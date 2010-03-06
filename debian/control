@@ -1,0 +1,16 @@
+Source: cdo
+Section: utils
+Priority: optional
+Maintainer: Alastair McKinstry <mckinstry@debian.org>
+Build-Depends: cdbs, debhelper (>> 7), dh-buildinfo, libhdf5-serial-dev, libproj-dev, autoconf, automake, libnetcdf-dev
+Standards-Version: 3.8.3
+Homepage: http://www.mpimet.mpg.de/fileadmin/software/cdo/
+
+Package: cdo
+Section: utils
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Climate Data Operators
+ Climate Data Operators are a collection of command line Operators 
+ to manipulate and analyse Climate model Data.  Supported data formats are GRIB, 
+ netCDF, SERVICE, EXTRA and IEG. There are more than 400 operators available.

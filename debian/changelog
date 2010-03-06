@@ -1,0 +1,53 @@
+cdo (1.4.0.1~dfsg-1build1) lucid; urgency=low
+
+  * No-change rebuild for hdf5 1.6.6-0 -> 1.8.4 transition.
+
+ -- Ilya Barygin <barygin@gmail.com>  Sat, 06 Mar 2010 11:22:09 +0300
+
+cdo (1.4.0.1~dfsg-1) unstable; urgency=low
+
+  * New upstream release. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 03 Nov 2009 13:30:48 +0000
+
+cdo (1.3.2~dfsg-1) unstable; urgency=low
+
+  * New upstream release.
+  * Move to Standards-Version: 3.8.2. No changes required.
+  * Build with netcdf support. Closes: #538244.
+  * Move to debhelper DH_COMPAT=7.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 24 Jul 2009 12:56:22 +0100
+
+cdo (1.3.1+dfsg-4) unstable; urgency=low
+
+  * Add automake dependency (checked with pbuilder). Closes: 529086. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 18 May 2009 12:38:27 +0100
+
+cdo (1.3.1+dfsg-3) unstable; urgency=low
+
+  * Add autoconf dependency. Closes: #529013. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 17 May 2009 11:46:55 +0100
+
+cdo (1.3.1+dfsg-2) unstable; urgency=low
+
+  * Now use libproj. 
+  * Added ${shlibs:Depenbds} for dependencies.
+  * More docs: Add OPERATORS, NEWS, cdo.spec files. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 16 May 2009 16:55:32 +0100
+
+cdo (1.3.1+dfsg-1) unstable; urgency=low
+
+  * New Upstream release; Closes: #522772.
+  * Remove pdf's from source to make it dfsg for release.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 10 May 2009 19:52:19 +0100
+
+cdo (1.3.0-1) unstable; urgency=low
+
+  * Initial Debian release. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon,  6 Apr 2009 16:15:52 +0100
