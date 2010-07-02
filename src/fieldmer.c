@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 #include "nth_element.h"
 /* QR */
 
-void merfun(FIELD field1, FIELD *field2, int function)
+void merfun(field_t field1, field_t *field2, int function)
 {
   if      ( function == func_min )  mermin(field1, field2);
   else if ( function == func_max )  mermax(field1, field2);  
@@ -35,9 +35,10 @@ void merfun(FIELD field1, FIELD *field2, int function)
 }
 
 
-void mermin(FIELD field1, FIELD *field2)
+void mermin(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval = field1.missval;
@@ -76,9 +77,10 @@ void mermin(FIELD field1, FIELD *field2)
 }
 
 
-void mermax(FIELD field1, FIELD *field2)
+void mermax(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval = field1.missval;
@@ -117,9 +119,11 @@ void mermax(FIELD field1, FIELD *field2)
 }
 
 
-void mersum(FIELD field1, FIELD *field2)
+void mersum(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  long   nvals   = 0;
+  int    rnmiss  = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval = field1.missval;
@@ -133,10 +137,20 @@ void mersum(FIELD field1, FIELD *field2)
     {
       if ( nmiss > 0 )
 	{
+	  nvals = 0;
 	  rsum = 0;
 	  for ( j = 0; j < ny; j++ )
 	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
-	      rsum += array[j*nx+i];
+	      {
+		rsum += array[j*nx+i];
+		nvals++;
+	      }
+
+	  if ( !nvals )
+	    {
+	      rsum = missval;
+	      rnmiss++;
+	    }
 	}
       else
 	{
@@ -152,9 +166,10 @@ void mersum(FIELD field1, FIELD *field2)
 }
 
 
-void mermean(FIELD field1, FIELD *field2)
+void mermean(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval1 = field1.missval;
@@ -200,9 +215,10 @@ void mermean(FIELD field1, FIELD *field2)
 }
 
 
-void meravg(FIELD field1, FIELD *field2)
+void meravg(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
   int    grid     = field1.grid;
   int    nmiss    = field1.nmiss;
   double missval1 = field1.missval;
@@ -247,9 +263,10 @@ void meravg(FIELD field1, FIELD *field2)
 }
 
 
-void mervar(FIELD field1, FIELD *field2)
+void mervar(field_t field1, field_t *field2)
 {
-  int i, j, nx, ny, rnmiss = 0;
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval = field1.missval;
@@ -291,6 +308,7 @@ void mervar(FIELD field1, FIELD *field2)
 	}
 
       rvar = IS_NOT_EQUAL(rsumw, 0) ? (rsumq*rsumw - rsum*rsum) / (rsumw*rsumw) : missval;
+      if ( rvar < 0 && rvar > -1.e-5 ) rvar = 0;
 
       if ( DBL_IS_EQUAL(rvar, missval) ) rnmiss++;
 
@@ -301,9 +319,10 @@ void mervar(FIELD field1, FIELD *field2)
 }
 
 
-void merstd(FIELD field1, FIELD *field2)
+void merstd(field_t field1, field_t *field2)
 {
-  int i, nx, rnmiss = 0;
+  long   i, nx;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   double missval = field1.missval;
   double rvar, rstd;
@@ -315,7 +334,15 @@ void merstd(FIELD field1, FIELD *field2)
   for ( i = 0; i < nx; i++ )
     {
       rvar = field2->ptr[i];
-      rstd = (IS_NOT_EQUAL(rvar, 0) && !DBL_IS_EQUAL(rvar, missval)) ? sqrt(rvar) : missval;
+
+      if ( DBL_IS_EQUAL(rvar, missval) || rvar < 0 )
+	{
+	  rstd = missval;
+	}
+      else
+	{
+	  rstd = IS_NOT_EQUAL(rvar, 0) ? sqrt(rvar) : 0;
+	}
 
       if ( DBL_IS_EQUAL(rvar, missval) ) rnmiss++;
 
@@ -326,11 +353,12 @@ void merstd(FIELD field1, FIELD *field2)
 }
 
 /* RQ */
-void merpctl(FIELD field1, FIELD *field2, int p)
+void merpctl(field_t field1, field_t *field2, int p)
 {
   static const char func[] = "merpctl";
 
-  int i, j, l, nx, ny, rnmiss = 0;
+  long   i, j, l, nx, ny;
+  int    rnmiss = 0;
   int    grid    = field1.grid;
   int    nmiss   = field1.nmiss;
   double missval = field1.missval;

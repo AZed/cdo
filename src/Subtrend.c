@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,8 +41,8 @@ void *Subtrend(void *argument)
   int nmiss;
   int nvars, nlevel;
   double missval, missval1, missval2;
-  FIELD **vars2, **vars3;
-  FIELD field1, field4;
+  field_t **vars2, **vars3;
+  field_t field1, field4;
 
   cdoInitialize(argument);
 
@@ -81,8 +81,8 @@ void *Subtrend(void *argument)
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field4.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars2 = (FIELD **) malloc(nvars*sizeof(FIELD *));
-  vars3 = (FIELD **) malloc(nvars*sizeof(FIELD *));
+  vars2 = (field_t **) malloc(nvars*sizeof(field_t *));
+  vars3 = (field_t **) malloc(nvars*sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -91,8 +91,8 @@ void *Subtrend(void *argument)
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars2[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
-      vars3[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+      vars2[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+      vars3[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{

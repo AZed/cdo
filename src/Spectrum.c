@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -170,8 +170,8 @@ void *Spectrum(void *argument)
   double wssum;
   double *array1, *array2;
   double *real, *imag, *window;
-  FIELD ***vars = NULL;
-  FIELD ***vars2 = NULL;
+  field_t ***vars = NULL;
+  field_t ***vars2 = NULL;
 
   cdoInitialize(argument);
 
@@ -200,13 +200,13 @@ void *Spectrum(void *argument)
 	  nalloc += NALLOC_INC;
 	  vdate = (int *) realloc(vdate, nalloc*sizeof(int));
 	  vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	  vars  = (FIELD ***) realloc(vars, nalloc*sizeof(FIELD **));
+	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
       vtime[tsID] = taxisInqVtime(taxisID1);
 
-      vars[tsID] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -214,7 +214,7 @@ void *Spectrum(void *argument)
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
-	  vars[tsID][varID] = (FIELD *) malloc(nlevel*sizeof(FIELD));
+	  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
 
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
@@ -271,10 +271,10 @@ void *Spectrum(void *argument)
 
   nfreq = seg_l/2 + 1;
 
-  vars2 = (FIELD ***) malloc(nfreq*sizeof(FIELD **));
+  vars2 = (field_t ***) malloc(nfreq*sizeof(field_t **));
   for ( freq = 0; freq < nfreq; freq++ )
     {
-      vars2[freq] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars2[freq] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -283,7 +283,7 @@ void *Spectrum(void *argument)
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       
-	  vars2[freq][varID] = (FIELD *) malloc(nlevel*sizeof(FIELD));
+	  vars2[freq][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
       
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {

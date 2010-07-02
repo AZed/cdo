@@ -88,8 +88,6 @@ void *Smooth9(void *argument)
 	}
     }
 
-  /*  nospec(vlistID1); */
-
   gridsize = vlistGridsizeMax(vlistID1);
   array1 = (double *) malloc(gridsize*sizeof(double));
   array2 = (double *) malloc(gridsize *sizeof(double));

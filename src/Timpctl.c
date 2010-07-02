@@ -54,8 +54,8 @@ static void timpctl(int operatorID)
   int nvars, nlevels;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD **vars1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL;
+  field_t field;
   int pn;
   HISTOGRAM_SET *hset = NULL;
   
@@ -107,7 +107,7 @@ static void timpctl(int operatorID)
 
   field.ptr = (double *) malloc(gridsize * sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars * sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars * sizeof(field_t *));
   hset = hsetCreate(nvars);
   
   for ( varID = 0; varID < nvars; varID++ )
@@ -117,7 +117,7 @@ static void timpctl(int operatorID)
       nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *) malloc(nlevels*sizeof(FIELD));
+      vars1[varID] = (field_t *) malloc(nlevels*sizeof(field_t));
       hsetCreateVarLevels(hset, varID, nlevels, gridID);
 
       for ( levelID = 0; levelID < nlevels; levelID++ )

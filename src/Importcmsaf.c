@@ -407,6 +407,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
   grp_id = H5Gopen(loc_id, "Geolocation");
 
   proj_id = H5Dopen(grp_id, "Projection");
+  if ( proj_id < 0 )
+    proj_id = H5Dopen(grp_id, "projection");
   /*
   {
     hid_t tid;
@@ -421,7 +423,10 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
       }
   }
   */
-  status = H5Dread(proj_id, proj_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &proj);
+  if ( proj_id < 0 )
+    memset(&proj, 0, sizeof(proj_t));
+  else
+    status = H5Dread(proj_id, proj_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &proj);
 
   H5Dclose(proj_id);
   H5Tclose(proj_tid);
@@ -443,8 +448,13 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
   H5Tinsert(region_tid, "dy",   HOFFSET(region_t, dy),   H5T_NATIVE_FLOAT);
 
   region_id = H5Dopen(grp_id, "Region");
-
-  status = H5Dread(region_id, region_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &region);
+  if ( region_id < 0 )
+    region_id = H5Dopen(grp_id, "region");
+  
+  if ( region_id < 0 )
+    memset(&region, 0, sizeof(region_t));
+  else
+    status = H5Dread(region_id, region_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &region);
 
   H5Dclose(region_id);
   H5Tclose(region_tid);
@@ -471,14 +481,72 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 
   /* some CM-SAF files have incorrect entries for some metadata. */
   /* these are corrected in the following sections. */
+  /* in case of questions on this, contact frank.kaspar@dwd.de */
   if ( strcmp(proj.ellipsoid, "WSG-84") == 0 ) strcpy(proj.ellipsoid, "WGS-84");
 
-  if ( strcmp(proj.name, "sinusoidal") != 0  && 
-       nx == xsize && ny == ysize &&
-       (int)region.xmin == -8887500 &&  (int)region.xmax == 8887500 && 
-       (int)region.ymin  -8887500 && (int)region.ymax == 8887500 && 
+  if ( (int)region.xmin == -8887500 &&  (int)region.xmax == -8887500 &&
+       (int)region.ymin == 8887500 && (int)region.ymax == 8887500 &&
        (int)region.dx == 15000 && (int)region.dy  == 15000 )
-  {
+    {
+       region.xmax = 8887500.0;
+       region.ymin = -8887500.0;
+       if ( cdoVerbose )
+         cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
+                region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
+
+       xsize = NINT((region.xmax-region.xmin)/region.dx);
+       ysize = NINT((region.ymax-region.ymin)/region.dy);
+       if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
+    }
+
+  if (nx == 298 && ny == 371 &&
+      (int)region.xmin == -6709222 &&  (int)region.xmax == 6709222 &&
+      (int)region.ymin == -6664078 && (int)region.ymax == 9984898 &&
+      (int)region.dx == 45000 && (int)region.dy  == 45000 )
+    {
+        region.xmin = -6705000;
+        region.xmax = 6705000;
+        region.ymin = -6705000;
+        region.ymax = 9990000;      
+        cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
+               region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
+
+        xsize = NINT((region.xmax-region.xmin)/region.dx);
+        ysize = NINT((region.ymax-region.ymin)/region.dy);
+        if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
+    }
+
+  if ( strcmp(proj.name, "sinusoidal") != 0  && 
+       ( (nx == xsize && ny == ysize &&
+	  (int)region.xmin == -8887500 && (int)region.xmax == 8887500 && 
+	  (int)region.ymin == -8887500 && (int)region.ymax == 8887500 && 
+	  (int)region.dx == 15000 && (int)region.dy  == 15000 )
+	 ||
+	 (nx == xsize && ny == ysize &&
+	  (int)region.xmin == -5827500 && (int)region.xmax == 5827500 && 
+	  (int)region.ymin ==  3307500 && (int)region.ymax == 8887500 && 
+	  (int)region.dx == 15000 && (int)region.dy  == 15000 )
+	 ||
+	 (nx == xsize && ny == ysize &&
+	  (int)region.xmin == -5827500 && (int)region.xmax == 5827500 &&
+	  (int)region.ymin ==  3307500 && (int)region.ymax == 8887500 &&
+	  (int)region.dx == 45000 && (int)region.dy  == 45000 )
+	 ||
+	 (nx == xsize && ny == ysize &&
+	  (int)region.xmin == -5827500 && (int)region.xmax == 5827500 &&
+	  (int)region.ymin ==  3307500 && (int)region.ymax == 8887500 &&
+	  (int)region.dx == 3000 && (int)region.dy  == 3000 )
+	 ||
+	 (nx == 298 && ny == 371 &&
+	  (int)region.xmin == -6709222 && (int)region.xmax == 6709222 &&
+	  (int)region.ymin == -6664078 && (int)region.ymax == 9984898 &&
+	  (int)region.dx == 45000 && (int)region.dy  == 45000 ) 
+	 ||
+	 (nx == xsize && ny == ysize &&
+	  (int)region.xmin == -6705000 && (int)region.xmax == 6705000 &&
+	  (int)region.ymin == -6705000 && (int)region.ymax == 9990000 &&
+	  (int)region.dx == 45000 && (int)region.dy  == 45000 ) ) )
+    {
       if ( cdoVerbose ) cdoPrint("Replacing incorrect projection parameters for sinusoidal products:");
       strcpy(proj.ellipsoid, "WGS-84");
       strcpy(proj.name, "sinusoidal");
@@ -492,7 +560,7 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 	  cdoPrint("proj1 = %g, proj2 = %g, proj3 = %g, proj4 = %g,",  
 		   proj.parameter[0], proj.parameter[1],  
 		   proj.parameter[2], proj.parameter[3]);
-  }
+    }
 
   if ( nx == xsize && ny == ysize && 
        strcmp(proj.name, "sinusoidal") == 0 && 
@@ -1144,7 +1212,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	{
 	  if ( ! (missval < minval || missval > maxval) )
 	    {
-	      if ( DBL_IS_EQUAL(missval, 255) && dtype == DATATYPE_UINT8 )
+	      if ( DBL_IS_EQUAL(missval, 255.) && dtype == DATATYPE_UINT8 )
 		{
 		  missval = -255;
 		  dtype   = DATATYPE_INT16;

@@ -21,10 +21,6 @@
       Hi      hi           Compute the humidity index
 */
 
-
-#include <string.h>
-#include <math.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -50,7 +46,7 @@ static double humidityIndex(double t, double e, double r, double missval)
 }
 
 
-static void farexpr(FIELD *field1, FIELD field2, FIELD field3, double (*expression)(double, double, double, double))
+static void farexpr(field_t *field1, field_t field2, field_t field3, double (*expression)(double, double, double, double))
 {
   static char func[] = "farexpr";
   int   i, len;
@@ -104,7 +100,7 @@ void *Hi(void *argument)
   int levelID1, levelID2, levelID3;
   int vlistID1, vlistID2, vlistID3, vlistID4;
   int taxisID1, taxisID2, taxisID3, taxisID4;
-  FIELD field1, field2, field3;
+  field_t field1, field2, field3;
 
   cdoInitialize(argument);
   cdoOperatorAdd("hi", 0, 0, NULL);
@@ -127,8 +123,6 @@ void *Hi(void *argument)
   vlistCompare(vlistID1, vlistID2, func_sft);
   vlistCompare(vlistID1, vlistID3, func_sft);
   
-  nospec(vlistID1);
-
   gridsize = vlistGridsizeMax(vlistID1);
 
   field1.ptr = (double *) malloc(gridsize*sizeof(double));

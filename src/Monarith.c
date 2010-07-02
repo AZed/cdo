@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,6 @@
       Monarith  monmul         Multiply monthly time series
       Monarith  mondiv         Divide monthly time series
 */
-
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -48,7 +45,7 @@ void *Monarith(void *argument)
   int taxisID1, taxisID2, taxisID3;
   int vdate;
   int yearmon1, yearmon2 = -1;
-  FIELD field1, field2;
+  field_t field1, field2;
   int **varnmiss2;
   double **vardata2;
 
@@ -73,9 +70,6 @@ void *Monarith(void *argument)
 
   vlistCompare(vlistID1, vlistID2, func_sft);
   
-  if ( operfunc == func_mul || operfunc == func_div )
-    nospec(vlistID1);
-
   gridsize = vlistGridsizeMax(vlistID1);
 
   field1.ptr = (double *) malloc(gridsize*sizeof(double));

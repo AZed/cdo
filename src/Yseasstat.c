@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -65,8 +65,8 @@ void *Yseasstat(void *argument)
   int *recVarID, *recLevelID;
   int vdates[NSEAS], vtimes[NSEAS];
   double missval;
-  FIELD **vars1[NSEAS], **vars2[NSEAS], **samp1[NSEAS];
-  FIELD field;
+  field_t **vars1[NSEAS], **vars2[NSEAS], **samp1[NSEAS];
+  field_t field;
   int season_start;
 
   cdoInitialize(argument);
@@ -121,7 +121,7 @@ void *Yseasstat(void *argument)
     {
       vdate = taxisInqVdate(taxisID1);
       vtime = taxisInqVtime(taxisID1);
-      decode_date(vdate, &year, &month, &day);
+      cdiDecodeDate(vdate, &year, &month, &day);
       if ( month < 0 || month > 16 )
 	cdoAbort("Month %d out of range!", month);
 
@@ -148,10 +148,10 @@ void *Yseasstat(void *argument)
 
       if ( vars1[seas] == NULL )
 	{
-	  vars1[seas] = (FIELD **) malloc(nvars*sizeof(FIELD *));
-	  samp1[seas] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	  vars1[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  samp1[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
 	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[seas] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	    vars2[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
@@ -160,10 +160,10 @@ void *Yseasstat(void *argument)
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      missval  = vlistInqVarMissval(vlistID1, varID);
 
-	      vars1[seas][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
-	      samp1[seas][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	      vars1[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+	      samp1[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[seas][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+		vars2[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	      
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{

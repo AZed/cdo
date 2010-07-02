@@ -42,10 +42,10 @@ typedef struct {
   char    longname[256];
   char    units[128];
 }
-ZAXIS;
+zaxis_t;
 
 
-void zaxisInit(ZAXIS *zaxis)
+void zaxisInit(zaxis_t *zaxis)
 {
   zaxis->vals        = NULL;
   zaxis->lbounds     = NULL;
@@ -97,7 +97,7 @@ static int getoptname(char *optname, const char *optstring, int nopt)
 }
 
 
-int zaxisDefine(ZAXIS zaxis)
+int zaxisDefine(zaxis_t zaxis)
 {
   static char func[] = "zaxisDefine";
   int zaxisID = UNDEFID;
@@ -155,7 +155,7 @@ int zaxisFromFile(FILE *gfp)
   static char func[] = "zaxisFromFile";
   char line[MAX_LINE_LEN], *pline;
   int zaxisID;
-  ZAXIS zaxis;
+  zaxis_t zaxis;
 
   zaxisInit(&zaxis);
 
@@ -369,17 +369,42 @@ int zaxisFromFile(FILE *gfp)
 }
 
 
+int zaxisFromName(const char *zaxisname)
+{
+  static char func[] = "zaxisFromName";
+  const char *pline;
+  int zaxisID = UNDEFID;
+  zaxis_t zaxis;
+
+  zaxisInit(&zaxis);
+
+  pline = zaxisname;
+  if ( memcmp(pline, "surface", 7) == 0 ) /* surface */
+    {
+      zaxis.type = ZAXIS_SURFACE;
+      zaxis.size = 1;
+      zaxis.vals = (double *) malloc(zaxis.size*sizeof(double));
+      zaxis.vals[0] = 0;
+    }
+
+  if ( zaxis.type != -1 ) zaxisID = zaxisDefine(zaxis);
+
+  return (zaxisID);
+}
+
+
 int cdoDefineZaxis(const char *zaxisfile)
 {
   static char func[] = "cdoDefineZaxis";
   FILE *zfp;
   int zaxisID = -1;
 
-  if ( cdoDebug ) cdoPrint("zaxis from ASCII file");
   zfp = fopen(zaxisfile, "r");
-  if ( zfp == 0 )
+  if ( zfp == NULL )
     {
-      SysError(func, zaxisfile);
+      zaxisID = zaxisFromName(zaxisfile);
+
+      if ( zaxisID == -1 ) cdoAbort("Open failed on %s!", zaxisfile);
     }
   else
     {

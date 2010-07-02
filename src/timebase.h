@@ -2,13 +2,7 @@
 #define  _TIMEBASE_H
 
 /* date format:  YYYYMMDD */
-/* time format:  hhmm     */
-
-void decode_date(int date, int *year, int *month, int *day);
-int  encode_date(int year, int month, int day);
-
-void decode_time(int time, int *hour, int *minute, int *second);
-int  encode_time(int hour, int minute, int second);
+/* time format:  hhmmss   */
 
 void decode_julday(int calendar, int julday, int *year, int *mon, int *day);
 int  encode_julday(int calendar, int year, int month, int day);

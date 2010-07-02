@@ -50,8 +50,8 @@ void *Seascount(void *argument)
   int *recVarID, *recLevelID;
   int newseas, oldmon = 0, newmon;
   double missval;
-  FIELD **vars1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL;
+  field_t field;
   int season_start;
 
   cdoInitialize(argument);
@@ -88,7 +88,7 @@ void *Seascount(void *argument)
 
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars*sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -97,7 +97,7 @@ void *Seascount(void *argument)
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
       for ( levelID = 0; levelID < nlevel; levelID++ )
         {
@@ -118,7 +118,7 @@ void *Seascount(void *argument)
         {
           vdate = taxisInqVdate(taxisID1);
           vtime = taxisInqVtime(taxisID1);
-	  decode_date(vdate, &year, &month, &day);
+	  cdiDecodeDate(vdate, &year, &month, &day);
           if ( month < 0 || month > 16 )
             cdoAbort("Month %d out of range!", month);
 

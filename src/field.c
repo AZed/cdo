@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -48,7 +48,7 @@ double _FROOT_(double x, double missval1)
 }
 
 
-double fldfun(FIELD field, int function)
+double fldfun(field_t field, int function)
 {
   double rval = 0;
 
@@ -64,10 +64,10 @@ double fldfun(FIELD field, int function)
   return rval;
 }
 
-double fldmin(FIELD field)
+double fldmin(field_t field)
 {
-  int i;
-  int    len     = field.size;
+  long   i;
+  long   len     = field.size;
   int    nmiss   = field.nmiss;
   double missval = field.missval;
   double *array  = field.ptr;
@@ -94,10 +94,10 @@ double fldmin(FIELD field)
 }
 
 
-double fldmax(FIELD field)
+double fldmax(field_t field)
 {
-  int i;
-  int    len     = field.size;
+  long   i;
+  long   len     = field.size;
   int    nmiss   = field.nmiss;
   double missval = field.missval;
   double *array  = field.ptr;
@@ -124,10 +124,11 @@ double fldmax(FIELD field)
 }
 
 
-double fldsum(FIELD field)
+double fldsum(field_t field)
 {
-  int i;
-  int    len     = field.size;
+  long   i;
+  long   nvals   = 0;
+  long   len     = field.size;
   int    nmiss   = field.nmiss;
   double missval = field.missval;
   double *array  = field.ptr;
@@ -137,7 +138,12 @@ double fldsum(FIELD field)
     {
       for ( i = 0; i < len; i++ ) 
 	if ( !DBL_IS_EQUAL(array[i], missval) )
-	  rsum += array[i];
+	  {
+	    rsum += array[i];
+	    nvals++;
+	  }
+
+      if ( !nvals ) rsum = missval;
     }
   else
     {
@@ -149,10 +155,10 @@ double fldsum(FIELD field)
 }
 
 
-double fldmean(FIELD field)
+double fldmean(field_t field)
 {
-  int i;
-  int    len      = field.size;
+  long   i;
+  long   len      = field.size;
   int    nmiss    = field.nmiss;
   double missval1 = field.missval;
   double missval2 = field.missval;
@@ -184,10 +190,10 @@ double fldmean(FIELD field)
 }
 
 
-double fldavg(FIELD field)
+double fldavg(field_t field)
 {
-  int i;
-  int    len      = field.size;
+  long   i;
+  long   len      = field.size;
   int    nmiss    = field.nmiss;
   double missval1 = field.missval;
   double missval2 = field.missval;
@@ -219,10 +225,10 @@ double fldavg(FIELD field)
 }
 
 
-double fldvar(FIELD field)
+double fldvar(field_t field)
 {
-  int i;
-  int    len     = field.size;
+  long   i;
+  long   len     = field.size;
   int    nmiss   = field.nmiss;
   double missval = field.missval;
   double *array  = field.ptr;
@@ -253,27 +259,36 @@ double fldvar(FIELD field)
     }
 
   rvar = IS_NOT_EQUAL(rsumw, 0) ? (rsumq*rsumw - rsum*rsum) / (rsumw*rsumw) : missval;
+  if ( rvar < 0 && rvar > -1.e-5 ) rvar = 0;
 
   return (rvar);
 }
 
 
-double fldstd(FIELD field)
+double fldstd(field_t field)
 {
   double missval = field.missval;
   double rvar, rstd;
 
   rvar = fldvar(field);
 
-  rstd = (IS_NOT_EQUAL(rvar, 0) && !DBL_IS_EQUAL(rvar, missval)) ? sqrt(rvar) : missval;
+  if ( DBL_IS_EQUAL(rvar, missval) || rvar < 0 )
+    {
+      rstd = missval;
+    }
+  else
+    {
+      rstd = IS_NOT_EQUAL(rvar, 0) ? sqrt(rvar) : 0;
+    }
 
   return (rstd);
 }
 
 
-void fldrms(FIELD field, FIELD field2, FIELD *field3)
+void fldrms(field_t field, field_t field2, field_t *field3)
 {
-  int i, len, rnmiss = 0;
+  long   i, len;
+  int    rnmiss = 0;
   int    grid1    = field.grid;
   int    nmiss1   = field.nmiss;
   double *array1  = field.ptr;
@@ -321,9 +336,10 @@ void fldrms(FIELD field, FIELD field2, FIELD *field3)
 }
 
 
-void varrms(FIELD field, FIELD field2, FIELD *field3)
+void varrms(field_t field, field_t field2, field_t *field3)
 {
-  int i, k, nlev, len, rnmiss = 0;
+  long   i, k, nlev, len;
+  int    rnmiss = 0;
   int    zaxis    = field.zaxis;
   int    grid1    = field.grid;
   int    nmiss1   = field.nmiss;
@@ -374,17 +390,17 @@ void varrms(FIELD field, FIELD field2, FIELD *field3)
 }
 
 /* RQ */
-double fldpctl(FIELD field, int p)
+double fldpctl(field_t field, int p)
 {
   static const char func[] = "fldpctl";
   
-  int    len     = field.size;
+  long   len     = field.size;
   int    nmiss   = field.nmiss;
   double missval = field.missval;
   double *array  = field.ptr;
   double *array2;
 	
-  int i, j;
+  long i, j;
   double pctl = missval;
   
   if ( len - nmiss > 0 )

@@ -38,8 +38,10 @@ Building and installing it:
  
           --with-netcdf=<netCDF-4 root directory> --with-hdf5=<HDF5 root directory> 
 
-        You have to specify also the location of the SZLIB if HDF5 was build with 
-        SZLIB support.
+        You have to specify also the location of the SZLIB if HDF5 was build
+        with SZLIB support. If only the linking is required, you can directly
+        set the linking path with --with-szlib-lib=<dir>, --with-zlib-lib=<dir>
+        and --with-hdf5-lib=<dir>
 
         To process szip compressed GRIB files you have to enable SZLIB support with:
           --with-szlib=<directory>
@@ -57,4 +59,4 @@ Porting:
      
 Contact:
 
-     Send questions, comments and bug reports to Uwe.Schulzweida@zmaw.de
+     Send questions, comments and bug reports to <http://code.zmaw.de/projects/cdo>

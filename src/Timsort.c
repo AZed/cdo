@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,9 +22,6 @@
 */
 
 
-#include <stdio.h>
-#include <math.h>
-
 #if defined (_OPENMP)
 #  include <omp.h>
 #endif
@@ -32,10 +29,12 @@
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
+#include "pstream.h"
 
 
-#define  NALLOC_INC  1000
+#define  NALLOC_INC  1024
 
+static
 int cmpdarray(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -49,6 +48,7 @@ int cmpdarray(const void *s1, const void *s2)
 
   return (cmp);
 }
+
 
 void *Timsort(void *argument)
 {
@@ -68,7 +68,7 @@ void *Timsort(void *argument)
   int ompthID;
   double missval;
   double **sarray = NULL;
-  FIELD ***vars = NULL;
+  field_t ***vars = NULL;
 
   cdoInitialize(argument);
 
@@ -97,13 +97,13 @@ void *Timsort(void *argument)
 	  nalloc += NALLOC_INC;
 	  vdate = (int *) realloc(vdate, nalloc*sizeof(int));
 	  vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	  vars  = (FIELD ***) realloc(vars, nalloc*sizeof(FIELD **));
+	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
       vtime[tsID] = taxisInqVtime(taxisID1);
 
-      vars[tsID] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -111,7 +111,7 @@ void *Timsort(void *argument)
 	  missval = vlistInqVarMissval(vlistID1, varID);
 	  nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
-	  vars[tsID][varID] = (FIELD *) malloc(nlevel*sizeof(FIELD));
+	  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
 
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {

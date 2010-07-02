@@ -25,9 +25,6 @@
       Set        setltype        Set GRIB level type
 */
 
-
-#include <string.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -86,6 +83,7 @@ void *Set(void *argument)
       FILE *fp;
       size_t fsize;
       char *parbuf = NULL;
+      size_t nbytes;
 
       partab = operatorArgv()[0];
       fp = fopen(partab, "r");
@@ -95,7 +93,7 @@ void *Set(void *argument)
 	  fsize = (size_t) ftell(fp);
 	  parbuf = (char *) malloc(fsize+1);
 	  fseek(fp, 0L, SEEK_SET);
-	  fread(parbuf, fsize, 1, fp);
+	  nbytes = fread(parbuf, fsize, 1, fp);
 	  parbuf[fsize] = 0;
 	  fseek(fp, 0L, SEEK_SET);
 

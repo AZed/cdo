@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2006 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,21 +31,32 @@
 
 #endif
 
+typedef struct {
+  short       check_datarange;
+  int         gridsize;
+  int         datatype;
+  double      missval;
+  double      addoffset;
+  double      scalefactor;
+} varlist_t;
+
 
 struct _PSTREAM {
-  int     self;
-  int     mode;
-  int     fileID;
-  int     vlistID;
-  int     tsID;
-  int     filetype;
-  int     ispipe;
-  int     isopen;
-  char   *name;
-  int     tsID0;
-  int     mfiles;
-  int     nfiles;
-  char  **mfnames;
+  int            self;
+  int            mode;
+  int            fileID;
+  int            vlistID;
+  int            tsID;
+  int            filetype;
+  int            ispipe;
+  int            isopen;
+  int            tsID0;
+  int            mfiles;
+  int            nfiles;
+  int            varID;           /* next varID defined with streamDefVar */
+  char          *name;
+  char         **mfnames;
+  varlist_t     *varlist;
 #if  defined  (HAVE_LIBPTHREAD)
   struct _PIPE  *pipe;
   pthread_t     rthreadID; /* read  thread ID */
@@ -59,14 +70,14 @@ typedef struct _PSTREAM PSTREAM;
 #if  defined  (HAVE_LIBPTHREAD)
 
 struct _PIPE {
-  int nrecs, EOP;
-  int varID, levelID;
-  int recIDr, recIDw, tsIDr, tsIDw;
-  int hasdata, usedata;
-  struct _PSTREAM *pstreamptr_in;
-  int nmiss;
-  /* unsigned long */ off_t nvals;
+  int     nrecs, EOP;
+  int     varID, levelID;
+  int     recIDr, recIDw, tsIDr, tsIDw;
+  int     hasdata, usedata;
+  int     nmiss;
   double *data;
+  struct _PSTREAM *pstreamptr_in;
+  /* unsigned long */ off_t nvals;
   pthread_mutex_t *mutex;
   pthread_cond_t *tsDef, *tsInq, *vlistDef, *isclosed;
   pthread_cond_t *recDef, *recInq;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -57,7 +57,7 @@ char *strdup(const char *s);
 #define  DATE_IS_NEQ(dtstr1, dtstr2, len) (memcmp(dtstr1, dtstr2, len) != 0)
 
 
-#if defined (__ibm__) /* performance problems on IBM */
+#if defined (__xlC__) /* performance problems on IBM */
 #ifndef DBL_IS_NAN
 #  define DBL_IS_NAN(x)     ((x) != (x))
 #endif
@@ -107,9 +107,6 @@ char *strdup(const char *s);
 #define CDO_EXP_LOCAL   1
 #define CDO_EXP_REMOTE  2
 
-#define DATE_FORMAT "%5.4d-%2.2d-%2.2d"
-#define TIME_FORMAT "%2.2d:%2.2d:%2.2d"
-
 
 enum {DATE_FIRST, DATE_LAST, DATE_MIDDLE};
 
@@ -133,6 +130,9 @@ int ntr2nlat(int ntr);
 int ntr2nlat_linear(int ntr);
 int compNlon(int nlat);
 
+void param2str(int param, char *paramstr, int maxlen);
+void date2str(int date, char *datestr, int maxlen);
+void time2str(int time, char *timestr, int maxlen);
 
 typedef struct {
   int   date;
@@ -167,6 +167,9 @@ void    cdologs(int noper);
 void    cdologo(int noper);
 void    nospec(int vlistID);
 void    gridWrite(FILE *fp, int gridID);
+
+int  cdf_openread(const char *filename);
+int pcdf_openread(const char *filename);
 
 void printFiletype(int streamID, int vlistID);
 

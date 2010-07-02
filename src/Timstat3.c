@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,6 @@
         Timstat3        varquot2test
         Timstat3        meandiff2test
 */
-
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -56,10 +53,10 @@ void *Timstat3(void *argument)
   double fnvals0, fnvals1;
   double missval, missval1, missval2;
   double fractil_1, fractil_2, statistic;
-  FIELD **fwork[NFWORK];
+  field_t **fwork[NFWORK];
   double temp0, temp1, temp2, temp3;
   int ***iwork[NIWORK];
-  FIELD *in, *out;
+  field_t *in, *out;
   int *reached_eof;
   int n_in = NIN;
 
@@ -121,16 +118,16 @@ void *Timstat3(void *argument)
   reached_eof = (int *) malloc(NIN*sizeof(int));
   memset(reached_eof, 0, NIN*sizeof(int));
 
-  in = (FIELD *) malloc(NIN*sizeof(FIELD));
+  in = (field_t *) malloc(NIN*sizeof(field_t));
   for ( i = 0; i < NIN; ++i )
     in[i].ptr = (double *) malloc(gridsize*sizeof(double));
   				 
-  out = (FIELD *) malloc(NOUT*sizeof(FIELD));
+  out = (field_t *) malloc(NOUT*sizeof(field_t));
   for ( i = 0; i < NOUT; ++i )
     out[i].ptr = (double *) malloc(gridsize*sizeof(double));
   				 
   for ( iw = 0; iw < NFWORK; ++iw )
-    fwork[iw] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+    fwork[iw] = (field_t **) malloc(nvars*sizeof(field_t *));
   for ( iw = 0; iw < NIWORK; ++iw )
     iwork[iw] = (int ***)   malloc(nvars*sizeof(int **));
 
@@ -143,7 +140,7 @@ void *Timstat3(void *argument)
       missval2 = vlistInqVarMissval(vlistID[1], varID); 
 
       for ( iw = 0; iw < NFWORK; ++iw )
-	fwork[iw][varID] = (FIELD *)  malloc(nlevs*sizeof(FIELD));
+	fwork[iw][varID] = (field_t *)  malloc(nlevs*sizeof(field_t));
       for ( iw = 0; iw < NIWORK; ++iw )
 	iwork[iw][varID] = (int **)  malloc(nlevs*sizeof(int *));  
 

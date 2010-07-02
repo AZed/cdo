@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,9 +20,6 @@
 
      Splittime  splityear       Split years
 */
-
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -82,6 +79,7 @@ void *Splityear(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
+      if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
     }
 
@@ -96,7 +94,7 @@ void *Splityear(void *argument)
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       vdate = taxisInqVdate(taxisID1);
-      decode_date(vdate, &year2, &mon2, &day);
+      cdiDecodeDate(vdate, &year2, &mon2, &day);
 
       if ( tsID == 0 || year1 != year2 || (year1 == year2 && mon1 > mon2) )
 	{

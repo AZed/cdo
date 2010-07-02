@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,10 +21,6 @@
       Intgrid    interpolate     PINGO grid interpolation
       Intgrid    intgridbil      Bilinear grid interpolation
 */
-
-
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -186,7 +182,7 @@ int genBoxavgGrid(int gridID1, int xinc, int yinc)
 }
 
 
-void boxavg(FIELD *field1, FIELD *field2, int xinc, int yinc)
+void boxavg(field_t *field1, field_t *field2, int xinc, int yinc)
 {
   static char func[] = "boxavg";
   int nlon1, nlat1;
@@ -256,7 +252,7 @@ void boxavg(FIELD *field1, FIELD *field2, int xinc, int yinc)
 }
 
 
-void thinout(FIELD *field1, FIELD *field2, int xinc, int yinc)
+void thinout(field_t *field1, field_t *field2, int xinc, int yinc)
 {
   static char func[] = "thinout";
   int nlon1, nlat1;
@@ -333,7 +329,7 @@ void *Intgrid(void *argument)
   double missval;
   double slon, slat;
   double *array1 = NULL, *array2 = NULL;
-  FIELD field1, field2;
+  field_t field1, field2;
   int taxisID1, taxisID2;
 
   cdoInitialize(argument);

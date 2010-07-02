@@ -1,21 +1,30 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/autotools.mk
+# The magic debhelper  rule
+%:
+	dh $@
 
 CFLAGS += -fPIC
 
-DEB_MAKE_CHECK_TARGET := check
-DEB_MAKE_CLEAN_TARGET := clean distclean maintainer-clean
-DEB_CONFIGURE_EXTRA_FLAGS := --with-zlib --with-hdf5 --with-proj --with-netcdf
+ARCH:=$(shell dpkg --print-architecture)
+WITH_GRIB:= --with-grib-api=/usr
 
-clean::
+ifeq ($(ARCH), mips)
+  WITH_GRIB:=
+endif
+ifeq ($(ARCH), hppa)
+  WITH_GRIB:=
+endif
+ifeq ($(ARCH), sparc)
+  WITH_GRIB:=
+endif
+
+override_dh_auto_clean:
+	dh_auto_clean	
 	find . -name Makefile.in -delete
 	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/ltmain.sh config/missing configure INSTALL
 
-post-patches::
+override_dh_auto_configure:
 	autoreconf -if
+	./configure --prefix=/usr --with-zlib=/usr --with-jasper=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr  $(WITH_GRIB)
 
-# Store build information
-common-binary-post-install-arch common-binary-post-install-indep::
-	dh_buildinfo

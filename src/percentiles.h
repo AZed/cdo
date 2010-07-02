@@ -43,8 +43,8 @@ HISTOGRAM_SET *hsetCreate(int nvars);
 void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int nhists);
 void hsetDestroy(HISTOGRAM_SET *hset);
 
-void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const FIELD *min, const FIELD *max);
-void hsetAddVarLevelValues(HISTOGRAM_SET *histField, int varID, int levelID, const FIELD *field);
-void hsetGetVarLevelPercentiles(FIELD *field, const HISTOGRAM_SET *hset, int varID, int levelID, int k); 
+void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *min, const field_t *max);
+void hsetAddVarLevelValues(HISTOGRAM_SET *histField, int varID, int levelID, const field_t *field);
+void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, int k); 
 
 #endif /*PERCENTILES_H_*/

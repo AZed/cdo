@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,10 +20,7 @@
 
 */
 
-
-#include <string.h>
 #include <ctype.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -46,8 +43,8 @@ int readnextpos(FILE *fp, int calendar, juldate_t *juldate, double *xpos, double
 
   if ( stat != EOF )
     {
-      date = encode_date(year, month, day);
-      time = encode_time(hour, minute, second);
+      date = cdiEncodeDate(year, month, day);
+      time = cdiEncodeTime(hour, minute, second);
       *juldate = juldate_encode(calendar, date, time);
     }
 
@@ -80,7 +77,7 @@ void *Intgridtraj(void *argument)
   char *posfile;
   double missval;
   int calendar = CALENDAR_STANDARD;
-  FIELD field1, field2;
+  field_t field1, field2;
   FILE *fp;
 
   cdoInitialize(argument);
@@ -134,7 +131,7 @@ void *Intgridtraj(void *argument)
 
       if ( gridInqType(gridID1) != GRID_LONLAT &&
 	   gridInqType(gridID1) != GRID_GAUSSIAN )
-	cdoAbort("Interpolation of %s data failed!", gridNamePtr(gridInqType(gridID1)) );
+	cdoAbort("Unsupported grid type: %s", gridNamePtr(gridInqType(gridID1)) );
 
       vlistChangeGridIndex(vlistID2, index, gridID2);
     }

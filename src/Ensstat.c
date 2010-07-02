@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,6 @@
       Ensstat    enspctl         Ensemble percentiles
 */
 
-
 #if defined (_OPENMP)
 #  include <omp.h>
 #endif
@@ -37,6 +36,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 
 void *Ensstat(void *argument)
@@ -45,6 +45,8 @@ void *Ensstat(void *argument)
   int operatorID;
   int operfunc;
   int i;
+  int nvars;
+  int cmpfunc;
   int varID, recID;
   int gridsize = 0;
   int gridID;
@@ -58,8 +60,9 @@ void *Ensstat(void *argument)
   int ompthID;
   double missval;
   double *array2 = NULL;
-  FIELD *field;
+  field_t *field;
   int fileID, nfiles;
+  const char *ofilename;
   typedef struct
   {
     int streamID;
@@ -103,9 +106,16 @@ void *Ensstat(void *argument)
   if ( cdoVerbose )
     cdoPrint("Ensemble over %d files.", nfiles);
 
+  ofilename = cdoStreamName(nfiles);
+
+  if ( !cdoSilentMode )
+    if ( fileExist(ofilename) )
+      if ( !userFileOverwrite(ofilename) )
+	cdoAbort("Outputfile %s already exist!", ofilename);
+
   ef = (ens_file_t *) malloc(nfiles*sizeof(ens_file_t));
 
-  field = (FIELD *) malloc(ompNumThreads*sizeof(FIELD));
+  field = (field_t *) malloc(ompNumThreads*sizeof(field_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
       field[i].size   = nfiles;
@@ -127,8 +137,14 @@ void *Ensstat(void *argument)
     }
 
   /* check that the contents is always the same */
+  nvars = vlistNvars(ef[0].vlistID);
+  if ( nvars == 1 ) 
+    cmpfunc = func_sftn;
+  else
+    cmpfunc = func_sftn;
+
   for ( fileID = 1; fileID < nfiles; fileID++ )
-    vlistCompare(ef[0].vlistID, ef[fileID].vlistID, func_hrd);
+    vlistCompare(ef[0].vlistID, ef[fileID].vlistID, cmpfunc);
 
   vlistID1 = ef[0].vlistID;
   vlistID2 = vlistDuplicate(vlistID1);
@@ -136,8 +152,8 @@ void *Ensstat(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
+  streamID2 = streamOpenWrite(ofilename, cdoFiletype());
+  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", ofilename);
 
   streamDefVlist(streamID2, vlistID2);
 	  
@@ -166,6 +182,10 @@ void *Ensstat(void *argument)
       
       for ( recID = 0; recID < nrecs0; recID++ )
 	{
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared) private(fileID, streamID, nmiss) \
+                                     lastprivate(varID, levelID)
+#endif
 	  for ( fileID = 0; fileID < nfiles; fileID++ )
 	    {
 	      streamID = ef[fileID].streamID;
@@ -204,7 +224,13 @@ void *Ensstat(void *argument)
 	        array2[i] = fldfun(field[ompthID], operfunc);
 	      /* QR */
 
-	      if ( DBL_IS_EQUAL(array2[i], field[ompthID].missval) ) nmiss++;
+	      if ( DBL_IS_EQUAL(array2[i], field[ompthID].missval) )
+		{
+#if defined (_OPENMP)
+#pragma omp atomic
+#endif
+		  nmiss++;
+		}
 	    }
 
 	  streamDefRecord(streamID2, varID, levelID);

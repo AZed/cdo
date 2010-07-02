@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,13 +31,14 @@
 void *Diff(void *argument)
 {
   static char func[] = "Diff";
-  int DIFF, DIFFV, SDIFF;
+  int DIFF, DIFFP, DIFFV, SDIFF;
   int operatorID;
   int i;
   int indg;
   int varID1, varID2, recID;
   int gridsize;
-  int gridID, zaxisID, code, vdate, vtime;
+  int code, param;
+  int gridID, zaxisID, vdate, vtime;
   int nrecs, nrecs2;
   int levelID;
   int tsID;
@@ -47,9 +48,10 @@ void *Diff(void *argument)
   int taxisID;
   int nmiss1, nmiss2;
   int ndrec = 0, nd2rec = 0, ngrec = 0;
-  char varname[128];
-  int year, month, day, hour, minute, second;
   int lfunc;
+  char varname[128];
+  char paramstr[32];
+  char vdatestr[32], vtimestr[32];	  
   double *array1, *array2;
   double absm, relm;
   double missval1, missval2;
@@ -57,6 +59,7 @@ void *Diff(void *argument)
   cdoInitialize(argument);
 
   DIFF  = cdoOperatorAdd("diff",  0, 0, NULL);
+  DIFFP = cdoOperatorAdd("diffp", 0, 0, NULL);
   DIFFV = cdoOperatorAdd("diffv", 0, 0, NULL);
   SDIFF = cdoOperatorAdd("sdiff", 0, 0, NULL);
 
@@ -88,7 +91,10 @@ void *Diff(void *argument)
   if ( ! cdoSilentMode )
     {
       if ( operatorID == DIFFV )
-	fprintf(stdout, "               Date  Time    Varname     Level    Size    Miss :"
+	fprintf(stdout, "               Date  Time    Varname      Level    Size    Miss :"
+		" S Z  Max_Absdiff Max_Reldiff\n");
+      else if ( operatorID == DIFFP )
+	fprintf(stdout, "               Date  Time    Param        Level    Size    Miss :"
 		" S Z  Max_Absdiff Max_Reldiff\n");
       else if ( operatorID == DIFF )
 	fprintf(stdout, "               Date  Time    Code  Level    Size    Miss :"
@@ -105,9 +111,9 @@ void *Diff(void *argument)
 	{
 	  vdate = taxisInqVdate(taxisID);
 	  vtime = taxisInqVtime(taxisID);
-
-	  decode_date(vdate, &year, &month, &day);
-	  decode_time(vtime, &hour, &minute, &second);
+	  
+	  date2str(vdate, vdatestr, sizeof(vdatestr));
+	  time2str(vtime, vtimestr, sizeof(vtimestr));
 	}
 
       nrecs2 = streamInqTimestep(streamID2, tsID);
@@ -121,6 +127,7 @@ void *Diff(void *argument)
 
 	  indg += 1;
 
+	  param    = vlistInqVarParam(vlistID1, varID1);
 	  code     = vlistInqVarCode(vlistID1, varID1);
 	  gridID   = vlistInqVarGrid(vlistID1, varID1);
 	  zaxisID  = vlistInqVarZaxis(vlistID1, varID1);
@@ -128,19 +135,21 @@ void *Diff(void *argument)
 	  missval1 = vlistInqVarMissval(vlistID1, varID1);
 	  missval2 = vlistInqVarMissval(vlistID2, varID2);
 
+	  cdiParamToString(param, paramstr, sizeof(paramstr));
+
 	  if ( ! cdoSilentMode )
-	    if ( operatorID == DIFFV || operatorID == DIFF )
+	    if ( operatorID == DIFFP || operatorID == DIFFV || operatorID == DIFF )
 	      {
 		if ( operatorID == DIFFV ) vlistInqVarName(vlistID1, varID1, varname);
 		
 		if ( operatorID == DIFFV )
-		  fprintf(stdout, "%6d :"DATE_FORMAT" "TIME_FORMAT" %-8s ",
-			  indg, year, month, day, hour, minute, second, varname);
+		  fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, varname);
+		else if ( operatorID == DIFFP )
+		  fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, paramstr);
 		else if ( operatorID == DIFF )
-		  fprintf(stdout, "%6d :"DATE_FORMAT" "TIME_FORMAT" %3d",
-			  indg, year, month, day, hour, minute, second, code);
+		  fprintf(stdout, "%6d :%s %s %3d ", indg, vdatestr, vtimestr, code);
 
-		fprintf(stdout, " %7g ", zaxisInqLevel(zaxisID, levelID));
+		fprintf(stdout, "%7g ", zaxisInqLevel(zaxisID, levelID));
 	      }
 
 	  streamReadRecord(streamID1, array1, &nmiss1);
@@ -172,7 +181,7 @@ void *Diff(void *argument)
 	    }
 
 	  if ( ! cdoSilentMode )
-	    if ( operatorID == DIFFV || operatorID == DIFF )
+	    if ( operatorID == DIFFP || operatorID == DIFFV || operatorID == DIFF )
 	      {
 		fprintf(stdout, "%7d %7d :", gridsize, MAX(nmiss1, nmiss2));
 		

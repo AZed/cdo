@@ -52,8 +52,8 @@ void *Timcount(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD **vars1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL;
+  field_t field;
 
   cdoInitialize(argument);
 
@@ -96,7 +96,7 @@ void *Timcount(void *argument)
 
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars*sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -105,7 +105,7 @@ void *Timcount(void *argument)
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{

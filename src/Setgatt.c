@@ -22,8 +22,6 @@
       Setgatt    setgatts        Set global attributes
 */
 
-
-#include <string.h>
 #include <ctype.h>
 
 #include "cdi.h"

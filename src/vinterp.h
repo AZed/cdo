@@ -5,21 +5,25 @@
 extern "C" {
 #endif
 
-void h2p(double *phlev, double *hlev, int nphlev);
+void h2p(double * restrict phlev, const double * restrict hlev, long nphlev);
 
-void presh(double *pf, double *php, double *vct, double *ps, int nhlev, int ngp);
+void presh(double * restrict fullp, double * halfp, const double *restrict vct,
+	   const double *restrict ps, long nhlev, long ngp);
 
-void genind(int *nx, double *plev, double *fullp, int ngp, int nplev, int nhlev);
-void genindmiss(int *nx, double *plev, int ngp, int nplev, double *ps_prog, int *pnmiss);
+void genind(int *nx, const double * restrict plev, const double * restrict fullp, long ngp, long nplev, long nhlev);
+void genindmiss(int *nx, const double * restrict plev, int ngp, int nplev, const double * restrict ps_prog, int * restrict pnmiss);
 
-void extra_P(double *slp, double *halfp, double *fullp, double *geop, double *temp, int ngp);
+void extra_P(double * restrict slp, const double * restrict halfp, const double * restrict fullp,
+	     const double * restrict geop, const double * restrict temp, long ngp);
 
-void interp_T(double *geop, double *gt, double *pt, double *fullp, double *halfp,
-              int *nx, double *plev, int nplev, int ngp, int nhlev, double missval);
-void interp_Z(double *geop, double *gz, double *pz, double *fullp, double *halfp,
-	      int *nx, double *gt, double *plev, int nplev, int ngp, int nhlev, double missval);
-void interp_X(double *gt, double *pt, double *hyb_press,
-	      int *nx, double *plev, int nplev, int ngp, int nhlev, double missval);
+void interp_T(const double * restrict geop, const double * restrict gt, double *pt, const double * restrict fullp,
+	      const double * restrict halfp, const int *nx, const double * restrict plev, long nplev, long ngp,
+	      long nhlev, double missval);
+void interp_Z(const double * restrict geop, const double * restrict gz, double *pz, const double * restrict fullp,
+	      const double * restrict halfp, const int *nx, const double * restrict gt, const double * restrict plev,
+	      long nplev, long ngp, long nhlev, double missval);
+void interp_X(const double * restrict gt, double *pt, const double * restrict hyb_press, const int *nx,
+	      const double * restrict plev, long nplev, long ngp, long nhlev, double missval);
 
 #if defined(__cplusplus)
 }

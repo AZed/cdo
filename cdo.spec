@@ -4,14 +4,14 @@
 
 Name:           cdo
 #BuildRequires:  
-Version:        1.4.0.1
+Version:        1.4.5
 Release:        1
 Summary:        Climate Data Operators
 License:        GNU GENERAL PUBLIC LICENSE Version 2, June 1991
 Group:          Productivity/Graphics/Visualization/Other
 Requires:       netcdf
 Autoreqprov:    on
-URL:            http://www.mpimet.mpg.de/fileadmin/software/cdo/
+URL:            http://code.zmaw.de/projects/cdo
 Source0:        cdo-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -27,7 +27,7 @@ Authors:
     Uwe Schulzweida, Uwe.Schulzweida@zmaw.de, is the main author.
     Luis Kornblueh, Luis.Kornblueh@zmaw.de
     Ralf Quast, Ralf.Quast@brockmann-consult.de
-    Send questions, comments and bug reports to Uwe.Schulzweida@zmaw.de
+    Send questions, comments and bug reports to <http://code.zmaw.de/projects/cdo>
 
 
 %prep

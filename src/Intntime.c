@@ -45,7 +45,6 @@ void *Intntime(void *argument)
   int offset;
   int calendar;
   int numts, it;
-  int year, month, day, hour, minute, second;
   int *recVarID, *recLevelID;
   int **nmiss1, **nmiss2, nmiss3;
   double missval1, missval2;
@@ -94,6 +93,11 @@ void *Intntime(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID2) )
+    {
+      cdoWarning("Time bounds unsupported by this operator, removed!");
+      taxisDeleteBounds(taxisID2);
+    }
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -153,15 +157,15 @@ void *Intntime(void *argument)
 
 	  if ( cdoVerbose )
 	    {
+	      char vdatestr[32], vtimestr[32];	  
 	      /*
 		cdoPrint("juldate1 %f", juldate_to_seconds(juldate1));
 		cdoPrint("juldate  %f", juldate_to_seconds(juldate));
 		cdoPrint("juldate2 %f", juldate_to_seconds(juldate2));
 	      */
-	      decode_date(vdate, &year, &month, &day);
-	      decode_time(vtime, &hour, &minute, &second);
-	      cdoPrint(DATE_FORMAT" "TIME_FORMAT,
-		       year, month, day, hour, minute, second);
+	      date2str(vdate, vdatestr, sizeof(vdatestr));
+	      time2str(vtime, vtimestr, sizeof(vtimestr));
+	      cdoPrint("%s %s", vdatestr, vtimestr);
 	    }
 
 	  taxisDefVdate(taxisID2, vdate);
@@ -170,7 +174,7 @@ void *Intntime(void *argument)
 
 	  fac1 = juldate_to_seconds(juldate_sub(juldate2, juldate)) / 
 	         juldate_to_seconds(juldate_sub(juldate2, juldate1));
-	  fac2 = juldate_to_seconds(juldate_sub(juldate, juldate1)) / 
+	  fac2 = juldate_to_seconds(juldate_sub(juldate,  juldate1)) / 
 	         juldate_to_seconds(juldate_sub(juldate2, juldate1));
 
 	  for ( recID = 0; recID < nrecs; recID++ )

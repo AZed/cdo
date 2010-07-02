@@ -304,7 +304,7 @@ void sp2fctest(double *sa, double *fa, double *poli, int nlev, int nlat, int nfc
 }
 
 
-void sp2fc(double *sa, double *fa, double *poli, int nlev, int nlat, int nfc, int nt)
+void sp2fc(const double *sa, double *fa, const double *poli, long nlev, long nlat, long nfc, long nt)
 {
   long lev, jmm, jfc, lat, nsp2;
   double sar, sai;
@@ -449,6 +449,8 @@ void spcut(double *arrayIn, double *arrayOut, int trunc, int *waves)
 	    {
 	      *arrayOut++ = 0.0;
 	      *arrayOut++ = 0.0;
+	      arrayIn++;
+	      arrayIn++;
 	    }
 	}
     }

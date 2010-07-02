@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,7 @@ void *Fldrms(void *argument)
   int needWeights = FALSE;
   double slon, slat;
   double sglval;
-  FIELD field1, field2, field3;
+  field_t field1, field2, field3;
   int taxisID1, taxisID3;
 
   cdoInitialize(argument);

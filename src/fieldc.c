@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 #include "cdi.h"
 
 
-void farcfun(FIELD *field, double rconst, int function)
+void farcfun(field_t *field, double rconst, int function)
 {
   if      ( function == func_add ) farcadd(field, rconst);
   else if ( function == func_sub ) farcsub(field, rconst);
@@ -30,7 +30,7 @@ void farcfun(FIELD *field, double rconst, int function)
   else    cdoAbort("function %d not implemented!", function);
 }
 
-void farcmul(FIELD *field, double rconst)
+void farcmul(field_t *field, double rconst)
 {
   int i, len;
   int    grid     = field->grid;
@@ -59,7 +59,7 @@ void farcmul(FIELD *field, double rconst)
 }
 
 
-void farcdiv(FIELD *field, double rconst)
+void farcdiv(field_t *field, double rconst)
 {
   int i, len;
   int    grid     = field->grid;
@@ -85,7 +85,7 @@ void farcdiv(FIELD *field, double rconst)
 }
 
 
-void farcadd(FIELD *field, double rconst)
+void farcadd(field_t *field, double rconst)
 {
   int i, len;
   int    grid     = field->grid;
@@ -109,13 +109,13 @@ void farcadd(FIELD *field, double rconst)
 }
 
 
-void farcsub(FIELD *field, double rconst)
+void farcsub(field_t *field, double rconst)
 {
   farcadd(field, -rconst);
 }
 
 
-void farinv(FIELD *field)
+void farinv(field_t *field)
 {
   int i, len;
   int    grid     = field->grid;

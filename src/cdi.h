@@ -15,6 +15,10 @@ extern "C" {
 #define  CDI_BIGENDIAN            0   /* Byte order BIGENDIAN     */
 #define  CDI_LITTLEENDIAN         1   /* Byte order LITTLEENDIAN  */
 
+#define  CDI_REAL                 1   /* Real numbers             */
+#define  CDI_COMP                 2   /* Complex numbers          */
+#define  CDI_BOTH                 3   /* Both numbers             */
+
 /* Error identifier */
 
 #define	 CDI_NOERR        	  0   /* No Error                             */
@@ -24,6 +28,7 @@ extern "C" {
 #define  CDI_ELIBNAVAIL         -22   /* xxx library not available            */
 #define  CDI_EUFSTRUCT          -23   /* Unsupported file structure           */
 #define  CDI_EUNC4              -24   /* Unsupported netCDF4 structure        */
+#define  CDI_ELIMIT             -99   /* Internal limits exceeded             */
 
 /* File types */
 
@@ -43,6 +48,7 @@ extern "C" {
 #define  COMPRESS_GZIP            2
 #define  COMPRESS_BZIP2           3
 #define  COMPRESS_ZIP             4
+#define  COMPRESS_JPEG            5
 
 /* external data types */
 
@@ -79,6 +85,8 @@ extern "C" {
 #define  DATATYPE_PACK30         30
 #define  DATATYPE_PACK31         31
 #define  DATATYPE_PACK32         32
+#define  DATATYPE_CPX32          64
+#define  DATATYPE_CPX64         128
 #define  DATATYPE_FLT32         132
 #define  DATATYPE_FLT64         164
 #define  DATATYPE_INT8          208
@@ -93,6 +101,7 @@ extern "C" {
 #define  DATATYPE_INT           251
 #define  DATATYPE_FLT           252
 #define  DATATYPE_TXT           253
+#define  DATATYPE_CPX           254
 
 
 /* GRID types */
@@ -147,10 +156,25 @@ extern "C" {
 #define  TUNIT_MONTH              5
 #define  TUNIT_YEAR               6
 #define  TUNIT_QUARTER            7
+#define  TUNIT_3HOURS             8
+#define  TUNIT_6HOURS             9
+#define  TUNIT_12HOURS           10
+
+/* TSTEP types */
+
+#define  TSTEP_INSTANT            1
+#define  TSTEP_AVG                2
+#define  TSTEP_ACCUM              3
+#define  TSTEP_MAX                4
+#define  TSTEP_MIN                5
+#define  TSTEP_DIFF               6
+#define  TSTEP_RANGE              7
+#define  TSTEP_INSTANT2           8
+#define  TSTEP_INSTANT3           9
 
 /* CALENDAR types */
 
-#define  CALENDAR_STANDARD        0  /* don't change this value (used also in griblib)! */
+#define  CALENDAR_STANDARD        0  /* don't change this value (used also in cgribexlib)! */
 #define  CALENDAR_PROLEPTIC       1
 #define  CALENDAR_360DAYS         2
 #define  CALENDAR_365DAYS         3
@@ -170,6 +194,25 @@ void    cdiPrintVersion(void);
 void    cdiDefMissval(double missval);
 double  cdiInqMissval(void);
 void    cdiDefGlobal(const char *string, int val);
+
+/* CDI converter routines */
+
+/* parameter */
+
+void    cdiParamToString(int param, char *paramstr, int maxlen);
+
+void    cdiDecodeParam(int param, int *pnum, int *pcat, int *pdis);
+int     cdiEncodeParam(int pnum, int pcat, int pdis);
+
+/* date format:  YYYYMMDD */
+/* time format:    hhmmss */
+
+void    cdiDecodeDate(int date, int *year, int *month, int *day);
+int     cdiEncodeDate(int year, int month, int day);
+
+void    cdiDecodeTime(int time, int *hour, int *minute, int *second);
+int     cdiEncodeTime(int hour, int minute, int second);
+
 
 /* STREAM control routines */
 
@@ -229,24 +272,24 @@ off_t   streamNvals(int streamID);
 /* STREAM var I/O routines */
 
 /*      streamReadVar: Read a variable */
-void    streamReadVar(int streamID, int varID, double *data, int *nmiss);
+void    streamReadVar(int streamID, int varID, double *data_vec, int *nmiss);
 
 /*      streamWriteVar: Write a variable */
-void    streamWriteVar(int streamID, int varID, const double *data, int nmiss);
+void    streamWriteVar(int streamID, int varID, const double *data_vec, int nmiss);
 
 /*      streamReadVarSlice: Read a horizontal slice of a variable */
-void    streamReadVarSlice(int streamID, int varID, int levelID, double *data, int *nmiss);
+void    streamReadVarSlice(int streamID, int varID, int levelID, double *data_vec, int *nmiss);
 
 /*      streamWriteVarSlice: Write a horizontal slice of a variable */
-void    streamWriteVarSlice(int streamID, int varID, int levelID, const double *data, int nmiss);
+void    streamWriteVarSlice(int streamID, int varID, int levelID, const double *data_vec, int nmiss);
 
 
 /* STREAM record I/O routines */
 
 void    streamInqRecord(int streamID, int *varID, int *levelID);
 void    streamDefRecord(int streamID, int  varID, int  levelID);
-void    streamReadRecord(int streamID, double *data, int *nmiss);
-void    streamWriteRecord(int streamID, const double *data, int nmiss);
+void    streamReadRecord(int streamID, double *data_vec, int *nmiss);
+void    streamWriteRecord(int streamID, const double *data_vec, int nmiss);
 void    streamCopyRecord(int streamIDdest, int streamIDsrc);
 
 void    streamInqGinfo(int streamID, int *intnum, float *fltnum);
@@ -277,6 +320,9 @@ void    vlistCat(int vlistID2, int vlistID1);
 void    vlistMerge(int vlistID2, int vlistID1);
 
 void    vlistPrint(int vlistID);
+
+/*      vlistNumber: Number type in a variable list */
+int     vlistNumber(int vlistID);
 
 /*      vlistNvars: Number of variables in a variable list */
 int     vlistNvars(int vlistID);
@@ -332,6 +378,12 @@ int     vlistInqVarZtype(int vlistID, int varID);
 void    vlistDefVarZlevel(int vlistID, int varID, int zlevel);
 int     vlistInqVarZlevel(int vlistID, int varID);
 
+/*      vlistDefVarParam: Define the parameter number of a Variable */
+void    vlistDefVarParam(int vlistID, int varID, int param);
+
+/*      vlistInqVarParam: Get the parameter number of a Variable */
+int     vlistInqVarParam(int vlistID, int varID);
+
 /*      vlistDefVarCode: Define the code number of a Variable */
 void    vlistDefVarCode(int vlistID, int varID, int code);
 
@@ -343,6 +395,8 @@ void    vlistDefVarDatatype(int vlistID, int varID, int datatype);
 
 /*      vlistInqVarDatatype: Get the data type of a Variable */
 int     vlistInqVarDatatype(int vlistID, int varID);
+
+int     vlistInqVarNumber(int vlistID, int varID);
 
 void    vlistDefVarInstitut(int vlistID, int varID, int instID);
 int     vlistInqVarInstitut(int vlistID, int varID);
@@ -357,15 +411,17 @@ void    vlistDefVarName(int vlistID, int varID, const char *name);
 /*      vlistInqVarName: Get the name of a Variable */
 void    vlistInqVarName(int vlistID, int varID, char *name);
 
+/*      vlistDefVarStdname: Define the standard name of a Variable */
+void    vlistDefVarStdname(int vlistID, int varID, const char *stdname);
+
+/*      vlistInqVarStdname: Get the standard name of a Variable */
+void    vlistInqVarStdname(int vlistID, int varID, char *stdname);
+
 /*      vlistDefVarLongname: Define the long name of a Variable */
 void    vlistDefVarLongname(int vlistID, int varID, const char *longname);
 
-void    vlistDefVarStdname(int vlistID, int varID, const char *stdname);
-
 /*      vlistInqVarLongname: Get the long name of a Variable */
 void    vlistInqVarLongname(int vlistID, int varID, char *longname);
-
-void    vlistInqVarStdname(int vlistID, int varID, char *stdname);
 
 /*      vlistDefVarUnits: Define the units of a Variable */
 void    vlistDefVarUnits(int vlistID, int varID, const char *units);
@@ -383,10 +439,14 @@ void    vlistDefVarScalefactor(int vlistID, int varID, double scalefactor);
 double  vlistInqVarScalefactor(int vlistID, int varID);
 void    vlistDefVarAddoffset(int vlistID, int varID, double addoffset);
 double  vlistInqVarAddoffset(int vlistID, int varID);
+
+void    vlistDefVarTsteptype(int vlistID, int varID, int tsteptype);
+int     vlistInqVarTsteptype(int vlistID, int varID);
 void    vlistDefVarTimave(int vlistID, int varID, int timave);
 int     vlistInqVarTimave(int vlistID, int varID);
 void    vlistDefVarTimaccu(int vlistID, int varID, int timaccu);
 int     vlistInqVarTimaccu(int vlistID, int varID);
+
 int     vlistInqVarSize(int vlistID, int varID);
 int     vlistInqVarID(int vlistID, int code);
 
@@ -402,18 +462,24 @@ int     vlistMergedLevel(int vlistID, int varID, int levelID);
 
 /* VLIST attributes */
 
+/*      vlistInqNatts: Get number of variable attributes assigned to this variable */
 int     vlistInqNatts(int vlistID, int varID, int *nattsp);
-
+/*      vlistInqAtt: Get information about an attribute */
 int     vlistInqAtt(int vlistID, int varID, int attrnum, char *name, int *typep, int *lenp);
-
 int     vlistDelAtt(int vlistID, int varID, const char *name);
 
-int     vlistDefAttInt(int vlistID, int varID, const char *name, int len, const int *ip);
-int     vlistDefAttFlt(int vlistID, int varID, const char *name, int len, const double *dp);
+/*      vlistDefAttInt: Define an integer attribute */
+int     vlistDefAttInt(int vlistID, int varID, const char *name, int len, const int *ip_vec);
+/*      vlistDefAttInt: Define a floating point attribute */
+int     vlistDefAttFlt(int vlistID, int varID, const char *name, int len, const double *dp_vec);
+/*      vlistDefAttInt: Define a text attribute */
 int     vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char *tp);
 
-int     vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip);
-int     vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *dp);
+/*      vlistInqAttInt: Get the value(s) of an integer attribute */
+int     vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip_vec);
+/*      vlistInqAttInt: Get the value(s) of a floating point attribute */
+int     vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *dp_vec);
+/*      vlistInqAttInt: Get the value(s) of a text attribute */
 int     vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char *tp);
 
 
@@ -424,8 +490,8 @@ char   *gridNamePtr(int gridtype);
 
 void    gridCompress(int gridID);
 
-void    gridDefMask(int gridID, const int *mask);
-int     gridInqMask(int gridID, int *mask);
+void    gridDefMask(int gridID, const int *mask_vec);
+int     gridInqMask(int gridID, int *mask_vec);
 
 void    gridPrint(int gridID, int opt);
 int     gridSize(void);
@@ -458,16 +524,16 @@ void    gridDefYsize(int gridID, int ysize);
 int     gridInqYsize(int gridID);
 
 /*      gridDefXvals: Define the values of a X-axis */
-void    gridDefXvals(int gridID, const double *xvals);
+void    gridDefXvals(int gridID, const double *xvals_vec);
 
 /*      gridInqXvals: Get all values of a X-axis */
-int     gridInqXvals(int gridID, double *xvals);
+int     gridInqXvals(int gridID, double *xvals_vec);
 
 /*      gridDefYvals: Define the values of a Y-axis */
-void    gridDefYvals(int gridID, const double *yvals);
+void    gridDefYvals(int gridID, const double *yvals_vec);
 
 /*      gridInqYvals: Get all values of a Y-axis */
-int     gridInqYvals(int gridID, double *yvals);
+int     gridInqYvals(int gridID, double *yvals_vec);
 
 /*      gridDefXname: Define the name of a X-axis */
 void    gridDefXname(int gridID, const char *xname);
@@ -559,8 +625,8 @@ void gridDefLaea(int gridID, double earth_radius, double lon_0, double lat_0);
 void gridInqLaea(int gridID, double *earth_radius, double *lon_0, double *lat_0);
 
 
-void    gridDefArea(int gridID, const double *area);
-void    gridInqArea(int gridID, double *area);
+void    gridDefArea(int gridID, const double *area_vec);
+void    gridInqArea(int gridID, double *area_vec);
 int     gridHasArea(int gridID);
 
 /*      gridDefNvertex: Define the number of vertex of a Gridbox */
@@ -570,20 +636,23 @@ void    gridDefNvertex(int gridID, int nvertex);
 int     gridInqNvertex(int gridID);
 
 /*      gridDefXbounds: Define the bounds of a X-axis */
-void    gridDefXbounds(int gridID, const double *xbounds);
+void    gridDefXbounds(int gridID, const double *xbounds_vec);
 
 /*      gridInqXbounds: Get the bounds of a X-axis */
-int     gridInqXbounds(int gridID, double *xbounds);
+int     gridInqXbounds(int gridID, double *xbounds_vec);
 
 /*      gridDefYbounds: Define the bounds of a Y-axis */
-void    gridDefYbounds(int gridID, const double *ybounds);
+void    gridDefYbounds(int gridID, const double *ybounds_vec);
 
 /*      gridInqYbounds: Get the bounds of a Y-axis */
-int     gridInqYbounds(int gridID, double *ybounds);
+int     gridInqYbounds(int gridID, double *ybounds_vec);
 
-void    gridDefRowlon(int gridID, int nrowlon, const int *rowlon);
-void    gridInqRowlon(int gridID, int *rowlon);
+void    gridDefRowlon(int gridID, int nrowlon, const int *rowlon_vec);
+void    gridInqRowlon(int gridID, int *rowlon_vec);
 void    gridChangeType(int gridID, int gridtype);
+
+void    gridDefComplexPacking(int gridID, int lpack);
+int     gridInqComplexPacking(int gridID);
 
 /* ZAXIS routines */
 
@@ -610,10 +679,10 @@ void    zaxisPrint(int zaxisID);
 int     zaxisSize(void);
 
 /*      zaxisDefLevels: Define the levels of a Z-axis */
-void    zaxisDefLevels(int zaxisID, const double *levels);
+void    zaxisDefLevels(int zaxisID, const double *levels_vec);
 
 /*      zaxisInqLevels: Get all levels of a Z-axis */
-void    zaxisInqLevels(int zaxisID, double *levels);
+void    zaxisInqLevels(int zaxisID, double *levels_vec);
 
 /*      zaxisDefLevel: Define one level of a Z-axis */
 void    zaxisDefLevel(int zaxisID, int levelID, double levels);
@@ -646,17 +715,17 @@ void    zaxisDefLtype(int zaxisID, int ltype);
 int     zaxisInqLtype(int zaxisID);
 
 const double *zaxisInqLevelsPtr(int zaxisID);
-void    zaxisDefVct(int zaxisID, int size, const double *vct);
+void    zaxisDefVct(int zaxisID, int size, const double *vct_vec);
 int     zaxisInqVctSize(int zaxisID);
 const double *zaxisInqVctPtr(int zaxisID);
-int     zaxisInqLbounds(int zaxisID, double *lbounds);
-int     zaxisInqUbounds(int zaxisID, double *ubounds);
-int     zaxisInqWeights(int zaxisID, double *weights);
+int     zaxisInqLbounds(int zaxisID, double *lbounds_vec);
+int     zaxisInqUbounds(int zaxisID, double *ubounds_vec);
+int     zaxisInqWeights(int zaxisID, double *weights_vec);
 double  zaxisInqLbound(int zaxisID, int index);
 double  zaxisInqUbound(int zaxisID, int index);
-void    zaxisDefLbounds(int zaxisID, const double *lbounds);
-void    zaxisDefUbounds(int zaxisID, const double *ubounds);
-void    zaxisDefWeights(int zaxisID, const double *weights);
+void    zaxisDefLbounds(int zaxisID, const double *lbounds_vec);
+void    zaxisDefUbounds(int zaxisID, const double *ubounds_vec);
+void    zaxisDefWeights(int zaxisID, const double *weights_vec);
 void    zaxisChangeType(int zaxisID, int zaxistype);
 
 /* TAXIS routines */
@@ -686,6 +755,8 @@ void    taxisDefRdate(int taxisID, int date);
 void    taxisDefRtime(int taxisID, int time);
 
 int     taxisHasBounds(int taxisID);
+
+void    taxisDeleteBounds(int taxisID);
 
 void    taxisDefVdateBounds(int taxisID, int vdate_lb, int vdate_ub);
 

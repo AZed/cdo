@@ -1,10 +1,11 @@
 Source: cdo
 Section: utils
-Priority: optional
+Priority: extra
 Maintainer: Alastair McKinstry <mckinstry@debian.org>
-Build-Depends: cdbs, debhelper (>> 7), dh-buildinfo, libhdf5-serial-dev, libproj-dev, autoconf, automake, libnetcdf-dev
-Standards-Version: 3.8.3
-Homepage: http://www.mpimet.mpg.de/fileadmin/software/cdo/
+Build-Depends: debhelper (>= 7.0.50~), dh-buildinfo, libhdf5-serial-dev | libhdf5-dev, libproj-dev, autoconf, automake, libnetcdf-dev, 
+ libgrib-api-dev [!mips !sparc !hppa]
+Standards-Version: 3.8.4
+Homepage: https://code.zmaw.de/projects/cdo
 
 Package: cdo
 Section: utils

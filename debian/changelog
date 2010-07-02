@@ -1,8 +1,55 @@
-cdo (1.4.0.1~dfsg-1build1) lucid; urgency=low
+cdo (1.4.5.dfsg.1-1) unstable; urgency=low
 
-  * No-change rebuild for hdf5 1.6.6-0 -> 1.8.4 transition.
+  * New upstream release
 
- -- Ilya Barygin <barygin@gmail.com>  Sat, 06 Mar 2010 11:22:09 +0300
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 02 Jul 2010 09:04:06 +0100
+
+cdo (1.4.4.dfsg.1-2) unstable; urgency=low
+
+  * Make build-dep on grib-api conditional so that we build on sparc, hppa
+    and mips, where grib-api doesn't. Closes: #581801. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 16 May 2010 19:18:17 +0100
+
+cdo (1.4.4.dfsg.1-1) unstable; urgency=low
+
+  * Upstream release. 
+  * no_sz.patch no longer needed; upstream fix.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 08 May 2010 16:04:20 +0100
+
+cdo (1.4.3.dfsg.1-2) unstable; urgency=low
+
+  * Enable GRIB-API support. Closes: #574955. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 25 Mar 2010 12:20:07 +0000
+
+cdo (1.4.3.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * New CDO Homepage. https://code.zmaw.de/projects/cdo 
+  * Patch no_sz.patch: Don't require libsz for HDF5, as it cannot be included
+     in Debian for patent reasons.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 02 Mar 2010 11:07:53 +0000
+
+cdo (1.4.1.dfsg.1-2) unstable; urgency=low
+
+  * Build using ./configure rather than dh_auto_configure ; for some reason
+    the latter is currently failing.
+  * Change priority to extra, as we depend on libproj0, which is extra. 
+  * Built with hdf-1.8.4 since -1 (Closes: #568220).
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Wed, 03 Feb 2010 14:33:35 +0000
+
+cdo (1.4.1.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release, with better netcdf support.
+  * Build netcdf and hdf5-1.8.4
+  * Move to Standards-Version: 3.8.4 , source format 3.0
+  * Move cdbs to debhelper 7 style build 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Wed, 03 Feb 2010 13:22:29 +0000
 
 cdo (1.4.0.1~dfsg-1) unstable; urgency=low
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2006 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,6 @@
       Intyear    intyear         Year interpolation
 */
 
-
-#include <string.h>
 #include <ctype.h>
 
 #include "cdi.h"
@@ -88,6 +86,11 @@ void *Intyear(void *argument)
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID3) )
+    {
+      cdoWarning("Time bounds unsupported by this operator, removed!");
+      taxisDeleteBounds(taxisID3);
+    }
   vlistDefTaxis(vlistID3, taxisID3);
 
   strcpy(filename, cdoStreamName(2));
@@ -166,12 +169,14 @@ void *Intyear(void *argument)
 		      if ( !DBL_IS_EQUAL(array1[i], missval1) &&
 			   !DBL_IS_EQUAL(array2[i], missval2) )
 			array3[i] = array1[i]*fac1 + array2[i]*fac2;
+		      /* 2010-04-19 Uwe Schulzweida: removed 
 		      else if ( DBL_IS_EQUAL(array1[i], missval1) &&
 				!DBL_IS_EQUAL(array2[i], missval2) && fac2 >= 0.5 )
 			array3[i] = array2[i];
 		      else if ( DBL_IS_EQUAL(array2[i], missval2) &&
 				!DBL_IS_EQUAL(array1[i], missval1) && fac1 >= 0.5 )
 			array3[i] = array1[i];
+		      */
 		      else
 			{
 			  array3[i] = missval1;

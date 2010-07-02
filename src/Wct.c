@@ -21,10 +21,6 @@
       Wct     wct          Compute the windchill temperature (degree C)
 */
 
-
-#include <string.h>
-#include <math.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -47,7 +43,7 @@ static double windchillTemperature(double t, double ff, double missval)
 }
 
 
-static void farexpr(FIELD *field1, FIELD field2, double (*expression)(double, double, double))
+static void farexpr(field_t *field1, field_t field2, double (*expression)(double, double, double))
 {
   static char func[] = "farexpr";
   int   i, len;
@@ -97,7 +93,7 @@ void *Wct(void *argument)
   int levelID1, levelID2;
   int vlistID1, vlistID2, vlistID3;
   int taxisID1, taxisID2, taxisID3;
-  FIELD field1, field2;
+  field_t field1, field2;
 
   cdoInitialize(argument);
   cdoOperatorAdd("wct", 0, 0, NULL);
@@ -115,8 +111,6 @@ void *Wct(void *argument)
 
   vlistCompare(vlistID1, vlistID2, func_sft);
   
-  nospec(vlistID1);
-
   gridsize = vlistGridsizeMax(vlistID1);
 
   field1.ptr = (double *) malloc(gridsize*sizeof(double));

@@ -1,10 +1,10 @@
 
 typedef struct {
-  int nlon;
-  int nlat;
-  int ntr;
-  int poldim;
-  int ifax[10];
+  long nlon;
+  long nlat;
+  long ntr;
+  long poldim;
+  long ifax[10];
   double *trig;
   double *poli;
   double *pold;
@@ -23,7 +23,7 @@ typedef struct {
 }
 DVTRANS;
 
-void dv2ps(double *div, double *pot, int nlev, int ntr);
+void dv2ps(const double * restrict div, double * restrict pot, long nlev, long ntr);
 
 SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag);
 void sptrans_delete(SPTRANS *sptrans);
@@ -45,17 +45,17 @@ void spec2grid(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, d
 void spec2spec(int gridIDin, double *arrayIn, int gridIDout, double *arrayOut);
 void speccut(int gridIDin, double *arrayIn, double *arrayOut, int *waves);
 
-void sp2fc(double *sa, double *fa, double *poli, int nlev, int nlat, int nfc, int nt);
+void sp2fc(const double *sa, double *fa, const double *poli, long nlev, long nlat, long nfc, long nt);
 void fc2sp(double *fa, double *sa, double *poli, int nlev, int nlat, int nfc, int nt);
 
-void fc2gp(double *trig, int *ifax, double *fc, double *gp, int nlat, int nlon, int nlev, int nfc);
-void gp2fc(double *trig, int *ifax, double *gp, double *fc, int nlat, int nlon, int nlev, int nfc);
+void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlon, long nlev, long nfc);
+void gp2fc(double *trig, long *ifax, double *gp, double *fc, long nlat, long nlon, long nlev, long nfc);
 
 void sp2sp(double *arrayIn, int ntrIn, double *arrayOut, int ntrOut);
-void spcut(double *arrayIn, double *arrayOut, int ntr, int waves[]);
+void spcut(double *arrayIn, double *arrayOut, int ntr, int *waves);
 
 void phcs(double *pnm, double *hnm, int waves, double pmu,
 	  double *ztemp1, double *ztemp2);
 void jspleg1(double *pleg, double plat, int ntr, double *work);
 
-void fft_set(double *trigs, int *ifax, int n);
+void fft_set(double *trigs, long *ifax, long n);

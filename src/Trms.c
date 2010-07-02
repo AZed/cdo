@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 #include "pstream.h"
 
 
-void trms(FIELD field1, FIELD field2, double *dp, FIELD *field3)
+void trms(field_t field1, field_t field2, double *dp, field_t *field3)
 {
   int i, k, nlev, len, rnmiss = 0;
   int    zaxis    = field1.zaxis;
@@ -90,7 +90,7 @@ void *Trms(void *argument)
   double **vardata1 = NULL, **vardata2 = NULL;
   double slon, slat;
   double sglval;
-  FIELD field1, field2, field3;
+  field_t field1, field2, field3;
   int taxisID1, taxisID3;
 
   cdoInitialize(argument);

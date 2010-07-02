@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 
-
 /*
  * if DEBUG_MEMORY is defined setenv MEMORY_DEBUG to debug memory
  */
@@ -28,15 +27,15 @@ extern void    Free   (const char *caller, const char *file, int line, void *ptr
 #endif
 
 #if  defined  WITH_CALLER_NAME
-#  define  realloc(x, y)  Realloc(func, __FILE__, __LINE__, x, y)
-#  define   calloc(x, y)   Calloc(func, __FILE__, __LINE__, x, y)
-#  define   malloc(x)      Malloc(func, __FILE__, __LINE__, x)
-#  define     free(x)        Free(func, __FILE__, __LINE__, x)
+#  define  realloc(p, s)  Realloc(func, __FILE__, __LINE__, p, (size_t)s)
+#  define   calloc(n, s)   Calloc(func, __FILE__, __LINE__, n, (size_t)s)
+#  define   malloc(s)      Malloc(func, __FILE__, __LINE__, (size_t)s)
+#  define     free(p)        Free(func, __FILE__, __LINE__, p)
 #else
-#  define  realloc(x, y)  Realloc((void *) NULL, __FILE__, __LINE__, x, y)
-#  define   calloc(x, y)   Calloc((void *) NULL, __FILE__, __LINE__, x, y)
-#  define   malloc(x)      Malloc((void *) NULL, __FILE__, __LINE__, x)
-#  define     free(x)        Free((void *) NULL, __FILE__, __LINE__, x)
+#  define  realloc(p, s)  Realloc((void *) NULL, __FILE__, __LINE__, p, (size_t)s)
+#  define   calloc(n, s)   Calloc((void *) NULL, __FILE__, __LINE__, n, (size_t)s)
+#  define   malloc(s)      Malloc((void *) NULL, __FILE__, __LINE__, (size_t)s)
+#  define     free(p)        Free((void *) NULL, __FILE__, __LINE__, p)
 #endif
 
 #endif /* DEBUG_MEMORY */

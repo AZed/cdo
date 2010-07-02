@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,8 +26,6 @@
 #if  defined  (HAVE_CONFIG_H)
 #  include "config.h" /* VERSION */
 #endif
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -229,6 +227,7 @@ static void dumpmap()
   int swpflg = 0;
   int i;
   struct gaindx indx;
+  size_t nbytes;
   FILE *mapfp;
 
   indx.hipnt = NULL;
@@ -242,47 +241,47 @@ static void dumpmap()
   /* check the version number */
 
   fseek(mapfp, 1, 0);
-  fread(&vermap, sizeof(unsigned char), 1, mapfp);
+  nbytes = fread(&vermap, sizeof(unsigned char), 1, mapfp);
 
   if ( vermap == 2 )
     {
       printf("gribmap version = %d\n", vermap);
       fseek(mapfp, 2, 0);
 
-      fread(mrec, sizeof(unsigned char), 4, mapfp);
+      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.hinum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
       
-      fread(mrec, sizeof(unsigned char), 4, mapfp);
+      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.hfnum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 
-      fread(mrec, sizeof(unsigned char), 4, mapfp);
+      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.intnum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 
-      fread(mrec, sizeof(unsigned char), 4, mapfp);
+      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.fltnum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 
-      fread(mrec, sizeof(unsigned char), 7, mapfp);
+      nbytes = fread(mrec, sizeof(unsigned char), 7, mapfp);
 
       if ( indx.hinum > 0 )
 	{
 	  indx.hipnt = (int *) malloc(sizeof(int)*indx.hinum);
 	  for ( i = 0; i < indx.hinum; i++ )
 	    {
-	      fread(mrec, sizeof(unsigned char), 4, mapfp);
+	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
 	      indx.hipnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 	    }
 	}
       if ( indx.hfnum > 0 )
 	{
 	  indx.hfpnt = (float *) malloc(sizeof(float)*indx.hfnum);
-	  fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
+	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
 	}
       if ( indx.intnum > 0 )
 	{
 	  indx.intpnt = (int *) malloc(sizeof(int)*indx.intnum);
 	  for ( i = 0; i < indx.intnum; i++ )
 	    {
-	      fread(mrec, sizeof(unsigned char), 4, mapfp);
+	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
 	      indx.intpnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 	      if ( indx.intpnt[i] < 0 ) indx.intpnt[i] = 0x7fffffff - indx.intpnt[i] + 1;
 	    }
@@ -292,7 +291,7 @@ static void dumpmap()
 	  indx.fltpnt = (float *) malloc(sizeof(float)*indx.fltnum);
 	  for ( i = 0; i < indx.fltnum; i++ )
 	    {
-	      fread(urec, sizeof(unsigned char), 4, mapfp);
+	      nbytes = fread(urec, sizeof(unsigned char), 4, mapfp);
 	      indx.fltpnt[i] = ibm2flt(urec);
 	    }
 	}
@@ -300,7 +299,7 @@ static void dumpmap()
   else
     {
       fseek(mapfp, 0, 0);
-      fread (&indx, sizeof(struct gaindx), 1, mapfp);
+      nbytes = fread (&indx, sizeof(struct gaindx), 1, mapfp);
       if ( indx.type>>24 > 0 ) swpflg = 1;
       if ( swpflg ) printf("swap endian!\n");
       if ( swpflg ) gabswp((float *)&indx.type, 5);
@@ -308,25 +307,25 @@ static void dumpmap()
       if ( indx.hinum > 0 )
 	{
 	  indx.hipnt = (int *) malloc(sizeof(int)*indx.hinum);
-	  fread (indx.hipnt, sizeof(int), indx.hinum, mapfp);
+	  nbytes = fread (indx.hipnt, sizeof(int), indx.hinum, mapfp);
 	  if ( swpflg ) gabswp((float *)(indx.hipnt),indx.hinum);
 	}
       if ( indx.hfnum > 0 )
 	{
 	  indx.hfpnt = (float *) malloc(sizeof(float)*indx.hfnum);
-	  fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
+	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
 	  if ( swpflg ) gabswp(indx.hfpnt,indx.hfnum);
 	}
       if ( indx.intnum > 0 )
 	{
 	  indx.intpnt = (int *) malloc(sizeof(int)*indx.intnum);
-	  fread (indx.intpnt,sizeof(int),indx.intnum,mapfp);
+	  nbytes = fread (indx.intpnt,sizeof(int),indx.intnum,mapfp);
 	  if ( swpflg ) gabswp((float *)(indx.intpnt),indx.intnum);
 	}
       if ( indx.fltnum > 0 )
 	{
 	  indx.fltpnt = (float *) malloc(sizeof(float)*indx.fltnum);
-	  fread (indx.fltpnt,sizeof(float),indx.fltnum,mapfp);
+	  nbytes = fread (indx.fltpnt,sizeof(float),indx.fltnum,mapfp);
 	  if ( swpflg ) gabswp(indx.fltpnt,indx.fltnum);
 	}
     }
@@ -420,8 +419,7 @@ void *Gradsdes(void *argument)
   double *array = NULL;
   double xfirst, yfirst, xinc, yinc;
   double *xvals, *yvals;
-  char *cmons[]={"jan","feb","mar","apr","may","jun",
-		 "jul","aug","sep","oct","nov","dec"};
+  const char *cmons[]={"jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"};
       
   cdoInitialize(argument);
 
@@ -501,7 +499,7 @@ void *Gradsdes(void *argument)
       else
 	{
 	  vlistInqVarName(vlistID, varID, varname);
-	  cdoPrint("%s grid unsupported, skipped variable %s",
+	  cdoPrint("Unsupported grid type >%s<, skipped variable %s",
 		   gridNamePtr(gridInqType(vlistInqVarGrid(vlistID, varID))), varname);
 	  vars[varID] = FALSE;
 	}
@@ -610,8 +608,8 @@ void *Gradsdes(void *argument)
 
       if ( tsID == 0 )
 	{
-	  decode_time(vtime, &ihhs, &imns, &isds);
-	  decode_date(vdate, &iyys, &imms, &idds);
+	  cdiDecodeDate(vdate, &iyys, &imms, &idds);
+	  cdiDecodeTime(vtime, &ihhs, &imns, &isds);
      
 	  if ( imms < 1 || imms > 12 )  imms=1;
 
@@ -624,8 +622,8 @@ void *Gradsdes(void *argument)
 
       if ( tsID == 1 )
 	{
-	  decode_time(vtime, &ihh, &imn, &isd);
-	  decode_date(vdate, &iyy, &imm, &idd);
+	  cdiDecodeDate(vdate, &iyy, &imm, &idd);
+	  cdiDecodeTime(vtime, &ihh, &imn, &isd);
 
 	  idmn = imn - imns;
 	  idhh = ihh - ihhs;
@@ -663,8 +661,8 @@ void *Gradsdes(void *argument)
 
       if ( tsID > 0 && tsID < 6 && iik != 3 && (monavg == TRUE || monavg == -1) )
 	{
-	  decode_time(vtime, &ihh, &imn, &isd);
-	  decode_date(vdate, &iyy, &imm, &idd);
+	  cdiDecodeDate(vdate, &iyy, &imm, &idd);
+	  cdiDecodeTime(vtime, &ihh, &imn, &isd);
 
 	  idmn = imn - imns;
 	  idhh = ihh - ihhs;
@@ -717,11 +715,11 @@ void *Gradsdes(void *argument)
 	      
 		  streamInqGinfo(streamID, &intnum[index], &fltnum[index]);
 
-		  checksize = (long)intnum[index] + gridsize*intnum[index+2]/8;
+		  checksize = (long)intnum[index] + (long)gridsize*intnum[index+2]/8;
 		  if ( checksize < 0L || checksize > 2147483647L )
 		    {
 		      nrecords -= nrecsout;
-		      cdoWarning("GRIB file to large for GrADS! Only the first %d time steps (2GB) are processed.",
+		      cdoWarning("GRIB file too large for GrADS! Only the first %d time steps (2GB) are processed.",
 				 tsID);
 		      goto LABEL_STOP;
 		    }

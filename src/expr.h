@@ -36,13 +36,13 @@ typedef struct {
 /* functions */
 typedef struct {
   char *name;                 /* function name */
-  struct nodeTypeTag *op;     /* operand */
+  struct nodeTypeTag *op;     /* operand       */
 } funNodeType;
 
 /* operators */
 typedef struct {
-  int oper;                   /* operator */
-  int nops;                   /* number of operands */
+  int oper;                   /* operator              */
+  int nops;                   /* number of operands    */
   struct nodeTypeTag *op[1];  /* operands (expandable) */
 } oprNodeType;
 
@@ -83,9 +83,9 @@ typedef struct{ /* prs_sct */
 
 typedef union{
     double cvalue;              /* constant value */
-    char *varnm;                /* variable name */
-    char *fname;                /* function name */
-    nodeType *nPtr;             /* node pointer */
+    char *varnm;                /* variable name  */
+    char *fname;                /* function name  */
+    nodeType *nPtr;             /* node pointer   */
 } stype_t;
 
 

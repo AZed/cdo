@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,16 +21,13 @@
       Replace    replace         Replace variables
 */
 
-
-#include <string.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 
 
-#define MAX_VARS 999
+#define  MAX_VARS  1024
 
 void *Replace(void *argument)
 {
@@ -51,6 +48,7 @@ void *Replace(void *argument)
   int nmiss;
   int taxisID1, taxisID3;
   int nlev, offset;
+  int nts2;
   int varlist1[MAX_VARS], varlist2[MAX_VARS];
   int **varnmiss2 = NULL;
   double **vardata2 = NULL;
@@ -153,29 +151,34 @@ void *Replace(void *argument)
   gridsize = vlistGridsizeMax(vlistID1);
   array = (double *) malloc(gridsize*sizeof(double));
 
+  nts2 = streamNtsteps(streamID2);
+
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       taxisCopyTimestep(taxisID3, taxisID1);
 
-      nrecs2 = streamInqTimestep(streamID2, tsID);
-      if ( nrecs2 == 0 )
-	cdoAbort("Input streams have different number of timesteps!");
-
-      for ( recID = 0; recID < nrecs2; recID++ )
+      if ( tsID == 0 || (nts2 != 0 && nts2 != 1) )
 	{
-	  streamInqRecord(streamID2, &varID, &levelID);
+	  nrecs2 = streamInqTimestep(streamID2, tsID);
+	  if ( nrecs2 == 0 )
+	    cdoAbort("Input streams have different number of timesteps!");
 
-	  for ( index = 0; index < nchvars; index++ )
-	    if ( varlist2[index] == varID )
-	      {
-		gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
-		offset   = gridsize*levelID;
-		parray   = vardata2[index]+offset;
-		streamReadRecord(streamID2, parray, &nmiss);
-		varnmiss2[index][levelID] = nmiss;
-		break;
-	      }
+	  for ( recID = 0; recID < nrecs2; recID++ )
+	    {
+	      streamInqRecord(streamID2, &varID, &levelID);
+	      
+	      for ( index = 0; index < nchvars; index++ )
+		if ( varlist2[index] == varID )
+		  {
+		    gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+		    offset   = gridsize*levelID;
+		    parray   = vardata2[index]+offset;
+		    streamReadRecord(streamID2, parray, &nmiss);
+		    varnmiss2[index][levelID] = nmiss;
+		    break;
+		  }
+	    }
 	}
 
       streamDefTimestep(streamID3, tsID);

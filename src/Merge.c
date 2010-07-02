@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 
 void *Merge(void *argument)
@@ -47,6 +48,7 @@ void *Merge(void *argument)
   int gridsize;
   int nmiss;
   int taxisID1, taxisID2;
+  const char *ofilename;
   double *array = NULL;
 
   cdoInitialize(argument);
@@ -55,6 +57,14 @@ void *Merge(void *argument)
 
   streamCnt = cdoStreamCnt();
   nmerge    = streamCnt - 1;
+
+  ofilename = cdoStreamName(streamCnt-1);
+
+  if ( !cdoSilentMode )
+    if ( fileExist(ofilename) )
+      if ( !userFileOverwrite(ofilename) )
+	cdoAbort("Outputfile %s already exist!", ofilename);
+
   streamIDs = (int *) malloc(nmerge*sizeof(int));
   vlistIDs  = (int *) malloc(nmerge*sizeof(int));
 
@@ -83,9 +93,9 @@ void *Merge(void *argument)
       for ( index = 0; index < nmerge; index++ ) vlistPrint(vlistIDs[index]);
       vlistPrint(vlistID2);
     }
-
-  streamID2 = streamOpenWrite(cdoStreamName(streamCnt-1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(streamCnt-1));
+       
+  streamID2 = streamOpenWrite(ofilename, cdoFiletype());
+  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", ofilename);
 
   vlistDefTaxis(vlistID2, taxisID2);
   streamDefVlist(streamID2, vlistID2);

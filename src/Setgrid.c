@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,6 @@
       Setgrid    setgrid         Set grid
       Setgrid    setgridtype     Set grid type
 */
-
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -48,6 +45,7 @@ void *Setgrid(void *argument)
   int nmiss;
   int found;
   int areasize = 0;
+  int lregular = 0;
   char *gridname = NULL;
   double *areaweight = NULL;
   double *array = NULL;
@@ -74,7 +72,8 @@ void *Setgrid(void *argument)
       else if ( strcmp(gridname, "cell") == 0 )        gridtype = GRID_CELL;
       else if ( strcmp(gridname, "lonlat") == 0 )      gridtype = GRID_LONLAT;
       else if ( strcmp(gridname, "gaussian") == 0 )    gridtype = GRID_GAUSSIAN;
-      else cdoAbort("%s grid unsupported!", gridname);
+      else if ( strcmp(gridname, "regular") == 0 )    {gridtype = GRID_GAUSSIAN; lregular = 1;}
+      else cdoAbort("Unsupported grid name: %s", gridname);
     }
   else if ( operatorID == SETGRIDAREA )
     {
@@ -154,9 +153,19 @@ void *Setgrid(void *argument)
 	{
 	  gridID1 = vlistGrid(vlistID1, index);
 
-	  if      ( gridtype == GRID_CURVILINEAR ) gridID2 = gridToCurvilinear(gridID1);
-	  else if ( gridtype == GRID_CELL )        gridID2 = gridToCell(gridID1);
-	  else cdoAbort("%s grid unsupported!", gridname);
+	  if ( lregular )
+	    {
+	      if ( gridInqType(gridID1) == GRID_GAUSSIAN_REDUCED )
+		{
+		  gridID2 = gridToRegular(gridID1);
+		}
+	    }
+	  else
+	    {
+	      if      ( gridtype == GRID_CURVILINEAR ) gridID2 = gridToCurvilinear(gridID1);
+	      else if ( gridtype == GRID_CELL )        gridID2 = gridToCell(gridID1);
+	      else cdoAbort("Unsupported grid name: %s", gridname);
+	    }
 
 	  /*	  gridCompress(gridID2); */
 	  vlistChangeGridIndex(vlistID2, index, gridID2);
@@ -182,7 +191,11 @@ void *Setgrid(void *argument)
   streamDefVlist(streamID2, vlistID2);
   //vlistPrint(vlistID2);
 
-  gridsize = vlistGridsizeMax(vlistID1);
+  if ( lregular )
+    gridsize = vlistGridsizeMax(vlistID2);
+  else
+    gridsize = vlistGridsizeMax(vlistID1);
+
   array = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
@@ -198,6 +211,17 @@ void *Setgrid(void *argument)
 	  streamDefRecord(streamID2,  varID,  levelID);
 	  
 	  streamReadRecord(streamID1, array, &nmiss);
+	  if ( lregular )
+	    {
+	      gridID1 = vlistInqVarGrid(vlistID1, varID);
+	      gridID2 = vlistInqVarGrid(vlistID2, varID);
+	      if ( gridInqType(gridID1) == GRID_GAUSSIAN_REDUCED )
+		{
+		  double missval = vlistInqVarMissval(vlistID1, varID);
+		  field2regular(gridID1, gridID2, missval, array, nmiss);
+		}
+	    }
+
 	  streamWriteRecord(streamID2, array, nmiss);
 	}
       tsID++;

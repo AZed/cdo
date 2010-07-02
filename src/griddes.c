@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,8 @@
 #define  deg2rad  (M_PI/180.)   /* conversion for deg to rad */
 #define  rad2deg  (180./M_PI)   /* conversion for rad to deg */
 
+#define  cmpstr(s1, s2, len)  (memcmp(s1, s2, len = strlen(s2)))
+
 /*
 int  extInqPrec(int fileID);
 
@@ -54,7 +56,7 @@ void extClose(int fileID);
 #define MAX_LINE_LEN 65536
 
 
-void gridInit(GRID *grid)
+void gridInit(grid_t *grid)
 {
   grid->xvals         = NULL;
   grid->yvals         = NULL;
@@ -65,6 +67,7 @@ void gridInit(GRID *grid)
   grid->size          = 0;
   grid->xsize         = 0;
   grid->ysize         = 0;
+  grid->lcomplex      = 1;
   grid->xpole         = 0;
   grid->ypole         = 0;
   grid->prec          = 0;
@@ -157,7 +160,7 @@ int getoptname(char *optname, const char *optstring, int nopt)
 }
 
 
-int gridDefine(GRID grid)
+int gridDefine(grid_t grid)
 {
   static char func[] = "gridDefine";
   int gridID = UNDEFID;
@@ -410,6 +413,8 @@ int gridDefine(GRID grid)
 	gridDefPrec(gridID, grid.prec);
 
 	gridDefTrunc(gridID, grid.ntr);
+
+	gridDefComplexPacking(gridID, grid.lcomplex);
 	
 	break;
       }
@@ -433,9 +438,9 @@ int gridDefine(GRID grid)
     default:
       {
 	if ( grid.type == -1 )
-	  Error(func, "gridtype undefined!");
+	  Error(func, "Undefined grid type!");
 	else
-	  Error(func, "%s grid unsupported!", gridNamePtr(grid.type));
+	  Error(func, "Unsupported grid type: %s", gridNamePtr(grid.type));
       }
     }
 
@@ -515,7 +520,7 @@ void fnmexp2(char *out, char *in1, const char *in2)
 }
 
 /*
-double *readfield(GRID *grid, int record, char *format, char *filename)
+double *readfield(grid_t *grid, int record, char *format, char *filename)
 {
   static char func[] = "readfield";
   int fileID, rxysize, ierr, irec;
@@ -551,7 +556,7 @@ double *readfield(GRID *grid, int record, char *format, char *filename)
 }
 */
 /*
-double *readfield4(GRID *grid, int record, char *format, char *filename)
+double *readfield4(grid_t *grid, int record, char *format, char *filename)
 {
   static char func[] = "readfield4";
   int fileID, rxysize, ierr, irec;
@@ -588,14 +593,28 @@ double *readfield4(GRID *grid, int record, char *format, char *filename)
 }
 */
 
+double readflt(const char *name, const char *pline)
+{
+  const char func[] = "readflt";
+  double val;
+  char *endptr;
+
+  val = strtod(pline, &endptr);
+  if ( pline == endptr )
+    Warning(func, "Couldn't read value for %s, set to zero!", name);
+
+  return (val);
+}
+
+
 int gridFromFile(FILE *gfp, const char *dname)
 {
   static char func[] = "gridFromFile";
   char line[MAX_LINE_LEN], *pline;
-  /* char path[4096]; */
   int gridID = -1;
   int size;
-  GRID grid;
+  size_t len;
+  grid_t grid;
 
   gridInit(&grid);
 
@@ -606,193 +625,203 @@ int gridFromFile(FILE *gfp, const char *dname)
       pline = line;
       while ( isspace((int) *pline) ) pline++;
       if ( pline[0] == '\0' ) continue;
-      if ( memcmp(pline, "gridtype", 8) == 0 )
+      if ( cmpstr(pline, "gridtype", len) == 0 )
 	{
-	  pline = skipSeparator(pline + 8);
-	  if ( memcmp(pline, "lonlat", 6)  == 0 ||
-	       memcmp(pline, "latlon", 6)  == 0 )
+	  pline = skipSeparator(pline + len);
+	  if ( cmpstr(pline, "lonlat", len)  == 0 ||
+	       cmpstr(pline, "latlon", len)  == 0 )
 	    {
 	      grid.type = GRID_LONLAT;
 	      grid.nvertex = 2;
 	    }
-	  else if ( memcmp(pline, "gaussian", 8)  == 0 )
+	  else if ( cmpstr(pline, "gaussian", len)  == 0 )
 	    {
 	      grid.type = GRID_GAUSSIAN;
 	      grid.nvertex = 2;
 	    }
-	  else if ( memcmp(pline, "curvilinear", 11)  == 0 )
+	  else if ( cmpstr(pline, "curvilinear", len)  == 0 )
 	    {
 	      grid.type = GRID_CURVILINEAR;
 	      grid.nvertex = 4;
 	    }
-	  else if ( memcmp(pline, "cell", 4)  == 0 )
+	  else if ( cmpstr(pline, "spectral", len)  == 0 )
+	    grid.type = GRID_SPECTRAL;
+	  else if ( cmpstr(pline, "cell", len)  == 0 )
 	    grid.type = GRID_CELL;
-	  else if ( memcmp(pline, "gme", 3)  == 0 )
+	  else if ( cmpstr(pline, "gme", len)  == 0 )
 	    grid.type = GRID_GME;
-	  else if ( memcmp(pline, "lcc2", 4)  == 0 )
+	  else if ( cmpstr(pline, "lcc2", len)  == 0 )
 	    grid.type = GRID_LCC2;
-	  else if ( memcmp(pline, "lcc", 3)  == 0 )
+	  else if ( cmpstr(pline, "lcc", len)  == 0 )
 	    grid.type = GRID_LCC;
-	  else if ( memcmp(pline, "lambert", 7)  == 0 )
+	  else if ( cmpstr(pline, "lambert", len)  == 0 )
 	    grid.type = GRID_LCC;
-	  else if ( memcmp(pline, "sinusoidal", 10)  == 0 )
+	  else if ( cmpstr(pline, "sinusoidal", len)  == 0 )
 	    grid.type = GRID_SINUSOIDAL;
-	  else if ( memcmp(pline, "laea", 4)  == 0 )
+	  else if ( cmpstr(pline, "laea", len)  == 0 )
 	    grid.type = GRID_LAEA;
 	  else
 	    Warning(func, "Invalid grid name : %s", pline);
 	}
-      else if ( memcmp(pline, "gridprec", 8)  == 0 )
+      else if ( cmpstr(pline, "gridprec", len)  == 0 )
 	{
-	  grid.prec = atol(skipSeparator(pline + 8));
+	  grid.prec = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "gridsize", 8)  == 0 )
+      else if ( cmpstr(pline, "gridsize", len)  == 0 )
 	{
-	  grid.size = atol(skipSeparator(pline + 8));
+	  grid.size = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "xname", 5)  == 0 )
+      else if ( cmpstr(pline, "truncation", len)  == 0 )
 	{
-	  strcpy(grid.xname, skipSeparator(pline + 5));
+	  grid.ntr = atoi(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "xlongname", 9)  == 0 )
+      else if ( cmpstr(pline, "complexpacking", len)  == 0 )
 	{
-	  strcpy(grid.xlongname, skipSeparator(pline + 9));
+	  grid.lcomplex = atoi(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "xunits", 6)  == 0 )
+      else if ( cmpstr(pline, "xname", len)  == 0 )
 	{
-	  strcpy(grid.xunits, skipSeparator(pline + 6));
+	  strcpy(grid.xname, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "yname", 5)  == 0 )
+      else if ( cmpstr(pline, "xlongname", len)  == 0 )
 	{
-	  strcpy(grid.yname, skipSeparator(pline + 5));
+	  strcpy(grid.xlongname, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "ylongname", 9)  == 0 )
+      else if ( cmpstr(pline, "xunits", len)  == 0 )
 	{
-	  strcpy(grid.ylongname, skipSeparator(pline + 9));
+	  strcpy(grid.xunits, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "yunits", 6)  == 0 )
+      else if ( cmpstr(pline, "yname", len)  == 0 )
 	{
-	  strcpy(grid.yunits, skipSeparator(pline + 6));
+	  strcpy(grid.yname, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "nvertex", 7)  == 0 )
+      else if ( cmpstr(pline, "ylongname", len)  == 0 )
 	{
-	  grid.nvertex = atol(skipSeparator(pline + 7));
+	  strcpy(grid.ylongname, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "ni", 2)  == 0 )
+      else if ( cmpstr(pline, "yunits", len)  == 0 )
 	{
-	  grid.ni = atol(skipSeparator(pline + 2));
+	  strcpy(grid.yunits, skipSeparator(pline + len));
+	}
+      else if ( cmpstr(pline, "nvertex", len)  == 0 )
+	{
+	  grid.nvertex = atol(skipSeparator(pline + len));
+	}
+      else if ( cmpstr(pline, "ni", len)  == 0 )
+	{
+	  grid.ni = atol(skipSeparator(pline + len));
           grid.nd = 10;
 	}
-      else if ( memcmp(pline, "xsize", 5)  == 0 )
+      else if ( cmpstr(pline, "xsize", len)  == 0 )
 	{
-	  grid.xsize = atol(skipSeparator(pline + 5));
+	  grid.xsize = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "nlon", 4)  == 0 )
+      else if ( cmpstr(pline, "nlon", len)  == 0 )
 	{
-	  grid.xsize = atol(skipSeparator(pline + 4));
+	  grid.xsize = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "ysize", 5)  == 0 )
+      else if ( cmpstr(pline, "ysize", len)  == 0 )
 	{
-	  grid.ysize = atol(skipSeparator(pline + 5));
+	  grid.ysize = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "nlat", 4)  == 0 )
+      else if ( cmpstr(pline, "nlat", len)  == 0 )
 	{
-	  grid.ysize = atol(skipSeparator(pline + 4));
+	  grid.ysize = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "xfirst", 6)  == 0 )
+      else if ( cmpstr(pline, "xfirst", len)  == 0 )
 	{
-	  grid.xfirst = atof(skipSeparator(pline + 6));
+	  grid.xfirst = readflt("xfirst", skipSeparator(pline + len));
 	  grid.def_xfirst = TRUE;
 	}
-      else if ( memcmp(pline, "lonfirst", 8)  == 0 )
+      else if ( cmpstr(pline, "lonfirst", len)  == 0 )
 	{
-	  grid.xfirst = atof(skipSeparator(pline + 8));
+	  grid.xfirst = readflt("lonfirst", skipSeparator(pline + len));
 	  grid.def_xfirst = TRUE;
 	}
-      else if ( memcmp(pline, "yfirst", 6)  == 0 )
+      else if ( cmpstr(pline, "yfirst", len)  == 0 )
 	{
-	  grid.yfirst = atof(skipSeparator(pline + 6));
+	  grid.yfirst = readflt("yfirst", skipSeparator(pline + len));
 	  grid.def_yfirst = TRUE;
 	}
-      else if ( memcmp(pline, "latfirst", 8)  == 0 )
+      else if ( cmpstr(pline, "latfirst", len)  == 0 )
 	{
-	  grid.yfirst = atof(skipSeparator(pline + 8));
+	  grid.yfirst = readflt("latfirst", skipSeparator(pline + len));
 	  grid.def_yfirst = TRUE;
 	}
-      else if ( memcmp(pline, "xlast", 5)  == 0 )
+      else if ( cmpstr(pline, "xlast", len)  == 0 )
 	{
-	  grid.xlast = atof(skipSeparator(pline + 5));
+	  grid.xlast = readflt("xlast", skipSeparator(pline + len));
 	  grid.def_xlast = TRUE;
 	}
-      else if ( memcmp(pline, "lonlast", 7)  == 0 )
+      else if ( cmpstr(pline, "lonlast", len)  == 0 )
 	{
-	  grid.xlast = atof(skipSeparator(pline + 7));
+	  grid.xlast = readflt("lonlast", skipSeparator(pline + len));
 	  grid.def_xlast = TRUE;
 	}
-      else if ( memcmp(pline, "ylast", 5)  == 0 )
+      else if ( cmpstr(pline, "ylast", len)  == 0 )
 	{
-	  grid.ylast = atof(skipSeparator(pline + 5));
+	  grid.ylast = readflt("ylast", skipSeparator(pline + len));
 	  grid.def_ylast = TRUE;
 	}
-      else if ( memcmp(pline, "latlast", 7)  == 0 )
+      else if ( cmpstr(pline, "latlast", len)  == 0 )
 	{
-	  grid.ylast = atof(skipSeparator(pline + 7));
+	  grid.ylast = readflt("latlast", skipSeparator(pline + len));
 	  grid.def_ylast = TRUE;
 	}
-      else if ( memcmp(pline, "xinc", 4)  == 0 )
+      else if ( cmpstr(pline, "xinc", len)  == 0 )
 	{
-	  grid.xinc = atof(skipSeparator(pline + 4));
+	  grid.xinc = readflt("xinc", skipSeparator(pline + len));
 	  grid.def_xinc = TRUE;
 	}
-      else if ( memcmp(pline, "loninc", 6)  == 0 )
+      else if ( cmpstr(pline, "loninc", len)  == 0 )
 	{
-	  grid.xinc = atof(skipSeparator(pline + 6));
+	  grid.xinc = readflt("loninc", skipSeparator(pline + len));
 	  grid.def_xinc = TRUE;
 	}
-      else if ( memcmp(pline, "yinc", 4)  == 0 )
+      else if ( cmpstr(pline, "yinc", len)  == 0 )
 	{
-	  grid.yinc = atof(skipSeparator(pline + 4));
+	  grid.yinc = readflt("yinc", skipSeparator(pline + len));
 	  grid.def_yinc = TRUE;
 	}
-      else if ( memcmp(pline, "latinc", 6)  == 0 )
+      else if ( cmpstr(pline, "latinc", len)  == 0 )
 	{
-	  grid.yinc = atof(skipSeparator(pline + 6));
+	  grid.yinc = readflt("latinc", skipSeparator(pline + len));
 	  grid.def_yinc = TRUE;
 	}
-      else if ( memcmp(pline, "originLon", 9)  == 0 )
+      else if ( cmpstr(pline, "originLon", len)  == 0 )
 	{
-	  grid.originLon = atof(skipSeparator(pline + 9));
+	  grid.originLon = readflt("originLon", skipSeparator(pline + len));
 	  grid.def_originLon = TRUE;
 	}
-      else if ( memcmp(pline, "originLat", 9)  == 0 )
+      else if ( cmpstr(pline, "originLat", len)  == 0 )
 	{
-	  grid.originLat = atof(skipSeparator(pline + 9));
+	  grid.originLat = readflt("originLat", skipSeparator(pline + len));
 	  grid.def_originLat = TRUE;
 	}
-      else if ( memcmp(pline, "lonParY", 7)  == 0 )
+      else if ( cmpstr(pline, "lonParY", len)  == 0 )
 	{
-	  grid.lonParY = atof(skipSeparator(pline + 7));
+	  grid.lonParY = readflt("lonParY", skipSeparator(pline + len));
 	  grid.def_lonParY = TRUE;
 	}
-      else if ( memcmp(pline, "lat1", 4)  == 0 )
+      else if ( cmpstr(pline, "lat1", len)  == 0 )
 	{
-	  grid.lat1 = atof(skipSeparator(pline + 4));
+	  grid.lat1 = readflt("lat1", skipSeparator(pline + len));
 	  grid.def_lat1 = TRUE;
 	}
-      else if ( memcmp(pline, "lat2", 4)  == 0 )
+      else if ( cmpstr(pline, "lat2", len)  == 0 )
 	{
-	  grid.lat2 = atof(skipSeparator(pline + 4));
+	  grid.lat2 = readflt("lat2", skipSeparator(pline + len));
 	  grid.def_lat2 = TRUE;
 	}
-      else if ( memcmp(pline, "projection", 10)  == 0 )
+      else if ( cmpstr(pline, "projection", len)  == 0 )
 	{
-	  pline = skipSeparator(pline + 10);
-	  if      ( memcmp(pline, "north", 5) == 0 )
+	  pline = skipSeparator(pline + len);
+	  if      ( cmpstr(pline, "north", len) == 0 )
 	    {
 	      grid.projflag = 0;
 	      grid.scanflag = 64;
 	    }
-	  else if ( memcmp(pline, "south", 5) == 0 )
+	  else if ( cmpstr(pline, "south", len) == 0 )
 	    {
 	      grid.projflag = 128;
 	      grid.scanflag = 64;
@@ -800,248 +829,51 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    Warning(func, "Invalid projection : %s", pline);
 	}
-      else if ( memcmp(pline, "a", 1)  == 0 )
+      else if ( cmpstr(pline, "a", len)  == 0 )
 	{
-	  grid.a = atof(skipSeparator(pline + 1));
+	  grid.a = readflt("a", skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "lon_0", 5)  == 0 )
+      else if ( cmpstr(pline, "lon_0", len)  == 0 )
 	{
-	  grid.lon_0 = atof(skipSeparator(pline + 5));
+	  grid.lon_0 = readflt("lon_0", skipSeparator(pline + len));
 	  grid.def_lon_0 = TRUE;
 	}
-      else if ( memcmp(pline, "lat_0", 5)  == 0 )
+      else if ( cmpstr(pline, "lat_0", len)  == 0 )
 	{
-	  grid.lat_0 = atof(skipSeparator(pline + 5));
+	  grid.lat_0 = readflt("lat_0", skipSeparator(pline + len));
 	  grid.def_lat_0 = TRUE;
 	}
-      else if ( memcmp(pline, "lat_1", 5)  == 0 )
+      else if ( cmpstr(pline, "lat_1", len)  == 0 )
 	{
-	  grid.lat_1 = atof(skipSeparator(pline + 5));
+	  grid.lat_1 = readflt("lat_1", skipSeparator(pline + len));
 	  grid.def_lat_1 = TRUE;
 	}
-      else if ( memcmp(pline, "lat_2", 5)  == 0 )
+      else if ( cmpstr(pline, "lat_2", len)  == 0 )
 	{
-	  grid.lat_2 = atof(skipSeparator(pline + 5));
+	  grid.lat_2 = readflt("lat_2", skipSeparator(pline + len));
 	  grid.def_lat_2 = TRUE;
 	}
-      else if ( memcmp(pline, "xnpole", 6)  == 0 )
+      else if ( cmpstr(pline, "xnpole", len)  == 0 )
 	{
-	  grid.xpole = atof(skipSeparator(pline + 6));
+	  grid.xpole = readflt("xnpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( memcmp(pline, "lonpole", 7)  == 0 )
+      else if ( cmpstr(pline, "lonpole", len)  == 0 )
 	{
-	  grid.xpole = atof(skipSeparator(pline + 7));
+	  grid.xpole = readflt("lonpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( memcmp(pline, "ynpole", 6)  == 0 )
+      else if ( cmpstr(pline, "ynpole", len)  == 0 )
 	{
-	  grid.ypole = atof(skipSeparator(pline + 6));
+	  grid.ypole = readflt("ynpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( memcmp(pline, "latpole", 7)  == 0 )
+      else if ( cmpstr(pline, "latpole", len)  == 0 )
 	{
-	  grid.ypole = atof(skipSeparator(pline + 7));
+	  grid.ypole = readflt("latpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      /*
-      else if ( memcmp(pline, "xvalsf", 6)  == 0 )
-	{
-	  char *format = NULL;
-	  char *file = NULL;
-	  int record = 1;
-	  pline = skipSeparator(pline + 6);
-	  if ( memcmp(pline, "format", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      format = pline;
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "record", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      record = atoi(pline);
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "file", 4)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 4);
-	      file = pline;
-	      while ( *pline != ' ' &&  *pline != 0 ) pline++;
-	      *pline++ = 0;
-	    }
-
-	  if ( file == NULL ) Error(func, "file name undefined!");
-
-	  if ( *file == '^' || *file == '$' )
-	    fnmexp2(path, file, dname);
-	  else
-	    strcpy(path, file);
-
-	  grid.xvals = readfield(&grid, record, format, path);
-	}
-      else if ( memcmp(pline, "yvalsf", 6)  == 0 )
-	{
-	  char *format = NULL;
-	  char *file = NULL;
-	  int record = 1;
-	  pline = skipSeparator(pline + 6);
-	  if ( memcmp(pline, "format", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      format = pline;
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "record", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      record = atoi(pline);
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "file", 4)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 4);
-	      file = pline;
-	      while ( *pline != ' ' &&  *pline != 0 ) pline++;
-	      *pline++ = 0;
-	    }
-
-	  if ( file == NULL ) Error(func, "file name undefined!");
-
-	  if ( *file == '^' || *file == '$' )
-	    fnmexp2(path, file, dname);
-	  else
-	    strcpy(path, file);
-
-	  grid.yvals = readfield(&grid, record, format, path);
-	}
-      else if ( memcmp(pline, "gridareaf", 9)  == 0 )
-	{
-	  char *format = NULL;
-	  char *file = NULL;
-	  int record = 1;
-	  pline = skipSeparator(pline + 9);
-	  if ( memcmp(pline, "format", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      format = pline;
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "record", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      record = atoi(pline);
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "file", 4)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 4);
-	      file = pline;
-	      while ( *pline != ' ' &&  *pline != 0 ) pline++;
-	      *pline++ = 0;
-	    }
-
-	  if ( file == NULL ) Error(func, "file name undefined!");
-
-	  if ( *file == '^' || *file == '$' )
-	    fnmexp2(path, file, dname);
-	  else
-	    strcpy(path, file);
-
-	  grid.area = readfield(&grid, record, format, path);
-	}
-      else if ( memcmp(pline, "xboundsf", 8)  == 0 )
-	{
-	  char *format = NULL;
-	  char *file = NULL;
-	  int record = 1;
-	  pline = skipSeparator(pline + 8);
-	  if ( memcmp(pline, "format", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      format = pline;
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "record", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      record = atoi(pline);
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "file", 4)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 4);
-	      file = pline;
-	      while ( *pline != ' ' &&  *pline != 0 ) pline++;
-	      *pline++ = 0;
-	    }
-
-	  if ( file == NULL ) Error(func, "file name undefined!");
-
-	  if ( *file == '^' || *file == '$' )
-	    fnmexp2(path, file, dname);
-	  else
-	    strcpy(path, file);
-
-	  grid.xbounds = readfield4(&grid, record, format, path);
-	}
-      else if ( memcmp(pline, "yboundsf", 8)  == 0 )
-	{
-	  char *format = NULL;
-	  char *file = NULL;
-	  int record = 1;
-	  pline = skipSeparator(pline + 8);
-	  if ( memcmp(pline, "format", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      format = pline;
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "record", 6)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 6);
-	      record = atoi(pline);
-	      while ( isalnum((int) *pline ) ) pline++;
-	      *pline++ = 0;
-	    }
-	  pline = skipSeparator(pline);
-	  if ( memcmp(pline, "file", 4)  == 0 )
-	    {
-	      pline = skipSeparator(pline + 4);
-	      file = pline;
-	      while ( *pline != ' ' &&  *pline != 0 ) pline++;
-	      *pline++ = 0;
-	    }
-
-	  if ( file == NULL ) Error(func, "file name undefined!");
-
-	  if ( *file == '^' || *file == '$' )
-	    fnmexp2(path, file, dname);
-	  else
-	    strcpy(path, file);
-
-	  grid.ybounds = readfield4(&grid, record, format, path);
-	}
-      */
-      else if ( memcmp(pline, "gridlatlon", 10)  == 0 )
+      else if ( cmpstr(pline, "gridlatlon", len)  == 0 )
 	{
 	  int i;
 	  double flat = 0, flon = 0;
@@ -1061,7 +893,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	      grid.xvals[i] = flon;
 	    }
 	}
-      else if ( memcmp(pline, "xvals", 5)  == 0 )
+      else if ( cmpstr(pline, "xvals", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1074,7 +906,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 
 	  if ( size > 0 )
 	    {
-	      pline = skipSeparator(pline + 5);
+	      pline = skipSeparator(pline + len);
 	      grid.xvals = (double *) malloc(size*sizeof(double));
 
 	      for ( i = 0; i < size; i++ )
@@ -1098,7 +930,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    Warning(func, "xsize or gridsize undefined!");
 	}
-      else if ( memcmp(pline, "yvals", 5)  == 0 )
+      else if ( cmpstr(pline, "yvals", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1111,7 +943,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 
 	  if ( size > 0 )
 	    {
-	      pline = skipSeparator(pline + 5);
+	      pline = skipSeparator(pline + len);
 	      grid.yvals = (double *) malloc(size*sizeof(double));
 
 	      for ( i = 0; i < size; i++ )
@@ -1135,7 +967,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    Warning(func, "ysize or gridsize undefined!");
 	}
-      else if ( memcmp(pline, "xbounds", 7)  == 0 )
+      else if ( cmpstr(pline, "xbounds", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1153,7 +985,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 
 	  if ( size > 0 && grid.nvertex > 0 )
 	    {	  
-	      pline = skipSeparator(pline + 7);
+	      pline = skipSeparator(pline + len);
 	      grid.xbounds = (double *) malloc(size*grid.nvertex*sizeof(double));
 
 	      for ( i = 0; i < (int) (size*grid.nvertex); i++ )
@@ -1180,7 +1012,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	      if ( grid.nvertex == 0 ) Warning(func, "nvertex undefined!");
 	    }
 	}
-      else if ( memcmp(pline, "ybounds", 7)  == 0 )
+      else if ( cmpstr(pline, "ybounds", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1198,7 +1030,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 
 	  if ( size > 0 && grid.nvertex > 0 )
 	    {	  
-	      pline = skipSeparator(pline + 7);
+	      pline = skipSeparator(pline + len);
 	      grid.ybounds = (double *) malloc(size*grid.nvertex*sizeof(double));
 
 	      for ( i = 0; i < (int) (size*grid.nvertex); i++ )
@@ -1310,7 +1142,7 @@ int gridFromPingo(FILE *gfp, const char *dname)
   int i;
   int nlon, nlat;
   int lgauss = FALSE;
-  GRID grid;
+  grid_t grid;
 
   gridInit(&grid);
 
@@ -1511,7 +1343,7 @@ int compNlon(int nlat)
 }
 
 
-void gen_grid_lonlat(GRID *grid, const char *pline, double inc, double lon1, double lon2, double lat1, double lat2)
+void gen_grid_lonlat(grid_t *grid, const char *pline, double inc, double lon1, double lon2, double lat1, double lat2)
 {
   static char func[] = "gen_grid_lonlat";
   int nlon, nlat, i;
@@ -1544,7 +1376,8 @@ int gridFromName(const char *gridname)
   static char func[] = "gridFromName";
   const char *pline;
   int gridID = UNDEFID;
-  GRID grid;
+  grid_t grid;
+  size_t len;
 
   gridInit(&grid);
 
@@ -1555,11 +1388,15 @@ int gridFromName(const char *gridname)
 	{
 	  grid.ntr = atoi(pline);
 	  while ( isdigit((int) *pline) ) pline++;
-	  if      ( memcmp(pline, "grid", 4) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( memcmp(pline, "spec", 4) == 0 ) grid.type = GRID_SPECTRAL;
+	  if      ( cmpstr(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstr(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstr(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
       
 	  grid.ysize = ntr2nlat_linear(grid.ntr);
-	  grid.xsize = compNlon(grid.ysize);
+	  if ( cmpstr(pline, "zon",  len) == 0 )
+	    grid.xsize = 1;
+	  else
+	    grid.xsize = compNlon(grid.ysize);
 
 	  if ( grid.type == GRID_GAUSSIAN )
 	    {
@@ -1575,11 +1412,15 @@ int gridFromName(const char *gridname)
 	{
 	  grid.ntr = atoi(pline);
 	  while ( isdigit((int) *pline) ) pline++;
-	  if      ( memcmp(pline, "grid", 4) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( memcmp(pline, "spec", 4) == 0 ) grid.type = GRID_SPECTRAL;
+	  if      ( cmpstr(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstr(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstr(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
       
 	  grid.ysize = ntr2nlat(grid.ntr);
-	  grid.xsize = compNlon(grid.ysize);
+	  if ( cmpstr(pline, "zon",  len) == 0 )
+	    grid.xsize = 1;
+	  else
+	    grid.xsize = compNlon(grid.ysize);
 
 	  if ( grid.type == GRID_GAUSSIAN )
 	    {
@@ -1704,8 +1545,7 @@ int gridFromName(const char *gridname)
       gen_grid_lonlat(&grid, pline, dll, lon1, lon2, lat1, lat2);
     }
 
-  if ( grid.type != -1 )
-    gridID = gridDefine(grid);
+  if ( grid.type != -1 ) gridID = gridDefine(grid);
 
   return (gridID);
 }
@@ -1717,6 +1557,7 @@ int cdoDefineGrid(const char *gridfile)
   FILE *gfp;
   char buffer[4];
   int gridID = -1;
+  size_t len;
 
   gfp = fopen(gridfile, "r");
   if ( gfp == NULL )
@@ -1732,7 +1573,7 @@ int cdoDefineGrid(const char *gridfile)
 
       fclose(gfp);
 
-      if ( memcmp(buffer, "CDF", 3) == 0 )
+      if ( cmpstr(buffer, "CDF", len) == 0 )
 	{
 	  if ( cdoDebug ) cdoPrint("Grid from netCDF file");
 	  gridID = gridFromNCfile(gridfile);
@@ -1740,7 +1581,7 @@ int cdoDefineGrid(const char *gridfile)
 
       if ( gridID == -1 )
 	{
-	  if ( memcmp(buffer+1, "HDF", 3) == 0 )
+	  if ( cmpstr(buffer+1, "HDF", len) == 0 )
 	    {
 	      if ( cdoDebug ) cdoPrint("Grid from HDF5 file");
 	      gridID = gridFromH5file(gridfile);

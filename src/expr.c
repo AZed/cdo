@@ -43,7 +43,7 @@ static FUNC fun_sym_tbl[] =
 
 static int NumFunc = sizeof(fun_sym_tbl) / sizeof(fun_sym_tbl[0]);
 
-
+static
 nodeType *expr_con_con(int oper, nodeType *p1, nodeType *p2)
 {
   static char func[] = "expr_con_con";
@@ -66,7 +66,7 @@ nodeType *expr_con_con(int oper, nodeType *p1, nodeType *p2)
   return (p);
 }
 
-
+static
 nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
 {
   static char func[] = "expr_con_var";
@@ -101,14 +101,26 @@ nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
 	for ( i = 0; i < ngp; i++ )
 	  p->data[i+k*ngp] = p1->u.con.value + p2->data[i+k*ngp];
       break;
-    case '-':  cdoAbort("const - var not implemented!"); break;
+    case '-':
+      for ( k = 0; k < nlev; k++ )
+	for ( i = 0; i < ngp; i++ )
+	  p->data[i+k*ngp] = p1->u.con.value - p2->data[i+k*ngp];
+      break;
     case '*':
       for ( k = 0; k < nlev; k++ )
 	for ( i = 0; i < ngp; i++ )
 	  p->data[i+k*ngp] = p1->u.con.value * p2->data[i+k*ngp];
       break;
-    case '/':  cdoAbort("const / var not implemented!"); break;
-    case '^':  cdoAbort("const ^ var not implemented!"); break;
+    case '/':
+      for ( k = 0; k < nlev; k++ )
+	for ( i = 0; i < ngp; i++ )
+	  p->data[i+k*ngp] = p1->u.con.value / p2->data[i+k*ngp];
+      break;
+    case '^':
+      for ( k = 0; k < nlev; k++ )
+	for ( i = 0; i < ngp; i++ )
+	  p->data[i+k*ngp] = pow(p1->u.con.value, p2->data[i+k*ngp]);
+      break;
     default:
       cdoAbort("%s: operator %c unsupported!", func, oper);
     }
@@ -118,7 +130,7 @@ nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
   return (p);
 }
 
-
+static
 nodeType *expr_var_con(int oper, nodeType *p1, nodeType *p2)
 {
   static char func[] = "expr_var_con";
@@ -182,7 +194,7 @@ nodeType *expr_var_con(int oper, nodeType *p1, nodeType *p2)
   return (p);
 }
 
-
+static
 nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
 {
   static char func[] = "expr_var_var";
@@ -275,7 +287,7 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
   return (p);
 }
 
-
+static
 void ex_copy(nodeType *p2, nodeType *p1)
 {
   int ngp, ngp1, ngp2, i;
@@ -295,7 +307,7 @@ void ex_copy(nodeType *p2, nodeType *p1)
       p2->data[i+k*ngp] = p1->data[i+k*ngp];
 }
 
-
+static
 nodeType *expr(int oper, nodeType *p1, nodeType *p2)
 {
   nodeType *p = NULL;
@@ -330,7 +342,7 @@ nodeType *expr(int oper, nodeType *p1, nodeType *p2)
   return (p);
 }
 
-
+static
 nodeType *ex_fun_con(char *fun, nodeType *p1)
 {
   static char func[] = "ex_fun_con";
@@ -358,7 +370,7 @@ nodeType *ex_fun_con(char *fun, nodeType *p1)
   return (p);
 }
 
-
+static
 nodeType *ex_fun_var(char *fun, nodeType *p1)
 {
   static char func[] = "ex_fun_var";
@@ -415,7 +427,7 @@ nodeType *ex_fun_var(char *fun, nodeType *p1)
   return (p);
 }
 
-
+static
 nodeType *ex_fun(char *fun, nodeType *p1)
 {
   nodeType *p = NULL;
@@ -436,7 +448,7 @@ nodeType *ex_fun(char *fun, nodeType *p1)
   return (p);
 }
 
-
+static
 nodeType *ex_uminus_var(nodeType *p1)
 {
   static char func[] = "ex_uminus_var";
@@ -471,7 +483,7 @@ nodeType *ex_uminus_var(nodeType *p1)
   return (p);
 }
 
-
+static
 nodeType *ex_uminus_con(nodeType *p1)
 {
   static char func[] = "ex_uminus_con";
@@ -486,7 +498,7 @@ nodeType *ex_uminus_con(nodeType *p1)
   return (p);
 }
 
-
+static
 nodeType *ex_uminus(nodeType *p1)
 {
   nodeType *p = NULL;

@@ -315,18 +315,18 @@ static int drmaa_submit(const char *expname, const char *jobfilename, const char
     if ( status == 0 )
       {
 	sprintf(commandline, "cat %s | grep -v tty  | grep -v shell | grep -v SunOS | grep -v logout\n", outname);
-	system(commandline);
+	status = system(commandline);
       }
 
     status = ftpget(0, ftp_url, ftppath, errname, errname);
     if ( status == 0 )
       {
 	sprintf(commandline, "cat %s | grep -v cannot | grep -v resize | grep -v rm\n", errname);
-	system(commandline);
+	status = system(commandline);
       }
 
     sprintf(commandline, "rm -f %s %s\n", outname, errname);
-    system(commandline);
+    status = system(commandline);
   }
 
   return 0;
@@ -724,7 +724,7 @@ void exp_run(int argc, char *argv[], char *cdoExpName)
   if ( cdoVerbose)
     {
       sprintf(commandline, "cat %s\n", jobfilename);
-      system(commandline);
+      status = system(commandline);
     }
 
   status = job_submit(cdoExpName, jobfilename, jobname, tmppath0, ftppath0);
@@ -735,10 +735,10 @@ void exp_run(int argc, char *argv[], char *cdoExpName)
     }
 
   sprintf(commandline, "rm -f %s\n", jobfilename);
-  system(commandline);
+  status = system(commandline);
 
   sprintf(commandline, "rm -f %s\n", cdojobfiles);
-  system(commandline);
+  status = system(commandline);
 
   sprintf(ftp_url, "ftp://%s.zmaw.de", cdoExpName);
 
@@ -759,7 +759,7 @@ void exp_run(int argc, char *argv[], char *cdoExpName)
     }
 
   sprintf(commandline, "rm -f %s\n", cdojobfiles);
-  system(commandline);
+  status = system(commandline);
 
   status = ftprmd(ftp_url, ftppath);
 }

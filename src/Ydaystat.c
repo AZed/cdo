@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2008 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -65,8 +65,8 @@ void *Ydaystat(void *argument)
   int *recVarID, *recLevelID;
   int vdates[NDAY], vtimes[NDAY];
   double missval;
-  FIELD **vars1[NDAY], **vars2[NDAY], **samp1[NDAY];
-  FIELD field;
+  field_t **vars1[NDAY], **vars2[NDAY], **samp1[NDAY];
+  field_t field;
 
   cdoInitialize(argument);
 
@@ -122,7 +122,7 @@ void *Ydaystat(void *argument)
 
       if ( cdoVerbose ) cdoPrint("process timestep: %d %d %d", tsID+1, vdate, vtime);
 
-      decode_date(vdate, &year, &month, &day);
+      cdiDecodeDate(vdate, &year, &month, &day);
 
       if ( month >= 1 && month <= 12 )
 	dayoy = (month-1)*31 + day;
@@ -137,10 +137,10 @@ void *Ydaystat(void *argument)
 
       if ( vars1[dayoy] == NULL )
 	{
-	  vars1[dayoy] = (FIELD **) malloc(nvars*sizeof(FIELD *));
-	  samp1[dayoy] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	  vars1[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  samp1[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
 	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[dayoy] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	    vars2[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
@@ -149,10 +149,10 @@ void *Ydaystat(void *argument)
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      missval  = vlistInqVarMissval(vlistID1, varID);
 
-	      vars1[dayoy][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
-	      samp1[dayoy][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	      vars1[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+	      samp1[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[dayoy][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+		vars2[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	      
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{

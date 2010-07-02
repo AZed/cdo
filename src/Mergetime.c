@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,12 +22,11 @@
 */
 
 
-#include <string.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 
 void *Mergetime(void *argument)
@@ -36,13 +35,14 @@ void *Mergetime(void *argument)
   int streamID1, streamID2 = CDI_UNDEFID;
   int tsID2 = 0, recID, varID, levelID;
   int vlistID1, vlistID2;
-  int streamCnt, nfiles, fileID;
+  int nfiles, fileID;
   int taxisID1, taxisID2 = CDI_UNDEFID;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
   int vdate, vtime;
   int next_fileID;
+  const char *ofilename;
   double *array = NULL;
   typedef struct
   {
@@ -60,8 +60,7 @@ void *Mergetime(void *argument)
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
-  streamCnt = cdoStreamCnt();
-  nfiles = streamCnt - 1;
+  nfiles = cdoStreamCnt() - 1;
 
   sf = (sfile_t *) malloc(nfiles*sizeof(sfile_t));
 
@@ -100,9 +99,16 @@ void *Mergetime(void *argument)
 	}
     }
 
-  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
+  ofilename = cdoStreamName(nfiles);
+
+  if ( !cdoSilentMode )
+    if ( fileExist(ofilename) )
+      if ( !userFileOverwrite(ofilename) )
+	cdoAbort("Outputfile %s already exist!", ofilename);
+
+  streamID2 = streamOpenWrite(ofilename, cdoFiletype());
   if ( streamID2 < 0 )
-    cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
+    cdiError(streamID2, "Open failed on %s", ofilename);
 
   if ( ! lcopy )
     {

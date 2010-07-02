@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,9 +25,6 @@
       Spectral   sp2sp           Spectral to spectral
       Spectral   spcut           Cut spectral wave number
 */
-
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -128,6 +125,7 @@ void *Spectral(void *argument)
 	    {
 	      gridIDsp = gridCreate(GRID_SPECTRAL, (ntr+1)*(ntr+2));
 	      gridDefTrunc(gridIDsp, ntr);
+	      gridDefComplexPacking(gridIDsp, 1);
 	    }
 	}
 
@@ -193,6 +191,7 @@ void *Spectral(void *argument)
 	  int nsp = (ntr+1)*(ntr+2);
 	  gridIDsp = gridCreate(GRID_SPECTRAL, nsp);
 	  gridDefTrunc(gridIDsp, ntr);
+	  gridDefComplexPacking(gridIDsp, 1);
 	}
       else
 	cdoAbort("No spectral data found!");

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,9 +33,6 @@
 #if  defined  (HAVE_CONFIG_H)
 #  include "config.h" /* VERSION */
 #endif
-
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -562,7 +559,6 @@ void *Outputgmt(void *argument)
   int zaxisID, taxisID;
   int ninc = 1;
   int vdate, vtime;
-  int year, month, day, hour, minute, second;
   char varname[256];
   double level;
   double missval;
@@ -580,6 +576,7 @@ void *Outputgmt(void *argument)
   CPT cpt;
   int grid_is_circular;
   char units[128];
+  char vdatestr[32], vtimestr[32];	  
 
   cdoInitialize(argument);
 
@@ -754,9 +751,8 @@ void *Outputgmt(void *argument)
 	{
 	  if ( lgrid_gen_bounds )
 	    {
-	      if ( ! (lzon || lmer) )
-		genXbounds(nlon, nlat, grid_center_lon, grid_corner_lon, 0);
-	      genYbounds(nlon, nlat, grid_center_lat, grid_corner_lat);
+	      if ( ! lzon ) genXbounds(nlon, nlat, grid_center_lon, grid_corner_lon, 0);
+	      if ( ! lmer ) genYbounds(nlon, nlat, grid_center_lat, grid_corner_lat);
 	    }
 	  else
 	    cdoAbort("Grid corner missing!");
@@ -817,9 +813,9 @@ void *Outputgmt(void *argument)
     {
       vdate = taxisInqVdate(taxisID);
       vtime = taxisInqVtime(taxisID);
-
-      decode_date(vdate, &year, &month, &day);
-      decode_time(vtime, &hour, &minute, &second);
+	      
+      date2str(vdate, vdatestr, sizeof(vdatestr));
+      time2str(vtime, vtimestr, sizeof(vtimestr));
 
       if ( tsID == 0 && operatorID != OUTPUTTRI )
 	{
@@ -837,8 +833,8 @@ void *Outputgmt(void *argument)
 	    fprintf(stdout, "# Increment = %d\n", ninc);
 	  fprintf(stdout, "#\n");
 	  fprintf(stdout, "# File  = %s\n", cdoStreamName(0));
-	  fprintf(stdout, "# Date  = "DATE_FORMAT"\n", year, month, day);
-	  fprintf(stdout, "# Time  = "TIME_FORMAT"\n", hour, minute, second);
+	  fprintf(stdout, "# Date  = %s\n", vdatestr);
+	  fprintf(stdout, "# Time  = %s\n", vtimestr);
 	  fprintf(stdout, "# Name  = %s\n", varname);
 	  fprintf(stdout, "# Code  = %d\n", code);
 	}
@@ -1022,20 +1018,51 @@ void *Outputgmt(void *argument)
 
 		  if ( lzon )
 		    {
-		      double xlev[4];
-		      xlev[0] = zaxis_lower_lev[levelID];
-		      xlev[1] = zaxis_upper_lev[levelID];
-		      xlev[2] = zaxis_upper_lev[levelID];
-		      xlev[3] = zaxis_lower_lev[levelID];
+		      double xlev[4], xlat[4];
+		      double levmin = zaxis_lower_lev[levelID];
+		      double levmax = zaxis_upper_lev[levelID];
+		      double latmin = grid_corner_lat[i*4+0];
+		      double latmax = grid_corner_lat[i*4+0];
+		      for ( ic = 1; ic < 4; ic++ )
+			{
+			  if ( grid_corner_lat[i*4+ic] < latmin ) latmin = grid_corner_lat[i*4+ic];
+			  if ( grid_corner_lat[i*4+ic] > latmax ) latmax = grid_corner_lat[i*4+ic];
+			}
+		      xlev[0] = levmin;
+		      xlev[1] = levmax;
+		      xlev[2] = levmax;
+		      xlev[3] = levmin;
+		      xlat[0] = latmin;
+		      xlat[1] = latmin;
+		      xlat[2] = latmax;
+		      xlat[3] = latmax;
 		      for ( ic = 0; ic < 4; ic++ )
-			fprintf(stdout, "   %g  %g\n",
-				grid_corner_lat[i*4+ic], xlev[ic]);
-		      fprintf(stdout, "   %g  %g\n",
-			      grid_corner_lat[i*4], xlev[0]);
+			fprintf(stdout, "   %g  %g\n", xlat[ic], xlev[ic]);
+		      fprintf(stdout, "   %g  %g\n", xlat[0], xlev[0]);
 		    }
 		  else if ( lmer )
 		    {
-		      cdoAbort("Implementation for meridional data missing!\n");
+		      double xlev[4], xlon[4];
+		      double levmin = zaxis_lower_lev[levelID];
+		      double levmax = zaxis_upper_lev[levelID];
+		      double lonmin = grid_corner_lon[i*4+0];
+		      double lonmax = grid_corner_lon[i*4+0];
+		      for ( ic = 1; ic < 4; ic++ )
+			{
+			  if ( grid_corner_lon[i*4+ic] < lonmin ) lonmin = grid_corner_lon[i*4+ic];
+			  if ( grid_corner_lon[i*4+ic] > lonmax ) lonmax = grid_corner_lon[i*4+ic];
+			}
+		      xlev[0] = levmin;
+		      xlev[1] = levmin;
+		      xlev[2] = levmax;
+		      xlev[3] = levmax;
+		      xlon[0] = lonmin;
+		      xlon[1] = lonmax;
+		      xlon[2] = lonmax;
+		      xlon[3] = lonmin;
+		      for ( ic = 0; ic < 4; ic++ )
+			fprintf(stdout, "   %g  %g\n", xlon[ic], xlev[ic]);
+		      fprintf(stdout, "   %g  %g\n", xlon[0], xlev[0]);
 		    }
 		  else if ( lhov )
 		    {

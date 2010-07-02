@@ -12,13 +12,17 @@ cdo_SOURCES = Arith.c		\
 	      CDItest.c		\
 	      Change.c		\
 	      Change_e5slm.c	\
+	      Cloudlayer.c 	\
+	      Command.c 	\
 	      Comp.c 		\
 	      Compc.c 		\
+              Complextorect.c   \
 	      Cond.c 		\
 	      Cond2.c 		\
 	      Condc.c 		\
+	      Consecstat.c      \
 	      Copy.c		\
-              Del29feb.c	\
+              Deltime.c      	\
               Detrend.c		\
               Diff.c		\
               Echam5ini.c     	\
@@ -26,12 +30,16 @@ cdo_SOURCES = Arith.c		\
               Enlargegrid.c     \
               Ensstat.c     	\
               Eofcoeff.c     	\
+              EOFs.c     	\
               Exprf.c     	\
               Filedes.c 	\
               Fillmiss.c 	\
               Filter.c 		\
               Fldrms.c 		\
               Fldstat.c 	\
+              Fldstat2.c 	\
+              Fourier.c 	\
+              Gather.c 	        \
               Gengrid.c 	\
               Gradsdes.c 	\
               Gridboxstat.c 	\
@@ -73,6 +81,7 @@ cdo_SOURCES = Arith.c		\
               Remap.c  	        \
               Remapeta.c    	\
               Replace.c  	\
+              Replacevalues.c  	\
               Rotuv.c     	\
               Runpctl.c  	\
               Runstat.c  	\
@@ -81,7 +90,7 @@ cdo_SOURCES = Arith.c		\
               Seasstat.c 	\
               Selbox.c  	\
               Select.c  	\
-              Select2.c  	\
+              Selvar.c  	\
               Seloperator.c  	\
               Selrec.c  	\
               Seltime.c 	\
@@ -91,14 +100,15 @@ cdo_SOURCES = Arith.c		\
 	      Setgrid.c		\
 	      Sethalo.c		\
               Setmiss.c 	\
-              Setrange.c 	\
               Setrcaname.c 	\
 	      Settime.c		\
 	      Setzaxis.c	\
+	      Scatter.c	        \
               Showinfo.c	\
               Sinfo.c   	\
               Smooth9.c   	\
               Sort.c      	\
+              Sorttimestamp.c   \
               Specinfo.c	\
               Spectral.c	\
               Spectrum.c	\
@@ -112,7 +122,6 @@ cdo_SOURCES = Arith.c		\
               Test.c    	\
               Tests.c    	\
               Timcount.c 	\
-              Timeof.c 		\
               Timpctl.c 	\
               Timsort.c 	\
               Timselpctl.c 	\
@@ -121,9 +130,11 @@ cdo_SOURCES = Arith.c		\
               Timstat2.c 	\
               Timstat3.c 	\
               Tinfo.c 		\
+              Tocomplex.c 	\
               Transpose.c  	\
               Trend.c  		\
               Trms.c  		\
+              Tstepcount.c      \
               Vardup.c  	\
               Vargen.c  	\
               Varrms.c  	\
@@ -155,11 +166,13 @@ cdo_SOURCES = Arith.c		\
               cdo.c		\
               cdo_pthread.c 	\
               cdo_vlist.c 	\
+              counter.h 	\
               field.c 		\
               fieldc.c 		\
               field2.c		\
               fieldmer.c  	\
               fieldzon.c  	\
+              fieldmem.c  	\
               gradsdeslib.c     \
               gradsdeslib.h     \
               grid.c		\
@@ -172,6 +185,7 @@ cdo_SOURCES = Arith.c		\
               griddes_nc.c	\
               griddes_h5.c	\
               hetaeta.c		\
+              hetaeta.h   	\
               history.c		\
               institution.c 	\
               interpol.c 	\
@@ -189,7 +203,7 @@ cdo_SOURCES = Arith.c		\
               userlog.c 	\
               util.c		\
               legendre.c 	\
-              fourier.c  	\
+              fouriertrans.c  	\
 	      specspace.c 	\
               readline.c  	\
               juldate.c  	\
@@ -240,9 +254,11 @@ cdo_SOURCES = Arith.c		\
 	      statistic.h       \
 	      cdi.h
 #
-#cdo_LDADD = $(LDFLAGS) -lm
+AM_CPPFLAGS = $(NETCDF_C_INCLUDE) $(HDF5_C_INCLUDE) $(GRIB_API_C_INCLUDE) $(ZLIB_C_INCLUDE) $(SZLIB_C_INCLUDE) $(PROJ_C_INCLUDE) $(CPPFLAGS)
 #
-#cdotest_LDADD = $(LDFLAGS) -lm
+cdo_LDADD   =  @NETCDF_C_LIB@     @HDF5_C_LIB@       @GRIB_API_C_LIB@      @ZLIB_C_LIB@      @SZLIB_C_LIB@      @PROJ_C_LIB@       @LDFLAGS@ @LIBS@
+#
+cdotest_LDADD = $(cdo_LDADD)
 #
 cdotest_SOURCES = cdi.h 	\
 		  cdilib.c 	\

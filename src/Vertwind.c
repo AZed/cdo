@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2008 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,10 +21,7 @@
       Vertwind    vertwind      Convert the vertical velocity to [m/s]
 */
 
-
 #include <ctype.h>
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -48,7 +45,7 @@ void *Vertwind(void *argument)
   int nvars, nvct = 0;
   int gridsize, i;
   int offset;
-  int nmiss;
+  int nmiss, nmiss_out;
   int ngp = 0, ngrids;
   int temp_code, sq_code, ps_code, omega_code, lsp_code;
   int tempID = -1, sqID = -1, psID = -1, omegaID = -1, lnpsID = -1;
@@ -58,6 +55,7 @@ void *Vertwind(void *argument)
   double *level = NULL;
   double *temp = NULL, *sq = NULL, *omega = NULL, *wms = NULL;
   double *fpress = NULL, *hpress = NULL, *ps_prog = NULL;
+  double missval_t, missval_sq, missval_wap, missval_out;
 
   cdoInitialize(argument);
 
@@ -132,10 +130,16 @@ void *Vertwind(void *argument)
       cdoAbort("Parameter not found!");
     }
 
+  /* Get missing values */
+  missval_t   = vlistInqVarMissval(vlistID1, tempID);
+  missval_sq  = vlistInqVarMissval(vlistID1, sqID);
+  missval_wap = vlistInqVarMissval(vlistID1, omegaID);
+  missval_out = missval_wap;
+
   gridID  = vlistInqVarGrid(vlistID1, omegaID);
   zaxisID = vlistInqVarZaxis(vlistID1, omegaID);
 
-  if ( psID == -1 && zaxisInqType(zaxisID) == ZAXIS_PRESSURE )
+  if ( psID == -1 && zaxisInqType(zaxisID) == ZAXIS_HYBRID )
     cdoAbort("Surface pressure (code 134) not found!");
 
   gridsize = gridInqSize(gridID);
@@ -187,6 +191,7 @@ void *Vertwind(void *argument)
   vlistDefVarName(vlistID2, 0, "W");
   vlistDefVarLongname(vlistID2, 0, "Vertical velocity");
   vlistDefVarUnits(vlistID2, 0, "m/s");
+  vlistDefVarMissval(vlistID2, 0, missval_out);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
@@ -229,31 +234,44 @@ void *Vertwind(void *argument)
 
 	  for ( i = 0; i < gridsize; ++i )
 	    {
-	      /* Virtuelle Temperatur bringt die Feuchteabhaengigkeit hinein */
-	      tv = temp[offset+i] * (1. + 0.608*sq[offset+i]);
+	      if ( DBL_IS_EQUAL(temp[offset+i],missval_t)    || 
+		   DBL_IS_EQUAL(omega[offset+i],missval_wap) ||
+		   DBL_IS_EQUAL(sq[offset+i],missval_sq) )
+		{
+		  wms[offset+i] = missval_out;
+		}
+	      else
+		{
+	          /* Virtuelle Temperatur bringt die Feuchteabhaengigkeit hinein */
+	          tv = temp[offset+i] * (1. + 0.608*sq[offset+i]);
 
-	      /*
-		Die Dichte erhaelt man nun mit der Gasgleichung rho=p/(R*tv)
-		Level in Pa!
-	      */
-	      rho = fpress[offset+i] / (R*tv);
+	          /*
+		    Die Dichte erhaelt man nun mit der Gasgleichung rho=p/(R*tv)
+		    Level in Pa!
+	          */
+	          rho = fpress[offset+i] / (R*tv);
 
-	      /*
-		Nun daraus die Vertikalgeschwindigkeit im m/s, indem man die
-		Vertikalgeschwindigkeit in Pa/s durch die Erdbeschleunigung
-		und die Dichte teilt
-	      */
-	      wms[offset+i] = omega[offset+i]/(G*rho);
-	    }
+	          /*
+		    Nun daraus die Vertikalgeschwindigkeit im m/s, indem man die
+		    Vertikalgeschwindigkeit in Pa/s durch die Erdbeschleunigung
+		    und die Dichte teilt
+	          */
+	          wms[offset+i] = omega[offset+i]/(G*rho);
+	        }
+            }
 	}
 
       for ( levelID = 0; levelID < nlevel; ++levelID )
 	{
+	  nmiss_out = 0;
+	  for ( i = 0; i < gridsize; i++ )
+            if ( DBL_IS_EQUAL(wms[offset+i],missval_out) )
+	      nmiss_out++;
+
 	  offset = levelID*gridsize;
 
 	  streamDefRecord(streamID2, 0, levelID);
-	  nmiss = 0;
-	  streamWriteRecord(streamID2, wms+offset, nmiss);
+	  streamWriteRecord(streamID2, wms+offset, nmiss_out);
 	}
 
       tsID++;

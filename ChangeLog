@@ -1,3 +1,203 @@
+2010-06-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.4.5 released
+
+2010-06-17  Etienne Tourigny <tourigny@sca.uqam.ca>
+
+	* Added operator setvals - Set list of old values to new values
+
+2010-05-18  Cedrick Ansorge <Cedrick.Ansorge.zmaw.de>
+
+	* Added operator eof - Calculate EOFs in spatial or time space
+        * Added operator eoftime - Calculate EOFs in time space
+        * Added operator eofspatial - Calculate EOFs in spatial space
+	* Added operator eofcoeff - Principal coefficients of EOFs
+
+2010-05-17  Ralf Mueller  <Ralf.Mueller@zmaw.de>
+
+	* Added operator consecsum - Consecutive Sum
+	* Added operator consects - Consecutive Timesteps
+
+2010-04-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.4.4
+	* Version 1.4.4 released
+
+2010-04-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * fldsum: change result from 0 to missval, if only missing values found [report: Angelika Heil]
+	* intyear: set the interpolation result always to missval, if missing values found [report: Angelika Heil]
+
+2010-04-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator delday
+
+2010-04-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added support for time units 3hours and 6hours [request: Jaison-Thomas Ambadan]
+	
+2010-04-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Remap: bypass variables with gridtype generic and only one gridpoint
+
+2010-04-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* selgrid: change gridID to grididx (bug fix)
+	* Added operator cloudlayer: compute low, mid and high clouds [request: Daniel Klocke]
+
+2010-04-01  Martin Claus  <mclaus@ifm-geomar.de>
+
+	* vertwind: added missing value support
+	
+2010-03-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* standard deviation (bug fix): change the result from missval to zero, if variance is zero [report: Jaison-Thomas Ambadan]
+
+2010-03-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator tstepcount: count number of timesteps (experimental) [request: Swantje Preuschmann]
+
+2010-03-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* import_binary: added support for variables with different number of levels [report: Dennis Shea]
+
+2010-03-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: bug fix for parameter lon2 [report: Alberto Maurizi]
+	* random: added optional parameter seed
+
+2010-03-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pstreamWriteRecord: check pstreamptr->varlist (bug fix) [report: Kevin Sieck]
+	* added operator fldcor to correlate two fields
+	
+2010-03-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added predefined grid t<RES>zon
+	
+2010-03-11  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* expr: added support for const/var (bug fix) [report: Youmin Chen]
+	
+2010-03-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added support for netCDF time bounds (bug fix) [report: Beate Geyer]
+
+2010-03-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Released module Gridboxstat
+	
+2010-03-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* inputsrv: added level information (bug fix) [report: Simon Blessing]
+
+2010-02-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.4.3
+	* changed GRIB1 default packing type of spherical harmonics to complex
+	* added CDO option -M to indicate that the I/O streams have missing values
+	* Version 1.4.3 released
+
+2010-02-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.4.2
+	* Added new module Gridboxstat (testversion)
+	* Version 1.4.2 released
+	
+2010-02-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* netCDF+packed data: check that all values are inside the valid range
+	
+2010-02-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remove netCDF offset/scalefactor if option -b 32 is set
+	
+2010-01-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Ensstat: don't overwrite existing files
+
+2010-01-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Zonstat: added support for generic grids
+	* Merstat: added support for generic grids
+
+2010-01-14  Frank Kaspar <Frank.Kaspar@dwd.de>
+
+	* import_cmsaf: added more corrections for wrong projection parameter
+
+2010-01-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* replace: added support for time constant fields [request: Wei Wei]
+	
+2010-01-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Genweights: use netCDF2 (64bit) for large remap weights files [request: Daniel Goll]
+	
+2010-01-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added module Fourier
+	* Detrend: OpenMP parallelization
+
+2009-12-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapcon, remaplaf: speed up by fast store of links
+
+2009-12-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.4.1 released
+
+2009-12-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Vertint: set default table number to 0
+	
+2009-12-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Ensstat: change vlistCompare to func_sftn
+	
+2009-11-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* merge, mergetime: don't overwrite existing files
+	
+2009-11-27  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: splittabnum - Split parameter table numbers
+
+2009-11-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* showtime: removed output of date, only print time string hh:mm:ss
+	* convert date and time to string for printing
+
+2009-11-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: sethalo - Set the left and right bounds of a field
+	* change number of input streams from unlimited to 1 in pipes
+	* rename module Select to Selvar
+	* rename selgridname/selzaxisname to selgrid/selzaxis
+	* added operator vct2
+	* Selvar: abort if no variable is selected
+	
+2009-11-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added default zaxis name "surface"
+	
+2009-11-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgridtype: added parameter regular to convert reduced gaussian grids
+	* gridFromFile: check floating point parameter
+
+2009-11-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remap: bug fix for weights from gennn (set remap_extrapolate = TRUE) [report: Helmut Frank]
+
+2009-11-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridFromNCfile: lock call to nc_open (race condition) [report: Nils Fischer]
+
+2009-10-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* outputbounds: added support for meridional data
+	* showtime: added comma to output string (bug fix) [report: Stefan Hagemann]
+
 2009-10-21  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.4.0.1

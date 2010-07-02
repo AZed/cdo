@@ -1,7 +1,7 @@
 /*
   This is a C library of the Fortran SCRIP version 1.4
 
-  ===>>> Please send bug reports to Uwe.Schulzweida@zmaw.de <<<===
+  ===>>> Please send bug reports to1 Uwe.Schulzweida@zmaw.de <<<===
 
   Spherical Coordinate Remapping and Interpolation Package (SCRIP)
   ================================================================
@@ -42,7 +42,7 @@
 
 */
 /*
-  2009-05-25 Uwe Schulzweida: Change restict data type from double to int
+  2009-05-25 Uwe Schulzweida: Changed restict data type from double to int
   2009-01-11 Uwe Schulzweida: OpenMP parallelization
  */
 
@@ -67,9 +67,8 @@
 #include "remap.h"
 
 
-/*#define STORE_LINK_CNSRV_FAST 1 *//* test optimized version of store_link_cnsrv */
+/* used for store_link_fast */
 
-#if defined (STORE_LINK_CNSRV_FAST)
 #define BLK_SIZE 4096
 #define BLK_NUM(x) (x/grid_store->blk_size)
 #define BLK_IDX(x) (x%grid_store->blk_size)
@@ -90,7 +89,7 @@ typedef struct
   int *nlayers;
   grid_layer_t **layers;
 } grid_store_t;
-#endif
+
 
 /* constants */
 
@@ -117,7 +116,7 @@ static double south_thresh =-2.00;  /* threshold for coord transf. */
 
 double intlin(double x, double y1, double x1, double y2, double x2);
 
-extern int timer_remap, timer_remap_con, timer_remap_con2, timer_remap_con3;
+extern int timer_remap, timer_remap_sort, timer_remap_con, timer_remap_con2, timer_remap_con3;
 
 
 void remapGridFree(remapgrid_t *rg)
@@ -164,7 +163,7 @@ void remapGridFree(remapgrid_t *rg)
 void remapVarsFree(remapvars_t *rv)
 {
   static char func[] = "remapVarsFree";
-  long i;
+  long i, num_blks;
 
   if ( rv->pinit == TRUE )
     {
@@ -182,7 +181,8 @@ void remapVarsFree(remapvars_t *rv)
 	  if ( rv->links.num_blks )
 	    {
 	      free(rv->links.num_links);
-	      for ( i = 0; i < rv->links.num_blks; i++ )
+	      num_blks = rv->links.num_blks;
+	      for ( i = 0; i < num_blks; ++i )
 		{
 		  free(rv->links.src_add[i]);
 		  free(rv->links.dst_add[i]);
@@ -201,8 +201,8 @@ void remapVarsFree(remapvars_t *rv)
 
 /*****************************************************************************/
 
-void genXbounds(long xsize, long ysize, const double *grid_center_lon, 
-		double *grid_corner_lon, double dlon)
+void genXbounds(long xsize, long ysize, const double *restrict grid_center_lon, 
+		double *restrict grid_corner_lon, double dlon)
 {
   long i, j, index;
   double minlon, maxlon;
@@ -212,11 +212,11 @@ void genXbounds(long xsize, long ysize, const double *grid_center_lon,
   if ( xsize == 1 || (grid_center_lon[xsize-1]-grid_center_lon[0]+dlon) < 359 )
     cdoAbort("Cannot calculate Xbounds for %d vals with dlon = %g", xsize, dlon);
   */
-  for ( i = 0; i < xsize; i++ )
+  for ( i = 0; i < xsize; ++i )
     {
       minlon = grid_center_lon[i] - HALF*dlon;
       maxlon = grid_center_lon[i] + HALF*dlon;
-      for ( j = 0; j < ysize; j++ )
+      for ( j = 0; j < ysize; ++j )
 	{
 	  index = j*4*xsize + 4*i;
 	  grid_corner_lon[index  ] = minlon;
@@ -263,7 +263,8 @@ double genYmax(double y1, double y2)
 
 /*****************************************************************************/
 
-void genYbounds(long xsize, long ysize, const double *grid_center_lat, double *grid_corner_lat)
+void genYbounds(long xsize, long ysize, const double *restrict grid_center_lat,
+		double *restrict grid_corner_lat)
 {
   long i, j, index;
   double minlat, maxlat;
@@ -274,7 +275,7 @@ void genYbounds(long xsize, long ysize, const double *grid_center_lat, double *g
 
   if ( ysize == 1 ) cdoAbort("Cannot calculate Ybounds for 1 value!");
 
-  for ( j = 0; j < ysize; j++ )
+  for ( j = 0; j < ysize; ++j )
     {
       index = j*xsize;
       if ( firstlat > lastlat )
@@ -302,7 +303,7 @@ void genYbounds(long xsize, long ysize, const double *grid_center_lat, double *g
 	    maxlat = 0.5*(grid_center_lat[index]+grid_center_lat[index+xsize]);
 	}
 
-      for ( i = 0; i < xsize; i++ )
+      for ( i = 0; i < xsize; ++i )
 	{
 	  index = j*4*xsize + 4*i;
 	  grid_corner_lat[index  ] = minlat;
@@ -425,8 +426,8 @@ void remapGridRealloc(int map_type, remapgrid_t *rg)
 
 /*****************************************************************************/
 static
-void boundbox_from_corners(long size, long nc, const double *corner_lon,
-			   const double *corner_lat, restr_t *bound_box)
+void boundbox_from_corners(long size, long nc, const double *restrict corner_lon,
+			   const double *restrict corner_lat, restr_t *restrict bound_box)
 {
   long i4, inc, i, j;
 
@@ -454,8 +455,8 @@ void boundbox_from_corners(long size, long nc, const double *corner_lon,
 }
 
 static
-void boundbox_from_center(int lonIsCyclic, long size, long nx, long ny,
-			  const double *center_lon, const double *center_lat, restr_t *bound_box)
+void boundbox_from_center(int lonIsCyclic, long size, long nx, long ny, const double *restrict center_lon,
+			  const double *restrict center_lat, restr_t *restrict bound_box)
 {
   long n4, i, j, k, n, ip1, jp1;
   long n_add, e_add, ne_add;
@@ -526,7 +527,7 @@ void boundbox_from_center(int lonIsCyclic, long size, long nx, long ny,
 }
 
 static
-void scale2(long nvals, double scalefactor, double * restrict vec1, double * restrict vec2)
+void scale2(long nvals, double scalefactor, double *restrict vec1, double *restrict vec2)
 {
   long n;
 
@@ -590,7 +591,7 @@ void check_lon_boundbox_range(long nlons, restr_t *bound_box)
 }
 
 static
-void check_lat_boundbox_range(long nlats, restr_t * restrict bound_box, double * restrict lats)
+void check_lat_boundbox_range(long nlats, restr_t *restrict bound_box, double *restrict lats)
 {
   long n, n4;
 
@@ -618,11 +619,14 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
   long nele;   /* Element loop counter          */
   long i,j;    /* Logical 2d addresses          */
   long nx, ny;
+  long grid1_size, grid2_size;
+  int lgrid1_destroy = FALSE, lgrid2_destroy = FALSE;
   int lgrid1_gen_bounds = FALSE, lgrid2_gen_bounds = FALSE;
   int gridID1_gme = -1;
   int gridID2_gme = -1;
   double dlat, dlon;                /* lat/lon intervals for search bins  */
 
+  rg->store_link_fast = FALSE;
 
   if ( lextrapolate > 0 )
     rg->lextrapolate = TRUE;
@@ -820,6 +824,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	}
       else
 	{
+	  lgrid1_destroy = TRUE;
 	  gridID1 = gridToCurvilinear(rg->gridID1);
 	  lgrid1_gen_bounds = TRUE;
 	}
@@ -837,13 +842,14 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	}
       else
 	{
+	  lgrid2_destroy = TRUE;
 	  gridID2 = gridToCurvilinear(rg->gridID2);
 	  lgrid2_gen_bounds = TRUE;
 	}
     }
 
-  rg->grid1_size = gridInqSize(gridID1);
-  rg->grid2_size = gridInqSize(gridID2);
+  grid1_size = rg->grid1_size = gridInqSize(gridID1);
+  grid2_size = rg->grid2_size = gridInqSize(gridID2);
 
   rg->grid1_is_cyclic = gridIsCircular(gridID1);
   rg->grid2_is_cyclic = gridIsCircular(gridID2);
@@ -900,9 +906,9 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
   /* Initialize logical mask */
 
 #if defined (_OPENMP)
-#pragma omp parallel for default(none) shared(rg)
+#pragma omp parallel for default(none) shared(grid1_size, rg)
 #endif
-  for ( i = 0; i < rg->grid1_size; i++ ) rg->grid1_mask[i] = TRUE;
+  for ( i = 0; i < grid1_size; i++ ) rg->grid1_mask[i] = TRUE;
 
   if ( gridInqType(rg->gridID1) == GRID_GME ) gridInqMask(gridID1_gme, rg->grid1_vgpm);
 
@@ -927,6 +933,8 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       cdoWarning("Unknown units supplied for grid1 center lat/lon: "
 		 "proceeding assuming radians");
     }
+
+  if ( lgrid1_destroy ) gridDestroy(gridID1);
 
   /* Data for grid 2 */
 
@@ -960,9 +968,9 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
   /* Initialize logical mask */
 
 #if defined (_OPENMP)
-#pragma omp parallel for default(none) shared(rg)
+#pragma omp parallel for default(none) shared(grid2_size, rg)
 #endif
-  for ( i = 0; i < rg->grid2_size; i++ ) rg->grid2_mask[i] = TRUE;
+  for ( i = 0; i < grid2_size; i++ ) rg->grid2_mask[i] = TRUE;
 
   if ( gridInqType(rg->gridID2) == GRID_GME ) gridInqMask(gridID2_gme, rg->grid2_vgpm);
 
@@ -987,6 +995,8 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       cdoWarning("Unknown units supplied for grid2 center lat/lon: "
 		 "proceeding assuming radians");
     }
+
+  if ( lgrid2_destroy ) gridDestroy(gridID2);
 
   /* Convert longitudes to 0,2pi interval */
 
@@ -1027,7 +1037,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	{
 	  if ( cdoVerbose ) cdoPrint("Grid1: bounds missing -> full grid search!");
 
-	  for ( i = 0; i < rg->grid1_size; i++ )
+	  for ( i = 0; i < grid1_size; ++i )
 	    {
 	      i4 = i*4;
 	      rg->grid1_bound_box[i4  ] = RESTR_SCALE(-PIH);
@@ -1064,7 +1074,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	{
 	  if ( cdoVerbose ) cdoPrint("Grid2: bounds missing -> full grid search!");
 
-	  for ( i = 0; i < rg->grid2_size; i++ )
+	  for ( i = 0; i < grid2_size; ++i )
 	    {
 	      i4 = i*4;
 	      rg->grid2_bound_box[i4  ] = RESTR_SCALE(-PIH);
@@ -1116,7 +1126,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 
       dlat = PI/rg->num_srch_bins;
 
-      for ( n = 0; n < rg->num_srch_bins; n++ )
+      for ( n = 0; n < nbins; n++ )
 	{
 	  n2 = n*2;
 	  rg->bin_lats[n2  ] = RESTR_SCALE((n  )*dlat - PIH);
@@ -1129,10 +1139,15 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	  rg->bin_addr2[n2+1] = 0;
 	}
 
-      for ( nele = 0; nele < rg->grid1_size; nele++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  private(n, nele4)		       \
+  shared(grid1_size, nbins, rg)
+#endif
+      for ( nele = 0; nele < grid1_size; nele++ )
 	{
 	  nele4 = nele*4;
-	  for ( n = 0; n < rg->num_srch_bins; n++ )
+	  for ( n = 0; n < nbins; n++ )
 	    if ( rg->grid1_bound_box[nele4  ] <= rg->bin_lats[n*2+1] &&
 		 rg->grid1_bound_box[nele4+1] >= rg->bin_lats[n*2  ] )
 	      {
@@ -1141,10 +1156,15 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	      }
 	}
 
-      for ( nele = 0; nele < rg->grid2_size; nele++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  private(n, nele4)		       \
+  shared(grid2_size, nbins, rg)
+#endif
+      for ( nele = 0; nele < grid2_size; nele++ )
 	{
 	  nele4 = nele*4;
-	  for ( n = 0; n < rg->num_srch_bins; n++ )
+	  for ( n = 0; n < nbins; n++ )
 	    if ( rg->grid2_bound_box[nele4  ] <= rg->bin_lats[n*2+1] &&
 		 rg->grid2_bound_box[nele4+1] >= rg->bin_lats[n*2  ] )
 	      {
@@ -1164,19 +1184,19 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       dlat = PI /rg->num_srch_bins;
       dlon = PI2/rg->num_srch_bins;
 
-      nbins = rg->num_srch_bins*rg->num_srch_bins;
+      nbins = rg->num_srch_bins;
 
       if ( cdoVerbose )
 	cdoPrint("Using %d lat/lon boxes to restrict search.", nbins);
 
-      rg->bin_addr1 = (int *) realloc(rg->bin_addr1, 2*nbins*sizeof(int));
-      rg->bin_addr2 = (int *) realloc(rg->bin_addr2, 2*nbins*sizeof(int));
-      rg->bin_lats  = (restr_t *) realloc(rg->bin_lats, 2*nbins*sizeof(restr_t));
-      rg->bin_lons  = (restr_t *) realloc(rg->bin_lons, 2*nbins*sizeof(restr_t));
+      rg->bin_addr1 = (int *) realloc(rg->bin_addr1, 2*nbins*nbins*sizeof(int));
+      rg->bin_addr2 = (int *) realloc(rg->bin_addr2, 2*nbins*nbins*sizeof(int));
+      rg->bin_lats  = (restr_t *) realloc(rg->bin_lats, 2*nbins*nbins*sizeof(restr_t));
+      rg->bin_lons  = (restr_t *) realloc(rg->bin_lons, 2*nbins*nbins*sizeof(restr_t));
 
       n = 0;
-      for ( j = 0; j < rg->num_srch_bins; j++ )
-	for ( i = 0; i < rg->num_srch_bins; i++ )
+      for ( j = 0; j < nbins; j++ )
+	for ( i = 0; i < nbins; i++ )
 	  {
 	    n2 = n*2;
 	    rg->bin_lats[n2  ]  = RESTR_SCALE((j  )*dlat - PIH);
@@ -1191,12 +1211,12 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	    n++;
 	  }
 
-      rg->num_srch_bins = rg->num_srch_bins*rg->num_srch_bins;
+      rg->num_srch_bins = nbins*nbins;
 
-      for ( nele = 0; nele < rg->grid1_size; nele++ )
+      for ( nele = 0; nele < grid1_size; nele++ )
 	{
 	  nele4 = nele*4;
-	  for ( n = 0; n < rg->num_srch_bins; n++ )
+	  for ( n = 0; n < nbins*nbins; n++ )
 	    if ( rg->grid1_bound_box[nele4  ] <= rg->bin_lats[2*n+1] &&
 		 rg->grid1_bound_box[nele4+1] >= rg->bin_lats[2*n  ] &&
 		 rg->grid1_bound_box[nele4+2] <= rg->bin_lons[2*n+1] &&
@@ -1207,10 +1227,10 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	      }
 	}
 
-      for ( nele = 0; nele < rg->grid2_size; nele++ )
+      for ( nele = 0; nele < grid2_size; nele++ )
 	{
 	  nele4 = nele*4;
-	  for ( n = 0; n < rg->num_srch_bins; n++ )
+	  for ( n = 0; n < nbins*nbins; n++ )
 	    if ( rg->grid2_bound_box[nele4  ] <= rg->bin_lats[2*n+1] &&
 		 rg->grid2_bound_box[nele4+1] >= rg->bin_lats[2*n  ] &&
 		 rg->grid2_bound_box[nele4+2] <= rg->bin_lons[2*n+1] &&
@@ -1335,9 +1355,9 @@ void resize_remap_vars(remapvars_t *rv, int increment)
      
   -----------------------------------------------------------------------
 */
-void remap(double *dst_array, double missval, long dst_size, long num_links, double **map_wts, 
-	   long num_wts, const int *dst_add, const int *src_add, const double *src_array, 
-	   const double *src_grad1, const double *src_grad2, const double *src_grad3,
+void remap(double *restrict dst_array, double missval, long dst_size, long num_links, double *restrict *restrict map_wts, 
+	   long num_wts, const int *restrict dst_add, const int *restrict src_add, const double *restrict src_array, 
+	   const double *restrict src_grad1, const double *restrict src_grad2, const double *restrict src_grad3,
 	   remaplink_t links)
 {
   /*
@@ -1388,7 +1408,7 @@ void remap(double *dst_array, double missval, long dst_size, long num_links, dou
     {
       if ( links.option == TRUE )
 	{
-	  int j;
+	  long j;
 	  for ( j = 0; j < links.num_blks; j++ )
 	    {
 #ifdef SX
@@ -1438,7 +1458,7 @@ void remap(double *dst_array, double missval, long dst_size, long num_links, dou
 }
 
 
-long get_max_add(long num_links, long size, const int *add)
+long get_max_add(long num_links, long size, const int *restrict add)
 {
   static char func[] = "get_max_add";
   long n, i;
@@ -1464,8 +1484,8 @@ long get_max_add(long num_links, long size, const int *add)
      
   -----------------------------------------------------------------------
 */
-void remap_laf(double *dst_array, double missval, long dst_size, long num_links, double **map_wts,
-	       const int *dst_add, const int *src_add, const double *src_array)
+void remap_laf(double *restrict dst_array, double missval, long dst_size, long num_links, double *restrict *restrict map_wts,
+	       const int *restrict dst_add, const int *restrict src_add, const double *restrict src_array)
 {
   /*
     Input arrays:
@@ -1552,7 +1572,7 @@ void remap_laf(double *dst_array, double missval, long dst_size, long num_links,
       */
       /* only for sorted dst_add! */
       {
-      int min_add = 1, max_add = 0;
+      long min_add = 1, max_add = 0;
 
       for ( n = 0; n < num_links; n++ )
 	if ( i == dst_add[n] ) break;
@@ -1623,8 +1643,8 @@ void remap_laf(double *dst_array, double missval, long dst_size, long num_links,
      
   -----------------------------------------------------------------------
 */
-void remap_sum(double *dst_array, double missval, long dst_size, long num_links, double **map_wts,
-	       const int *dst_add, const int *src_add, const double *src_array)
+void remap_sum(double *restrict dst_array, double missval, long dst_size, long num_links, double *restrict *restrict map_wts,
+	       const int *restrict dst_add, const int *restrict src_add, const double *restrict src_array)
 {
   /*
     Input arrays:
@@ -1687,10 +1707,10 @@ void remap_set_max_iter(long max_iter)
    source grid and returns the corners needed for a bilinear interpolation.
 */
 static
-void grid_search(remapgrid_t *rg, int * restrict src_add, double * restrict src_lats, 
-		 double * restrict src_lons,  double plat, double plon, const int *src_grid_dims,
-		 const double *src_center_lat, const double *src_center_lon,
-		 const restr_t *src_grid_bound_box, const int *src_bin_add)
+void grid_search(remapgrid_t *rg, int *restrict src_add, double *restrict src_lats, 
+		 double *restrict src_lons,  double plat, double plon, const int *restrict src_grid_dims,
+		 const double *restrict src_center_lat, const double *restrict src_center_lon,
+		 const restr_t *restrict src_grid_bound_box, const int *restrict src_bin_add)
 {
   /*
     Output variables:
@@ -1718,7 +1738,7 @@ void grid_search(remapgrid_t *rg, int * restrict src_add, double * restrict src_
   long nx, ny;                                /* dimensions of src grid           */
   long min_add, max_add;                      /* addresses for restricting search */
   long i, j, jp1, ip1, n_add, e_add, ne_add;  /* addresses                        */
-
+  long nbins;
   /* Vectors for cross-product check */
   double vec1_lat, vec1_lon;
   double vec2_lat, vec2_lon, cross_product;
@@ -1727,17 +1747,19 @@ void grid_search(remapgrid_t *rg, int * restrict src_add, double * restrict src_
   int scross[4], scross_last = 0;
   restr_t rlat, rlon;
 
+  nbins = rg->num_srch_bins;
+
   rlat = RESTR_SCALE(plat);
   rlon = RESTR_SCALE(plon);
 
-  /* Restrict search first using bins */
+  /*restrict search first using bins */
 
   for ( n = 0; n < 4; n++ ) src_add[n] = 0;
 
   min_add = rg->grid1_size-1;
   max_add = 0;
 
-  for ( n = 0; n < rg->num_srch_bins; ++n )
+  for ( n = 0; n < nbins; ++n )
     {
       n2 = n*2;
       if ( rlat >= rg->bin_lats[n2  ] && rlat <= rg->bin_lats[n2+1] &&
@@ -1939,7 +1961,7 @@ void grid_search(remapgrid_t *rg, int * restrict src_add, double * restrict src_
   and weight arrays and resizes those arrays if necessary.
 */
 static
-void store_link_bilin(remapvars_t *rv, int dst_add, const int *src_add, const double *weights)
+void store_link_bilin(remapvars_t *rv, int dst_add, const int *restrict src_add, const double *restrict weights)
 {
   /*
     Input variables:
@@ -2172,7 +2194,7 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
   and weight arrays and resizes those arrays if necessary.
 */
 static
-void store_link_bicub(remapvars_t *rv, const int dst_add, const int *src_add, double weights[4][4])
+void store_link_bicub(remapvars_t *rv, const int dst_add, const int *restrict src_add, double weights[4][4])
 {
   /*
     Input variables:
@@ -2430,10 +2452,11 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
    point and computes a distance to each of the neighbors.
 */
 static
-void grid_search_nbr(remapgrid_t *rg, int * restrict nbr_add, double * restrict nbr_dist, 
+void grid_search_nbr(remapgrid_t *rg, int *restrict nbr_add, double *restrict nbr_dist, 
 		     double plat, double plon, double coslat_dst, double coslon_dst, 
-		     double sinlat_dst, double sinlon_dst, const int *src_bin_add,
-		     const double *sinlat, const double *coslat, const double *sinlon, const double *coslon)
+		     double sinlat_dst, double sinlon_dst, const int *restrict src_bin_add,
+		     const double *restrict sinlat, const double *restrict coslat,
+		     const double *restrict sinlon, const double *restrict coslon)
 {
   /*
     Output variables:
@@ -2455,18 +2478,21 @@ void grid_search_nbr(remapgrid_t *rg, int * restrict nbr_add, double * restrict 
   /*  Local variables */
   long n, nmax, nadd, nchk;
   long min_add = 0, max_add = 0, nm1, np1, i, j, ip1, im1, jp1, jm1;
+  long nbins;
   double distance;     /* angular distance */
   restr_t rlat, rlon;
+
+  nbins = rg->num_srch_bins;
 
   rlat = RESTR_SCALE(plat);
   rlon = RESTR_SCALE(plon);
 
   /* Loop over source grid and find nearest neighbors                         */
-  /* Restrict the search using search bins expand the bins to catch neighbors */
+  /*restrict the search using search bins expand the bins to catch neighbors */
 
   if ( rg->restrict_type == RESTRICT_LATITUDE )
     {
-      for ( n = 0; n < rg->num_srch_bins; n++ )
+      for ( n = 0; n < nbins; n++ )
 	{
 	  if ( rlat >= rg->bin_lats[2*n  ] && rlat <= rg->bin_lats[2*n+1] )
 	    {
@@ -2735,10 +2761,11 @@ void remap_distwgt(remapgrid_t *rg, remapvars_t *rv)
    point and computes a distance to each of the neighbors.
 */
 static
-void grid_search_nbr1(remapgrid_t *rg, int * restrict nbr_add, double * restrict nbr_dist, 
+void grid_search_nbr1(remapgrid_t *rg, int *restrict nbr_add, double *restrict nbr_dist, 
 		      double plat, double plon, double coslat_dst, double coslon_dst, 
-		      double sinlat_dst, double sinlon_dst, const int *src_bin_add, 
-                      const double *sinlat, const double *coslat, const double *sinlon, const double *coslon)
+		      double sinlat_dst, double sinlon_dst, const int *restrict src_bin_add, 
+                      const double *restrict sinlat, const double *restrict coslat,
+		      const double *restrict sinlon, const double *restrict coslon)
 {
   /*
     Output variables:
@@ -2760,18 +2787,20 @@ void grid_search_nbr1(remapgrid_t *rg, int * restrict nbr_add, double * restrict
   /*  Local variables */
   long n, nmax, nadd;
   long min_add = 0, max_add = 0, nm1, np1, i, j, ip1, im1, jp1, jm1;
+  long nbins;
   double distance;     /* Angular distance */
   restr_t rlat, rlon;
 
+  nbins = rg->num_srch_bins;
   rlat = RESTR_SCALE(plat);
   rlon = RESTR_SCALE(plon);
 
   /* Loop over source grid and find nearest neighbors                         */
-  /* Restrict the search using search bins expand the bins to catch neighbors */
+  /*restrict the search using search bins expand the bins to catch neighbors */
 
   if ( rg->restrict_type == RESTRICT_LATITUDE )
     {
-      for ( n = 0; n < rg->num_srch_bins; n++ )
+      for ( n = 0; n < nbins; n++ )
 	{
 	  if ( rlat >= rg->bin_lats[2*n  ] && rlat <= rg->bin_lats[2*n+1] )
 	    {
@@ -3021,8 +3050,8 @@ static
 void pole_intersection(long *location, double *intrsct_lat, double *intrsct_lon, int *lcoinc,
 		       int *lthresh, double beglat, double beglon, double endlat, double endlon,
 		       double *begseg, int lrevers,
-		       long num_srch_cells, long srch_corners, const int *srch_add,
-		       const double *srch_corner_lat, const double *srch_corner_lon,
+		       long num_srch_cells, long srch_corners, const int *restrict srch_add,
+		       const double *restrict srch_corner_lat, const double *restrict srch_corner_lon,
 		       int *luse_last, double *intrsct_x, double *intrsct_y,
 		       int *avoid_pole_count, double *avoid_pole_offset)
 {
@@ -3493,8 +3522,8 @@ static
 void intersection(long *location, double *intrsct_lat, double *intrsct_lon, int *lcoinc,
 		  double beglat, double beglon, double endlat, double endlon, double *begseg,
 		  int lbegin, int lrevers,
-		  long num_srch_cells, long srch_corners, const int *srch_add,
-		  const double *srch_corner_lat, const double *srch_corner_lon,
+		  long num_srch_cells, long srch_corners, const int *restrict srch_add,
+		  const double *restrict srch_corner_lat, const double *restrict srch_corner_lon,
 		  int *last_loc, int *lthresh, double *intrsct_lat_off, double *intrsct_lon_off,
 		  int *luse_last, double *intrsct_x, double *intrsct_y,
 		  int *avoid_pole_count, double *avoid_pole_offset)
@@ -3979,20 +4008,26 @@ void line_integral(double *weights, int num_wts, double in_phi1, double in_phi2,
 }  /* line_integral */
 
 
-#if defined(STORE_LINK_CNSRV_FAST)
 static
 void grid_store_init(grid_store_t *grid_store, long gridsize)
 {
   const char func[] = "grid_store_init";
   long iblk;
+  long blksize[] = {128, 256, 512, 1024, 2048, 4096, 8192};
+  long nblks = sizeof(blksize)/sizeof(long);
+  long nblocks;
 
-  grid_store->blk_size = BLK_SIZE;
-  /* grid_store->blk_size = gridsize; */
+  for ( iblk = nblks-1; iblk >= 0; --iblk )
+    if ( gridsize/blksize[iblk] > 99 ) break;
+
+  if ( iblk < 0 ) iblk = 0;
+
+  /* grid_store->blk_size = BLK_SIZE; */
+  grid_store->blk_size = blksize[iblk];
   grid_store->max_size = gridsize;
 
   grid_store->nblocks = grid_store->max_size/grid_store->blk_size;
-  if ( grid_store->max_size%grid_store->blk_size > 0 )
-    grid_store->nblocks++;
+  if ( grid_store->max_size%grid_store->blk_size > 0 ) grid_store->nblocks++;
 
   if ( cdoVerbose )
     fprintf(stdout, "blksize = %d  lastblksize = %d  max_size = %d  nblocks = %d\n", 
@@ -4003,7 +4038,8 @@ void grid_store_init(grid_store_t *grid_store, long gridsize)
   grid_store->nlayers = (int *) malloc(grid_store->nblocks*sizeof(int));
   grid_store->layers  = (grid_layer_t **) malloc(grid_store->nblocks*sizeof(grid_layer_t *));
 
-  for ( iblk = 0; iblk < grid_store->nblocks; ++iblk )
+  nblocks = grid_store->nblocks;
+  for ( iblk = 0; iblk < nblocks; ++iblk )
     {
       grid_store->blksize[iblk] = grid_store->blk_size;
       grid_store->nlayers[iblk] = 0;
@@ -4014,9 +4050,8 @@ void grid_store_init(grid_store_t *grid_store, long gridsize)
 }
 
 /*
-    This routine stores the address and weight for this link in
-    the appropriate address and weight arrays and resizes those
-    arrays if necessary.
+    This routine stores the address and weight for this link in the appropriate 
+    address and weight arrays and resizes those arrays if necessary.
 */
 static
 void store_link_cnsrv_fast(remapvars_t *rv, long add1, long add2, double *weights, grid_store_t *grid_store)
@@ -4031,6 +4066,7 @@ void store_link_cnsrv_fast(remapvars_t *rv, long add1, long add2, double *weight
   /* Local variables */
   long nlink; /* link index */
   long ilayer, i, iblk, iadd2;
+  long nlayer, blksize;
   int lstore_link;
   grid_layer_t *grid_layer, **grid_layer2;
 
@@ -4046,7 +4082,8 @@ void store_link_cnsrv_fast(remapvars_t *rv, long add1, long add2, double *weight
 
   lstore_link = FALSE;
   grid_layer2 = &grid_store->layers[iblk];
-  for ( ilayer = 0; ilayer < grid_store->nlayers[iblk]; ++ilayer )
+  nlayer = grid_store->nlayers[iblk];
+  for ( ilayer = 0; ilayer < nlayer; ++ilayer )
     {
       grid_layer = *grid_layer2;
       nlink = grid_layer->grid2_link[iadd2];
@@ -4088,7 +4125,8 @@ void store_link_cnsrv_fast(remapvars_t *rv, long add1, long add2, double *weight
       grid_layer->next = NULL;
       grid_layer->grid2_link = (int *) malloc(grid_store->blksize[iblk]*sizeof(int));
 
-      for ( i = 0; i < grid_store->blksize[iblk]; ++i )
+      blksize = grid_store->blksize[iblk];
+      for ( i = 0; i < blksize; ++i )
 	grid_layer->grid2_link[i] = -1;
 
       grid_layer->grid2_link[iadd2] = nlink;
@@ -4109,15 +4147,13 @@ void store_link_cnsrv_fast(remapvars_t *rv, long add1, long add2, double *weight
 
 }  /* store_link_cnsrv_fast */
 
-#else
 
 /*
-    This routine stores the address and weight for this link in
-    the appropriate address and weight arrays and resizes those
-    arrays if necessary.
+    This routine stores the address and weight for this link in the appropriate 
+    address and weight arrays and resizes those arrays if necessary.
 */
 static
-void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double * restrict weights,
+void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double *restrict weights,
 		      int *link_add1[2], int *link_add2[2])
 {
   /*
@@ -4151,8 +4187,8 @@ void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double * restrict w
 #if STRIPED
 #define STRIPLENGTH 4096
   {
-    int ilink = max_link + 1;
-    int strip, estrip;
+    long ilink = max_link + 1;
+    long strip, estrip;
     nlink = 0;
     for ( strip=min_link; strip <= max_link; strip+=STRIPLENGTH )
       {
@@ -4170,7 +4206,7 @@ void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double * restrict w
   }
 #else
   {
-    int ilink = max_link + 1;
+    long ilink = max_link + 1;
     for ( nlink = min_link; nlink <= max_link; nlink++ )
       {
 	if ( add2 == rv->grid2_add[nlink] )
@@ -4220,7 +4256,6 @@ void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double * restrict w
   link_add2[1][add2] = (int)nlink;
 
 }  /* store_link_cnsrv */
-#endif
 
 
 /*
@@ -4243,7 +4278,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   long ioffset;
   long grid1_addm4, grid2_addm4;
   int max_subseg = 100000; /* max number of subsegments per segment to prevent infinite loop */
-                           /* 1000 is to small!!! */
+                           /* 1000 is too small!!! */
   long grid1_size;
   long grid2_size;
   long grid1_corners;
@@ -4255,6 +4290,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   long n, n2, k;        /* generic counters                        */
   long corner;          /* corner of cell that segment starts from */
   long next_corn;       /* corner of cell that segment ends on     */
+  long nbins, num_links;
   int num_subseg;       /* number of subsegments                   */
 
   int lcoinc;           /* flag for coincident segments            */
@@ -4285,10 +4321,8 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   double *srch_corner_lat;  /* lat of each corner of srch cells */
   double *srch_corner_lon;  /* lon of each corner of srch cells */
 
-#ifndef STORE_LINK_CNSRV_FAST
   int *link_add1[2];        /* min,max link add to restrict search */
   int *link_add2[2];        /* min,max link add to restrict search */
-#endif
 
   /* Intersection */
   int last_loc = -1;        /* save location when crossing threshold  */
@@ -4303,13 +4337,15 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   int avoid_pole_count = 0;         /* count attempts to avoid pole  */
   double avoid_pole_offset = TINY;  /* endpoint offset to avoid pole */
   restr_t  bound_box_lat1, bound_box_lat2, bound_box_lon1, bound_box_lon2;
+  grid_store_t *grid_store = NULL;
 
-#ifdef STORE_LINK_CNSRV_FAST
-  grid_store_t *grid_store;
+  nbins = rg->num_srch_bins;
 
-  grid_store = (grid_store_t *) malloc(sizeof(grid_store_t));
-  grid_store_init(grid_store, rg->grid2_size);
-#endif
+  if ( rg->store_link_fast )
+    {
+      grid_store = (grid_store_t *) malloc(sizeof(grid_store_t));
+      grid_store_init(grid_store, rg->grid2_size);
+    }
 
   if ( cdoVerbose )
     {
@@ -4325,30 +4361,31 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   grid1_corners = rg->grid1_corners;
   grid2_corners = rg->grid2_corners;
 
-#ifndef STORE_LINK_CNSRV_FAST
-  link_add1[0] = (int *) malloc(grid1_size*sizeof(int));
-  link_add1[1] = (int *) malloc(grid1_size*sizeof(int));
-  link_add2[0] = (int *) malloc(grid2_size*sizeof(int));
-  link_add2[1] = (int *) malloc(grid2_size*sizeof(int));
+  if ( ! rg->store_link_fast )
+    {
+      link_add1[0] = (int *) malloc(grid1_size*sizeof(int));
+      link_add1[1] = (int *) malloc(grid1_size*sizeof(int));
+      link_add2[0] = (int *) malloc(grid2_size*sizeof(int));
+      link_add2[1] = (int *) malloc(grid2_size*sizeof(int));
 
 #if defined (SX)
 #pragma vdir nodep
 #endif
-  for ( n = 0; n < grid1_size; n++ )
-    {
-      link_add1[0][n] = -1;
-      link_add1[1][n] = -1;
-    }
+      for ( n = 0; n < grid1_size; n++ )
+	{
+	  link_add1[0][n] = -1;
+	  link_add1[1][n] = -1;
+	}
 
 #if defined (SX)
 #pragma vdir nodep
 #endif
-  for ( n = 0; n < grid2_size; n++ )
-    {
-      link_add2[0][n] = -1;
-      link_add2[1][n] = -1;
+      for ( n = 0; n < grid2_size; n++ )
+	{
+	  link_add2[0][n] = -1;
+	  link_add2[1][n] = -1;
+	}
     }
-#endif
 
   /* Initialize centroid arrays */
 
@@ -4393,15 +4430,15 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
 #if defined (_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(grid1_centroid_lon, grid1_centroid_lat, \
-         link_add1, link_add2, \
+  shared(nbins, grid1_centroid_lon, grid1_centroid_lat,	\
+         grid_store, link_add1, link_add2,	 \
          rv, cdoVerbose, max_subseg, \
 	 grid1_corners,	srch_corners, rg, grid2_size, grid1_size, func, srch_add2, lwarn) \
   private(ompthID, lmask, srch_add, min_add, max_add, n, n2, k, num_srch_cells, max_srch_cells, \
 	  grid1_add, grid2_add, grid1_addm4, grid2_addm4, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
 	  weights, intrsct_lat, intrsct_lon, intrsct_lat_off, intrsct_lon_off, intrsct_x, intrsct_y, \
-	  last_loc, lcoinc, bound_box_lat1, bound_box_lat2, bound_box_lon1, bound_box_lon2) 	\
+	  last_loc, lcoinc, bound_box_lat1, bound_box_lat2, bound_box_lon1, bound_box_lon2) \
   firstprivate(lthresh, luse_last, avoid_pole_count, avoid_pole_offset)	\
   schedule(dynamic,1)
 #endif
@@ -4412,11 +4449,11 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
       srch_add = srch_add2[ompthID];
 #endif
 
-      /* Restrict searches first using search bins */
+      /*restrict searches first using search bins */
 
       min_add = grid2_size - 1;
       max_add = 0;
-      for ( n = 0; n < rg->num_srch_bins; n++ )
+      for ( n = 0; n < nbins; ++n )
 	{
 	  n2 = n*2;
 	  if ( grid1_add >= rg->bin_addr1[n2] && grid1_add <= rg->bin_addr1[n2+1] )
@@ -4594,11 +4631,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #pragma omp critical
 #endif
 			{
-#if defined (STORE_LINK_CNSRV_FAST)
-			  store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
-#else
-			  store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
-#endif
+			  if ( rg->store_link_fast )
+			    store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
+			  else
+			    store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
 
 			  rg->grid2_frac[grid2_add] += weights[rv->num_wts];
 			}
@@ -4665,8 +4701,8 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
 #if defined (_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(grid2_centroid_lon, grid2_centroid_lat, \
-         link_add1, link_add2, \
+  shared(nbins, grid2_centroid_lon, grid2_centroid_lat,	\
+         grid_store, link_add1, link_add2, \
          rv, cdoVerbose, max_subseg, \
 	 grid2_corners, srch_corners, rg, grid2_size, grid1_size, func, srch_add2, lwarn) \
   private(ompthID, lmask, srch_add, min_add, max_add, n, n2, k, num_srch_cells, max_srch_cells, grid1_addm4, grid2_addm4, \
@@ -4684,11 +4720,11 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
       srch_add = srch_add2[ompthID];
 #endif
 
-      /* Restrict searches first using search bins */
+      /*restrict searches first using search bins */
 
       min_add = grid1_size - 1;
       max_add = 0;
-      for ( n = 0; n < rg->num_srch_bins; n++ )
+      for ( n = 0; n < nbins; n++ )
 	{
 	  n2 = n*2;
 	  if ( grid2_add >= rg->bin_addr2[n2] && grid2_add <= rg->bin_addr2[n2+1] )
@@ -4868,11 +4904,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #pragma omp critical
 #endif
 			{
-#if defined (STORE_LINK_CNSRV_FAST)
-			  store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
-#else
-			  store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
-#endif
+			  if ( rg->store_link_fast )
+			    store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
+			  else
+			    store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
 
 			  rg->grid1_frac[grid1_add] += weights[0];
 			}
@@ -4968,11 +5003,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( grid1_add != -1 && grid2_add != -1 )
     {
-#if defined (STORE_LINK_CNSRV_FAST)
-      store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
-#else
-      store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
-#endif
+      if ( rg->store_link_fast )
+	store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
+      else
+	store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
 
       rg->grid1_frac[grid1_add] += weights[0];
       rg->grid2_frac[grid2_add] += weights[rv->num_wts  ];
@@ -5024,55 +5058,54 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( grid1_add != -1 && grid2_add != -1 )
     {
-#if defined (STORE_LINK_CNSRV_FAST)
-      store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
-#else
-      store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
-#endif
+      if ( rg->store_link_fast )
+	store_link_cnsrv_fast(rv, grid1_add, grid2_add, weights, grid_store);
+      else
+	store_link_cnsrv(rv, grid1_add, grid2_add, weights, link_add1, link_add2);
 
       rg->grid1_frac[grid1_add] += weights[0];
       rg->grid2_frac[grid2_add] += weights[rv->num_wts];
     }
 
-#if defined (STORE_LINK_CNSRV_FAST)
-  {
-    grid_layer_t *grid_layer, *grid_layer_f;
-    long ilayer;
-    long i, j;
-    long iblk;
+  if ( rg->store_link_fast )
+    {
+      grid_layer_t *grid_layer, *grid_layer_f;
+      long ilayer;
+      long i, j;
+      long iblk;
 
-    for ( iblk = 0; iblk < grid_store->nblocks; ++iblk )
-      {
-	j = 0;
-	grid_layer = grid_store->layers[iblk];
-	for ( ilayer = 0; ilayer < grid_store->nlayers[iblk]; ++ilayer )
-	  {
-	    if ( cdoVerbose )
-	      {
-		for ( i = 0; i < grid_store->blksize[iblk]; ++i )
-		  if ( grid_layer->grid2_link[i] != -1 ) j++;
-	      }
+      for ( iblk = 0; iblk < grid_store->nblocks; ++iblk )
+	{
+	  j = 0;
+	  grid_layer = grid_store->layers[iblk];
+	  for ( ilayer = 0; ilayer < grid_store->nlayers[iblk]; ++ilayer )
+	    {
+	      if ( cdoVerbose )
+		{
+		  for ( i = 0; i < grid_store->blksize[iblk]; ++i )
+		    if ( grid_layer->grid2_link[i] != -1 ) j++;
+		}
+	      
+	      grid_layer_f = grid_layer;
+	      free(grid_layer->grid2_link);
+	      grid_layer = grid_layer->next;
+	      free(grid_layer_f);
+	    }
 
-	    grid_layer_f = grid_layer;
-	    free(grid_layer->grid2_link);
-	    grid_layer = grid_layer->next;
-	    free(grid_layer_f);
-	  }
+	  if ( cdoVerbose )
+	    {
+	      fprintf(stderr, "block = %ld nlayers = %d  allocated = %d  used = %ld\n",
+		      iblk+1, grid_store->nlayers[iblk], 
+		      grid_store->nlayers[iblk]*grid_store->blksize[iblk], j);
+	    }
+	}
 
-	if ( cdoVerbose )
-	  {
-	    fprintf(stderr, "block = %d nlayers = %d  allocated = %d  used = %d\n",
-		    iblk+1, grid_store->nlayers[iblk], 
-		    grid_store->nlayers[iblk]*grid_store->blksize[iblk], j);
-	  }
-      }
+      free(grid_store->blksize);
+      free(grid_store->layers);
+      free(grid_store->nlayers);
+      free(grid_store);
+    }
 
-    free(grid_store->blksize);
-    free(grid_store->layers);
-    free(grid_store->nlayers);
-    free(grid_store);
-  }
-#endif
 
   /* Finish centroid computation */
 
@@ -5092,12 +5125,19 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /* Include centroids in weights and normalize using destination area if requested */
 
+  num_links = rv->num_links;
+
   if ( rv->norm_opt == NORM_OPT_DESTAREA )
     {
 #if defined (SX)
 #pragma vdir nodep
 #endif
-      for ( n = 0; n < rv->num_links; n++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)		\
+  private(n, grid1_add, grid2_add, weights, norm_factor)
+#endif
+      for ( n = 0; n < num_links; n++ )
 	{
 	  grid1_add = rv->grid1_add[n]; grid2_add = rv->grid2_add[n];
 	  weights[0] = rv->wts[0][n]; weights[1] = rv->wts[1][n]; weights[2] = rv->wts[2][n];
@@ -5117,7 +5157,12 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #if defined (SX)
 #pragma vdir nodep
 #endif
-      for ( n = 0; n < rv->num_links; n++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)		\
+  private(n, grid1_add, grid2_add, weights, norm_factor)
+#endif
+      for ( n = 0; n < num_links; n++ )
 	{
 	  grid1_add = rv->grid1_add[n]; grid2_add = rv->grid2_add[n];
 	  weights[0] = rv->wts[0][n]; weights[1] = rv->wts[1][n]; weights[2] = rv->wts[2][n];
@@ -5137,7 +5182,12 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #if defined (SX)
 #pragma vdir nodep
 #endif
-      for ( n = 0; n < rv->num_links; n++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)	\
+  private(n, grid1_add, grid2_add, weights, norm_factor)
+#endif
+      for ( n = 0; n < num_links; n++ )
 	{
 	  grid1_add = rv->grid1_add[n]; grid2_add = rv->grid2_add[n];
 	  weights[0] = rv->wts[0][n]; weights[1] = rv->wts[1][n]; weights[2] = rv->wts[2][n];
@@ -5204,7 +5254,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( lcheck )
     {
-      for ( n = 0; n < rv->num_links; n++ )
+      for ( n = 0; n < num_links; n++ )
 	{
 	  grid1_add = rv->grid1_add[n];
 	  grid2_add = rv->grid2_add[n];
@@ -5222,7 +5272,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #if defined (SX)
 #pragma vdir nodep
 #endif
-  for ( n = 0; n < rv->num_links; n++ )
+  for ( n = 0; n < num_links; n++ )
     {
       grid2_add = rv->grid2_add[n];
       grid2_centroid_lat[grid2_add] += rv->wts[0][n];
@@ -5250,12 +5300,13 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   free(grid2_centroid_lat);
   free(grid2_centroid_lon);
 
-#ifndef STORE_LINK_CNSRV_FAST
-  free(link_add1[0]);
-  free(link_add1[1]);
-  free(link_add2[0]);
-  free(link_add2[1]);
-#endif
+  if ( ! rg->store_link_fast )
+    {
+      free(link_add1[0]);
+      free(link_add1[1]);
+      free(link_add2[0]);
+      free(link_add2[1]);
+    }
 
   if ( cdoTimer ) timer_stop(timer_remap_con);
 
@@ -5263,8 +5314,8 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
 /*****************************************************************************/
 
-void remap_stat(int remap_order, remapgrid_t rg, remapvars_t rv, const double *array1, 
-		const double *array2, double missval)
+void remap_stat(int remap_order, remapgrid_t rg, remapvars_t rv, const double *restrict array1, 
+		const double *restrict array2, double missval)
 {
   static char func[] = "remap_stat";
   long n, ns, i;
@@ -5387,8 +5438,8 @@ void remap_stat(int remap_order, remapgrid_t rg, remapvars_t rv, const double *a
 
 /*****************************************************************************/
 
-void remap_gradients(remapgrid_t rg, const double *array, double * restrict grad1_lat,
-		     double * restrict grad1_lon, double * restrict grad1_latlon)
+void remap_gradients(remapgrid_t rg, const double *restrict array, double *restrict grad1_lat,
+		     double *restrict grad1_lon, double *restrict grad1_latlon)
 {
   static char func[] = "remap_gradients";
   long n, nx, ny, grid1_size;
@@ -5586,7 +5637,229 @@ void remap_gradients(remapgrid_t rg, const double *array, double * restrict grad
 
 /*****************************************************************************/
 
-void sort_add(long num_links, long num_wts, int * restrict add1, int * restrict add2, double ** restrict weights)
+void sort_add_test(long num_links, long num_wts, int *restrict add1, int *restrict add2, double *restrict *restrict weights)
+{
+  static char *func = "sort_add_test";
+  /*
+    This routine sorts address and weight arrays based on the
+    destination address with the source address as a secondary
+    sorting criterion. The method is a standard heap sort.
+  */
+  /*
+    Input and Output arrays:
+    
+       long num_links; ! num of links for this mapping
+       long num_wts;   ! num of weights for this mapping
+       add1,           ! destination address array [num_links]
+       add2            ! source      address array
+       weights         ! remapping weights [num_links][num_wts]
+  */
+
+  /* Local variables */
+
+  int add1_tmp, add2_tmp;  /* temp for addresses during swap     */
+  int idx_tmp, *idx;
+  long lvl, final_lvl;     /* level indexes for heap sort levels */
+  long chk_lvl1, chk_lvl2, max_lvl;
+  long i, n;
+  double *wgt_tmp[4];
+
+  if ( cdoTimer ) timer_start(timer_remap_sort);
+
+  if ( num_links <= 1 ) return;
+
+  /*
+  for ( n = 0; n < num_links; n++ )
+    printf("in: %5d %5d %5d # dst_add src_add n\n", add1[n]+1, add2[n]+1, n+1);
+  */
+
+  idx = (int *) malloc(num_links*sizeof(int));
+  for ( i = 0; i < num_links; ++i ) idx[i] = i;
+
+  for ( n = 0; n < num_wts; n++ )
+    {
+      wgt_tmp[n] = (double*) malloc( num_links*sizeof(double));
+      memcpy(wgt_tmp[n], weights[n], num_links*sizeof(double));
+    }
+
+  /*
+    start at the lowest level (N/2) of the tree and shift lower 
+    values to the bottom of the tree, promoting the larger numbers
+  */
+  for ( lvl = num_links/2-1; lvl >= 0; lvl-- )
+    {
+      final_lvl = lvl;
+      add1_tmp = add1[lvl];
+      add2_tmp = add2[lvl];
+      idx_tmp  = idx[lvl];
+
+      /* Loop until proper level is found for this link, or reach bottom */
+
+      for ( i = 0; i < num_links; i++ ) /* while ( TRUE ) */
+	{
+	  /* Find the largest of the two daughters */
+
+          chk_lvl1 = 2*final_lvl+1;
+          chk_lvl2 = 2*final_lvl+2;
+          if ( chk_lvl1 == num_links-1 ) chk_lvl2 = chk_lvl1;
+
+          if ((add1[chk_lvl1] >  add1[chk_lvl2]) ||
+	     ((add1[chk_lvl1] == add1[chk_lvl2]) &&
+              (add2[chk_lvl1] >  add2[chk_lvl2])))
+            max_lvl = chk_lvl1;
+          else 
+            max_lvl = chk_lvl2;
+
+          /*
+	    If the parent is greater than both daughters,
+	    the correct level has been found
+	  */
+          if ((add1_tmp >  add1[max_lvl]) ||
+             ((add1_tmp == add1[max_lvl]) &&
+              (add2_tmp >  add2[max_lvl])))
+	    {
+	      add1[final_lvl] = add1_tmp;
+	      add2[final_lvl] = add2_tmp;
+	      idx[final_lvl]  = idx_tmp;
+
+	      break;
+	    }
+	  else
+	    {
+	      /*
+		Otherwise, promote the largest daughter and push
+		down one level in the tree.  If haven"t reached
+		the end of the tree, repeat the process.  Otherwise
+		store last values and exit the loop
+	      */
+	      add1[final_lvl] = add1[max_lvl];
+	      add2[final_lvl] = add2[max_lvl];
+	      idx[final_lvl]  = idx[max_lvl];
+
+	      final_lvl = max_lvl;
+	      if ( 2*final_lvl+1 >= num_links )
+		{
+		  add1[final_lvl] = add1_tmp;
+		  add2[final_lvl] = add2_tmp;
+		  idx[final_lvl]  = idx_tmp;
+
+		  break;
+		}
+	    }
+	}
+
+      if ( i == num_links )
+	cdoAbort("Internal problem; link 1 not found!");
+    }
+
+  /*
+    Now that the heap has been sorted, strip off the top (largest)
+    value and promote the values below
+  */
+
+  for ( lvl = num_links-1; lvl >= 2; lvl-- )
+    {
+      /* Move the top value and insert it into the correct place */
+
+      add1_tmp  = add1[lvl];
+      add1[lvl] = add1[0];
+
+      add2_tmp  = add2[lvl];
+      add2[lvl] = add2[0];
+
+      idx_tmp  = idx[lvl];
+      idx[lvl] = idx[0];
+
+      /* As above this loop sifts the tmp values down until proper level is reached */
+
+      final_lvl = 0;
+
+      for ( i = 0; i < num_links; i++ ) /* while ( TRUE ) */
+	{
+	  /* Find the largest of the two daughters */
+
+          chk_lvl1 = 2*final_lvl+1;
+          chk_lvl2 = 2*final_lvl+2;
+          if ( chk_lvl2 >= lvl ) chk_lvl2 = chk_lvl1;
+
+          if ((add1[chk_lvl1] >  add1[chk_lvl2]) ||
+             ((add1[chk_lvl1] == add1[chk_lvl2]) &&
+              (add2[chk_lvl1] >  add2[chk_lvl2])))
+            max_lvl = chk_lvl1;
+          else 
+            max_lvl = chk_lvl2;
+
+          /*
+	    If the parent is greater than both daughters,
+	    the correct level has been found
+	  */
+          if ((add1_tmp >  add1[max_lvl]) ||
+             ((add1_tmp == add1[max_lvl]) &&
+              (add2_tmp >  add2[max_lvl])))
+	    {
+	      add1[final_lvl] = add1_tmp;
+	      add2[final_lvl] = add2_tmp;
+	      idx[final_lvl]  = idx_tmp;
+
+	      break;
+	    }
+	  else
+	    {
+	      /*
+		Otherwise, promote the largest daughter and push
+		down one level in the tree.  If haven't reached
+		the end of the tree, repeat the process.  Otherwise
+		store last values and exit the loop
+	      */
+	      add1[final_lvl] = add1[max_lvl];
+	      add2[final_lvl] = add2[max_lvl];
+	      idx[final_lvl]  = idx[max_lvl];
+
+	      final_lvl = max_lvl;
+	      if ( 2*final_lvl+1 >= lvl )
+		{
+		  add1[final_lvl] = add1_tmp;
+		  add2[final_lvl] = add2_tmp;
+		  idx[final_lvl]  = idx_tmp;
+
+		  break;
+		}
+	    }
+	}
+
+      if ( i == num_links )
+	cdoAbort("Internal problem; link 2 not found!");
+    }
+
+  /* Swap the last two entries */
+
+  add1_tmp = add1[1];
+  add1[1]  = add1[0];
+  add1[0]  = add1_tmp;
+
+  add2_tmp = add2[1];
+  add2[1]  = add2[0];
+  add2[0]  = add2_tmp;
+
+  idx_tmp = idx[1];
+  idx[1]  = idx[0];
+  idx[0]  = idx_tmp;
+
+  for ( n = 0; n < num_wts; n++ )
+    for ( i = 0; i < num_links; ++i )
+      weights[n][i] = wgt_tmp[n][idx[i]];
+
+  for ( n = 0; n < num_wts; n++ ) free(wgt_tmp[n]);
+  free(idx);
+  /*
+  for ( n = 0; n < num_links; n++ )
+    printf("out: %5d %5d %5d # dst_add src_add n\n", add1[n]+1, add2[n]+1, n+1);
+  */
+  if ( cdoTimer ) timer_stop(timer_remap_sort);
+} /* sort_add_test */
+
+
+void sort_add(long num_links, long num_wts, int *restrict add1, int *restrict add2, double *restrict *restrict weights)
 {
   /*
     This routine sorts address and weight arrays based on the
@@ -5610,6 +5883,8 @@ void sort_add(long num_links, long num_wts, int * restrict add1, int * restrict 
   long chk_lvl1, chk_lvl2, max_lvl;
   long i, n;
   double wgttmp[4];        /* temp for holding wts during swap   */
+
+  if ( cdoTimer ) timer_start(timer_remap_sort);
 
   if ( num_links <= 1 ) return;
 
@@ -5797,6 +6072,7 @@ void sort_add(long num_links, long num_wts, int * restrict add1, int * restrict 
   for ( n = 0; n < num_links; n++ )
     printf("out: %5d %5d %5d # dst_add src_add n\n", add1[n]+1, add2[n]+1, n+1);
   */
+  if ( cdoTimer ) timer_stop(timer_remap_sort);
 } /* sort_add */
 
 
@@ -5810,13 +6086,16 @@ void reorder_links(remapvars_t *rv)
   long nlinks;
   long max_links = 0;
   long n;
+  long num_links;
+
+  num_links = rv->num_links;
 
   printf("reorder_links\n");
-  printf("rv->num_links %ld\n", rv->num_links);
+  printf("  num_links %ld\n", num_links);
   rv->links.option = TRUE;
 
   lastval = -1;
-  for ( n = 0; n < rv->num_links; n++ )
+  for ( n = 0; n < num_links; n++ )
     {
       if ( rv->grid2_add[n] == lastval ) nval++;
       else
@@ -5831,7 +6110,7 @@ void reorder_links(remapvars_t *rv)
   if ( num_blks )
     {
       rv->links.max_links = max_links;
-      rv->links.num_blks = num_blks;
+      rv->links.num_blks  = num_blks;
 
       printf("num_links %ld  max_links %ld  num_blks %ld\n", rv->num_links, max_links, num_blks);
 
@@ -5854,7 +6133,7 @@ void reorder_links(remapvars_t *rv)
       lastval = -1;
       nlinks = 0;
 
-      for ( n = 0; n < rv->num_links; n++ )
+      for ( n = 0; n < num_links; n++ )
 	{
 	  if ( rv->grid2_add[n] == lastval ) nval++;
 	  else
@@ -5886,7 +6165,8 @@ void reorder_links(remapvars_t *rv)
 
 
 #if  defined  (HAVE_LIBNETCDF)
-static void nce(int istat)
+static
+void nce(int istat)
 {
   /*
     This routine provides a simple interface to netCDF error message routine.
@@ -5955,10 +6235,12 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type,
   char grid2_units[] = "radians";
   time_t date_and_time_in_sec;
   struct tm *date_and_time;
-  int i, n;
+  long i, n;
+  size_t filesize;
   size_t start[2];
   size_t count[2];
   double weights[4];
+  int writemode = NC_CLOBBER;
 
   switch ( rv.norm_opt )
     {
@@ -6000,8 +6282,24 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type,
       break;
     }
 
+  filesize = rg.grid1_size*(4*8 + 4 + rg.grid1_corners*2*8) +
+             rg.grid2_size*(4*8 + 4 + rg.grid2_corners*2*8) +
+             rv.num_links*(4 + 4 + rv.num_wts*8);
+
+  if ( cdoVerbose )
+    cdoPrint("Filesize for remap weights: ~%lu\n", (unsigned long) filesize);
+    
+  if ( filesize > 0x7FFFFC00 ) /* 2**31 - 1024 (<2GB) */
+    {
+#if  defined  (NC_64BIT_OFFSET)
+      writemode = NC_CLOBBER | NC_64BIT_OFFSET;
+#else
+      cdoAbort("Filesize for remap weights is too large!");
+#endif
+    }
+
   /* Create netCDF file for mapping and define some global attributes */
-  nce(nc_create(interp_file, NC_CLOBBER, &nc_file_id));
+  nce(nc_create(interp_file, writemode, &nc_file_id));
 
   /* Map name */
   nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "title", strlen(map_name), map_name));
@@ -6271,7 +6569,7 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
   int nc_dstadd_id;         /* id for map destination address           */
   int nc_rmpmatrix_id;      /* id for remapping matrix                  */
 
-  int i, n;                 /* dummy index */
+  long i, n;                 /* dummy index */
 
   char map_name[1024];
   char map_method[64];      /* character string for map_type             */
@@ -6291,7 +6589,8 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
 
   /* Open file and read some global information */
 
-  nce(nc_open(interp_file, NC_NOWRITE, &nc_file_id));
+  /* nce(nc_open(interp_file, NC_NOWRITE, &nc_file_id)); */
+  nc_file_id = pcdf_openread(interp_file);
 
   /* Map name */
 
