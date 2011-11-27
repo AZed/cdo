@@ -6,6 +6,9 @@
 /* Compiler version */
 #undef COMP_VERSION
 
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
 
@@ -15,11 +18,20 @@
 /* Define to 1 if you have the `getrlimit' function. */
 #undef HAVE_GETRLIMIT
 
+/* Define to 1 if you have the <grib_api.h> header file. */
+#undef HAVE_GRIB_API_H
+
+/* Define to 1 if you have the <hdf5.h> header file. */
+#undef HAVE_HDF5_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
 /* Define to 1 if you have the `isnan' function. */
 #undef HAVE_ISNAN
+
+/* Define to 1 if you have the <jasper.h> header file. */
+#undef HAVE_JASPER_H
 
 /* Define to 1 for GRIB1 decoding/encoding with cgribex */
 #undef HAVE_LIBCGRIBEX
@@ -33,11 +45,14 @@
 /* GRIB_API library is present if defined to 1 */
 #undef HAVE_LIBGRIB_API
 
-/* HDF 5 library is present if defined to 1 */
+/* Define to 1 for HDF5 support */
 #undef HAVE_LIBHDF5
 
 /* Define to 1 for IEG interface */
 #undef HAVE_LIBIEG
+
+/* Define to 1 for JPEG compression for GRIB2 */
+#undef HAVE_LIBJASPER
 
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
@@ -45,10 +60,13 @@
 /* Define to 1 if you have the `malloc' library (-lmalloc). */
 #undef HAVE_LIBMALLOC
 
-/* NETCDF library is present if defined to 1 */
+/* Define to 1 for NETCDF OpenDAP */
+#undef HAVE_LIBNC_DAP
+
+/* Define to 1 for NETCDF support */
 #undef HAVE_LIBNETCDF
 
-/* PROJ library is present if defined to 1 */
+/* Define to 1 for PROJ support */
 #undef HAVE_LIBPROJ
 
 /* Define to 1 if you have the `pthread' library (-lpthread). */
@@ -57,10 +75,10 @@
 /* Define to 1 for SERVICE interface */
 #undef HAVE_LIBSERVICE
 
-/* SZLIB library is present if defined to 1 */
+/* Define to 1 for SZIP support */
 #undef HAVE_LIBSZ
 
-/* ZLIB library is present if defined to 1 */
+/* Define 1 for ZLIB support */
 #undef HAVE_LIBZ
 
 /* Define to 1 if you have the `mallinfo' function. */
@@ -74,6 +92,21 @@
 
 /* Define to 1 if you have a working `mmap' system call. */
 #undef HAVE_MMAP
+
+/* Define to 1 for NETCDF2 support */
+#undef HAVE_NETCDF2
+
+/* Define to 1 for NETCDF4 support */
+#undef HAVE_NETCDF4
+
+/* Define to 1 if you have the <netcdf.h> header file. */
+#undef HAVE_NETCDF_H
+
+/* Define to 1 if you have the <projects.h> header file. */
+#undef HAVE_PROJECTS_H
+
+/* Define if you have POSIX threads libraries and header files. */
+#undef HAVE_PTHREAD
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #undef HAVE_PTHREAD_H
@@ -90,8 +123,11 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
-/* Define to 1 if `struct stat' is a member of `st_blksize'. */
+/* Define to 1 if `st_blksize' is a member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_BLKSIZE
+
+/* Define to 1 if you have the <sys/param.h> header file. */
+#undef HAVE_SYS_PARAM_H
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #undef HAVE_SYS_RESOURCE_H
@@ -105,11 +141,24 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <szlib.h> header file. */
+#undef HAVE_SZLIB_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
+
 /* Host name */
 #undef HOST_NAME
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
+/* Define to 1 if your C compiler doesn't accept -c and -o together. */
+#undef NO_MINUS_C_MINUS_O
 
 /* Name of package */
 #undef PACKAGE
@@ -131,6 +180,10 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Define to necessary symbol if this constant uses a non-standard name on
+   your system. */
+#undef PTHREAD_CREATE_JOINABLE
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
       Ymonarith  ymondiv         Divide multi-year monthly time series
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -34,7 +34,6 @@
 
 void *Ymonarith(void *argument)
 {
-  static char func[] = "Ymonarith";
   int operatorID;
   int operfunc;
   int streamID1, streamID2, streamID3;
@@ -45,7 +44,7 @@ void *Ymonarith(void *argument)
   int offset;
   int vlistID1, vlistID2, vlistID3;
   int taxisID1, taxisID2, taxisID3;
-  int vdate, vtime, mon;
+  int vdate, vtime, year, mon, day;
   field_t field1, field2;
   int **varnmiss2[MAX_MON];
   double **vardata2[MAX_MON];
@@ -58,18 +57,16 @@ void *Ymonarith(void *argument)
   cdoOperatorAdd("ymondiv", func_div, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -82,7 +79,6 @@ void *Ymonarith(void *argument)
   vlistDefTaxis(vlistID3, taxisID3);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 
@@ -95,7 +91,7 @@ void *Ymonarith(void *argument)
     {
       vdate = taxisInqVdate(taxisID2);
 
-      mon   = (vdate - (vdate/10000)*10000) / 100;
+      cdiDecodeDate(vdate, &year, &mon, &day);
       if ( mon < 0 || mon >= MAX_MON ) cdoAbort("Month %d out of range!", mon);
 
       if ( vardata2[mon] != NULL ) cdoAbort("Month %d already allocatd!", mon);
@@ -132,7 +128,7 @@ void *Ymonarith(void *argument)
       vdate = taxisInqVdate(taxisID1);
       vtime = taxisInqVtime(taxisID1);
 
-      mon   = (vdate - (vdate/10000)*10000) / 100;
+      cdiDecodeDate(vdate, &year, &mon, &day);
       if ( mon < 0 || mon >= MAX_MON ) cdoAbort("Month %d out of range!", mon);
 
       taxisDefVdate(taxisID3, vdate);
@@ -147,6 +143,7 @@ void *Ymonarith(void *argument)
 
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	  offset   = gridsize*levelID;
+	  if ( vardata2[mon] == NULL ) cdoAbort("Month %d not found!", mon);
 	  memcpy(field2.ptr, vardata2[mon][varID]+offset, gridsize*sizeof(double));
 	  field2.nmiss = varnmiss2[mon][varID][levelID];
 

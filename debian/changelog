@@ -1,3 +1,100 @@
+cdo (1.5.3.dfsg.1-2) unstable; urgency=low
+
+  * Install the contrib/ components for bash, zsh completion.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 27 Nov 2011 10:56:58 +0000
+
+cdo (1.5.3.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 24 Oct 2011 09:45:04 +0100
+
+cdo (1.5.2.dfsg.1-4) unstable; urgency=low
+
+  * CDI needs MPI version of HDF5 to build. Closes: #645545. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 18 Oct 2011 11:15:54 +0100
+
+cdo (1.5.2.dfsg.1-3) unstable; urgency=low
+
+  * Enable and ship CDI library.
+  * Multi-arch. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 15 Oct 2011 17:53:49 +0100
+
+cdo (1.5.2.dfsg.1-2) unstable; urgency=low
+
+  * Build with mpicc when mpi IS set, not the opposite, in rules file. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 12 Sep 2011 10:53:54 +0100
+
+cdo (1.5.2.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+  * Add LDFLAGS="-Wl,--as-needed" ; fix --with-hdf6 to --with-hdf5
+  * Add "| libhdf5-dev" and optional code for an MPI version; 
+    enable with DEB_BUILD_OPTIONS=mpi
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 10 Sep 2011 10:27:18 +0100
+
+cdo (1.5.1.dfsg.1-2) unstable; urgency=low
+
+  * Remove alternate build-dep "| libhdf5-dev", build only works with 
+    libhdf5-serial-dev for the moment.
+  * --disable-cgribex needed to enable GRIB2 support. Closes: #633934.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 15 Jul 2011 23:47:02 +0100
+
+cdo (1.5.1.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 15 Jul 2011 13:10:33 +0100
+
+cdo (1.5.0.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+  * Standards-Version: 3.9.2. No changes required.
+  * Use the Debian version of cfortran, rather than supply a copy. 
+    Closes: #631015. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 19 Jun 2011 20:54:03 +0100
+
+cdo (1.4.7.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 27 Jan 2011 09:34:23 +0000
+
+cdo (1.4.6.dfsg.1-4) unstable; urgency=low
+
+  * jasper dependency must be conditional on mips, hppa, sparc.
+    Closes: #597975. 
+  * clean rule should also remove .deps that may be left behind on 
+    previous builds.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 25 Sep 2010 14:15:53 +0100
+
+cdo (1.4.6.dfsg.1-3) unstable; urgency=low
+
+  * grib-api dependency now requires libjasper to build. Closes: #597921. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 24 Sep 2010 04:02:29 +0100
+
+cdo (1.4.6.dfsg.1-2) unstable; urgency=low
+
+  * Libtool now needed. Closes: #597838.
+  * Standards-Version: 3.9.4 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 23 Sep 2010 05:01:34 +0100
+
+cdo (1.4.6.dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Wed, 22 Sep 2010 15:58:09 +0100
+
 cdo (1.4.5.dfsg.1-1) unstable; urgency=low
 
   * New upstream release

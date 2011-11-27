@@ -1,0 +1,63 @@
+CDI NEWS
+--------
+
+Version 1.5.3 (17 October 2011):
+
+   New features:
+     * Added support for level type ZAXIS_TOA, ZAXIS_SEA_BOTTOM, ZAXIS_ATMOSPHERE
+   Fixed bugs:
+     * deflate compression with netCDF4 doesn't work
+
+Version 1.5.2 (22 August 2011):
+
+   New features:
+     * Added flexible XYZ dimension ordering for netCDF
+     * Added support for grid type GRID_FOURIER (fourier coefficients)
+     * Added interface function zaxisInqVct to read the VCT
+
+Version 1.5.1 (12 July 2011):
+
+   New features:
+     * Added support for FILETYPE_NC4C (netcdf4 classic)
+
+Version 1.5.0 (15 March 2011):
+
+   New features: 
+     * GRIB2 support via ECMWF GRIB_API
+     * Added support for netCDF level bounds
+
+Version 1.4.7 (3 January 2011):
+
+   New features:
+     * improved support for netCDF output from WRF model
+
+Version 1.4.6 (17 September 2010):
+
+   New features:
+     * GRIB1: use packing only for non constant fields
+     * Added support for attribute type int16 and float32
+     * use libtool 2.2.10 for compiling + linking
+
+Version 1.4.5.1 (5 July 2010):
+
+   New features:
+      * Added support for grid mask
+      * GRIB1 decode: Correct ZeroShiftError of simple packed spherical harmonics
+
+Version 1.4.5 (6 June 2010):
+
+   Fixed bugs:
+      * stream_history: added NC4 support
+      * gridGenYvals: bug fix for nlat > 4096
+
+Version 1.4.4 (29 April 2010):
+
+   New features:
+      * MAX_STREAMS: changed fixed size of 4096 to dynamic range of 1024 - 65536
+      * added support for GRIB1 time units 3hours and 6hours
+      * added support for non integer time units MONTH
+      * vlistMerge: added support to merge levels
+
+   Fixed bugs:
+      * gauaw: bug fix for allocation of zfnlat for odd number of nlat
+      * cgribexDefTime: bug fix for GRIB1 time range 3 and 10

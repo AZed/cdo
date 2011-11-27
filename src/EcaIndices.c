@@ -163,18 +163,22 @@ static const char TX90P_LONGNAME[]   = "This is the percent of time per time per
 static const char TX90P_UNITS[]      = "Percent";
 
 static const char CDD_NAME[]         = "consecutive_dry_days_index_per_time_period";
-static const char CDD_LONGNAME[]     = "Consecutive dry days is the greatest number of consecutive days per time period with daily precipitation amount  below 1 mm. The time period should be defined by the bounds of the time coordinate.";
+static const char CDD_LONGNAME[]     = "Consecutive dry days is the greatest number of consecutive days per time period with daily precipitation amount  below %g mm. The time period should be defined by the bounds of the time coordinate.";
 static const char CDD_UNITS[]        = "No.";
 static const char CDD_NAME2[]        = "number_of_cdd_periods_with_more_than_5days_per_time_period";
 static const char CDD_LONGNAME2[]    = "Number of cdd periods in given time period with more than 5 days. The time period should be defined by the bounds of the time coordinate.";
 static const char CDD_UNITS2[]       = "No.";
 
 static const char CWD_NAME[]         = "consecutive_wet_days_index_per_time_period";
-static const char CWD_LONGNAME[]     = "Consecutive wet days is the greatest number of consecutive days per time period with daily precipitation above 1 mm. The time period should be defined by the bounds of the time coordinate.";
+static const char CWD_LONGNAME[]     = "Consecutive wet days is the greatest number of consecutive days per time period with daily precipitation above %g mm. The time period should be defined by the bounds of the time coordinate.";
 static const char CWD_UNITS[]        = "No.";
 static const char CWD_NAME2[]        = "number_of_cwd_periods_with_more_than_5days_per_time_period";
 static const char CWD_LONGNAME2[]    = "Number of cwd periods in given time period with more than 5 days. The time period should be defined by the bounds of the time coordinate.";
 static const char CWD_UNITS2[]       = "No.";
+
+static const char PD_NAME[]          = "precipitation_days_index_per_time_period";
+static const char PD_LONGNAME[]      = "precipitation days is the number of days per time period with daily precipitation sum exceeding %g mm. The time period should be defined by the bounds of the time coordinate.";
+static const char PD_UNITS[]         = "No.";
 
 static const char R10MM_NAME[]       = "heavy_precipitation_days_index_per_time_period";
 static const char R10MM_LONGNAME[]   = "Heavy precipitation days is the number of days per time period with daily precipitation sum exceeding 10 mm. The time period should be defined by the bounds of the time coordinate.";
@@ -217,7 +221,7 @@ static const char R99PTOT_LONGNAME[] = "percentage of  total  precipitation amou
 static const char R99PTOT_UNITS[]    = "Percent";
 
 static const char RR1_NAME[]         = "wet_days_index_per_time_period";
-static const char RR1_LONGNAME[]     = "Wet days index is the number of days per time period with daily precipitation of at least 1 mm.  The time period should be defined by the bounds of the time coordinate.";
+static const char RR1_LONGNAME[]     = "Wet days index is the number of days per time period with daily precipitation of at least %g mm.  The time period should be defined by the bounds of the time coordinate.";
 static const char RR1_UNITS[]        = "No.";
 
 static const char RX1DAY_NAME[]      = "highest_one_day_precipitation_amount_per_time_period";
@@ -232,7 +236,7 @@ static const char RX5DAY_LONGNAME2[] = "Number of 5day periods in given time per
 static const char RX5DAY_UNITS2[]    = "No.";
 
 static const char SDII_NAME[]        = "simple_daily_intensitiy_index_per_time_period";
-static const char SDII_LONGNAME[]    = "Simple daily intensity index is the mean of precipitation amount on wet days. A wet day is a day with precipitation sum of at least 1 mm. The time period should be defined by the bounds of the time coordinate.";
+static const char SDII_LONGNAME[]    = "Simple daily intensity index is the mean of precipitation amount on wet days. A wet day is a day with precipitation sum of at least %g mm. The time period should be defined by the bounds of the time coordinate.";
 static const char SDII_UNITS[]       = "mm";
 
 static const char FDNS_NAME[]        = "frost_days_where_no_snow_index_per_time_period";       
@@ -324,7 +328,6 @@ void *EcaCsu(void *argument)
 
 void *EcaCwdi(void *argument)
 {
-  static const char func[] = "EcaCwdi";
   char *longname;
   int argN = 6;
   double argT = 5.0;
@@ -368,7 +371,6 @@ void *EcaCwdi(void *argument)
 
 void *EcaCwfi(void *argument)
 {
-  static const char func[] = "EcaCwfi";
   char *longname;
   int argN = 6;
   ECA_REQUEST_2 request;
@@ -467,7 +469,6 @@ void *EcaFd(void *argument)
 */
 void *EcaGsl(void *argument)
 {
-  static const char func[] = "EcaGsl";
   char *longname;
   int argN = 6; 
   double argT = 5.0;
@@ -546,7 +547,6 @@ void *EcaHd(void *argument)
 
 void *EcaHwdi(void *argument)
 {
-  static const char func[] = "EcaHwdi";
   char *longname;
   int argN = 6;
   double argT = 5.0;
@@ -590,7 +590,6 @@ void *EcaHwdi(void *argument)
 
 void *EcaHwfi(void *argument)
 {
-  static const char func[] = "EcaHwfi";
   char *longname;
   int argN = 6;
   ECA_REQUEST_2 request;
@@ -658,7 +657,6 @@ void *EcaId(void *argument)
 
 void *EcaSu(void *argument)
 {
-  static const char func[] = "EcaSu";
   char *longname;
   double argT = 25.0;
   ECA_REQUEST_1 request;
@@ -794,7 +792,6 @@ void *EcaTn90p(void *argument)
 
 void *EcaTr(void *argument)
 {
-  static const char func[] = "EcaTr";
   char *longname;
   double argT = 20.0;
   ECA_REQUEST_1 request;
@@ -884,15 +881,22 @@ void *EcaTx90p(void *argument)
 void *EcaCdd(void *argument)
 {
   ECA_REQUEST_1 request;
+  char lnamebuffer[1024];
+  double threshold = 1;
   
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cdd", 0, 31, NULL);
 
+  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+  sprintf(lnamebuffer, CDD_LONGNAME, threshold);
+
   request.var1.name     = CDD_NAME;
-  request.var1.longname = CDD_LONGNAME;
+  request.var1.longname = lnamebuffer;
   request.var1.units    = CDD_UNITS;
   request.var1.f1       = farselltc;
-  request.var1.f1arg    = 1.0;
+  request.var1.f1arg    = threshold;
   request.var1.f2       = farnum2;
   request.var1.f3       = farmax;
   request.var1.mulc     = 0.0;
@@ -916,15 +920,22 @@ void *EcaCdd(void *argument)
 void *EcaCwd(void *argument)
 {
   ECA_REQUEST_1 request;
+  char lnamebuffer[1024];
+  double threshold = 1;
   
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cwd", 0, 31, NULL);
 
+  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+  sprintf(lnamebuffer, CWD_LONGNAME, threshold);
+
   request.var1.name     = CWD_NAME;
-  request.var1.longname = CWD_LONGNAME;
+  request.var1.longname = lnamebuffer;
   request.var1.units    = CWD_UNITS;
   request.var1.f1       = farselgec;
-  request.var1.f1arg    = 1.0;
+  request.var1.f1arg    = threshold;
   request.var1.f2       = farnum2;
   request.var1.f3       = farmax;
   request.var1.mulc     = 0.0;
@@ -945,18 +956,59 @@ void *EcaCwd(void *argument)
 }
 
 
-void *EcaR10mm(void *argument)
+void *EcaPd(void *argument)
 {
+  int ECA_PD, ECA_R10MM, ECA_R20MM;
+  int operatorID;
+  char lnamebuffer[1024];
+  double threshold = 0;
   ECA_REQUEST_1 request;
   
   cdoInitialize(argument);
-  cdoOperatorAdd("eca_r10mm", 0, 31, NULL);
+
+  ECA_PD      = cdoOperatorAdd("eca_pd",      0, 31, NULL);
+  ECA_R10MM   = cdoOperatorAdd("eca_r10mm",   0, 31, NULL);
+  ECA_R20MM   = cdoOperatorAdd("eca_r20mm",   0, 31, NULL);
+
+  operatorID = cdoOperatorID();
+
+  if ( operatorID == ECA_PD )
+    {
+      operatorInputArg("daily precipitation amount threshold in [mm]");
+
+      if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
+      if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+      threshold = atof(operatorArgv()[0]);
+
+      if ( threshold < 0 ) cdoAbort("Parameter out of range: threshold = %d", threshold);
+
+      sprintf(lnamebuffer, PD_LONGNAME, threshold);
+      request.var1.name     = PD_NAME;
+      request.var1.longname = lnamebuffer;
+      request.var1.units    = PD_UNITS;
+    }
+  else if ( operatorID == ECA_R10MM )
+    {
+      threshold = 10;
+
+      request.var1.name     = R10MM_NAME;
+      request.var1.longname = R10MM_LONGNAME;
+      request.var1.units    = R10MM_UNITS;
+    }
+  else if ( operatorID == ECA_R20MM )
+    {
+      threshold = 20;
+
+      request.var1.name     = R20MM_NAME;
+      request.var1.longname = R20MM_LONGNAME;
+      request.var1.units    = R20MM_UNITS;
+    }
   
-  request.var1.name     = R10MM_NAME;
-  request.var1.longname = R10MM_LONGNAME;
-  request.var1.units    = R10MM_UNITS;
+  if ( cdoVerbose ) cdoPrint("threshold = %g", threshold);
+
   request.var1.f1       = farselgec;
-  request.var1.f1arg    = 10.0;
+  request.var1.f1arg    = threshold;
   request.var1.f2       = farnum;
   request.var1.f3       = NULL;
   request.var1.mulc     = 0.0;   
@@ -965,33 +1017,6 @@ void *EcaR10mm(void *argument)
   request.var2.h2       = NULL;
   request.var2.h3       = NULL;
   
-  eca1(&request);
-  cdoFinish();
-  
-  return (0);
-}
-
-
-void *EcaR20mm(void *argument)
-{
-  ECA_REQUEST_1 request;
-  
-  cdoInitialize(argument);
-  cdoOperatorAdd("eca_r20mm", 0, 31, NULL);
-
-  request.var1.name     = R20MM_NAME;
-  request.var1.longname = R20MM_LONGNAME;
-  request.var1.units    = R20MM_UNITS;
-  request.var1.f1       = farselgec;
-  request.var1.f1arg    = 20.0;
-  request.var1.f2       = farnum;
-  request.var1.f3       = NULL;
-  request.var1.mulc     = 0.0;   
-  request.var1.addc     = 0.0;    
-  request.var1.epilog   = NONE;
-  request.var2.h2       = NULL;
-  request.var2.h3       = NULL;
-    
   eca1(&request);
   cdoFinish();
   
@@ -1210,15 +1235,22 @@ void *EcaR99ptot(void *argument)
 void *EcaRr1(void *argument)
 {
   ECA_REQUEST_1 request;
+  char lnamebuffer[1024];
+  double threshold = 1;
   
   cdoInitialize(argument);
   cdoOperatorAdd("eca_rr1", 0, 31, NULL);
 
+  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+  sprintf(lnamebuffer, CDD_LONGNAME, threshold);
+
   request.var1.name     = RR1_NAME;
-  request.var1.longname = RR1_LONGNAME;
+  request.var1.longname = lnamebuffer;
   request.var1.units    = RR1_UNITS;
   request.var1.f1       = farselgec;
-  request.var1.f1arg    = 1.0;
+  request.var1.f1arg    = threshold;
   request.var1.f2       = farnum;
   request.var1.f3       = NULL;
   request.var1.mulc     = 0.0;    
@@ -1270,7 +1302,6 @@ void *EcaRx1day(void *argument)
 
 void *EcaRx5day(void *argument)
 {
-  static const char func[] = "EcaRx5day";
   char *longname;
   double argX = 50.0;
   ECA_REQUEST_1 request;
@@ -1312,15 +1343,22 @@ void *EcaRx5day(void *argument)
 void *EcaSdii(void *argument)
 {
   ECA_REQUEST_1 request;
+  char lnamebuffer[1024];
+  double threshold = 1;
   
   cdoInitialize(argument);
   cdoOperatorAdd("eca_sdii", 0, 31, NULL);
 
+  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+  sprintf(lnamebuffer, CDD_LONGNAME, threshold);
+
   request.var1.name     = SDII_NAME;
-  request.var1.longname = SDII_LONGNAME;
+  request.var1.longname = lnamebuffer;
   request.var1.units    = SDII_UNITS;
   request.var1.f1       = farselgec;
-  request.var1.f1arg    = 1.0;
+  request.var1.f1arg    = threshold;
   request.var1.f2       = farsum;
   request.var1.f3       = NULL;
   request.var1.mulc     = 0.0;    
@@ -1365,7 +1403,6 @@ void *Fdns(void *argument)
 
 void *Strwin(void *argument)
 {
-  static const char func[] = "Strwin";
   char *longname;
   double maxWind = 10.5;
   ECA_REQUEST_1 request;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
       Monarith  mondiv         Divide monthly time series
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -32,7 +32,6 @@
 
 void *Monarith(void *argument)
 {
-  static char func[] = "Monarith";
   int operatorID;
   int operfunc;
   int streamID1, streamID2, streamID3;
@@ -57,18 +56,16 @@ void *Monarith(void *argument)
   cdoOperatorAdd("mondiv", func_div, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
   
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -81,7 +78,6 @@ void *Monarith(void *argument)
   vlistDefTaxis(vlistID3, taxisID3);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 
@@ -138,7 +134,10 @@ void *Monarith(void *argument)
 	    {
 	      streamInqRecord(streamID2, &varID, &levelID);
 
-	      streamReadRecord(streamID2, &vardata2[varID][levelID], &field2.nmiss);
+	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+	      offset   = gridsize*levelID;
+
+	      streamReadRecord(streamID2, vardata2[varID]+offset, &field2.nmiss);
 	      varnmiss2[varID][levelID] = field2.nmiss;
 	    }
 
@@ -170,6 +169,7 @@ void *Monarith(void *argument)
 	  streamDefRecord(streamID3, varID, levelID);
 	  streamWriteRecord(streamID3, field1.ptr, field1.nmiss);
 	}
+
       tsID++;
     }
 

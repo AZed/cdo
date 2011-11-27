@@ -2,16 +2,36 @@ Source: cdo
 Section: utils
 Priority: extra
 Maintainer: Alastair McKinstry <mckinstry@debian.org>
-Build-Depends: debhelper (>= 7.0.50~), dh-buildinfo, libhdf5-serial-dev | libhdf5-dev, libproj-dev, autoconf, automake, libnetcdf-dev, 
- libgrib-api-dev [!mips !sparc !hppa]
-Standards-Version: 3.8.4
+Build-Depends: debhelper (>= 8.1.3~), dh-buildinfo, libhdf5-mpi-dev, libproj-dev, autoconf, automake, libnetcdf-dev, 
+ libgrib-api-dev [!mips !sparc !hppa], libtool, libjasper-dev, cfortran
+Standards-Version: 3.9.2
 Homepage: https://code.zmaw.de/projects/cdo
 
 Package: cdo
 Section: utils
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, libcdi0 ( = ${binary:Version})
 Description: Climate Data Operators
  Climate Data Operators are a collection of command line Operators 
  to manipulate and analyse Climate model Data.  Supported data formats are GRIB, 
  netCDF, SERVICE, EXTRA and IEG. There are more than 400 operators available.
+
+Package: libcdi0
+Section: libs
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Multi-Arch: same
+Description: Climate Data Interface (cdi) library
+ CDI is a C and Fortran Interface to access Climate model Data.
+ Supported data formats are GRIB, netCDF, SERVICE, EXTRA and IEG.
+
+Package: libcdi-dev
+Section: libdevel
+Architecture: any
+Depends: ${misc:Depends}, libcdi0 (= ${binary:Version})
+Multi-Arch: same
+Description: Development files for the climate data interface library
+ CDI is a C and Fortran Interface to access Climate model Data.
+ Supported data formats are GRIB, netCDF, SERVICE, EXTRA and IEG.
+ This package provides development libraries to build against CDI.

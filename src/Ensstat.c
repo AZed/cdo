@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,13 +26,16 @@
       Ensstat    ensstd          Ensemble standard deviation
       Ensstat    ensvar          Ensemble variance
       Ensstat    enspctl         Ensemble percentiles
+
+      Ensstat    enscrps         Ensemble cumulative ranked probability score
+      Ensstat    ensbrs          Ensemble brier score
 */
 
 #if defined (_OPENMP)
 #  include <omp.h>
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -41,12 +44,9 @@
 
 void *Ensstat(void *argument)
 {
-  static char func[] = "Ensstat";
   int operatorID;
   int operfunc;
   int i;
-  int nvars;
-  int cmpfunc;
   int varID, recID;
   int gridsize = 0;
   int gridID;
@@ -84,11 +84,16 @@ void *Ensstat(void *argument)
   cdoOperatorAdd("ensvar",  func_var,  0, NULL);
   cdoOperatorAdd("ensstd",  func_std,  0, NULL);
   /* RQ */
-  cdoOperatorAdd("enspctl", func_pctl,  0, NULL);
+  cdoOperatorAdd("enspctl", func_pctl, 0, NULL);
   /* QR */
 
+  /* >>> Cedrick Ansorge 18.10.2010 */
+  cdoOperatorAdd("enscrps", func_crps, 0, NULL);
+  cdoOperatorAdd("ensbrs",  func_brs,  0, NULL);
+  /* <<< Cedrick Ansorge 18.10.2010 */
+
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   /* RQ */
   if ( operfunc == func_pctl )
@@ -108,7 +113,7 @@ void *Ensstat(void *argument)
 
   ofilename = cdoStreamName(nfiles);
 
-  if ( !cdoSilentMode )
+  if ( !cdoSilentMode && !cdoOverwriteMode )
     if ( fileExist(ofilename) )
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exist!", ofilename);
@@ -128,7 +133,6 @@ void *Ensstat(void *argument)
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
       streamID = streamOpenRead(cdoStreamName(fileID));
-      if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(fileID));
 
       vlistID = streamInqVlist(streamID);
 
@@ -137,14 +141,8 @@ void *Ensstat(void *argument)
     }
 
   /* check that the contents is always the same */
-  nvars = vlistNvars(ef[0].vlistID);
-  if ( nvars == 1 ) 
-    cmpfunc = func_sftn;
-  else
-    cmpfunc = func_sftn;
-
   for ( fileID = 1; fileID < nfiles; fileID++ )
-    vlistCompare(ef[0].vlistID, ef[fileID].vlistID, cmpfunc);
+    vlistCompare(ef[0].vlistID, ef[fileID].vlistID, CMP_ALL);
 
   vlistID1 = ef[0].vlistID;
   vlistID2 = vlistDuplicate(vlistID1);
@@ -153,7 +151,6 @@ void *Ensstat(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(ofilename, cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", ofilename);
 
   streamDefVlist(streamID2, vlistID2);
 	  

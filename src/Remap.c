@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,11 +31,11 @@
       Genweights  genbic          Generate bicubic interpolation weights
       Genweights  gendis          Generate distance-weighted averaging weights
       Genweights  gennn           Generate nearest neighbor weights
-      Genweights  genlaf          Generate largest ares fraction weights
+      Genweights  genlaf          Generate largest area fraction weights
       Remap       remap           SCRIP grid remapping
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -45,6 +45,8 @@
 
 enum {REMAPCON, REMAPCON2, REMAPBIL, REMAPBIC, REMAPDIS, REMAPNN, REMAPLAF, REMAPSUM,
       GENCON, GENCON2, GENBIL, GENBIC, GENDIS, GENNN, GENLAF, REMAPXXX};
+
+enum {HEAP_SORT, MERGE_SORT};
 
 static
 void get_map_type(int operfunc, int *map_type, int *submap_type, int *remap_order)
@@ -143,79 +145,23 @@ int maptype2operfunc(int map_type, int submap_type, int remap_order)
   return (operfunc);
 }
 
+double remap_threshhold = 2;
+int remap_test = 0;
+int remap_order = 1;
+int remap_restrict_type = RESTRICT_LATITUDE;
+int remap_store_link_fast = TRUE;
+int remap_non_global = FALSE;
+int remap_num_srch_bins = 180;
+int lremap_num_srch_bins = FALSE;
+int remap_extrapolate = FALSE;
+int lextrapolate = FALSE;
+int max_remaps = 0;
+int sort_mode = HEAP_SORT;
 
-void *Remap(void *argument)
+static
+void get_remap_env(void)
 {
-  static char func[] = "Remap";
-  int operatorID;
-  int operfunc;
-  int streamID1, streamID2 = -1;
-  int nrecs, ngrids;
-  int nzaxis, zaxisID, zaxissize;
-  int nvars;
-  int index;
-  int tsID, recID, varID, levelID;
-  int gridsize, gridsize2;
-  int vlistID1, vlistID2;
-  int taxisID1, taxisID2;
-  int gridID1 = -1, gridID2;
-  int nmiss1, nmiss2, i, j, r;
-  int *imask = NULL;
-  int nremaps = 0;
-  int norm_opt = NORM_OPT_NONE;
-  int map_type = -1;
-  int submap_type = SUBMAP_TYPE_NONE;
-  int max_remaps = 0;
-  int remap_test = 0;
-  int remap_order = 1;
-  int need_gradiants = FALSE;
-  int remap_store_link_fast = TRUE;
-  int remap_non_global = FALSE;
-  int remap_extrapolate = FALSE;
-  int lextrapolate = FALSE;
-  int non_global;
-  int lgridboxinfo = TRUE;
-  int grid1sizemax;
-  short *remapgrids = NULL;
-  char varname[128];
-  double missval;
-  double *array1 = NULL, *array2 = NULL;
-  double *grad1_lat = NULL, *grad1_lon = NULL, *grad1_latlon = NULL;
-  remap_t *remaps;
   char *envstr;
-  char *remap_file = NULL;
-  int lwrite_remap;
-  int remap_max_iter = -1;
-  int remap_restrict_type = RESTRICT_LATITUDE;
-  int remap_num_srch_bins = 180;
-  int lremap_num_srch_bins = FALSE;
-
-  cdoInitialize(argument);
-
-  cdoOperatorAdd("remapcon",    REMAPCON,    0, NULL);
-  cdoOperatorAdd("remapcon2",   REMAPCON2,   0, NULL);
-  cdoOperatorAdd("remapbil",    REMAPBIL,    0, NULL);
-  cdoOperatorAdd("remapbic",    REMAPBIC,    0, NULL);
-  cdoOperatorAdd("remapdis",    REMAPDIS,    0, NULL);
-  cdoOperatorAdd("remapnn",     REMAPNN,     0, NULL);
-  cdoOperatorAdd("remaplaf",    REMAPLAF,    0, NULL);
-  cdoOperatorAdd("remapsum",    REMAPSUM,    0, NULL);
-  cdoOperatorAdd("gencon",      GENCON,      1, NULL);
-  cdoOperatorAdd("gencon2",     GENCON2,     1, NULL);
-  cdoOperatorAdd("genbil",      GENBIL,      1, NULL);
-  cdoOperatorAdd("genbic",      GENBIC,      1, NULL);
-  cdoOperatorAdd("gendis",      GENDIS,      1, NULL);
-  cdoOperatorAdd("gennn",       GENNN,       1, NULL);
-  cdoOperatorAdd("genlaf",      GENLAF,      1, NULL);
-  cdoOperatorAdd("remap",       REMAPXXX,    0, NULL);
-
-  operatorID = cdoOperatorID();
-  operfunc   = cdoOperatorFunc(operatorID);
-  lwrite_remap = cdoOperatorIntval(operatorID);
-
-  if ( operfunc == REMAPDIS || operfunc == GENDIS ||
-       operfunc == REMAPNN  || operfunc == GENNN )
-    remap_extrapolate = TRUE;
 
   envstr = getenv("MAX_REMAPS");
   if ( envstr )
@@ -237,10 +183,9 @@ void *Remap(void *argument)
       ival = atoi(envstr);
       if ( ival > 0 )
 	{
-	  remap_max_iter = ival;
-	  remap_set_max_iter(remap_max_iter);
+	  remap_set_max_iter(ival);
 	  if ( cdoVerbose )
-	    cdoPrint("Set REMAP_MAX_ITER to %d", remap_max_iter);
+	    cdoPrint("Set REMAP_MAX_ITER to %d", ival);
 	}
     }
   /*
@@ -273,6 +218,28 @@ void *Remap(void *argument)
 	}
     }
 
+#if defined (_OPENMP)
+  if ( ompNumThreads == 1 )
+    sort_mode = HEAP_SORT;
+  else
+    sort_mode = MERGE_SORT;
+#endif
+
+  envstr = getenv("REMAP_SORT_MODE");
+  if ( envstr )
+    {
+      if      ( strcmp(envstr, "heap")  == 0 ) sort_mode = HEAP_SORT;
+      else if ( strcmp(envstr, "merge") == 0 ) sort_mode = MERGE_SORT;
+
+      if ( cdoVerbose )
+	{
+	  if      ( sort_mode == HEAP_SORT )
+	    cdoPrint("Set sort_mode to HEAP_SORT");
+	  else if ( sort_mode == MERGE_SORT )
+	    cdoPrint("Set sort_mode to MERGE_SORT");
+	}
+    }
+
   envstr = getenv("REMAP_RESTRICT_TYPE");
   if ( envstr )
     {
@@ -285,6 +252,19 @@ void *Remap(void *argument)
 	    cdoPrint("Set REMAP_RESTRICT_TYPE to latitude");
 	  else if ( remap_restrict_type == RESTRICT_LATLON )
 	    cdoPrint("Set REMAP_RESTRICT_TYPE to latlon");
+	}
+    }
+
+  envstr = getenv("REMAP_THRESHHOLD");
+  if ( envstr )
+    {
+      double fval;
+      fval = atof(envstr);
+      if ( fval > 0 )
+	{
+	  remap_threshhold = fval;
+	  if ( cdoVerbose )
+	    cdoPrint("Set REMAP_THRESHHOLD to %g", remap_threshhold);
 	}
     }
 
@@ -307,7 +287,7 @@ void *Remap(void *argument)
     {
       int ival;
       ival = atoi(envstr);
-      if ( ival > 0 )
+      if ( ival >= 0 )
 	{
 	  remap_non_global = ival;
 	  if ( cdoVerbose )
@@ -320,7 +300,7 @@ void *Remap(void *argument)
     {
       int ival;
       ival = atoi(envstr);
-      if ( ival > 0 )
+      if ( ival >= 0 )
 	{
 	  remap_store_link_fast = ival;
 	  if ( cdoVerbose )
@@ -357,6 +337,72 @@ void *Remap(void *argument)
 	    }
 	}
     }
+}
+
+
+void *Remap(void *argument)
+{
+  int operatorID;
+  int operfunc;
+  int streamID1, streamID2 = -1;
+  int nrecs, ngrids;
+  int nzaxis, zaxisID, zaxissize;
+  int nvars;
+  int index;
+  int tsID, recID, varID, levelID;
+  int gridsize, gridsize2;
+  int vlistID1, vlistID2;
+  int taxisID1, taxisID2;
+  int gridID1 = -1, gridID2;
+  int gridtype;
+  int nmiss1, nmiss2, i, j, r;
+  int *imask = NULL;
+  int nremaps = 0;
+  int norm_opt = NORM_OPT_NONE;
+  int map_type = -1;
+  int submap_type = SUBMAP_TYPE_NONE;
+  int need_gradiants = FALSE;
+  int non_global;
+  int lgridboxinfo = TRUE;
+  int grid1sizemax;
+  short *remapgrids = NULL;
+  char varname[CDI_MAX_NAME];
+  double missval;
+  double *array1 = NULL, *array2 = NULL;
+  double *grad1_lat = NULL, *grad1_lon = NULL, *grad1_latlon = NULL;
+  remap_t *remaps;
+  char *envstr;
+  char *remap_file = NULL;
+  int lwrite_remap;
+
+  cdoInitialize(argument);
+
+  cdoOperatorAdd("remapcon",    REMAPCON,    0, NULL);
+  cdoOperatorAdd("remapcon2",   REMAPCON2,   0, NULL);
+  cdoOperatorAdd("remapbil",    REMAPBIL,    0, NULL);
+  cdoOperatorAdd("remapbic",    REMAPBIC,    0, NULL);
+  cdoOperatorAdd("remapdis",    REMAPDIS,    0, NULL);
+  cdoOperatorAdd("remapnn",     REMAPNN,     0, NULL);
+  cdoOperatorAdd("remaplaf",    REMAPLAF,    0, NULL);
+  cdoOperatorAdd("remapsum",    REMAPSUM,    0, NULL);
+  cdoOperatorAdd("gencon",      GENCON,      1, NULL);
+  cdoOperatorAdd("gencon2",     GENCON2,     1, NULL);
+  cdoOperatorAdd("genbil",      GENBIL,      1, NULL);
+  cdoOperatorAdd("genbic",      GENBIC,      1, NULL);
+  cdoOperatorAdd("gendis",      GENDIS,      1, NULL);
+  cdoOperatorAdd("gennn",       GENNN,       1, NULL);
+  cdoOperatorAdd("genlaf",      GENLAF,      1, NULL);
+  cdoOperatorAdd("remap",       REMAPXXX,    0, NULL);
+
+  operatorID = cdoOperatorID();
+  operfunc   = cdoOperatorF1(operatorID);
+  lwrite_remap = cdoOperatorF2(operatorID);
+
+  if ( operfunc == REMAPDIS || operfunc == GENDIS ||
+       operfunc == REMAPNN  || operfunc == GENNN )
+    remap_extrapolate = TRUE;
+
+  get_remap_env();
 
   if ( cdoVerbose )
     {
@@ -381,7 +427,6 @@ void *Remap(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -397,15 +442,17 @@ void *Remap(void *argument)
       remapgrids[index] = TRUE;
 
       gridID1 = vlistGrid(vlistID1, index);
+      gridtype = gridInqType(gridID1);
 
-      if ( gridInqType(gridID1) != GRID_LONLAT      &&
-	   gridInqType(gridID1) != GRID_GAUSSIAN    &&
-	   gridInqType(gridID1) != GRID_LCC         &&
-	   gridInqType(gridID1) != GRID_LAEA        &&
-	   gridInqType(gridID1) != GRID_SINUSOIDAL  &&
-	   gridInqType(gridID1) != GRID_GME         &&
-	   gridInqType(gridID1) != GRID_CURVILINEAR &&
-	   gridInqType(gridID1) != GRID_CELL )
+      if ( gridtype != GRID_LONLAT      &&
+	   gridtype != GRID_GAUSSIAN    &&
+	   gridtype != GRID_LCC         &&
+	   gridtype != GRID_LAEA        &&
+	   gridtype != GRID_SINUSOIDAL  &&
+	   gridtype != GRID_GME         &&
+	   gridtype != GRID_REFERENCE   &&
+	   gridtype != GRID_CURVILINEAR &&
+	   gridtype != GRID_UNSTRUCTURED )
 	{
 	  if ( gridInqType(gridID1) == GRID_GAUSSIAN_REDUCED )
 	    cdoAbort("Unsupported grid type: %s, use CDO option -R to convert reduced to regular grid!",
@@ -508,8 +555,8 @@ void *Remap(void *argument)
 	  remaps[0].grid.grid2_nvgp = gridInqSize(gridID2);
 	  remaps[0].grid.grid2_vgpm = (int *) realloc(remaps[0].grid.grid2_vgpm,
 						      gridInqSize(gridID2)*sizeof(int));
-	  gridID2_gme = gridToCell(gridID2);
-	  gridInqMask(gridID2_gme, remaps[0].grid.grid2_vgpm);
+	  gridID2_gme = gridToUnstructured(gridID2);
+	  gridInqMaskGME(gridID2_gme, remaps[0].grid.grid2_vgpm);
 	  for ( i = 0; i < gridsize2; ++i )
 	    if ( remaps[0].grid.grid2_vgpm[i] ) isize++;
 	  gridsize2 = isize;
@@ -583,7 +630,6 @@ void *Remap(void *argument)
   if ( ! lwrite_remap )
     {
       streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-      if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
       streamDefVlist(streamID2, vlistID2);
     }
@@ -720,7 +766,7 @@ void *Remap(void *argument)
 		    remaps[r].grid.luse_grid1_area = FALSE;
 		    remaps[r].grid.luse_grid2_area = FALSE;
 		  */
-		  if ( gridInqType(gridID1) != GRID_CELL && lremap_num_srch_bins == FALSE )
+		  if ( gridInqType(gridID1) != GRID_UNSTRUCTURED && lremap_num_srch_bins == FALSE )
 		    {
 		      if ( !remap_extrapolate && (map_type == MAP_TYPE_DISTWGT || map_type == MAP_TYPE_DISTWGT1) )
 			{
@@ -736,6 +782,7 @@ void *Remap(void *argument)
 			}
 		    }
 
+		  remaps[r].grid.threshhold    = remap_threshhold;
 		  remaps[r].grid.restrict_type = remap_restrict_type;
 		  remaps[r].grid.num_srch_bins = remap_num_srch_bins;
 		  remaps[r].grid.pinit = FALSE;
@@ -759,10 +806,6 @@ void *Remap(void *argument)
 		}
 
 	      memcpy(remaps[r].grid.grid1_mask, imask, remaps[r].grid.grid1_size*sizeof(int));
-	      /*
-	      for ( i = 0; i < gridsize; i++ )
-		if ( remaps[r].grid.grid1_mask[i] ) remaps[r].grid.grid1_mask[i] = imask[i];
-	      */
 
 	      if ( map_type == MAP_TYPE_CONSERV )
 		{
@@ -784,8 +827,22 @@ void *Remap(void *argument)
 	      if ( remaps[r].vars.num_links != remaps[r].vars.max_links )
 		resize_remap_vars(&remaps[r].vars, remaps[r].vars.num_links-remaps[r].vars.max_links);
 
-	      sort_add(remaps[r].vars.num_links, remaps[r].vars.num_wts,
-		       remaps[r].vars.grid2_add, remaps[r].vars.grid1_add, remaps[r].vars.wts);
+	      if ( sort_mode == MERGE_SORT )
+		{ /* 
+		  ** use a combination of the old sort_add and a split and merge approach.
+                  ** The chunk size is determined by MERGE_SORT_LIMIT_SIZE in remaplib.c. 
+		  ** OpenMP parallelism is supported
+		  */   
+		  sort_iter(remaps[r].vars.num_links, remaps[r].vars.num_wts,
+			    remaps[r].vars.grid2_add, remaps[r].vars.grid1_add,
+			    remaps[r].vars.wts, ompNumThreads);
+		}
+	      else
+		{ /* use a pure heap sort without any support of parallelism */
+		  sort_add(remaps[r].vars.num_links, remaps[r].vars.num_wts,
+			   remaps[r].vars.grid2_add, remaps[r].vars.grid1_add,
+			   remaps[r].vars.wts);
+		}
 	      	      
 	      if ( lwrite_remap ) goto WRITE_REMAP;
 
@@ -809,10 +866,10 @@ void *Remap(void *argument)
 
 	  if ( operfunc == REMAPLAF )
 	    remap_laf(array2, missval, gridInqSize(gridID2), remaps[r].vars.num_links, remaps[r].vars.wts,
-		  remaps[r].vars.grid2_add, remaps[r].vars.grid1_add, array1);
+		  remaps[r].vars.num_wts, remaps[r].vars.grid2_add, remaps[r].vars.grid1_add, array1);
 	  else if ( operfunc == REMAPSUM )
 	    remap_sum(array2, missval, gridInqSize(gridID2), remaps[r].vars.num_links, remaps[r].vars.wts,
-		  remaps[r].vars.grid2_add, remaps[r].vars.grid1_add, array1);
+		  remaps[r].vars.num_wts, remaps[r].vars.grid2_add, remaps[r].vars.grid1_add, array1);
 	  else
 	    remap(array2, missval, gridInqSize(gridID2), remaps[r].vars.num_links, remaps[r].vars.wts,
 		  remaps[r].vars.num_wts, remaps[r].vars.grid2_add, remaps[r].vars.grid1_add,

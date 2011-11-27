@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -55,7 +55,6 @@ int cmpdatetime(const void *s1, const void *s2)
 
 void *Sorttimestamp(void *argument)
 {
-  static char func[] = "Sorttimestamp";
   int gridsize;
   int nrecs;
   int gridID, varID, levelID, recID;
@@ -80,7 +79,6 @@ void *Sorttimestamp(void *argument)
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
       streamID1 = streamOpenRead(cdoStreamName(fileID));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(fileID));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID1 = vlistInqTaxis(vlistID1);
@@ -97,7 +95,7 @@ void *Sorttimestamp(void *argument)
 	}
       else
 	{
-	  vlistCompare(vlistID2, vlistID1, func_hrd);
+	  vlistCompare(vlistID2, vlistID1, CMP_ALL);
 	}
 
       nvars = vlistNvars(vlistID1);
@@ -175,7 +173,6 @@ void *Sorttimestamp(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 	  
   streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
 
   streamDefVlist(streamID2, vlistID2);
 

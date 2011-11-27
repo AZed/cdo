@@ -2,7 +2,7 @@
  This file is part of CDO. CDO is a collection of Operators to
  manipulate and analyse Climate model Data.
  
- Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+ Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
  See COPYING file for copying and redistribution conditions.
  
  This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 */
 #define WEIGHTS 1
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -33,8 +33,7 @@ void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 void *Eofcoeff(void * argument)
 {
-  static char func[] = "Eofcoeff";
-  char eof_name[5], oname[1024], filesuffix[32];
+  char eof_name[8], oname[1024], filesuffix[32];
   double *w;
   double missval1=-999, missval2;
   double *xvals, *yvals;  
@@ -54,12 +53,10 @@ void *Eofcoeff(void * argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eofcoeff",  0,       0, NULL);
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
      
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -84,7 +81,7 @@ void *Eofcoeff(void * argument)
   if ( vlistNgrids(vlistID2) > 1 || vlistNgrids(vlistID1) > 1 )
     cdoAbort("Too many grids in input");
   
-  nvars    = vlistNvars(vlistID1)==vlistNvars(vlistID2)? vlistNvars(vlistID1): -1;
+  nvars = vlistNvars(vlistID1)==vlistNvars(vlistID2) ? vlistNvars(vlistID1) : -1;
   nrecs = vlistNrecs(vlistID1); 
   nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, 0));
   w = (double*)malloc(gridsize*sizeof(double));
@@ -101,14 +98,7 @@ void *Eofcoeff(void * argument)
   nchars = strlen(oname);
   
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-        if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-          strcat(filesuffix, ".sz");
-    }
- 
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
   
   eof = (field_t ***) malloc (nvars * sizeof(field_t**) );
   for ( varID=0; varID<nvars; varID++)
@@ -184,9 +174,7 @@ void *Eofcoeff(void * argument)
         strcat(oname, filesuffix);
       
       streamIDs[eofID] = streamOpenWrite(oname, cdoFiletype());
-      if ( streamIDs[eofID] < 0) 
-        cdiError(streamIDs[eofID], "Open failed on %s", oname);
-      else if (cdoVerbose) 
+      if (cdoVerbose) 
         cdoPrint("opened %s ('w')  as stream%i for %i. eof", oname, streamIDs[eofID], eofID+1);
       
       streamDefVlist(streamIDs[eofID], vlistID3);
@@ -219,7 +207,7 @@ void *Eofcoeff(void * argument)
           streamDefTimestep(streamIDs[eofID],tsID);
         }
       */
-      for ( recID =0; recID< nrecs; recID ++ )
+      for ( recID =0; recID< nrecs; recID++ )
         {
           streamInqRecord(streamID2, &varID, &levelID);
           missval2 = vlistInqVarMissval(vlistID2, varID);

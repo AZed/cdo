@@ -18,7 +18,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 
@@ -53,8 +53,6 @@ char *get_strtimeptr()
 
 void cdoInqHistory(int fileID)
 {
-  static char func[] = "cdoInqHistory";
-
   if ( ghistory )
     {
       free(ghistory);
@@ -81,7 +79,6 @@ void cdoInqHistory(int fileID)
 
 void cdoDefHistory(int fileID, char *histstring)
 {
-  static char func[] = "cdoDefHistory";
   char *history = NULL;
   size_t historysize = 0;
   char *strtimeptr;

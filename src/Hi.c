@@ -21,7 +21,7 @@
       Hi      hi           Compute the humidity index
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -48,7 +48,6 @@ static double humidityIndex(double t, double e, double r, double missval)
 
 static void farexpr(field_t *field1, field_t field2, field_t field3, double (*expression)(double, double, double, double))
 {
-  static char func[] = "farexpr";
   int   i, len;
   const int     grid1    = field1->grid;
   const int     nmiss1   = field1->nmiss;
@@ -66,7 +65,7 @@ static void farexpr(field_t *field1, field_t field2, field_t field3, double (*ex
   len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) || len != gridInqSize(grid3) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 || nmiss3 > 0 )
     {
@@ -90,7 +89,6 @@ static void farexpr(field_t *field1, field_t field2, field_t field3, double (*ex
    
 void *Hi(void *argument)
 {
-  static char func[] = "Hi";
   int streamID1, streamID2, streamID3, streamID4;
   int gridsize;
   int nrecs, nrecs2, nrecs3, recID;
@@ -106,11 +104,8 @@ void *Hi(void *argument)
   cdoOperatorAdd("hi", 0, 0, NULL);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -120,8 +115,8 @@ void *Hi(void *argument)
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = vlistInqTaxis(vlistID3);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
-  vlistCompare(vlistID1, vlistID3, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_DIM);
+  vlistCompare(vlistID1, vlistID3, CMP_DIM);
   
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -150,7 +145,6 @@ void *Hi(void *argument)
   vlistDefVarUnits(vlistID4, varID4, HI_UNITS);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 

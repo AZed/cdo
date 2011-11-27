@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -30,7 +30,6 @@
 
 void *Trend(void *argument)
 {
-  static char func[] = "Trend";
   int gridsize;
   int vdate = 0, vtime = 0;
   int nrecs, nrecords;
@@ -43,6 +42,7 @@ void *Trend(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   int nwork = 5;
+  double zj;
   double temp1, temp2;
   double missval, missval1, missval2;
   field_t **work[5];
@@ -51,7 +51,6 @@ void *Trend(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -69,13 +68,9 @@ void *Trend(void *argument)
     vlistDefVarDatatype(vlistID2, varID, DATATYPE_FLT64);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
+  streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
-
-  streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
-
   streamDefVlist(streamID3, vlistID2);
 
   recVarID   = (int *) malloc(nrecords*sizeof(int));
@@ -109,19 +104,19 @@ void *Trend(void *argument)
 	}
     }
 
-  tsID    = 0;
+  tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       vdate = taxisInqVdate(taxisID1);
       vtime = taxisInqVtime(taxisID1);
 
-      tsID++; /* don't move this line !!! */
-
+      zj = tsID;
+      
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
 
-	  if ( tsID == 1 )
+	  if ( tsID == 0 )
 	    {
 	      recVarID[recID]   = varID;
 	      recLevelID[recID] = levelID;
@@ -136,13 +131,15 @@ void *Trend(void *argument)
 	  for ( i = 0; i < gridsize; i++ )
 	    if ( !DBL_IS_EQUAL(field1.ptr[i], missval) )
 	      {
-		work[0][varID][levelID].ptr[i] += tsID;
-		work[1][varID][levelID].ptr[i] += tsID * tsID;
-		work[2][varID][levelID].ptr[i] += tsID * field1.ptr[i];
+		work[0][varID][levelID].ptr[i] += zj;
+		work[1][varID][levelID].ptr[i] += zj * zj;
+		work[2][varID][levelID].ptr[i] += zj * field1.ptr[i];
 		work[3][varID][levelID].ptr[i] += field1.ptr[i];
 		work[4][varID][levelID].ptr[i]++;
 	      }      
 	}
+
+      tsID++;
     }
 	  
 

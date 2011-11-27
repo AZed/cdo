@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,14 +24,14 @@
 */
 
 
-#include <stdio.h>
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 
 
-static int input_iarray(int nval, int *array)
+static
+int input_iarray(int nval, int *array)
 {
   int i, n;
   int ival = 0;
@@ -68,7 +68,6 @@ static int input_darray(int nval, double *array)
 
 void *Input(void *argument)
 {
-  static char func[] = "Input";
   int INPUT, INPUTSRV, INPUTEXT;
   int operatorID;
   int varID = 0;
@@ -245,7 +244,6 @@ void *Input(void *argument)
 	  vlistDefTaxis(vlistID, taxisID);
 
 	  streamID = streamOpenWrite(cdoStreamName(0), output_filetype);
-	  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
 	  streamDefVlist(streamID, vlistID);
 	}

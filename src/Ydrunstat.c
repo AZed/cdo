@@ -27,12 +27,10 @@
       Ydrunstat    ydrunstd          Multi-year daily running standard deviation
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
-#include "field.h"
 
 
 #define NDAY 373
@@ -60,7 +58,6 @@ static void ydstatFinalize(YDAY_STATS *stats, int operfunc);
 
 void *Ydrunstat(void *argument)
 {
-  static char func[] = "Ydrunstat";
   int operatorID;
   int operfunc;
   int gridsize;
@@ -97,13 +94,12 @@ void *Ydrunstat(void *argument)
   cdoOperatorAdd("ydrunstd",  func_std,  0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   operatorInputArg("number of timesteps");
   ndates = atoi(operatorArgv()[0]);
   
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -116,7 +112,6 @@ void *Ydrunstat(void *argument)
   dpy      = calendar_dpy(calendar);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -275,20 +270,21 @@ void *Ydrunstat(void *argument)
       {
 	taxisDefVdate(taxisID2, stats->vdate[dayoy]);
 	taxisDefVtime(taxisID2, stats->vtime[dayoy]);
-	streamDefTimestep(streamID2, otsID++);
+	streamDefTimestep(streamID2, otsID);
 
 	for ( recID = 0; recID < nrecords; recID++ )
 	  {
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	      {
-		streamDefRecord(streamID2, varID, levelID);
-		streamWriteRecord(streamID2, stats->vars1[dayoy][varID][levelID].ptr,
-		  stats->vars1[dayoy][varID][levelID].nmiss);
-	      }
+	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	    streamDefRecord(streamID2, varID, levelID);
+	    streamWriteRecord(streamID2, stats->vars1[dayoy][varID][levelID].ptr,
+			      stats->vars1[dayoy][varID][levelID].nmiss);
 	  }
+
+	otsID++;
       }
   
   for ( its = 0; its < ndates; its++ )
@@ -326,9 +322,9 @@ void *Ydrunstat(void *argument)
   return (0);
 }
 
-static YDAY_STATS *ydstatCreate(int vlistID)
+static
+YDAY_STATS *ydstatCreate(int vlistID)
 {
-  static const char func[] = "ydstatCreate";
   int dayoy;
   
   YDAY_STATS *stats = (YDAY_STATS *) malloc(sizeof(YDAY_STATS));
@@ -346,9 +342,9 @@ static YDAY_STATS *ydstatCreate(int vlistID)
   return stats;
 }
 
-static void ydstatDestroy(YDAY_STATS *stats)
+static
+void ydstatDestroy(YDAY_STATS *stats)
 {
-  static const char func[] = "ydstatDestroy";
   int dayoy, varID, levelID, nvars, nlevels;
   
   if ( stats != NULL )
@@ -384,9 +380,9 @@ static void ydstatDestroy(YDAY_STATS *stats)
     }
 }
 
-static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
+static
+void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
 {
-  static const char func[] = "ydstatCreateVars1";
   int varID, levelID, nvars, nlevels;
   int gridID, gridsize;
   double missval;
@@ -414,9 +410,9 @@ static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
     }
 }
 
-static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
+static
+void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
 {
-  static const char func[] = "ydstatCreateVars2";
   int varID, levelID, nvars, nlevels;
   int gridID, gridsize;
   double missval;
@@ -444,8 +440,9 @@ static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
     }
 }
 
-static void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
-  field_t **vars1, field_t **vars2, int nsets, int operfunc)
+static
+void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
+		  field_t **vars1, field_t **vars2, int nsets, int operfunc)
 {
   int varID, levelID, nvars, nlevels;
   int gridsize;
@@ -513,7 +510,8 @@ static void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
   stats->nsets[dayoy] += nsets;
 }
 
-static void ydstatFinalize(YDAY_STATS *stats, int operfunc)
+static
+void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 {
   int varID, levelID, nvars, nlevels;
   int dayoy;

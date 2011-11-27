@@ -31,9 +31,9 @@ typedef struct {
 HISTOGRAM;
 
 typedef struct {
-  int  nvars;
-  int *nlevels;
-  int *grids;
+  int    nvars;
+  int   *nlevels;
+  int   *grids;
   HISTOGRAM ***histograms;
 }
 HISTOGRAM_SET;
@@ -45,6 +45,6 @@ void hsetDestroy(HISTOGRAM_SET *hset);
 
 void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *min, const field_t *max);
 void hsetAddVarLevelValues(HISTOGRAM_SET *histField, int varID, int levelID, const field_t *field);
-void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, int k); 
+void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, double pn); 
 
 #endif /*PERCENTILES_H_*/

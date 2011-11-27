@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Cond2      ifthenelse      If then else
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -29,7 +29,6 @@
 
 void *Cond2(void *argument)
 {
-  static char func[] = "Cond2";
   int IFTHENELSE;
   int operatorID;
   enum {FILL_NONE, FILL_TS, FILL_REC};
@@ -40,6 +39,7 @@ void *Cond2(void *argument)
   int tsID;
   int varID, levelID;
   int offset;
+  int ntsteps1, ntsteps2;
   int vlistID1, vlistID2, vlistID3, vlistID4;
   int nmiss1, nmiss2, nmiss3, nmiss4;
   int i;
@@ -57,11 +57,8 @@ void *Cond2(void *argument)
   operatorID = cdoOperatorID();
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -72,6 +69,11 @@ void *Cond2(void *argument)
   taxisID4 = taxisDuplicate(taxisID2);
   vlistDefTaxis(vlistID4, taxisID4);
 
+  ntsteps1 = vlistNtsteps(vlistID1);
+  ntsteps2 = vlistNtsteps(vlistID2);
+  if ( ntsteps1 == 0 ) ntsteps1 = 1;
+  if ( ntsteps2 == 0 ) ntsteps2 = 1;
+
   if ( vlistNrecs(vlistID1) == 1 && vlistNrecs(vlistID2) != 1 )
     {
       filltype = FILL_REC;
@@ -79,16 +81,15 @@ void *Cond2(void *argument)
     }
 
   if ( filltype == FILL_NONE )
-    vlistCompare(vlistID1, vlistID2, func_sft);
+    vlistCompare(vlistID1, vlistID2, CMP_DIM);
 
-  vlistCompare(vlistID2, vlistID3, func_sft);
+  vlistCompare(vlistID2, vlistID3, CMP_DIM);
 
   nospec(vlistID1);
   nospec(vlistID2);
   nospec(vlistID3);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 
@@ -104,12 +105,11 @@ void *Cond2(void *argument)
 
   if ( cdoVerbose )
     cdoPrint("Number of timesteps: file1 %d, file2 %d, file3 %d",
-	     vlistNtsteps(vlistID1), vlistNtsteps(vlistID2), vlistNtsteps(vlistID3));
+	     ntsteps1, ntsteps2, vlistNtsteps(vlistID3));
 
   if ( filltype == FILL_NONE )
     {
-      if ( (vlistNtsteps(vlistID1) == 1 || vlistNtsteps(vlistID1) == 0) &&
-	    vlistNtsteps(vlistID2) != 1 && vlistNtsteps(vlistID2) != 0 )
+      if ( ntsteps1 == 1 && ntsteps2 != 1 )
 	{
 	  filltype = FILL_TS;
 	  cdoPrint("Filling up stream1 >%s< by copying the first timestep.", cdoStreamName(0));

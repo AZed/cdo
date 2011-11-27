@@ -2,6 +2,7 @@
 #define _GRIDDES_H
 
 typedef struct {
+  int    *mask;
   double *xvals;
   double *yvals;
   double *xbounds;
@@ -37,6 +38,7 @@ typedef struct {
   int     type;
   int     ntr;
   int    *rowlon;
+  int     genBounds;
   int     nvertex;
   int     size;
   int     xsize;
@@ -49,12 +51,14 @@ typedef struct {
   int     def_xinc;
   int     def_yinc;
   int     nd, ni, ni2, ni3;
-  char    xname[128];
-  char    xlongname[128];
-  char    xunits[128];
-  char    yname[128];
-  char    ylongname[128];
-  char    yunits[128];
+  int     number, position;
+  char    path[16384];
+  char    xname[CDI_MAX_NAME];
+  char    xlongname[CDI_MAX_NAME];
+  char    xunits[CDI_MAX_NAME];
+  char    yname[CDI_MAX_NAME];
+  char    ylongname[CDI_MAX_NAME];
+  char    yunits[CDI_MAX_NAME];
 }
 grid_t;
 

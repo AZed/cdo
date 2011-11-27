@@ -1,6 +1,124 @@
 CDO NEWS
 --------
 
+Version 1.5.3 (20 October 2011):
+
+   New features:
+     * Variable input parameter for ECA operators: eca_cdd, eca_cwd, eca_rr1, eca_sdii
+   Fixed bugs:
+     * deflate compression with netCDF4 doesn't work (option: -z zip)
+     * sellonlatbox: correct lon bounds if necessary
+     * ifthen, ifthenelse: uses only the first time step of the first input file
+     * module Monarith (monadd, monsub, monmul, mondiv): wrong result for 3D variables
+
+Version 1.5.2 (22 August 2011):
+
+   New features:
+     * replace: added support to replace single levels
+   Changed operators:
+     * remapeta: Changed minimum pressure level for condensation from 1000Pa to 0Pa.
+                 Use the environment variable REMAPETA_PTOP to set the minimum pressure level for condensation. 
+                 Above this level the humidity is set to the constant 1.E-6.
+   Fixed bugs:
+     * invertlat: bug fix for CURVILINEAR grids
+     * ymon<stat>: preserve time axis attributes (type and calendar)
+     * import_binary: added support for OPTION ZREV
+     * expr/exprf: wrong result for expression 'constant-field' and 'constant/field' (e.g. 1-field)
+                   This bug was introduced in CDO version 1.5.1.
+     * eof, eoftime, eofspatial, eof3d - Empirical Orthogonal Functions: 
+            There was a bug in the calculation of the Frobenius norm, which has only been triggered in some cases
+            when using a low precision. The normalization has been changed thus that the eigenvectors are not weighted 
+            and their absolute is 1. The default settings for convergence have been changed to be more conservative:
+            CDO_SVD_MODE=jacobi    MAX_JACOBI_ITER=12   FNORM_PRECISION=1.e-12
+
+Version 1.5.1 (12 July 2011):
+
+   New features:
+     * Added support for netCDF4 classic format; option -f nc4c
+     * import_binary: Added support for 1 and 2 byte integer
+   New operators:
+     * intlevel3d: vertical interpolation to/from 3d vertical coordinates
+     * ensrkhistspace: Ranked Histogram averaged over time
+     * ensrkhisttime:  Ranked Histogram averaged over space
+     * ensroc:  Ensemble Receiver Operating characteristics
+     * enscrps: Ensemble CRPS and decomposition
+     * ensbrs:  Ensemble Brier score
+   Fixed bugs:
+     * Exprf: wrong result for missing values != (double) -9.e33
+     * detrend: added support for time bounds
+     * Filter: added support for time bounds
+     * eofspatial: integer overflow; wrong result for grid size > 46340
+     * eca_*: use the input calendar for the output streams
+
+Version 1.5.0 (15 March 2011):
+
+   New features:
+     * GRIB2 support via ECMWF GRIB_API
+     * Added support for netCDF level bounds
+     * Added option -O to overwrite existing output file (only for ens<STAT>, merge, mergetime)
+   New operators:
+     * selparam: Select parameters by identifier
+     * delparam: Delete parameters by identifier
+     * splitparam: Split parameter identifiers
+     * chparam: Change parameter identifier
+   Changed operators:
+     * expr: added functions abs(), int(), nint(), sqr()
+     * sinfo: changed output of table and code number to parameter identifier
+     * info:  changed output of code number to parameter identifier
+     * diff:  changed output of code number to parameter identifier
+   Fixed bugs:
+     * sellonlatbox: does not work as expected when selecting all longitudes
+     * sellonlatbox: initialization missing for unstructured grids
+     * ml2pl and ml2hl: wrong result if input file contains full *and* half level data
+     * trend and detrend: integer overflow; wrong result for ntimesteps > 46340
+     * spcut: only correct results with continuous wave numbers starting at 1
+     * remaplib: fixed data race in calculation of bin_addr (OpenMP)
+
+Version 1.4.7 (06 January 2011):
+
+   New features:
+     * improved support for netCDF output from WRF model (import time and grid variables)
+   New operators:
+     * ydayadd, ydaysub, ydaymul, ydaydiv: Multi-year daily arithmetic
+     * eca_pd: Precipitation days index per time period
+     * dv2ps: Divergence and vorticity to velocity potential and stream function
+   Changed operators:
+     * import_cmsaf: added time information also for time constant fields
+   Fixed bugs:
+     * eof: fix memory access violation
+     * eofcoeff: fix memory access violation
+     * fldmean: gives wrong result for grid units [radian]
+     * Yseasstat: bug fix for datasets with time constant fields
+     * sellevel: fix problem with hybrid model levels and netCDF output
+     * sellonlatbox: fix rounding error of the last lon index
+     * Settime: bug fix for time independent variables in combination with other operators (pipes)
+
+Version 1.4.6 (17 September 2010):
+
+   New features:
+     * Using libtool for linking (rpath)
+     * Changed predefined gaussian grid names from t<RES>grid to n<N>
+       Use n80 instead of t106grid to define a Gaussian N80 grid
+     * Changed percentile parameter type from integer to float
+   New operators:
+     * bandpass: Bandpass filtering
+     * lowpass:  Lowpass filtering
+     * highpass: Highpass filtering
+   Changed operators:
+     * eca_gsl: adjust implementation to fit definition by ECA
+     * expr, exprf: added missing values support
+   Fixed bugs:
+     * sellevel: copy zaxis meta data name and units
+     * seldate: open output file only when time steps found
+     * sellonlatbox: fix rounding error of the last lon index
+
+Version 1.4.5.1 (05 July 2010):
+
+   New features:
+     * GRIB1 decode: Correct ZeroShiftError of simple packed spherical harmonics
+   Fixed bugs:
+     * wrong result of SZIP compressed GRIB1 records with 24 bit packing and a compression ratio < 1.05 
+
 Version 1.4.5 (28 June 2010):
 
    New operators:

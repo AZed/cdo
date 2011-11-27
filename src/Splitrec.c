@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Split      splitrec        Split records
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -29,7 +29,6 @@
 
 void *Splitrec(void *argument)
 {
-  static char func[] = "Splitrec";
   int nchars;
   int streamID1, streamID2;
   int varID;
@@ -38,7 +37,7 @@ void *Splitrec(void *argument)
   int varID2, levelID2;
   int vlistID1, vlistID2;
   char filesuffix[32];
-  char filename[4096];
+  char filename[8192];
   int index;
   int lcopy = FALSE;
   int gridsize;
@@ -50,7 +49,6 @@ void *Splitrec(void *argument)
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -60,13 +58,7 @@ void *Splitrec(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   if ( ! lcopy )
     {
@@ -97,7 +89,6 @@ void *Splitrec(void *argument)
 	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
 	  streamID2 = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", filename);
 
 	  streamDefVlist(streamID2, vlistID2);
 

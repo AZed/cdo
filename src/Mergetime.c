@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -31,7 +31,6 @@
 
 void *Mergetime(void *argument)
 {
-  static char func[] = "Mergetime";
   int streamID1, streamID2 = CDI_UNDEFID;
   int tsID2 = 0, recID, varID, levelID;
   int vlistID1, vlistID2;
@@ -67,7 +66,6 @@ void *Mergetime(void *argument)
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
       streamID1 = streamOpenRead(cdoStreamName(fileID));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(fileID));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID1 = vlistInqTaxis(vlistID1);
@@ -80,7 +78,7 @@ void *Mergetime(void *argument)
   
   /* check that the contents is always the same */
   for ( fileID = 1; fileID < nfiles; fileID++ )
-    vlistCompare(sf[0].vlistID, sf[fileID].vlistID, func_hrd);
+    vlistCompare(sf[0].vlistID, sf[fileID].vlistID, CMP_ALL);
 
   /* read the first time step */
   for ( fileID = 0; fileID < nfiles; fileID++ )
@@ -101,14 +99,12 @@ void *Mergetime(void *argument)
 
   ofilename = cdoStreamName(nfiles);
 
-  if ( !cdoSilentMode )
+  if ( !cdoSilentMode && !cdoOverwriteMode )
     if ( fileExist(ofilename) )
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exist!", ofilename);
 
   streamID2 = streamOpenWrite(ofilename, cdoFiletype());
-  if ( streamID2 < 0 )
-    cdiError(streamID2, "Open failed on %s", ofilename);
 
   if ( ! lcopy )
     {

@@ -1,0 +1,3 @@
+usr/include/*
+usr/lib/*/libcdi.a
+usr/lib/*/pkgconfig/*

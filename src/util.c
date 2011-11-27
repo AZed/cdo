@@ -43,7 +43,6 @@ char *getProgname(char *string)
 
 char *getOperator(const char *argument)
 {
-  static char func[] = "getOperator";
   char *operatorArg = NULL;
   char *blankpos;
   size_t len;
@@ -68,9 +67,8 @@ char *getOperator(const char *argument)
 
 char *operatorAlias(char *operatorName);
 
-char *getOperatorName(char *operatorArg)
+char *getOperatorName(const char *operatorArg)
 {
-  static char func[] = "getOperatorName";
   char *commapos;
   char *operatorName = NULL;
   size_t len;
@@ -99,7 +97,6 @@ char *getOperatorName(char *operatorArg)
 
 char *makeArgument(int argc, char *argv[])
 {
-  static char func[] = "makeArgument";
   char *argument = NULL;
   int iarg;
   size_t len, pos = 0, off = 0;
@@ -124,7 +121,6 @@ char *makeArgument(int argc, char *argv[])
 
 char *getFileArg(char *argument)
 {
-  static char func[] = "getFileArg";
   char *fileArg = NULL;
   char *parg;
   char *blankpos;
@@ -145,6 +141,7 @@ char *getFileArg(char *argument)
 
   return (fileArg);
 }
+
 
 void input_int(char *arg, int intarr[], int maxint, int *nintfound)
 {
@@ -243,4 +240,66 @@ int userFileOverwrite(const char *filename)
     status = 1;
 
   return (status);
+}
+
+int stdin_is_tty  = 0;
+int stdout_is_tty = 0;
+
+void init_is_tty(void)
+{
+  struct stat statbuf;
+  fstat(0, &statbuf);
+  if ( S_ISCHR(statbuf.st_mode) ) stdin_is_tty = 1;  
+  fstat(1, &statbuf);
+  if ( S_ISCHR(statbuf.st_mode) ) stdout_is_tty = 1;  
+}
+
+
+int ps_lhead = FALSE;
+int ps_nch   = 0;
+int ps_cval  = -1;
+
+void progressInit(void)
+{
+  ps_lhead = FALSE;
+  ps_nch   = 0;;
+  ps_cval  = -1;
+}
+
+
+void progressStatus(double offset, double refval, double curval)
+{
+  int ival;
+
+  if ( !stdout_is_tty ) return;
+
+  offset = offset < 0 ? 0: offset;
+  offset = offset > 1 ? 1: offset;
+  refval = refval < 0 ? 0: refval;
+  refval = refval > 1 ? 1: refval;
+  curval = curval < 0 ? 0: curval;
+  curval = curval > 1 ? 1: curval;
+
+  ival = (offset + refval*curval)*100;
+
+  if ( ps_cval == -1 )
+    {
+      ps_nch = fprintf(stdout, "%s: %3d%%", processInqPrompt(), 0);
+      fflush(stdout);
+      ps_lhead = TRUE;
+    }
+
+  if ( ival != ps_cval )
+    {
+      ps_cval = ival;
+      fprintf(stdout, "\b\b\b\b%3d%%", ps_cval);
+      fflush(stdout);
+    }
+
+  if ( ps_cval == 100 && ps_lhead )
+    {
+      ps_lhead = FALSE;
+      while ( ps_nch-- ) fprintf(stdout, "\b \b");
+      fflush(stdout);
+    }
 }

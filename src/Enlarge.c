@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,16 +21,14 @@
       Enlarge    enlarge         Enlarge fields
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
 
 
 void *Enlarge(void *argument)
 {
-  static char func[] = "Enlarge";
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int gridID1, gridID2;
@@ -53,8 +51,9 @@ void *Enlarge(void *argument)
   xsize2 = gridInqXsize(gridID2);
   ysize2 = gridInqYsize(gridID2);
 
+  if ( cdoVerbose ) fprintf(stderr, "gridID2 %d, xsize2 %d, ysize2 %d\n", gridID2, xsize2, ysize2);
+
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -74,7 +73,6 @@ void *Enlarge(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -99,6 +97,9 @@ void *Enlarge(void *argument)
 	  xsize1 = gridInqXsize(gridID1);
 	  ysize1 = gridInqYsize(gridID1);
 	  gridsize1 = gridInqSize(gridID1);
+
+	  if ( xsize1 == 0 ) xsize1 = 1;
+	  if ( ysize1 == 0 ) ysize1 = 1;
 
 	  /* printf("%d %d %d %d\n", xsize1, ysize1, xsize2, ysize2); */
 	  if ( xsize1 == 1 && ysize1 == ysize2 && xsize1*ysize1 == gridsize1 )

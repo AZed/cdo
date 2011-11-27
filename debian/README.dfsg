@@ -1,0 +1,6 @@
+This version of CDO differs from the upstream in that:
+(1) No PDFs are shipped, as per Debian policy - they cannot be recreated from source.
+(2) cfortran.h is not shipped; we use cfortran that ships with Debian instead.
+ (This is currently cfortran 4.4 in Debian vs. 4.3 in the original sources).
+
+-  Alastair McKinstry, <mckinstry@debian.org>, 2011-06-18

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,8 @@
    This module contains the following operators:
 
       Split      splitcode       Split codes
-      Split      splitname       Split  variables
+      Split      splitparam      Split parameters
+      Split      splitname       Split variables
       Split      splitlevel      Split levels
       Split      splitgrid       Split grids
       Split      splitzaxis      Split zaxis
@@ -27,7 +28,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -35,13 +36,12 @@
 
 void *Split(void *argument)
 {
-  static char func[] = "Split";
-  int SPLITCODE, SPLITNAME, SPLITLEVEL, SPLITGRID, SPLITZAXIS, SPLITTABNUM;
+  int SPLITCODE, SPLITPARAM, SPLITNAME, SPLITLEVEL, SPLITGRID, SPLITZAXIS, SPLITTABNUM;
   int operatorID;
   int nchars;
   int streamID1;
   int varID;
-  int code, tabnum;
+  int code, tabnum, param;
   int nrecs, nvars, nzaxis, nlevs;
   int tsID, recID, levelID, zaxisID, levID;
   int varID2, levelID2;
@@ -50,7 +50,7 @@ void *Split(void *argument)
   int  itmp[999];
   double ftmp[999];
   char filesuffix[32];
-  char filename[1024];
+  char filename[8192];
   int nsplit = 0;
   int index;
   int i;
@@ -62,6 +62,7 @@ void *Split(void *argument)
   cdoInitialize(argument);
 
   SPLITCODE   = cdoOperatorAdd("splitcode",   0, 0, NULL);
+  SPLITPARAM  = cdoOperatorAdd("splitparam",  0, 0, NULL);
   SPLITNAME   = cdoOperatorAdd("splitname",   0, 0, NULL);
   SPLITLEVEL  = cdoOperatorAdd("splitlevel",  0, 0, NULL);
   SPLITGRID   = cdoOperatorAdd("splitgrid",   0, 0, NULL);
@@ -73,7 +74,6 @@ void *Split(void *argument)
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -85,13 +85,7 @@ void *Split(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   if ( operatorID == SPLITCODE )
     {
@@ -136,15 +130,87 @@ void *Split(void *argument)
 	  vlistCopyFlag(vlistID2, vlistID1);
 	  vlistIDs[index] = vlistID2;
 
-	  sprintf(filename+nchars, "%03d", codes[index]);
-	  if ( filesuffix[0] )
-	    sprintf(filename+nchars+3, "%s", filesuffix);
+	  if ( codes[index] > 9999 )
+	    {
+	      sprintf(filename+nchars, "%05d", codes[index]);
+	      if ( filesuffix[0] )
+		sprintf(filename+nchars+5, "%s", filesuffix);
+	    }
+	  else if ( codes[index] > 999 )
+	    {
+	      sprintf(filename+nchars, "%04d", codes[index]);
+	      if ( filesuffix[0] )
+		sprintf(filename+nchars+4, "%s", filesuffix);
+	    }
+	  else
+	    {
+	      sprintf(filename+nchars, "%03d", codes[index]);
+	      if ( filesuffix[0] )
+		sprintf(filename+nchars+3, "%s", filesuffix);
+	    }
+
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
       if ( codes ) free(codes);
+    }
+  else if ( operatorID == SPLITPARAM )
+    {
+      char paramstr[32];
+      int *params = NULL;
+      nsplit = 0;
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  param = vlistInqVarParam(vlistID1, varID);
+	  for ( index = 0; index < varID; index++ )
+	    if ( param == vlistInqVarParam(vlistID1, index) ) break;
+
+	  if ( index == varID )
+	    {
+	      itmp[nsplit] = param;
+	      nsplit++;
+	    }
+	}
+
+      params    = (int *) malloc(nsplit*sizeof(int));
+      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
+      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      memcpy(params, itmp, nsplit*sizeof(int));
+
+      for ( index = 0; index < nsplit; index++ )
+	{
+	  vlistClearFlag(vlistID1);
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      param   = vlistInqVarParam(vlistID1, varID);
+	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      nlevs   = zaxisInqSize(zaxisID);
+	      if ( params[index] == param )
+		{
+		  for ( levID = 0; levID < nlevs; levID++ )
+		    {
+		      vlistDefIndex(vlistID1, varID, levID, index);
+		      vlistDefFlag(vlistID1, varID, levID, TRUE);
+		    }
+		}
+	    }
+
+	  vlistID2 = vlistCreate();
+	  vlistCopyFlag(vlistID2, vlistID1);
+	  vlistIDs[index] = vlistID2;
+
+	  cdiParamToString(params[index], paramstr, sizeof(paramstr));
+
+	  filename[nchars] = '\0';
+	  strcat(filename, paramstr);
+	  if ( filesuffix[0] )
+	    strcat(filename, filesuffix);
+	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
+
+	  streamDefVlist(streamIDs[index], vlistIDs[index]);
+	}
+      if ( params ) free(params);
     }
   else if ( operatorID == SPLITTABNUM )
     {
@@ -193,7 +259,6 @@ void *Split(void *argument)
 	  if ( filesuffix[0] )
 	    sprintf(filename+nchars+3, "%s", filesuffix);
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
@@ -201,7 +266,7 @@ void *Split(void *argument)
     }
   else if ( operatorID == SPLITNAME )
     {
-      char varname[128];
+      char varname[CDI_MAX_NAME];
       nsplit = nvars;
 
       vlistIDs  = (int *) malloc(nsplit*sizeof(int));
@@ -229,7 +294,6 @@ void *Split(void *argument)
 	  if ( filesuffix[0] )
 	    strcat(filename, filesuffix);
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistID2);
 	}
@@ -283,7 +347,6 @@ void *Split(void *argument)
 	  if ( filesuffix[0] )
 	    sprintf(filename+nchars+6, "%s", filesuffix);
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistID2);
 	}
@@ -327,7 +390,6 @@ void *Split(void *argument)
 	  if ( filesuffix[0] )
 	    sprintf(filename+nchars+2, "%s", filesuffix);
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistID2);
 	}
@@ -370,7 +432,6 @@ void *Split(void *argument)
 	  if ( filesuffix[0] )
 	    sprintf(filename+nchars+2, "%s", filesuffix);
 	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
 	  streamDefVlist(streamIDs[index], vlistID2);
 	}
@@ -405,7 +466,6 @@ void *Split(void *argument)
 	  /*
 	    printf("%d %d %d %d %d %d\n", index, vlistID2, varID, levelID, varID2, levelID2);
 	  */
-
 	  streamDefRecord(streamIDs[index], varID2, levelID2);
 	  if ( lcopy )
 	    {

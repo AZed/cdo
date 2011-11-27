@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,7 @@
       Spectral   spcut           Cut spectral wave number
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -34,11 +34,8 @@
 #include "list.h"
 
 
-#define  MAX_NTR  9999
-
 void *Spectral(void *argument)
 {
-  static char func[] = "Spectral";
   int GP2SP, GP2SPL, SP2GP, SP2GPL, SP2SP, SPCUT;
   int operatorID;
   int streamID1, streamID2;
@@ -52,7 +49,7 @@ void *Spectral(void *argument)
   int gridID;
   int nmiss;
   int ncut = 0;
-  int *wnums = NULL, waves[MAX_NTR];
+  int *wnums = NULL, *waves = NULL;
   int *vars;
   int lcopy = FALSE;
   double *array1 = NULL, *array2 = NULL;
@@ -75,7 +72,6 @@ void *Spectral(void *argument)
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -200,26 +196,24 @@ void *Spectral(void *argument)
     }
   else if ( operatorID == SPCUT )
     {
-      int i, j;
+      long i, j, maxntr;
       gridID1 = gridIDsp;
 
       operatorInputArg("wave numbers");
       if ( gridID1 != -1 )
 	{
+	  maxntr = 1+gridInqTrunc(gridID1);
 	  ncut = args2intlist(operatorArgc(), operatorArgv(), ilist);
 	  wnums = (int *) listArrayPtr(ilist);
-	  for ( i = 0; i < MAX_NTR; i++ ) waves[i] = 1;
+	  waves = (int *) malloc(maxntr*sizeof(int));
+	  for ( i = 0; i < maxntr; i++ ) waves[i] = 1;
 	  for ( i = 0; i < ncut; i++ )
 	    {
 	      j = wnums[i] - 1;
-	      if ( j < 0 || j >= MAX_NTR )
-		cdoAbort("wave number %d out of range!", wnums[i]);
+	      if ( j < 0 || j >= maxntr )
+		cdoAbort("wave number %d out of range (min=1, max=%d)!", wnums[i], maxntr);
 	      waves[j] = 0;
 	    }
-	  /*
-	  for ( i = 0; i < 200; i++ )
-	    printf("%d %d\n", i+1, waves[i]);
-	  */
 	}
       else
 	cdoAbort("No spectral data found!");
@@ -240,7 +234,6 @@ void *Spectral(void *argument)
   if ( gridID1 != -1 ) vlistChangeGrid(vlistID2, gridID1, gridID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -267,7 +260,7 @@ void *Spectral(void *argument)
 	  if ( vars[varID] )
 	    {
 	      streamReadRecord(streamID1, array1, &nmiss);
-	      if ( nmiss ) cdoAbort("missing values unsupported for spectral data!");
+	      if ( nmiss ) cdoAbort("Missing values unsupported for spectral data!");
 
 	      gridID1 = vlistInqVarGrid(vlistID1, varID);
 	      if ( operatorID == GP2SP || operatorID == GP2SPL )
@@ -305,6 +298,7 @@ void *Spectral(void *argument)
   if ( array2 ) free(array2);
   if ( array1 ) free(array1);
   if ( vars )   free(vars);
+  if ( waves )  free(waves);
 
   listDelete(ilist);
 

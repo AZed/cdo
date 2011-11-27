@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
   GNU General Public License for more details.
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -24,7 +24,6 @@ static
 void genGrids(int gridID1, int *gridIDs, int nxvals, int nyvals, int nsx, int nsy,
 	      int **gridindex, int nsplit, int gridsize2)
 {
-  static char *func = "genGrids";
   int gridID2;
   int gridtype;
   int gridsize, nx, ny;
@@ -100,7 +99,6 @@ typedef struct
 
 void *Scatter(void *argument)
 {
-  static char func[] = "Scatter";
   int nchars;
   int streamID1;
   int *vlistIDs = NULL, *streamIDs = NULL;
@@ -109,7 +107,7 @@ void *Scatter(void *argument)
   int tsID, recID, levelID;
   int vlistID1;
   char filesuffix[32];
-  char filename[4096];
+  char filename[8192];
   int index;
   int nsplit, nsx, nsy, ix, iy;
   int xinc, yinc;
@@ -128,7 +126,6 @@ void *Scatter(void *argument)
   yinc = atoi(operatorArgv()[1]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -200,14 +197,7 @@ void *Scatter(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
-
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   for ( index = 0; index < nsplit; index++ )
     {
@@ -219,7 +209,6 @@ void *Scatter(void *argument)
       if ( filesuffix[0] )
 	sprintf(filename+nchars+5, "%s", filesuffix);
       streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
-      if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
 
       streamDefVlist(streamIDs[index], vlistIDs[index]);
     }

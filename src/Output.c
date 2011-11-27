@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,11 @@
       Output     outputint       Integer output
       Output     outputsrv       SERVICE output
       Output     outputext       EXTRA output
+      Output     outputtable     Table output
 */
 
-#include "cdi.h"
+#include <ctype.h>
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "grid.h"
@@ -34,14 +36,14 @@
 
 void *Output(void *argument)
 {
-  static char func[] = "Output";
-  int OUTPUT, OUTPUTINT, OUTPUTSRV, OUTPUTEXT, OUTPUTF, OUTPUTTS, OUTPUTFLD, OUTPUTARR, OUTPUTXYZ, OUTPUTKEY;
+  int OUTPUT, OUTPUTINT, OUTPUTSRV, OUTPUTEXT, OUTPUTF, OUTPUTTS, OUTPUTFLD, OUTPUTARR, OUTPUTXYZ, OUTPUTTAB;
   int operatorID;
   int i;
   int indf;
   int varID, recID;
   int gridsize = 0;
   int gridID, zaxisID, code, vdate, vtime;
+  int gridtype;
   int ngrids;
   int nrecs;
   int levelID;
@@ -60,14 +62,16 @@ void *Output(void *argument)
   double xdate;
   double missval;
   double lon, lat;
-  char name[128];
+  char name[CDI_MAX_NAME];
   int len;
   int npar = 0;
+  int year, month, day;
   char **parnames = NULL;
   int *keys = NULL, nkeys = 0, k;
   int nKeys;
-  enum                     {kvalue,  kcode,  kname,  klon,  klat,  klev,  kdate,  ktime};
-  const char *Keynames[] = {"value", "code", "name", "lon", "lat", "lev", "date", "time"};
+  int Keylen[]           = {     8,      4,      8,     6,     6,     6,      4,      4,      8,      6,      5,       2,     2};
+  enum                     {kvalue,  kcode,  kname,  klon,  klat,  klev,  kxind,  kyind,  kdate,  ktime,  kyear,  kmonth,  kday};
+  const char *Keynames[] = {"value", "code", "name", "lon", "lat", "lev", "xind", "yind", "date", "time", "year", "month", "day"};
 
 
   cdoInitialize(argument);
@@ -81,7 +85,7 @@ void *Output(void *argument)
   OUTPUTFLD = cdoOperatorAdd("outputfld", 0, 0, NULL);
   OUTPUTARR = cdoOperatorAdd("outputarr", 0, 0, NULL);
   OUTPUTXYZ = cdoOperatorAdd("outputxyz", 0, 0, NULL);
-  OUTPUTKEY = cdoOperatorAdd("outputkey", 0, 0, NULL);
+  OUTPUTTAB = cdoOperatorAdd("outputtab", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -92,7 +96,7 @@ void *Output(void *argument)
       format = operatorArgv()[0];
       nelem  = atoi(operatorArgv()[1]);
     }
-  else if ( operatorID == OUTPUTKEY )
+  else if ( operatorID == OUTPUTTAB )
     {
       operatorInputArg("keys to print");
  
@@ -110,16 +114,18 @@ void *Output(void *argument)
 	{
 	  for ( k = 0; k < nKeys; ++k )
 	    {
-	      len = strlen(parnames[i]);
+	      //	      len = strlen(parnames[i]);
+	      len = strlen(Keynames[k]);
 	      if ( len < 3 ) len = 3;
 	      if ( strncmp(parnames[i], Keynames[k], len) == 0 )
 		{
 		  keys[nkeys++] = k;
+		  if ( parnames[i][len] && isdigit(parnames[i][len]) ) Keylen[k] = atoi(&parnames[i][len]);
 		  break;
 		}
 	    }
 
-	  if ( k == nKeys ) cdoWarning("Key %s unsupported", parnames[i]);
+	  if ( k == nKeys ) cdoAbort("Key %s unsupported!", parnames[i]);
 	}
  
       if ( cdoVerbose )
@@ -130,7 +136,6 @@ void *Output(void *argument)
   for ( indf = 0; indf < cdoStreamCnt(); indf++ )
     {
       streamID = streamOpenRead(cdoStreamName(indf));
-      if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(indf));
 
       vlistID = streamInqVlist(streamID);
 
@@ -144,17 +149,18 @@ void *Output(void *argument)
 
       gridID   = vlistGrid(vlistID, 0);
       gridsize = gridInqSize(gridID);
+      gridtype = gridInqType(gridID);
 
       array = (double *) malloc(gridsize*sizeof(double));
 
-      if ( operatorID == OUTPUTFLD || operatorID == OUTPUTXYZ || operatorID == OUTPUTKEY )
+      if ( operatorID == OUTPUTFLD || operatorID == OUTPUTXYZ || operatorID == OUTPUTTAB )
 	{
-	  char units[128];
+	  if ( gridInqType(gridID) == GRID_GME ) gridID = gridToUnstructured(gridID);
 
-	  if ( gridInqType(gridID) == GRID_GME ) gridID = gridToCell(gridID);
-
-	  if ( gridInqType(gridID) != GRID_CELL && gridInqType(gridID) != GRID_CURVILINEAR )
+	  if ( gridInqType(gridID) != GRID_UNSTRUCTURED && gridInqType(gridID) != GRID_CURVILINEAR )
 	    gridID = gridToCurvilinear(gridID);
+
+	  gridtype = gridInqType(gridID);
 
 	  grid_center_lon = (double *) malloc(gridsize*sizeof(double));
 	  grid_center_lat = (double *) malloc(gridsize*sizeof(double));
@@ -162,10 +168,13 @@ void *Output(void *argument)
 	  gridInqYvals(gridID, grid_center_lat);
 
 	  /* Convert lat/lon units if required */
-	  gridInqYunits(gridID, units);
-
-	  gridToDegree(units, "grid center lon", gridsize, grid_center_lon);
-	  gridToDegree(units, "grid center lat", gridsize, grid_center_lat);
+	  {
+	    char units[CDI_MAX_NAME];
+	    gridInqXunits(gridID, units);
+	    gridToDegree(units, "grid center lon", gridsize, grid_center_lon);
+	    gridInqYunits(gridID, units);
+	    gridToDegree(units, "grid center lat", gridsize, grid_center_lat);
+	  }
 	}
 
       tsID = 0;
@@ -174,6 +183,8 @@ void *Output(void *argument)
 	{
 	  vdate = taxisInqVdate(taxisID);
 	  vtime = taxisInqVtime(taxisID);
+
+	  cdiDecodeDate(vdate, &year, &month, &day);
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -251,22 +262,40 @@ void *Output(void *argument)
 		      fprintf(stdout, "%g\t%g\t%g\t%g\n", xdate, 
 			      grid_center_lat[i], grid_center_lon[i], array[i]);
 		}
-	      else if ( operatorID == OUTPUTKEY )
+	      else if ( operatorID == OUTPUTTAB )
 		{
+		  int xsize, ysize;
+		  int xind, yind;
+		  int l2d = FALSE;
+
+		  xsize = gridInqXsize(gridID);
+		  ysize = gridInqYsize(gridID);
+		  if ( gridtype == GRID_CURVILINEAR ) l2d = TRUE;
+		      
 		  for ( i = 0; i < gridsize; i++ )
 		    {
+		      yind = i;
+		      xind = i;
+		      if ( l2d ) { yind /= xsize; xind -= yind*xsize; }
 		      lon = grid_center_lon[i];
 		      lat = grid_center_lat[i];
+
 		      for ( k = 0; k < nkeys; ++k )
 			{
-			  if      ( keys[k] == kvalue ) fprintf(stdout, "%8g ", array[i]);
-			  else if ( keys[k] == kcode  ) fprintf(stdout, "%4d ", code);
-			  else if ( keys[k] == kname  ) fprintf(stdout, "%8s ", name);
-			  else if ( keys[k] == klon   ) fprintf(stdout, "%6g ", lon);
-			  else if ( keys[k] == klat   ) fprintf(stdout, "%6g ", lat);
-			  else if ( keys[k] == klev   ) fprintf(stdout, "%6g ", level);
-			  else if ( keys[k] == kdate  ) fprintf(stdout, "%8d ", vdate);
-			  else if ( keys[k] == ktime  ) fprintf(stdout, "%6d ", vtime);
+			  len = Keylen[keys[k]];
+			  if      ( keys[k] == kvalue ) fprintf(stdout, "%*g ", len, array[i]);
+			  else if ( keys[k] == kcode  ) fprintf(stdout, "%*d ", len, code);
+			  else if ( keys[k] == kname  ) fprintf(stdout, "%*s ", len, name);
+			  else if ( keys[k] == klon   ) fprintf(stdout, "%*g ", len, lon);
+			  else if ( keys[k] == klat   ) fprintf(stdout, "%*g ", len, lat);
+			  else if ( keys[k] == klev   ) fprintf(stdout, "%*g ", len, level);
+			  else if ( keys[k] == kxind  ) fprintf(stdout, "%*d ", len, xind+1);
+			  else if ( keys[k] == kyind  ) fprintf(stdout, "%*d ", len, yind+1);
+			  else if ( keys[k] == kdate  ) fprintf(stdout, "%*d ", len, vdate);
+			  else if ( keys[k] == ktime  ) fprintf(stdout, "%*d ", len, vtime);
+			  else if ( keys[k] == kyear  ) fprintf(stdout, "%*d ", len, year);
+			  else if ( keys[k] == kmonth ) fprintf(stdout, "%*d ", len, month);
+			  else if ( keys[k] == kday   ) fprintf(stdout, "%*d ", len, day);
 			}
 		      fprintf(stdout, "\n");
 		    }
@@ -342,18 +371,49 @@ void *Output(void *argument)
 		}
 	      else
 		{
-		  nout = 0;
-		  for ( i = 0; i < gridsize; i++ )
+		  double minval, maxval;
+		  minval = array[0];
+		  maxval = array[0];
+		  if ( gridInqType(gridID) == GRID_SPECTRAL && gridsize <= 156 )
 		    {
-		      if ( nout == 6 )
+		      for ( i = 1; i < gridsize; i++ )
 			{
-			  nout = 0;
+			  if ( array[i] < minval ) minval = array[i];
+			  if ( array[i] > maxval ) maxval = array[i];
+			}
+		    }
+
+		  if ( gridInqType(gridID) == GRID_SPECTRAL && gridsize <= 156 /* T11 */ &&
+		       minval >= -1 && maxval <= 12 )
+		    {
+		      long m, n, ntr;
+		      double *spc = array;
+		      ntr = gridInqTrunc(gridID);
+		      for ( m = 0; m <= ntr; m++ )
+			{
+			  for ( n = m; n <= ntr; n++ )
+			    {
+			      fprintf(stdout, "%3d", (int) *spc++);
+			      fprintf(stdout, "%3d", (int) *spc++);
+			    }
 			  fprintf(stdout, "\n");
 			}
-		      fprintf(stdout, " %12.6g", array[i]);
-		      nout++;
 		    }
-		  fprintf(stdout, "\n");
+		  else
+		    {
+		      nout = 0;
+		      for ( i = 0; i < gridsize; i++ )
+			{
+			  if ( nout == 6 )
+			    {
+			      nout = 0;
+			      fprintf(stdout, "\n");
+			    }
+			  fprintf(stdout, " %12.6g", array[i]);
+			  nout++;
+			}
+		      fprintf(stdout, "\n");
+		    }
 		}
 	    }
 	  tsID++;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,16 +28,14 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
 
 
 void *Vertstat(void *argument)
 {
-  static char func[] = "Vertstat";
   int operatorID;
   int operfunc;
   int streamID1, streamID2;
@@ -65,10 +63,9 @@ void *Vertstat(void *argument)
   cdoOperatorAdd("vertstd",  func_std,  0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc   = cdoOperatorF1(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -91,7 +88,6 @@ void *Vertstat(void *argument)
       vlistChangeZaxisIndex(vlistID2, i, zaxisID);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -192,39 +188,40 @@ void *Vertstat(void *argument)
 	    }
 	}
 
-      if ( operfunc == func_mean || operfunc == func_avg )
-	for ( varID = 0; varID < nvars; varID++ )
-	  {
-	    if ( samp1[varID].ptr == NULL )
-	      farcmul(&vars1[varID], 1.0/vars1[varID].nsamp);
-	    else
-	      fardiv(&vars1[varID], samp1[varID]);
-	  }
-      else if ( operfunc == func_std || operfunc == func_var )
-	for ( varID = 0; varID < nvars; varID++ )
-	  {
-	    if ( samp1[varID].ptr == NULL )
-	      {
-		if ( operfunc == func_std )
-		  farcstd(&vars1[varID], vars2[varID], 1.0/vars1[varID].nsamp);
-		else
-		  farcvar(&vars1[varID], vars2[varID], 1.0/vars1[varID].nsamp);
-	      }
-	    else
-	      {
-		farinv(&samp1[varID]);
-		if ( operfunc == func_std )
-		  farstd(&vars1[varID], vars2[varID], samp1[varID]);
-		else
-		  farvar(&vars1[varID], vars2[varID], samp1[varID]);
-	      }
-	  }
-
       for ( varID = 0; varID < nvars; varID++ )
 	{
-	  streamDefRecord(streamID2, varID, 0);
-	  streamWriteRecord(streamID2, vars1[varID].ptr, vars1[varID].nmiss);
-	  vars1[varID].nsamp = 0;
+	  if ( vars1[varID].nsamp )
+	    {
+	      if ( operfunc == func_mean || operfunc == func_avg )
+		{
+		  if ( samp1[varID].ptr == NULL )
+		    farcmul(&vars1[varID], 1.0/vars1[varID].nsamp);
+		  else
+		    fardiv(&vars1[varID], samp1[varID]);
+		}
+	      else if ( operfunc == func_std || operfunc == func_var )
+		{
+		  if ( samp1[varID].ptr == NULL )
+		    {
+		      if ( operfunc == func_std )
+			farcstd(&vars1[varID], vars2[varID], 1.0/vars1[varID].nsamp);
+		      else
+			farcvar(&vars1[varID], vars2[varID], 1.0/vars1[varID].nsamp);
+		    }
+		  else
+		    {
+		      farinv(&samp1[varID]);
+		      if ( operfunc == func_std )
+			farstd(&vars1[varID], vars2[varID], samp1[varID]);
+		      else
+			farvar(&vars1[varID], vars2[varID], samp1[varID]);
+		    }
+		}
+
+	      streamDefRecord(streamID2, varID, 0);
+	      streamWriteRecord(streamID2, vars1[varID].ptr, vars1[varID].nmiss);
+	      vars1[varID].nsamp = 0;
+	    }
 	}
 
       tsID++;

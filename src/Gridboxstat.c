@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,17 +31,16 @@
 #  include <omp.h>
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
+#include "grid.h"
 
 
 static
 int genBoxGrid(int gridID1, int xinc, int yinc)
 {
-  static char func[] = "genBoxGrid";
   int i, j, i1;
   int gridID2 = -1, gridtype;
   int gridsize1 = 0, nlon1 = 0, nlat1 = 0;
@@ -74,7 +73,8 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
   if ( xinc < 1 || yinc < 1 )
     cdoAbort("xinc and yinc must not be smaller than 1!");
   
-  if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_LONLAT || gridtype == GRID_CURVILINEAR )
+  if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_LONLAT ||
+       gridtype == GRID_CURVILINEAR || gridtype == GRID_GENERIC )
     {
       nlon1 = gridInqXsize(gridID1);
       nlat1 = gridInqYsize(gridID1);
@@ -168,6 +168,9 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
           free(grid1_corner_lat);
         }
     } /* if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_LONLAT ) */
+  else if ( gridtype == GRID_GENERIC )
+    {
+    }
   else if ( gridtype == GRID_CURVILINEAR )
     {
       
@@ -180,6 +183,15 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
       yvals2 = (double *) malloc(nlon2*nlat2*sizeof(double));
       gridInqXvals(gridID1, xvals1);
       gridInqYvals(gridID1, yvals1);
+
+      /* Convert lat/lon units if required */
+      {
+	char units[CDI_MAX_NAME];
+	gridInqXunits(gridID1, units);
+	gridToDegree(units, "grid center lon", nlon1*nlat1, xvals1);
+	gridInqYunits(gridID1, units);
+	gridToDegree(units, "grid center lat", nlon1*nlat1, yvals1);
+      }
       
       if ( gridHasBounds )
         {
@@ -189,6 +201,15 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
           grid2_corner_lat = (double *) malloc(4*nlon2*nlat2*sizeof(double));
           gridInqXbounds(gridID1, grid1_corner_lon);
           gridInqYbounds(gridID1, grid1_corner_lat);
+
+	  /* Convert lat/lon units if required */
+	  {
+	    char units[CDI_MAX_NAME];
+	    gridInqXunits(gridID1, units);
+	    gridToDegree(units, "grid corner lon", 4*nlon1*nlat1, grid1_corner_lon);
+	    gridInqYunits(gridID1, units);
+	    gridToDegree(units, "grid corner lat", 4*nlon1*nlat1, grid1_corner_lat);
+	  }
         }
       
       /* Process grid2 bounds */
@@ -274,7 +295,7 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
                               /* lower right cell */
                               if ( ( y1 == (y2+1)*yinc -1 ) && (x1 == (x2+1)*xinc -1) )
                                 {
-                                  for ( corner = 0; corner < 4; corner ++ )
+                                  for ( corner = 0; corner < 4; corner++ )
                                     {                             
                                   add = 4*g1_add + corner;
                                       if ( grid1_corner_lon[add] > ox_lo )
@@ -287,7 +308,7 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
                               /* lower left cell */
                               if ( ( y1 == (y2+1)*yinc -1 ) && ( x1 == x2*xinc ) )
                                 {    
-                                  for ( corner = 0; corner < 4; corner ++ )
+                                  for ( corner = 0; corner < 4; corner++ )
                                     {
                                       add = 4*g1_add + corner;
                                       if ( grid1_corner_lon[add] < on_lo )
@@ -327,7 +348,7 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
                                           if ((IS_EQUAL(lon2, lon) && IS_EQUAL(lat2, lat))  ||
                                               (IS_EQUAL(lon3, lon) && IS_EQUAL(lat3, lat)) )
                                             c_flag[corner] = 1;
-                                        }                                                                                                                                                                      
+                                        }
                                     }
                                   for ( corner = 0; corner<4; corner++ )
                                     if ( !c_flag[corner] ) break;                                 
@@ -503,7 +524,6 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
 static
 void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statfunc)
 {
-  static char func[] = "gridboxstat";
   int nlon1, nlat1;
   int nlon2, nlat2;
   int ilat, ilon;
@@ -599,7 +619,6 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
 
 void *Gridboxstat(void *argument)
 {
-  static char func[] = "Gridboxstat";
   int operatorID;
   int operfunc;
   int streamID1, streamID2;
@@ -633,14 +652,13 @@ void *Gridboxstat(void *argument)
   cdoOperatorAdd("gridboxstd",  func_std,  0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   if ( operfunc == func_mean || operfunc == func_avg ||
        operfunc == func_var  || operfunc == func_std )
     needWeights = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -661,7 +679,6 @@ void *Gridboxstat(void *argument)
     vlistChangeGridIndex(vlistID2, index, gridID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

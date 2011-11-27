@@ -1,30 +1,55 @@
 #!/usr/bin/make -f
 
+export DH_VERBOSE=1
+
 # The magic debhelper  rule
 %:
-	dh $@
+	dh $@ 
+
+DESTDIR:=`pwd`/debian/tmp/
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+LIBDIR:=/usr/lib/$(DEB_HOST_MULTIARCH)
 
 CFLAGS += -fPIC
 
 ARCH:=$(shell dpkg --print-architecture)
-WITH_GRIB:= --with-grib-api=/usr
+WITH_GRIB:= --with-grib-api=/usr --disable-cgribex
+WITH_JASPER:= --with-jasper=/usr
 
+# grib-api not available on these arches; jasper is only needed for grib-api
 ifeq ($(ARCH), mips)
   WITH_GRIB:=
+  WITH_JASPER:=
 endif
 ifeq ($(ARCH), hppa)
   WITH_GRIB:=
+  WITH_JASPER:=
 endif
 ifeq ($(ARCH), sparc)
   WITH_GRIB:=
+  WITH_JASPER:=
 endif
 
 override_dh_auto_clean:
-	dh_auto_clean	
+	dh_auto_clean	|| echo "distclean ok"
 	find . -name Makefile.in -delete
+	find . -type l -delete
 	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/ltmain.sh config/missing configure INSTALL
+	rm -rf src/.deps
 
 override_dh_auto_configure:
+	ln -sf /usr/include/cfortran.h libcdi/src/cfortran.h 
 	autoreconf -if
-	./configure --prefix=/usr --with-zlib=/usr --with-jasper=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr  $(WITH_GRIB)
+	LDFLAGS="-Wl,--as-needed"  \
+	  ./configure --prefix=/usr --libdir=$(LIBDIR) \
+		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr \
+		 $(WITH_GRIB) $(WITH_JASPER) CC=mpicc
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_link -p libcdi0 $(LIBDIR)/libcdi.so.0.0.0  $(LIBDIR)/libcdi.so.0
+	dh_link -p libcdi-dev $(LIBDIR)/libcdi.so.0.0.0 $(LIBDIR)/libcdi.so
+	mkdir -p $(DESTDIR)/etc/bash_completion.d $(DESTDIR)//usr/share/zsh/functions/Completion/Linux
+	cp contrib/cdoCompletion.bash $(DESTDIR)/etc/bash_completion.d/cdo
+	cp contrib/cdoCompletion.zsh $(DESTDIR)//usr/share/zsh/functions/Completion/Linux/_cdo
 

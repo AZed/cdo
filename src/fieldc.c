@@ -18,7 +18,7 @@
 #include <math.h>
 #include "cdo.h"
 #include "cdo_int.h"
-#include "cdi.h"
+#include <cdi.h>
 
 
 void farcfun(field_t *field, double rconst, int function)

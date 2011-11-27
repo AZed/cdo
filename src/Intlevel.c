@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,19 +19,21 @@
    This module contains the following operators:
 
       Intlevel   intlevel        Linear level interpolation
+      Intlevel   intlevel3d      Linear level interpolation on a 3d vertical coordinates variable
 */
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "list.h"
 
 
-static void interp_lev(int gridsize, double missval, double *vardata1, double *vardata2,
-		       int nlev2, int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
+static
+void interp_lev(int gridsize, double missval, double *vardata1, double *vardata2,
+		int nlev2, int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
 {
   int i, ilev;
   int idx1, idx2;
@@ -51,6 +53,10 @@ static void interp_lev(int gridsize, double missval, double *vardata1, double *v
 
       var1L1 = vardata1+gridsize*idx1;
       var1L2 = vardata1+gridsize*idx2;
+
+#if defined (_OPENMP)
+#pragma omp parallel for shared(gridsize, var2, var1L1, var1L2, wgt1, wgt2, missval) private(i, w1, w2)
+#endif
       for ( i = 0; i < gridsize; ++i )
 	{
 	  w1 = wgt1;
@@ -84,9 +90,9 @@ static void interp_lev(int gridsize, double missval, double *vardata1, double *v
     }
 }
 
-
-static void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
-			int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
+static
+void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
+		 int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
 {
   int i1, i2;
   double val1, val2 = 0;
@@ -139,8 +145,8 @@ static void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *l
 	    {
 	      lev_idx1[i2] = idx1;
 	      lev_idx2[i2] = idx2;
-	      lev_wgt1[i2] = (lev1[lev_idx2[i2]] - lev2[i2]) / (lev1[lev_idx2[i2]] - lev1[lev_idx1[i2]]);
-	      lev_wgt2[i2] = (lev2[i2] - lev1[lev_idx1[i2]]) / (lev1[lev_idx2[i2]] - lev1[lev_idx1[i2]]);
+	      lev_wgt1[i2] = (lev1[idx2] - lev2[i2]) / (lev1[idx2] - lev1[idx1]);
+	      lev_wgt2[i2] = (lev2[i2] - lev1[idx1]) / (lev1[idx2] - lev1[idx1]);
 	    }
 	  lev_idx1[i2]--;
 	  lev_idx2[i2]--;
@@ -156,7 +162,6 @@ static void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *l
 
 void *Intlevel(void *argument)
 {
-  static char func[] = "Intlevel";
   int INTLEVEL, INTLEVELX;
   int operatorID;
   int streamID1, streamID2;
@@ -187,8 +192,8 @@ void *Intlevel(void *argument)
 
   cdoInitialize(argument);
 
-  INTLEVEL  = cdoOperatorAdd("intlevel",  0, 0, NULL);
-  INTLEVELX = cdoOperatorAdd("intlevelx", 0, 0, NULL);
+  INTLEVEL   = cdoOperatorAdd("intlevel",  0, 0, NULL);
+  INTLEVELX  = cdoOperatorAdd("intlevelx", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -202,7 +207,6 @@ void *Intlevel(void *argument)
   if ( cdoVerbose ) for ( i = 0; i < nlev2; ++i ) printf("lev2 %d: %g\n", i, lev2[i]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -294,15 +298,10 @@ void *Intlevel(void *argument)
   }
 
   for ( i = 0; i < nzaxis; i++ )
-    {
-      if ( zaxisID1 == vlistZaxis(vlistID1, i) )
-	{
-	  vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
-	}
-    }
+    if ( zaxisID1 == vlistZaxis(vlistID1, i) )
+      vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

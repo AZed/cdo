@@ -2,6 +2,7 @@
 #define _FUNCTS_H
 
 #define  func_all    8
+#define  func_hrd    9
 
 #define  func_min   10
 #define  func_max   11
@@ -14,13 +15,12 @@
 #define  func_pctl  17
 /* QR */
 
-#define  func_fld   21
+#define  func_crps  100
+#define  func_brs   101
+#define  func_rank  102
+#define  func_roc   103
 
-#define  func_hrd   31
-#define  func_sft   32
-#define  func_sftn  33
-#define  func_sftc  34
-#define  func_code  35
+#define  func_fld   21
 
 #define  func_add   41
 #define  func_sub   42
@@ -41,5 +41,18 @@
 
 #define  func_lon   98
 #define  func_lat   99
+
+enum cmp_flag {
+  CMP_CODE     = 1,
+  CMP_NAME     = 2,
+  CMP_GRID     = 4,
+  CMP_NLEVEL   = 8,
+  CMP_GRIDSIZE = 16,
+  CMP_HRD      = CMP_CODE | CMP_GRIDSIZE,
+  CMP_DIM      =            CMP_GRIDSIZE | CMP_NLEVEL | CMP_GRID,
+  CMP_ALL      = CMP_NAME | CMP_GRIDSIZE | CMP_NLEVEL | CMP_GRID,
+};
+
+void    vlistCompare(int vlistID1, int vlistID2, int flag);
 
 #endif  /* _FUNCTS_H */

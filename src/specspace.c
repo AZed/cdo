@@ -2,8 +2,9 @@
 #include <math.h>
 #include <string.h>
 
+#include <cdi.h>
 #include "cdo.h"
-#include "cdi.h"
+#include "cdo_int.h"
 #ifndef _DMEMORY_H
 #  include "dmemory.h"
 #endif
@@ -48,7 +49,6 @@ void geninx(long ntr, double *f, double *g)
 void legini_old(int ntr, int nlat, double *poli, double *pold,
 		double *pol2, double *pol3, double *coslat, double *rcoslat, int flag)
 {
-  static char func[] = "legini_old";
   int waves, dimsp;
   int jgl, jm, jn;
   int jsp;
@@ -122,7 +122,6 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
 
 void legini(int ntr, int nlat, double *poli, double *pold, double *rcoslat)
 {
-  static char func[] = "legini";
   int waves, dimsp, dimpnm;
   int jgl, jm, jn, is;
   int isp, latn, lats;
@@ -178,7 +177,6 @@ void legini(int ntr, int nlat, double *poli, double *pold, double *rcoslat)
 
 void grid2spec(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
 {
-  static char func[] = "grid2spec";
   int ntr, nlat, nlon, nfc;
   int nlev = 1;
   int waves;
@@ -202,7 +200,6 @@ void grid2spec(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, d
    
 void spec2grid(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
 {
-  static char func[] = "spec2grid";
   int ntr, nlat, nlon, nfc;
   int nlev = 1;
   int waves;
@@ -221,6 +218,73 @@ void spec2grid(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, d
   fc2gp(sptrans->trig, sptrans->ifax, fpwork, arrayOut, nlat, nlon, nlev, nfc);
 
   free(fpwork);
+}
+
+
+void four2spec(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
+{
+  int ntr, nlat, nfc;
+  int nlev = 1;
+  int waves;
+    
+  ntr  = gridInqTrunc(gridIDout);
+  nlat = sptrans->nlat;
+
+  waves = ntr + 1;
+  nfc   = waves * 2;
+
+  fc2sp(arrayIn, arrayOut, sptrans->pold, nlev, nlat, nfc, ntr);
+}
+
+
+void spec2four(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
+{
+  int ntr, nlat, nfc;
+  int nlev = 1;
+  int waves;
+    
+  ntr  = gridInqTrunc(gridIDin);
+  nfc  = gridInqSize(gridIDout);
+  nlat = nfc2nlat(nfc, ntr);
+
+  waves = ntr + 1;
+  nfc   = waves * 2;
+
+  sp2fc(arrayIn, arrayOut, sptrans->poli, nlev, nlat, nfc, ntr);
+}
+
+
+void four2grid(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
+{
+  int ntr, nlat, nlon, nfc;
+  int nlev = 1;
+  int waves;
+
+  ntr  = gridInqTrunc(gridIDin);
+  nlon = gridInqXsize(gridIDout);
+  nlat = gridInqYsize(gridIDout);
+
+  waves = ntr + 1;
+  nfc   = waves * 2;
+
+  fc2gp(sptrans->trig, sptrans->ifax, arrayIn, arrayOut, nlat, nlon, nlev, nfc);
+}
+
+
+void grid2four(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, double *arrayOut)
+{
+  int nlat, nlon, nfc, ntr;
+  int nlev = 1;
+  int waves;
+
+  ntr  = gridInqTrunc(gridIDout);
+  nlon = gridInqXsize(gridIDin);
+  nlat = gridInqYsize(gridIDin);
+
+  waves = ntr + 1;
+  nfc   = waves * 2;
+
+  gp2fc(sptrans->trig, sptrans->ifax, arrayIn, arrayOut, nlat, nlon, nlev, nfc);
 }
 
 
@@ -247,9 +311,8 @@ void speccut(int gridIDin, double *arrayIn, double *arrayOut, int *waves)
 
 SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
 {
-  static char func[] = "sptrans_new";
   SPTRANS *sptrans;
-  int dimsp;
+  int nsp;
 
   sptrans = (SPTRANS *) malloc(sizeof(SPTRANS));
 
@@ -257,8 +320,8 @@ SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
   sptrans->nlat = nlat;
   sptrans->ntr  = ntr;
 
-  dimsp = (ntr + 1)*(ntr + 2);
-  sptrans->poldim = dimsp / 2 * nlat;
+  nsp = (ntr + 1)*(ntr + 2);
+  sptrans->poldim = nsp / 2 * nlat;
 
   sptrans->trig = (double *) malloc(nlon * sizeof(double));
   fft_set(sptrans->trig, sptrans->ifax, nlon);
@@ -291,8 +354,6 @@ SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
 
 void sptrans_delete(SPTRANS *sptrans)
 {
-  static char func[] = "sptrans_delete";
-
   if ( sptrans )
     {
       if ( sptrans->trig ) { free(sptrans->trig);  sptrans->trig = NULL; }
@@ -310,7 +371,6 @@ void sptrans_delete(SPTRANS *sptrans)
 
 DVTRANS *dvtrans_new(int ntr)
 {
-  static char func[] = "dvtrans_new";
   DVTRANS *dvtrans;
   int dimsp;
 
@@ -332,8 +392,6 @@ DVTRANS *dvtrans_new(int ntr)
 
 void dvtrans_delete(DVTRANS *dvtrans)
 {
-  static char func[] = "dvtrans_delete";
-
   if ( dvtrans )
     {
       if ( dvtrans->f1 ) { free(dvtrans->f1);  dvtrans->f1 = NULL; }
@@ -553,16 +611,15 @@ void trans_uv2dv(SPTRANS *sptrans, int nlev,
 		 int gridID1, double *gu, double *gv,
 		 int gridID2, double *sd, double *svo)
 {
-  static char func[] = "trans_uv2dv";
   int ntr, nlat, nlon, nfc;
   int waves;
   double *fpwork1, *fpwork2;
 
   if ( gridInqType(gridID1) != GRID_GAUSSIAN )
-    Warning(func, "unexpected grid1 type: %s", gridNamePtr(gridInqType(gridID1)));
+    Warning("unexpected grid1 type: %s", gridNamePtr(gridInqType(gridID1)));
 
   if ( gridInqType(gridID2) != GRID_SPECTRAL )
-    Warning(func, "unexpected grid2 type: %s", gridNamePtr(gridInqType(gridID2)));
+    Warning("unexpected grid2 type: %s", gridNamePtr(gridInqType(gridID2)));
     
   ntr  = gridInqTrunc(gridID2);
   nlon = gridInqXsize(gridID1);
@@ -591,7 +648,6 @@ void trans_dv2uv(SPTRANS *sptrans, DVTRANS *dvtrans, int nlev,
 		 int gridID1, double *sd, double *svo,
 		 int gridID2, double *gu, double *gv)
 {
-  static char func[] = "trans_dv2uv";
   int ntr, nlat, nlon, nfc;
   int waves;
   int dimsp;
@@ -599,10 +655,10 @@ void trans_dv2uv(SPTRANS *sptrans, DVTRANS *dvtrans, int nlev,
   double *su, *sv;
 
   if ( gridInqType(gridID1) != GRID_SPECTRAL )
-    Warning(func, "unexpected grid1 type: %s", gridNamePtr(gridInqType(gridID1)));
+    Warning("unexpected grid1 type: %s", gridNamePtr(gridInqType(gridID1)));
 
   if ( gridInqType(gridID2) != GRID_GAUSSIAN )
-    Warning(func, "unexpected grid2 type: %s", gridNamePtr(gridInqType(gridID2)));
+    Warning("unexpected grid2 type: %s", gridNamePtr(gridInqType(gridID2)));
 
   ntr  = gridInqTrunc(gridID1);
   nlon = gridInqXsize(gridID2);

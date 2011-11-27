@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -34,20 +34,17 @@
 #  include "config.h" /* VERSION */
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "grid.h"
 #include "pstream.h"
 #include "color.h"
 
+double intlin(double x, double y1, double x1, double y2, double x2);
 
-#ifndef PI
-#define PI M_PI
-#endif
-
-
-static int pnpoly(int npol, double *xp, double *yp, double x, double y)
+static
+int pnpoly(int npol, double *xp, double *yp, double x, double y)
 {
   int i, j, c = 0;
 
@@ -62,98 +59,99 @@ static int pnpoly(int npol, double *xp, double *yp, double x, double y)
 }
 
 
-static double PolygonArea_old(int np, double *xp, double *yp)
+static
+double PolygonArea_old(int np, double *xp, double *yp)
 {
-   int i, j;
-   double area = 0;
+  int i, j;
+  double area = 0;
 
-   for ( i = 0; i < np; i++ )
-     {
-       j = (i + 1) % np;
-       area += xp[i] * yp[j];
-       area -= yp[i] * xp[j];
-     }
+  for ( i = 0; i < np; i++ )
+    {
+      j = (i + 1) % np;
+      area += xp[i] * yp[j];
+      area -= yp[i] * xp[j];
+    }
 
-   area /= 2;
-   /* return(area < 0 ? -area : area); */
-   return (area);
+  area /= 2;
+  /* return(area < 0 ? -area : area); */
+  return (area);
 }
 
 
-static double PolygonArea(int np, double *xp, double *yp, double yc)
+static
+double PolygonArea(int np, double *xp, double *yp, double yc)
 {
-   int i, j;
-   double area = 0.;
+  int i, j;
+  double area = 0.;
 
-   /*Process area in Radians*/
-   for ( i = 0; i < np; i++ )
-       { xp[i] *= PI/180.; yp[i] *= PI/180.; }
-   yc *= PI/180.;
+  /* Process area in Radians */
    
-   for ( i = 0; i < np; i++ )
-     {
-       j = (i + 1) % np;
-       area += xp[i] * yp[j];
-       area -= yp[i] * xp[j];
-     }
-   area *= 0.5 * cos(yc);
-   return (area);
+  for ( i = 0; i < np; i++ )
+    {
+      j = (i + 1) % np;
+      area += DEG2RAD*xp[i] * DEG2RAD*yp[j];
+      area -= DEG2RAD*yp[i] * DEG2RAD*xp[j];
+    }
+  area *= 0.5 * cos(DEG2RAD*yc);
+  return (area);
 }
 
+static
 int ccw(double p0x, double p0y, double p1x, double p1y, double p2x, double p2y)
 {
-    /*
-     This function says wether the point are orientated clockwise
-     +1 psitive orientation
-     -1 negative orientation
+  /*
+    This function says wether the point are orientated clockwise
+    +1 positive orientation
+    -1 negative orientation
      0 points are on a line --> no orientation
-     
-     This is done by a comparision of the gradient of
-     dy1/dx1 = p1 - p0 vs.
-     dy2/dx2 = p2 - p0
-     To avoid singularities at dx1=0 OR dx2 = 0 we multiply with
-     dx1*dx2
-     */
-    double dx1, dx2, dy1, dy2;
-    dx1 = p1x - p0x; dy1 = p1y - p0y;
-    dx2 = p2x - p0x; dy2 = p2y - p0y;
-    if ( dx1*dy2 > dy1*dx2 ) return +1;
-    if ( dx1*dy2 < dy1*dx2 ) return -1;
-    if ( (dx1*dx2 < 0 ) || (dy1*dy2 < 0)) return -1;
-    if ( (dx1*dx1 + dy1*dy1) < (dx2*dx2 + dy2*dy2)) return +1;
-    return 0;
+    
+    This is done by a comparision of the gradient of
+    dy1/dx1 = p1 - p0 vs.
+    dy2/dx2 = p2 - p0
+    To avoid singularities at dx1=0 OR dx2 = 0 we multiply with dx1*dx2
+  */
+  double dx1, dx2, dy1, dy2;
+
+  dx1 = p1x - p0x; dy1 = p1y - p0y;
+  dx2 = p2x - p0x; dy2 = p2y - p0y;
+  if ( dx1*dy2 > dy1*dx2 ) return +1;
+  if ( dx1*dy2 < dy1*dx2 ) return -1;
+  if ( (dx1*dx2 < 0 ) || (dy1*dy2 < 0)) return -1;
+  if ( (dx1*dx1 + dy1*dy1) < (dx2*dx2 + dy2*dy2)) return +1;
+
+  return 0;
 }
 
+static
 int intersect(double pix, double piy, double pjx, double pjy,
               double pkx, double pky, double plx, double ply)
 {
-    /*This function returns if there is an intersection between the lines 
-        line1 between pi and pj and
-        line2 between pk and pl,
-      whereas pi = (pix, piy).
+  /*This function returns if there is an intersection between the lines 
+    line1 between pi and pj and
+    line2 between pk and pl,
+    whereas pi = (pix, piy).
       
-      This can done by means of ccw since the product of ccw(pi,pj,pk)*ccw(pi,pj,pl)
-      shows if pk and pl are on different or the same side(s) of the line1 (They must
-		  have different signums to be on different sides).
+    This can done by means of ccw since the product of ccw(pi,pj,pk)*ccw(pi,pj,pl)
+    shows if pk and pl are on different or the same side(s) of the line1 (They must
+    have different signums to be on different sides).
       
-      Consequently if and ONLY IF pk as well as pl are on different sides of line1
-      AND pi as well as pj are on different sides of line2 there HAS TO be an intersection.
-    */
+    Consequently if and ONLY IF pk as well as pl are on different sides of line1
+    AND pi as well as pj are on different sides of line2 there HAS TO be an intersection.
+  */
     
-    return ( ( ccw(pix, piy, pjx, pjy, pkx, pky) *
-               ccw(pix, piy, pjx, pjy, plx, ply) <= 0 ) &&
-             ( ccw(pkx, pky, plx, ply, pix, piy) *
-               ccw(pkx, pky, plx, ply, pjx, pjy) <= 0 ) );
+  return ( ( ccw(pix, piy, pjx, pjy, pkx, pky) *
+	     ccw(pix, piy, pjx, pjy, plx, ply) <= 0 ) &&
+	   ( ccw(pkx, pky, plx, ply, pix, piy) *
+	     ccw(pkx, pky, plx, ply, pjx, pjy) <= 0 ) );
 }
 
 #ifndef MAX_CORNERS 
 #define MAX_CORNERS 8+1
 #endif
-void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
+void verify_grid(int gridtype, int gridsize, int ncorner,
 		double *grid_center_lon, double *grid_center_lat,
 		double *grid_corner_lon, double *grid_corner_lat)
 {
-  static char func[] = "verify_grid";
   int i0, i, j, k, l;
   int l0;
   int nout;
@@ -170,18 +168,33 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
   check_corners = 0; /* don't execute corner checking (last loop) */
   nout = 0;
   sumarea = 0;
-  
-  /* Check if center is inside bounds of cell */
-#if defined (SX)  
-#pragma vdir nodep
-#endif  
+  /*
   for ( i = 0; i < gridsize; ++i )
     {
       lon = grid_center_lon[i];
       lat = grid_center_lat[i];
-#if defined (SX)  
-#pragma vdir nodep
-#endif  
+      for ( k = 0; k < ncorner; ++k )
+        {
+          lon_bounds[k] = grid_corner_lon[i*ncorner+k];
+          lat_bounds[k] = grid_corner_lat[i*ncorner+k];
+          if ( (lon - lon_bounds[k]) > 270 ) lon_bounds[k] += 360;
+          if ( (lon_bounds[k] - lon) > 270 ) lon_bounds[k] -= 360;
+        }      
+      lon_bounds[ncorner] = lon_bounds[0];
+      lat_bounds[ncorner] = lat_bounds[0];
+      fprintf(stdout, " %6i %6i %9.4f %9.4f :",  nout, i+1, lon, lat);
+      for ( k = 0; k < ncorner; k++ )
+	fprintf(stdout, " %9.4f %9.4f : ", lon_bounds[k], lat_bounds[k]);
+      fprintf(stdout, "\n");
+    }
+  */
+
+  /* Check if center is inside bounds of cell */
+  for ( i = 0; i < gridsize; ++i )
+    {
+      lon = grid_center_lon[i];
+      lat = grid_center_lat[i];
+
       for ( k = 0; k < ncorner; ++k )
         {
           lon_bounds[k] = grid_corner_lon[i*ncorner+k];
@@ -208,18 +221,17 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
                 fprintf(stdout, "    lon_%2.2i     lat_%2.2i : ", k, k);
               fprintf(stdout, "\n");
             }
-          area = PolygonArea(ncorner+1,lon_bounds,lat_bounds,lat);
+          area = PolygonArea(ncorner+1, lon_bounds, lat_bounds,lat);
           fprintf(stdout, " %6i %6i   %9.4f   %9.4f %10.5f :", 
-		  nout, i, lon, lat, area*pow(10,6));
+		  nout, i+1, lon, lat, area*pow(10,6));
           for ( k = 0; k < ncorner; k++ )
             fprintf(stdout, " %9.4f  %9.4f : ", lon_bounds[k], lat_bounds[k]);
           fprintf(stdout, "\n");
-          
         }
     }
+
   if ( nout )
     cdoWarning("%d of %d points out of bounds!", nout, gridsize);
-  
   
   /* check that all cell bounds have the same orientation */
   
@@ -258,40 +270,42 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
                 fprintf(stdout, "    lon_%2.2i     lat_%2.2i : ", k, k);
               fprintf(stdout, "\n");
             }
-          fprintf(stdout, "%6i %6i   %9.4f   %9.4f :", nout, i, lon, lat);
+          fprintf(stdout, "%6i %6i   %9.4f   %9.4f :", nout, i+1, lon, lat);
           for ( k = 0; k < ncorner; k++ )
             fprintf(stdout, " %9.4f  %9.4f : ", lon_bounds[k], lat_bounds[k]);
           fprintf(stdout, "\n");
         }
     }
+
   if ( nout )
-		cdoWarning("%d of %d grid cells have wrong orientation!\n", nout, gridsize);
+    cdoWarning("%d of %d grid cells have wrong orientation!", nout, gridsize);
+
   if ( cdoVerbose ) 
-    fprintf(stdout, "area-error: %9.5f%%\n", 100.*(sumarea - 4.*PI)/4.*PI );
-  if ( fabs( 100.*(sumarea - 4.*PI)/4.*PI) > 0.1)
-    cdoWarning("area-error: %9.5f%%\n", 100.*(sumarea - 4.*PI)/4.*PI );
-  
-  
+    fprintf(stdout, "area-error: %9.5f%%\n", 100.*(sumarea - 4.*M_PI)/4.*M_PI );
+
+  if ( fabs(100.*(sumarea - 4.*M_PI)/4.*M_PI) > 0.1)
+    cdoWarning("area-error: %9.5f%%", 100.*(sumarea - 4.*M_PI)/4.*M_PI );
   
   /* check that all cells are convex */
-  
   
   nout = 0;
   for ( i0 = 0; i0 < gridsize; i0++ )
     {
       lon = grid_center_lon[i0];
+      lat = grid_center_lat[i0];
+
       for ( k = 0; k < ncorner; k++ )
-			  {
-			    lon_bounds[k] = grid_corner_lon[i0*ncorner+k];
-			    lat_bounds[k] = grid_corner_lat[i0*ncorner+k];
-			    /* Find cells that cover left and right border of the grid and adjust
-			       coordinates --> they become closed polygons on theta-phi plane! */
-			    if ( (lon - lon_bounds[k]) > 270 ) lon_bounds[k] += 360; 
-			    if ( (lon_bounds[k] - lon) > 270 ) lon_bounds[k] -= 360;
-			  }
+	{
+	  lon_bounds[k] = grid_corner_lon[i0*ncorner+k];
+	  lat_bounds[k] = grid_corner_lat[i0*ncorner+k];
+	  /* Find cells that cover left and right border of the grid and adjust
+	     coordinates --> they become closed polygons on theta-phi plane! */
+	  if ( (lon - lon_bounds[k]) > 270 ) lon_bounds[k] += 360; 
+	  if ( (lon_bounds[k] - lon) > 270 ) lon_bounds[k] -= 360;
+	}
       
-			/* Reset found cuts for the current cell before starting the search */
-      for ( i = 0; i < ncorner; i ++ )
+      /* Reset found cuts for the current cell before starting the search */
+      for ( i = 0; i < ncorner; i++ )
 	for ( j = 0; j < ncorner; j++ )
 	  cuts[i][j] = 0;
       
@@ -306,14 +320,16 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
 	     from one point to itself (j=i)*/
           for ( j = i+2 ; j < ncorner; j++ )
 	    {
-              /* Exclude the line between the last and first corner*/
-              if ( i == 0 && j == ncorner-1 ) continue;               
+              /* Exclude the line between the last and first corner */
+              if ( i == 0 && j == ncorner-1 ) continue;
+
 	      /* k = i+1: if starting point is in common lines to different corners
 		 do not intersect */
               for ( k = i+1; k < ncorner - 1; k++ )
 		{                  
                   if ( i == k ) l0 = j+1;
-                  else l0 = k+2;
+                  else          l0 = k+2;
+
                   for ( l = l0; l < ncorner; l++ )
 		    {
                       if ( cuts[k][l] && cuts[i][j] ) continue;
@@ -323,24 +339,26 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
 			 If so increment respective counters for intersections. 
 			 It is not relevant by which line a line is intersected - 
 			 it is only relevant if they is itersected! */
-                      if ( ! ( k==0 && l == ncorner-1 ) &&
-			   ( l != j ) && ( k != j )  )
+                      if ( ! ( k==0 && l == ncorner-1 ) && ( l != j ) && ( k != j )  )
 			{
                           if ( intersect(lon_bounds[i], lat_bounds[i], lon_bounds[j], lat_bounds[j],
-                                         lon_bounds[k], lat_bounds[k], lon_bounds[l], lat_bounds[l] ) )
-			    {cuts[i][j]++; cuts[k][l]++; cuts[j][i]++; cuts[l][k]++;}                                                        
+                                         lon_bounds[k], lat_bounds[k], lon_bounds[l], lat_bounds[l]) )
+			    {
+			      cuts[i][j]++; cuts[k][l]++; cuts[j][i]++; cuts[l][k]++;
+			    }
 			}
 		    }
 		}                  
 	    }
 	}
+
       convex = 1;
       /* The following loop covers all inner lines of the Polygon 
 	 (The assumption applies that the points are in cyclic order) */
       for ( i = 0; i < ncorner-1; i++ )
 	for ( j = i+2; j < ncorner; j++)
 	  {
-	    if ( i == 0 && j == ncorner-1 ) continue;
+	    if ( i == 0 && j == ncorner-1 ) continue;	   
 	    if ( ! cuts[i][j] ) convex = 0;
 	  }
       if ( !convex ) nout++;        
@@ -358,14 +376,15 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
               fprintf(stdout, "\n");
 	    }
           
-          fprintf(stdout, " %6i %6i   %9.4f   %9.4f :", nout, i0, lon, lat);
+          fprintf(stdout, " %6i %6i   %9.4f   %9.4f :", nout, i0+1, lon, lat);
           for ( k = 0; k < ncorner; k++ )
 	    fprintf(stdout, "  %9.4f %9.4f : ", lon_bounds[k], lat_bounds[k]);
           fprintf(stdout, "\n");         
 	}     
-		}
+    }
+
   if ( nout )
-    cdoWarning("%d of %d cells are not Convex\n", nout, gridsize);
+    cdoWarning("%d of %d cells are not Convex!", nout, gridsize);
   
   if ( check_corners )
     {
@@ -403,25 +422,26 @@ void verify_grid(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
 	      nout++;
 	      if ( cdoVerbose )
 		{
-	      if ( nout == 1 )
-		{
-		  fprintf(stdout,"\n VERTEX ALONE ON GRID\n");
-		  fprintf(stdout," number cell-Index  Vert-Index :        lon        lat\n");
-		}							
-	      fprintf(stdout, " %6i     %6i      %6i : %10.4f %10.4f\n", 
-		      nout, i/ncorner, i, grid_corner_lon[i], grid_corner_lat[i]);
+		  if ( nout == 1 )
+		    {
+		      fprintf(stdout,"\n VERTEX ALONE ON GRID\n");
+		      fprintf(stdout," number cell-Index  Vert-Index :        lon        lat\n");
+		    }							
+		  fprintf(stdout, " %6i     %6i      %6i : %10.4f %10.4f\n", 
+			  nout, i/ncorner, i, grid_corner_lon[i], grid_corner_lat[i]);
 		}					
 	    }
 	}
+
       if ( nout )
-	cdoWarning("%d of %d corners are lonely on the grid", nout, gridsize*ncorner);
+	cdoWarning("%d of %d corners are lonely on the grid!", nout, gridsize*ncorner);
     }
 
   free(alone_cell);
 }
 
 
-void verify_grid_old(int gridtype, int gridsize, int xsize, int ysize, int ncorner,
+void verify_grid_old(int gridtype, int gridsize, int ncorner,
 		double *grid_center_lon, double *grid_center_lat,
 		double *grid_corner_lon, double *grid_corner_lat)
 {
@@ -466,7 +486,7 @@ void verify_grid_old(int gridtype, int gridsize, int xsize, int ysize, int ncorn
     }
 
   if ( nout > 0 )
-    cdoWarning("%d of %d points out of bounds!\n", nout, gridsize);
+    cdoWarning("%d of %d points out of bounds!", nout, gridsize);
 
 
   /* check that all cell bounds have the same orientation */
@@ -505,7 +525,7 @@ void verify_grid_old(int gridtype, int gridsize, int xsize, int ysize, int ncorn
     }
 
   if ( nout > 0 )
-    cdoWarning("%d of %d grid cells have wrong orientation!\n", nout, gridsize);
+    cdoWarning("%d of %d grid cells have wrong orientation!", nout, gridsize);
 }
 
 
@@ -534,9 +554,8 @@ void make_cyclic(double *array1, double *array2, int nlon, int nlat)
 
 void *Outputgmt(void *argument)
 {
-  static char func[] = "Outputgmt";
   int GRIDVERIFY, OUTPUTCENTER, OUTPUTCENTER2, OUTPUTCENTERCPT, OUTPUTBOUNDS;
-  int OUTPUTBOUNDSCPT, OUTPUTVECTOR, OUTPUTTRI;
+  int OUTPUTBOUNDSCPT, OUTPUTVECTOR, OUTPUTTRI, OUTPUTVRML;
   int operatorID;
   int process_data = TRUE;
   int i, j;
@@ -559,7 +578,7 @@ void *Outputgmt(void *argument)
   int zaxisID, taxisID;
   int ninc = 1;
   int vdate, vtime;
-  char varname[256];
+  char varname[CDI_MAX_NAME];
   double level;
   double missval;
   double *array = NULL;
@@ -575,7 +594,7 @@ void *Outputgmt(void *argument)
   FILE *cpt_fp;
   CPT cpt;
   int grid_is_circular;
-  char units[128];
+  char units[CDI_MAX_NAME];
   char vdatestr[32], vtimestr[32];	  
 
   cdoInitialize(argument);
@@ -588,6 +607,7 @@ void *Outputgmt(void *argument)
   OUTPUTBOUNDSCPT = cdoOperatorAdd("outputboundscpt", 0, 0, NULL);
   OUTPUTVECTOR    = cdoOperatorAdd("outputvector",    0, 0, NULL);
   OUTPUTTRI       = cdoOperatorAdd("outputtri",       0, 0, NULL);
+  OUTPUTVRML      = cdoOperatorAdd("outputvrml",      0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -608,7 +628,7 @@ void *Outputgmt(void *argument)
   if ( operatorID == OUTPUTBOUNDS || operatorID == OUTPUTBOUNDSCPT )
     luse_grid_corner = TRUE;
 
-  if ( operatorID == OUTPUTCENTERCPT || operatorID == OUTPUTBOUNDSCPT )
+  if ( operatorID == OUTPUTCENTERCPT || operatorID == OUTPUTBOUNDSCPT || operatorID == OUTPUTVRML )
     {
       char *cpt_file;
 
@@ -625,7 +645,6 @@ void *Outputgmt(void *argument)
     }
 
   streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   vlistID = streamInqVlist(streamID);
   taxisID = vlistInqTaxis(vlistID);
@@ -637,9 +656,9 @@ void *Outputgmt(void *argument)
   zaxisID = vlistInqVarZaxis(vlistID, varID);
   missval = vlistInqVarMissval(vlistID, varID);
 
-  if ( gridInqType(gridID) == GRID_GME ) gridID = gridToCell(gridID);
+  if ( gridInqType(gridID) == GRID_GME ) gridID = gridToUnstructured(gridID);
 
-  if ( gridInqType(gridID) != GRID_CELL && gridInqType(gridID) != GRID_CURVILINEAR )
+  if ( gridInqType(gridID) != GRID_UNSTRUCTURED && gridInqType(gridID) != GRID_CURVILINEAR )
     {
       gridID = gridToCurvilinear(gridID);
       lgrid_gen_bounds = TRUE;
@@ -650,13 +669,13 @@ void *Outputgmt(void *argument)
   nlat     = gridInqYsize(gridID);
   nlev     = zaxisInqSize(zaxisID);
 
-  if ( gridInqMask(gridID, NULL) )
+  if ( gridInqMaskGME(gridID, NULL) )
     {
       grid_mask = (int *) malloc(gridsize*sizeof(int));
-      gridInqMask(gridID, grid_mask);
+      gridInqMaskGME(gridID, grid_mask);
     }
 
-  if ( gridInqType(gridID) != GRID_CELL )
+  if ( gridInqType(gridID) != GRID_UNSTRUCTURED )
     {
       if ( nlon == 1 && nlat  > 1 && nlev == 1 ) lhov = TRUE;
       if ( nlon == 1 && nlat  > 1 && nlev  > 1 ) lzon = TRUE;
@@ -683,7 +702,7 @@ void *Outputgmt(void *argument)
 	cdoAbort("Bounds not available hovmoeller data!");
     }
 
-  if ( gridInqType(gridID) == GRID_CELL )
+  if ( gridInqType(gridID) == GRID_UNSTRUCTURED )
     gridcorners = gridInqNvertex(gridID);
   else
     gridcorners = 4;
@@ -697,9 +716,9 @@ void *Outputgmt(void *argument)
   gridInqXvals(gridID, grid_center_lon);
 
   /* Convert lat/lon units if required */
-  gridInqYunits(gridID, units);
-
+  gridInqXunits(gridID, units);
   gridToDegree(units, "grid center lon", gridsize, grid_center_lon);
+  gridInqYunits(gridID, units);
   gridToDegree(units, "grid center lat", gridsize, grid_center_lat);
 
   nvals = gridsize;
@@ -803,7 +822,7 @@ void *Outputgmt(void *argument)
     }
 
   if ( operatorID == GRIDVERIFY )
-    verify_grid(gridInqType(gridID), gridsize, nlon, nlat, gridcorners,
+    verify_grid(gridInqType(gridID), gridsize, gridcorners,
 		grid_center_lon, grid_center_lat,
 		grid_corner_lon, grid_corner_lat);
 
@@ -819,6 +838,8 @@ void *Outputgmt(void *argument)
 
       if ( tsID == 0 && operatorID != OUTPUTTRI )
 	{
+	  if ( operatorID == OUTPUTVRML )
+	    printf("#VRML V2.0 utf8\n\n");
 #if defined (VERSION)
 	  fprintf(stdout, "# Generated by CDO version %s\n", VERSION);
 	  fprintf(stdout, "#\n");
@@ -948,7 +969,7 @@ void *Outputgmt(void *argument)
 	    }
 	  else if ( operatorID == OUTPUTVECTOR )
 	    {
-	      if ( nrecs < 2 ) cdoAbort("No enough fields!");
+	      if ( nrecs < 2 ) cdoAbort("Too few fields!");
 
 	      memcpy(uf, array, gridsize*sizeof(double));
 	      streamInqRecord(streamID, &varID, &levelID);
@@ -976,6 +997,107 @@ void *Outputgmt(void *argument)
 	      fprintf(stdout, "#\n");
 	      break;
 	    }
+	  else if ( operatorID == OUTPUTVRML )
+	    {
+	      double minval = 1e33;
+	      double maxval = -1e33;
+	      double meanval = 0;
+	      for ( i = 0; i < gridsize; i++ )
+		{
+		  if ( array[i] < minval ) minval = array[i];
+		  if ( array[i] > maxval ) maxval = array[i];
+		  meanval += array[i];
+		}
+	      meanval /= gridsize;
+
+	      double dx = 10./nlon;
+
+	      printf("Viewpoint {\n");
+	      printf("  description \"viewpoint1\"\n");
+	      printf("  orientation 0 0 1 0\n");
+	      printf("  position 0.0 0.0 10.0\n");
+	      printf("}\n");
+	      printf("\n");
+	      printf("Background {\n");
+	      printf("  skyColor [\n");
+	      printf("    0.0 0.1 0.8,\n");
+	      printf("    0.0 0.5 1.0,\n");
+	      printf("    1.0 1.0 1.0\n");
+	      printf("  ]\n");
+	      printf("  skyAngle [0.785, 1.571]\n");
+	      printf("\n");
+	      printf("  groundColor [\n");
+	      printf("    0.0 0.0 0.0,\n");
+	      printf("    0.3 0.3 0.3,\n");
+	      printf("    0.5 0.5 0.5\n");
+	      printf("  ]\n");
+	      printf("  groundAngle [0.785, 1.571]\n");
+	      printf("}\n");
+	      printf("\n");
+	      printf("Transform {\n");
+	      printf("  children [\n");
+	      printf("    Shape {\n");
+	      printf("      appearance Appearance {\n");
+	      printf("        material Material {}\n");
+	      printf("      }\n");
+	      printf("      geometry ElevationGrid {\n");
+    	      printf("        colorPerVertex TRUE\n");
+    	      printf("        solid FALSE\n");
+    	      printf("        xDimension %d\n", nlon);
+    	      printf("        zDimension %d\n", nlat);
+    	      printf("        xSpacing %g\n", dx);
+    	      printf("        zSpacing %g\n", dx);
+	      printf("        color Color {\n");
+	      printf("          color [\n");
+	      for ( j = nlat-1; j >= 0 ; --j )
+		for ( i = 0; i < nlon; ++i )
+		{
+		  int r = 0, g = 0, b = 0, n;
+		  double val = array[j*nlon+i];
+
+		  if ( !DBL_IS_EQUAL(val, missval) )
+		    {
+		      for ( n = 0; n < cpt.ncolors; n++ )
+			if ( val > cpt.lut[n].z_low && val <= cpt.lut[n].z_high ) break;
+		      
+		      if ( n == cpt.ncolors )
+			{
+			  r = cpt.bfn[0].rgb[0];  g = cpt.bfn[0].rgb[1];  b = cpt.bfn[0].rgb[2];
+			}
+		      else
+			{
+			  //  r = cpt.lut[n].rgb_high[0];  g = cpt.lut[n].rgb_high[1];  b = cpt.lut[n].rgb_high[2];
+			  r = intlin(val, cpt.lut[n].rgb_low[0], cpt.lut[n].z_low, cpt.lut[n].rgb_high[0], cpt.lut[n].z_high);
+			  g = intlin(val, cpt.lut[n].rgb_low[1], cpt.lut[n].z_low, cpt.lut[n].rgb_high[1], cpt.lut[n].z_high);
+			  b = intlin(val, cpt.lut[n].rgb_low[2], cpt.lut[n].z_low, cpt.lut[n].rgb_high[2], cpt.lut[n].z_high);
+			}
+		    }
+		  else
+		    {
+		      r = cpt.bfn[2].rgb[0];  g = cpt.bfn[2].rgb[1];  b = cpt.bfn[2].rgb[2]; 
+		    }
+		  printf(" %.3g %.3g %.3g,\n", r/255., g/255., b/255.);
+		}
+	      printf("          ]\n");
+	      printf("        }\n");
+    	      printf("        height [\n");
+	      //	      for ( j = 0; j < nlat; ++j )
+	      for ( j = nlat-1; j >= 0 ; --j )
+		{
+		  for ( i = 0; i < nlon; ++i )
+		    {
+		      printf("%g,\n", array[j*nlon+i]);
+		    }
+		}
+    	      printf("        ]\n");
+	      printf("      }\n");
+	      printf("    }\n");
+	      printf("  ]\n");
+	      printf("  translation -5 0 %g\n", -5.*nlat/nlon);
+	      printf("  rotation 0.0 0.0 0.0 0.0\n");
+	      printf("  scale 1.0 %g 1.0\n", 0.5/(maxval-minval));
+	      printf("}\n");
+            }
 	  else if ( operatorID == OUTPUTBOUNDS || operatorID == OUTPUTBOUNDSCPT )
 	    {
 	      for ( i = 0; i < gridsize; i++ )

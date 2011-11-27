@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -34,10 +34,9 @@
 #  include <omp.h>
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
-#include "field.h"
 #include "pstream.h"
 
 enum {CONSECSUM, CONSECTS};
@@ -45,7 +44,6 @@ enum {CONSECSUM, CONSECTS};
 
 static void selEndOfPeriod(field_t *periods, field_t history, field_t current, int isLastTimestep)
 {
-  static char func[] = "selEndOfPeriod";
   long   i, len;
   double pmissval = periods->missval;
   double  *parray = periods->ptr;
@@ -56,7 +54,7 @@ static void selEndOfPeriod(field_t *periods, field_t history, field_t current, i
 
   len = gridInqSize(periods->grid);
   if ( len != gridInqSize(current.grid) || (gridInqSize(current.grid) != gridInqSize(history.grid)) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if (!isLastTimestep)
   {
@@ -127,13 +125,11 @@ static void selEndOfPeriod(field_t *periods, field_t history, field_t current, i
 
 void *Consecstat (void *argument)
 {
-  static char func[] = "Consecstat";
   int operatorID;
-
   int i;
   int istreamID, itaxisID, ivlistID, itsID;
   int ostreamID, otaxisID, ovlistID, otsID;
-  int vdate, vtime;
+  int vdate = 0, vtime = 0;
   int histvdate = 0, histvtime = 0;
   int recID, nrecs;
   int varID, nvars;
@@ -154,7 +150,6 @@ void *Consecstat (void *argument)
     if ( operatorArgc() > 0 ) refval = atof(operatorArgv()[0]);
 
   istreamID = streamOpenRead(cdoStreamName(0));
-  if ( istreamID < 0 ) cdiError(istreamID, "Open failed on %s", cdoStreamName(0));
 
   ivlistID = streamInqVlist(istreamID);
   itaxisID = vlistInqTaxis(ivlistID);
@@ -206,7 +201,6 @@ void *Consecstat (void *argument)
   }
 
   ostreamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( ostreamID < 0 ) cdiError(ostreamID, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(ostreamID, ovlistID);
 
@@ -232,7 +226,7 @@ void *Consecstat (void *argument)
         }
         break;
       default:
-        printf (SWITCHWARN,func);
+        printf (SWITCHWARN,__func__);
     }
 
     for ( recID = 0; recID < nrecs; recID++ )
@@ -266,7 +260,7 @@ void *Consecstat (void *argument)
 #endif
           break;
         default:
-          printf (SWITCHWARN,func);
+          printf (SWITCHWARN,__func__);
       }
     }
     histvdate = vdate;

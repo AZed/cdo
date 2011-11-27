@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,7 +31,7 @@
 #include <sys/resource.h>   /* getrlimit */
 #endif
 #endif
-#include <unistd.h>         /* sysconf */
+#include <unistd.h>         /* sysconf, gethostname */
 
 #if defined (SX)
 #define RLIM_T  long long
@@ -40,7 +40,7 @@
 #endif
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 
@@ -76,14 +76,13 @@ int cdoDefaultTableID    = CDI_UNDEFID;
 
 int cdoCheckDatarange    = FALSE;
 
-int cdoHaveNC4           = FALSE;
 int cdoDiag              = FALSE;
-int cdoDisableFilesuffix = FALSE;
 int cdoDisableHistory    = FALSE;
-int cdoZtype             = COMPRESS_NONE;
-int cdoZlevel            = 0;
+int cdoCompType          = COMPRESS_NONE;  // compression type
+int cdoCompLevel         = 0;              // compression level
 int cdoLogOff            = FALSE;
 int cdoSilentMode        = FALSE;
+int cdoOverwriteMode     = FALSE;
 int cdoBenchmark         = FALSE;
 int cdoTimer             = FALSE;
 int cdoVerbose           = FALSE;
@@ -93,6 +92,7 @@ int cdoInteractive       = FALSE;
 int cdoParIO             = FALSE;
 int cdoRegulargrid       = FALSE;
 
+char cdo_file_suffix[32];
 
 int cdoExpMode           = -1;
 char *cdoExpName         = NULL;
@@ -124,7 +124,8 @@ int timer_remap, timer_remap_sort, timer_remap_con, timer_remap_con2, timer_rema
       }
 
 
-static void version(void)
+static
+void cdo_version(void)
 {
   fprintf(stderr, "%s\n", CDO_Version);
 #if defined (COMPILER)
@@ -133,12 +134,18 @@ static void version(void)
 #if defined (COMP_VERSION)
   fprintf(stderr, " version: %s\n", COMP_VERSION);
 #endif
-#if defined (HAVE_LIBPTHREAD) || defined (HAVE_LIBSZ) || defined (HAVE_LIBPROJ) || defined (HAVE_LIBDRMAA) || defined (HAVE_LIBCURL) || defined (_OPENMP)
   fprintf(stderr, "    with:");
-  if ( cdoHaveNC4 ) 
-    fprintf(stderr, " NC4");
 #if defined (HAVE_LIBPTHREAD)
   fprintf(stderr, " PTHREADS");
+#endif
+#if defined (_OPENMP)
+  fprintf(stderr, " OpenMP");
+#endif
+#if  defined  (HAVE_NETCDF4)
+  fprintf(stderr, " NC4");
+#endif
+#if  defined  (HAVE_LIBNC_DAP)
+  fprintf(stderr, " OPeNDAP");
 #endif
 #if defined (HAVE_LIBSZ)
   fprintf(stderr, " SZ");
@@ -158,11 +165,7 @@ static void version(void)
 #if defined (HAVE_LIBCURL)
   fprintf(stderr, " CURL");
 #endif
-#if defined (_OPENMP)
-  fprintf(stderr, " OpenMP");
-#endif
   fprintf(stderr, "\n");
-#endif
 #if defined (USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
   fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
 	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
@@ -170,7 +173,6 @@ static void version(void)
   cdiPrintVersion();
   fprintf(stderr, "\n");
 }
-
 
 static
 void usage(void)
@@ -185,11 +187,11 @@ void usage(void)
   fprintf(stderr, "  Options:\n");
   fprintf(stderr, "    -a             Generate an absolute time axis\n");
   fprintf(stderr, "    -b <nbits>     Set the number of bits for the output precision\n");
-  fprintf(stderr, "                   (I8/I16/I32/F32/F64 for nc/nc2/nc4; F32/F64 for srv/ext/ieg; 1 - 32 for grb/grb2)\n");
+  fprintf(stderr, "                   (I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for srv/ext/ieg; 1 - 24 for grb/grb2)\n");
   fprintf(stderr, "                   Add L or B to set the byteorder to Little or Big endian\n");
-  fprintf(stderr, "    -f <format>    Format of the output file. (grb, grb2, nc, nc2, nc4, srv, ext or ieg)\n");
+  fprintf(stderr, "    -f <format>    Format of the output file. (grb/grb2/nc/nc2/nc4/nc4c/srv/ext/ieg)\n");
   fprintf(stderr, "    -g <grid>      Set default grid name or file. Available grids: \n");
-  fprintf(stderr, "                   t<RES>grid, t<RES>spec, r<NX>x<NY>, g<NX>x<NY>, gme<NI>, lon=<LON>_lat=<LAT>\n");
+  fprintf(stderr, "                   n<N>, t<RES>, tl<RES>, r<NX>x<NY>, g<NX>x<NY>, gme<NI>, lon=<LON>/lat=<LAT>\n");
   fprintf(stderr, "    -h             Help information for the operators\n");
   /*
   fprintf(stderr, "    -i <inst>      Institution name/file\n");
@@ -202,15 +204,12 @@ void usage(void)
   /* fprintf(stderr, "    -l <level>     Level file\n"); */
   fprintf(stderr, "    -M             Switch to indicate that the I/O streams have missing values\n");
   fprintf(stderr, "    -m <missval>   Set the default missing value (default: %g)\n", cdiInqMissval());
+  fprintf(stderr, "    -O             Overwrite existing output file, if checked\n");
 #if defined (_OPENMP)
   fprintf(stderr, "    -P <nthreads>  Set number of OpenMP threads\n");
 #endif
-  /*
-  fprintf(stderr, "    -p <prec>      Set the precision of the output data in bytes\n");
-  fprintf(stderr, "                   (4/8 for nc, nc2, nc4, srv, ext, ieg; 1/2/3 for grb)\n");
-  */
-  fprintf(stderr, "    -Q             Sort netCDF variable names\n");
-  fprintf(stderr, "    -R             Convert GRIB data from reduced to regular grid\n");
+  fprintf(stderr, "    -Q             Alphanumeric sorting of netCDF parameter names\n");
+  fprintf(stderr, "    -R             Convert GRIB1 data from reduced to regular grid (only with cgribex)\n");
   fprintf(stderr, "    -r             Generate a relative time axis\n");
   fprintf(stderr, "    -S             Create an extra output stream for the module TIMSTAT. This stream\n");
   fprintf(stderr, "                   contains the number of non missing values for each output period.\n");
@@ -233,7 +232,7 @@ void usage(void)
   operatorPrintAll();
 
   fprintf(stderr, "\n");
-  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2010 Uwe Schulzweida\n", VERSION);
+  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2011 Uwe Schulzweida\n", VERSION);
   //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
   fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
@@ -257,6 +256,25 @@ void cdoPrintHelp(char *phelp[]/*, char *xoperator*/)
 	  if ( lprint ) printf("%s\n", *phelp);
 
 	  phelp++;
+	}
+    }
+}
+
+
+void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID)
+{
+  if ( strncmp(cdo_file_suffix, "NULL", 4) )
+    {
+      if ( cdo_file_suffix[0] != 0 )
+	{
+	  strncat(filesuffix, cdo_file_suffix, maxlen-1);
+	}
+      else
+	{
+	  strncat(filesuffix, streamFilesuffix(filetype), maxlen-1);
+	  if ( cdoDefaultFileType == FILETYPE_GRB )
+	    if ( vlistIsSzipped(vlistID) || cdoCompType == COMPRESS_SZIP )
+	      strncat(filesuffix, ".sz", maxlen-1);
 	}
     }
 }
@@ -391,7 +409,7 @@ void setDefaultDataType(char *datatypestr)
 	  else
 	    {
 	      fprintf(stderr, "Unsupported number of bits %d!\n", nbits);
-	      fprintf(stderr, "Use 32/64 for filetype nc/srv/ext/ieg and 1-32 for grb/grb2.\n");
+	      fprintf(stderr, "Use I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for srv/ext/ieg; 1 - 24 for grb/grb2.\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
@@ -517,6 +535,7 @@ void setDefaultFileType(char *filetypestr, int labort)
       else if ( memcmp(filetypestr, "grb1", 4)  == 0 ) { ftstr += 4; cdoDefaultFileType = FILETYPE_GRB; }
       else if ( memcmp(filetypestr, "grb",  3)  == 0 ) { ftstr += 3; cdoDefaultFileType = FILETYPE_GRB; }
       else if ( memcmp(filetypestr, "nc2",  3)  == 0 ) { ftstr += 3; cdoDefaultFileType = FILETYPE_NC2; }
+      else if ( memcmp(filetypestr, "nc4c", 4)  == 0 ) { ftstr += 4; cdoDefaultFileType = FILETYPE_NC4C;}
       else if ( memcmp(filetypestr, "nc4",  3)  == 0 ) { ftstr += 3; cdoDefaultFileType = FILETYPE_NC4; }
       else if ( memcmp(filetypestr, "nc",   2)  == 0 ) { ftstr += 2; cdoDefaultFileType = FILETYPE_NC;  }
       else if ( memcmp(filetypestr, "srv",  3)  == 0 ) { ftstr += 3; cdoDefaultFileType = FILETYPE_SRV; }
@@ -527,7 +546,7 @@ void setDefaultFileType(char *filetypestr, int labort)
 	  if ( labort )
 	    {
 	      fprintf(stderr, "Unsupported filetype %s!\n", filetypestr);
-	      fprintf(stderr, "Available filetypes: grb, grb2, nc, nc2, nc4, srv, ext and ieg\n");
+	      fprintf(stderr, "Available filetypes: grb/grb2/nc/nc2/nc4/nc4c/srv/ext/ieg\n");
 	      exit(EXIT_FAILURE);
 	    }
 	  else
@@ -548,8 +567,8 @@ void setDefaultFileType(char *filetypestr, int labort)
 	    {
 	      fprintf(stderr, "Unexpected character >%c< in file type >%s<!\n", *ftstr, filetypestr);
 	      fprintf(stderr, "Use format[_nbits] with:\n");
-	      fprintf(stderr, "    format = grb, grb2, nc, nc2, nc4, srv, ext or ieg\n");
-	      fprintf(stderr, "    nbits  = 32/64 for nc/nc2/nc4/srv/ext/ieg; 1 - 32 for grb/grb2\n");
+	      fprintf(stderr, "    format = grb, grb2, nc, nc2, nc4, nc4c, srv, ext or ieg\n");
+	      fprintf(stderr, "    nbits  = 32/64 for nc/nc2/nc4/nc4c/srv/ext/ieg; 1 - 24 for grb/grb2\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
@@ -569,24 +588,6 @@ int cdoFiletype(void)
   return (cdoDefaultFileType);
 }
 
-
-#if  defined  (HAVE_LIBNETCDF)
-#include "netcdf.h"
-#endif
-static
-int have_netCDF4(void)
-{
-  int haveNC4 = FALSE;
-
-#if  defined  (HAVE_LIBNETCDF)
-#if  defined  (NC_NETCDF4)
-  haveNC4 = TRUE;
-#endif
-#endif
-
-  return (haveNC4);
-}
-
 static
 void defineCompress(const char *arg)
 {
@@ -594,23 +595,23 @@ void defineCompress(const char *arg)
 
   if      ( memcmp(arg, "szip", len) == 0 )
     {
-      cdoZtype  = COMPRESS_SZIP;
-      cdoZlevel = 0;
+      cdoCompType  = COMPRESS_SZIP;
+      cdoCompLevel = 0;
     }
   else if ( memcmp(arg, "jpeg", len) == 0 )
     {
-      cdoZtype = COMPRESS_JPEG;
-      cdoZlevel = 0;
+      cdoCompType = COMPRESS_JPEG;
+      cdoCompLevel = 0;
     }
   else if ( memcmp(arg, "gzip", len) == 0 )
     {
-      cdoZtype  = COMPRESS_GZIP;
-      cdoZlevel = 6;
+      cdoCompType  = COMPRESS_GZIP;
+      cdoCompLevel = 6;
     }
   else if ( memcmp(arg, "zip", len) == 0 )
     {
-      cdoZtype  = COMPRESS_ZIP;
-      cdoZlevel = 1;
+      cdoCompType  = COMPRESS_ZIP;
+      cdoCompLevel = 1;
     }
   else
     fprintf(stderr, "%s compression unsupported!\n", arg);
@@ -643,12 +644,25 @@ void get_env_vars(void)
 	}
     }
 
+  cdo_file_suffix[0] = 0;
+
+  envstr = getenv("CDO_FILE_SUFFIX");
+  if ( envstr )
+    {
+      if ( envstr[0] )
+	{
+	  strncat(cdo_file_suffix, envstr, sizeof(cdo_file_suffix)-1);
+	  if ( cdoVerbose )
+	    fprintf(stderr, "CDO_FILE_SUFFIX = %s\n", envstr);
+	}
+    }
+
   envstr = getenv("CDO_DISABLE_FILESUFFIX");
   if ( envstr )
     {
       if ( atoi(envstr) == 1 )
 	{
-	  cdoDisableFilesuffix = TRUE;
+	  strcat(cdo_file_suffix, "NULL");
 	  if ( cdoVerbose )
 	    fprintf(stderr, "CDO_DISABLE_FILESUFFIX = %s\n", envstr);
 	}
@@ -669,7 +683,6 @@ void get_env_vars(void)
 
 int main(int argc, char *argv[])
 {
-  static char func[] = "main";
   int c;
   int Debug = 0;
   int Version = 0;
@@ -683,6 +696,8 @@ int main(int argc, char *argv[])
   char *operatorArg = NULL;
   char *argument = NULL;
   extern int dmemory_ExitOnError;
+
+  init_is_tty();
 
   dmemory_ExitOnError = 1;
 
@@ -700,9 +715,7 @@ int main(int argc, char *argv[])
 
   if ( noff ) setDefaultFileType(Progname+noff, 0);
 
-  cdoHaveNC4 = have_netCDF4();
-
-  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:l:m:t:D:z:aBcdhMQRrsSTuVvXZ")) != -1 )
+  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:l:m:t:D:z:aBcdhMOQRrsSTuVvXZ")) != -1 )
     {
       switch (c)
 	{
@@ -763,6 +776,9 @@ int main(int argc, char *argv[])
 	case 'M':
 	  cdiDefGlobal("HAVE_MISSVAL", TRUE);
 	  break;
+	case 'O':
+	  cdoOverwriteMode = TRUE;
+	  break;
 	case 'P':
 	  numThreads = atoi(cdoOptarg);
 	  break;
@@ -819,7 +835,7 @@ int main(int argc, char *argv[])
 
   get_env_vars();
 
-  if ( Debug || Version ) version();
+  if ( Debug || Version ) cdo_version();
 
   if ( Debug )
     {
@@ -828,10 +844,6 @@ int main(int argc, char *argv[])
       if ( DebugLevel == 0 ) DebugLevel = 1;
       cdoSetDebug(DebugLevel);
       fprintf(stderr, "\n");
-      if ( cdoHaveNC4 )
-	fprintf(stderr, "cdoHaveNC4          = TRUE\n");
-      else
-	fprintf(stderr, "cdoHaveNC4          = FALSE\n");
       fprintf(stderr, "cdoDefaultFileType  = %d\n", cdoDefaultFileType);
       fprintf(stderr, "cdoDefaultDataType  = %d\n", cdoDefaultDataType);
       fprintf(stderr, "cdoDefaultByteorder = %d\n", cdoDefaultByteorder);
@@ -955,7 +967,7 @@ int main(int argc, char *argv[])
   omp_set_num_threads(numThreads);
   ompNumThreads = omp_get_max_threads();
   if ( omp_get_max_threads() > omp_get_num_procs() )
-    fprintf(stderr, " Number of threads is greater than number of CPUs=%d!\n", omp_get_num_procs());
+    fprintf(stderr, "Warning: Number of OMP threads is greater than number of CPUs=%d!\n", omp_get_num_procs());
   if ( cdoVerbose )
     fprintf(stderr, " OpenMP:  num_procs = %d  max_threads = %d\n",
 	    omp_get_num_procs(), omp_get_max_threads());

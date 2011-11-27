@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -37,43 +37,38 @@
 
 #define MAX_LINE_LEN  4096
 
-struct _NML_LINE
+typedef struct
 {
   int nptype, namitf, namitl;
   char lineac[MAX_LINE_LEN], lineuc[MAX_LINE_LEN], linelc[MAX_LINE_LEN];
-};
+} nml_line_t;
 
-struct _NML_ENTRY
+typedef struct
 {
-  char *name;
-  void *ptr;
-  int type;
-  int occ;
-  int dis;
+  char  *name;
+  void  *ptr;
+  int    type;
+  int    occ;
+  int    dis;
   size_t size;
-};
+} nml_entry_t;
 
-typedef struct _NML_LINE   NML_LINE;
-typedef struct _NML_ENTRY  NML_ENTRY;
-
-struct _NAMELIST
+typedef struct
 {
-  int size;
-  int dis;
-  char *name;
-  NML_LINE line;
-  NML_ENTRY *entry[MAX_NML_ENTRY];
-};
+  int          size;
+  int          dis;
+  char        *name;
+  nml_line_t   line;
+  nml_entry_t *entry[MAX_NML_ENTRY];
+} namelist_t;
 
-typedef struct _NAMELIST   NAMELIST;
 
-NAMELIST *namelistNew(const char *name);
-void namelistDelete(NAMELIST *nml);
-void namelistClear(NAMELIST *nml);
-void namelistDebug(int debug);
-int  namelistAdd(NAMELIST *nml, const char *name, int type, int dis, void *ptr, size_t size);
-void namelistPrint(NAMELIST *nml);
-void namelistRead(FILE *nmlfp, NAMELIST *nml);
-int  namelistNum(NAMELIST *nml, const char *name);
+namelist_t *namelistNew(const char *name);
+void namelistDelete(namelist_t *nml);
+void namelistReset(namelist_t *nml);
+int  namelistAdd(namelist_t *nml, const char *name, int type, int dis, void *ptr, size_t size);
+void namelistPrint(namelist_t *nml);
+void namelistRead(FILE *nmlfp, namelist_t *nml);
+int  namelistNum(namelist_t *nml, const char *name);
 
 #endif  /* _NAMELIST_H */

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "process.h"
 

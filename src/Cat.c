@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2008 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,30 +21,26 @@
       Copy       cat             Concatenate datasets
 */
 
-#if  defined  (HAVE_CONFIG_H)
-#  include "config.h" /* large file */
-#endif
-
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 void *Cat(void *argument)
 {
-  static char func[] = "Cat";
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs;
   int tsID1, tsID2 = 0, recID, varID, levelID;
-  int vlistID1, vlistID2;
+  int vlistID1, vlistID2 = CDI_UNDEFID;
   int streamCnt, nfiles, indf;
   int taxisID1, taxisID2 = CDI_UNDEFID;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
-  int ntsteps;
+  int ntsteps, nvars;
   double *array = NULL;
 
   cdoInitialize(argument);
@@ -59,36 +55,23 @@ void *Cat(void *argument)
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(indf));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID1 = vlistInqTaxis(vlistID1);
 
       if ( indf == 0 )
 	{
-	  int fileExist = FALSE;
-	  FILE *fp;
-
-	  fp = fopen(cdoStreamName(nfiles), "r");
-	  if ( fp )
-	    {
-	      fclose(fp);
-	      fileExist = TRUE;
-	    }
-
-	  if ( fileExist )
+	  if ( fileExist(cdoStreamName(nfiles)) )
 	    {
 	      streamID2 = streamOpenAppend(cdoStreamName(nfiles));
-	      if ( streamID2 < 0 )
-		cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
 
 	      vlistID2 = streamInqVlist(streamID2);
 	      taxisID2 = vlistInqTaxis(vlistID2);
 
-	      vlistCompare(vlistID1, vlistID2, func_sft);
+	      vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
 	      tsID2 = vlistNtsteps(vlistID2);
-	      if ( tsID2 == 0 ) tsID2 = 1; /* bug fix for constant data only */
+	      if ( tsID2 == 0 ) tsID2 = 1; /* bug fix for time constant data only */
 	    }
 	  else
 	    {
@@ -96,18 +79,24 @@ void *Cat(void *argument)
 		cdoPrint("Output file doesn't exist, creating: %s", cdoStreamName(nfiles));
 
 	      streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-	      if ( streamID2 < 0 )
-		cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
 
 	      vlistID2 = vlistDuplicate(vlistID1);
 	      taxisID2 = taxisDuplicate(taxisID1);
 	      vlistDefTaxis(vlistID2, taxisID2);
 	  
 	      ntsteps = vlistNtsteps(vlistID1);
-	      if ( ntsteps == 0 && nfiles > 1 )
+	      nvars   = vlistNvars(vlistID1);
+	      
+	      if ( ntsteps == 1 )
 		{
-		  int nvars = vlistNvars(vlistID1);
+		  for ( varID = 0; varID < nvars; ++varID )
+		    if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
 		  
+		  if ( varID == nvars ) ntsteps = 0;
+		}
+
+	      if ( ntsteps == 0 && nfiles > 1 )
+		{		  
 		  for ( varID = 0; varID < nvars; ++varID )
 		    vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
 		}
@@ -120,6 +109,10 @@ void *Cat(void *argument)
 	      gridsize = vlistGridsizeMax(vlistID1);
 	      array = (double *) malloc(gridsize*sizeof(double));
 	    }
+	}
+      else
+	{
+	  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 	}
 
       tsID1 = 0;

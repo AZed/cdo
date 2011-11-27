@@ -1,9 +1,10 @@
 #include <string.h>
 #include <math.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
+#include "grid.h"
 
 
 double intlinarr2p(int nxm, int nym, double **fieldm, const double *xm, const double *ym,
@@ -108,7 +109,6 @@ void intlinarr(int nxm, double *ym, double *xm, int nx, double *y, double *x)
 
 void intgrid(field_t *field1, field_t *field2)
 {
-  static char func[] = "intgrid";
   int nlonIn, nlatIn;
   int nlonOut, nlatOut;
   int ilat, ilon;
@@ -223,252 +223,9 @@ void intgrid(field_t *field1, field_t *field2)
 }
 
 
-void intarea(field_t *field1, field_t *field2)
-{
-  static char func[] = "intarea";
-  int gridsize_i, gridsize_o;
-  int gridIDi;
-  double *arrayIn;
-  int gridIDo;
-  double *arrayOut;
-  double miss_val_8;
-  int nmiss = 0;
-  int jlat, jlon, i, j;
-  int nlon, nlat, out_nlon, out_nlat;
-  double xtm, xbm, xlm, xrm, xtd, xbd, xld, xrd;
-  double dx, dy, xdx, xdxm, xt, xb, xr, xl;
-  double pp;
-  double **fieldm;
-  double *lon, *lat, *lono, *lato;
-  double **field, **plane;
-  double *planedat;
-  double *lon_array, *lat_array, *lono_array, *lato_array;
-  int irun;
-  int latfirst = 0, latlast = 0;
-  int lonfirst = 0, lonlast;
-
-  gridIDi    = field1->grid;
-  gridIDo    = field2->grid;
-  arrayIn    = field1->ptr;
-  arrayOut   = field2->ptr;
-  miss_val_8 = field1->missval;
-
-  gridsize_i = gridInqSize(gridIDi);
-  gridsize_o = gridInqSize(gridIDo);
-
-  nlon  = gridInqXsize(gridIDi);
-  nlat  = gridInqYsize(gridIDi);
-  out_nlon = gridInqXsize(gridIDo);
-  out_nlat = gridInqYsize(gridIDo);
-
-  lon_array = (double *) malloc(nlon * sizeof(double));
-  lat_array = (double *) malloc(nlat * sizeof(double));
-  lon = lon_array;
-  lat = lat_array;
-
-  gridInqXvals(gridIDi, lon);
-  gridInqYvals(gridIDi, lat);
-
-  lono_array = (double *) malloc(out_nlon * sizeof(double));
-  lono = lono_array;
-  lato_array = (double *) malloc(out_nlat * sizeof(double));
-  lato = lato_array;
-
-  gridInqXvals(gridIDo, lono);
-  gridInqYvals(gridIDo, lato);
-
-  xdx  = 360./out_nlon;
-  xdxm = 360./(nlon-2);
-  /*
-  printf("xdx, xdxm %.9g %.9g\n", xdx, xdxm);
-  printf("nlon, nlat %d %d\n", nlon, nlat);
-  printf("out_nlon, out_nlat %d %d\n", out_nlon, out_nlat);
-  */
-
-  fieldm = (double **) malloc(nlat*sizeof(double *));
-
-  for ( j = 0; j < nlat; j++ )
-    fieldm[j] = arrayIn + j*nlon;
-
-  field = (double **) malloc(out_nlat*sizeof(double *));
-  for ( j = 0; j < out_nlat; j++ )
-    field[j] = arrayOut + j*out_nlon;
-
-  planedat = (double *) malloc(out_nlat*out_nlon*sizeof(double));
-  plane = (double **) malloc(out_nlat*sizeof(double *));
-  for ( j = 0; j < out_nlat; j++ )
-    plane[j] = planedat + j*out_nlon;
-
-  for ( jlat = 0; jlat < out_nlat; jlat++ )
-    for ( jlon = 0; jlon < out_nlon; jlon++ )
-      {
-        field[jlat][jlon] = 0;
-        plane[jlat][jlon] = 0;
-      }
-  /*
-  for ( i = 0; i < nlat; i++ ) printf("lat %5d %.9g\n", i+1, lat[i]);
-  for ( i = 0; i < nlon; i++ ) printf("lon %5d %.9g\n", i+1, lon[i]);
-  for ( i = 0; i < out_nlat; i++ ) printf("lato %5d %.9g\n", i+1, lato[i]);
-  for ( i = 0; i < out_nlon; i++ ) printf("lono %5d %.9g\n", i+1, lono[i]);
-  */
-  
-  /*
-      WRITE(*,*) NLON,NLAT,OUT_NLON,OUT_NLAT
-C      WRITE(*,*) XM
-C      WRITE(*,*) YM
-C      WRITE(*,*) X
-C      WRITE(*,*) Y
-      WRITE(*,*) XDX,XDXM
-      WRITE(*,*)
-  */
-
-  for ( jlat = 0; jlat < out_nlat; jlat++ )
-    {
-      if ( jlat == 0 )
-        xtm = 90.;
-      else
-        xtm = lato[jlat]+(lato[jlat-1]-lato[jlat])/2.;
-
-      if ( jlat == out_nlat-1 )
-        xbm = -90.;
-      else
-        xbm = lato[jlat]-(lato[jlat]-lato[jlat+1])/2.;
-      /*
-C      WRITE(*,*) JLAT,Y(JLAT),XBM,XTM
-      */
-      for ( j = 1; j < nlat; j++ )
-	{
-	  if ( lat[j-1] > xbm && lat[j] < xtm )
-	    {
-	      latfirst = j - 1;
-	      break;
-	    }
-	}
-      if ( j == nlat ) latfirst = nlat;
-
-      for ( j = latfirst+1; j < nlat; j++ )
-	{
-	  if ( lat[j] < xbm )
-	    {
-	      latlast = j + 1;
-	      break;
-	    }
-	}
-      if ( j >= nlat ) latlast = nlat;
-      
-      for ( jlon = 0; jlon < out_nlon; jlon++ )
-	{
-	  irun = 0;
-	  /*
-C       IF (JLAT.EQ.45) WRITE(*,*) 'LON=',JLON
-	  */
-	  xlm = lono[jlon] - xdx/2;
-	  xrm = lono[jlon] + xdx/2;
-	/*
-C        WRITE(*,*) X(JLON),XLM,XRM
-	*/
-	  for ( j = 1; j < nlon; j++ )
-	    {
-	      if ( lon[j-1] < xrm && lon[j] > xlm )
-		{
-		  lonfirst = j - 1;
-		  break;
-		}
-	    }
-	  if ( j == nlon ) lonfirst = nlon;
-
-	  for ( j = lonfirst+1; j < nlon; j++ )
-	    {
-	      if ( lon[j] > xrm )
-		{
-		  lonlast = j + 1;
-		  break;
-		}
-	    }
-	  if ( j >= nlon ) lonlast = nlon;
-	  /*  printf("%d %d %d %d\n", latfirst, latlast, lonfirst, lonlast); */
-
-	  for ( j = latfirst; j < latlast; j++ )
-	    {
-	      if ( j == 0 )
-		xtd = lat[0];
-	      else
-		xtd = lat[j] + (lat[j-1]-lat[j])/2.;
-
-	      if ( j == nlat-1 )
-		xbd = lat[nlat-1];
-	      else
-		xbd = lat[j] - (lat[j]-lat[j+1])/2.;
-
-	      for ( i = 0; i < nlon; i++ )
-		{
-		  if ( !DBL_IS_EQUAL(fieldm[j][i], miss_val_8) )
-		    {
-		      xld = lon[i] - xdxm/2;
-		      xrd = lon[i] + xdxm/2;
-		/*
-C        WRITE(*,*) XM(I),XLD,XRD
-		*/
-		      xt = MIN(xtd, xtm);
-		      xb = MAX(xbd, xbm);
-		      dy = MAX(0., xt-xb);
-
-		      xr = MIN(xrd, xrm);
-		      xl = MAX(xld, xlm);
-		      dx = MAX(0., xr-xl);
-
-		  /*
-		  printf("xt, xb, dy, xr, xl, dx %8d %g %g %g %g %g %g\n", iii++, xt, xb, dy, xr, xl, dx);
-		  */
-		/*
-C          IF (JLON.LT.5.AND.JLAT.LT.4.AND.I.LT.5.AND.J.LT.5) THEN
-C          IF(DX.GT.0..AND.DY.GT.0.) THEN
-C            WRITE(*,*)'X',JLON,I,XLM,XRM,XLD,XRD,DX,XL,XR
-C            WRITE(*,*)'Y',JLAT,J,XBM,XTM,XBD,XTD,DY,XB,XT
-C          ENDIF
-C          ENDIF
-C
-		*/
-		      field[jlat][jlon] = field[jlat][jlon] + fieldm[j][i]*dx*dy;
-		      plane[jlat][jlon] = plane[jlat][jlon] + dx*dy;
-		      irun++;
-		    }
-		}
-	    }
-	  /* printf("runs %d %d %d\n", jlat, jlon, irun); */
-	}
-    }
-
-  for ( jlat = 0; jlat < out_nlat; jlat++ )
-    for ( jlon = 0; jlon < out_nlon; jlon++ )
-      {
-        pp = plane[jlat][jlon];
-        if ( pp > 0 )
-          field[jlat][jlon] = field[jlat][jlon]/pp;
-        else
-	  {
-	    field[jlat][jlon] = miss_val_8;
-	    nmiss++;
-	  }
-      }
-
-  field2->nmiss = nmiss;
-
-  free(lon_array);
-  free(lat_array);
-  free(lono_array);
-  free(lato_array);
-  free(fieldm);
-  free(field);
-  free(planedat);
-  free(plane);
-}
-
-
 /* source code from pingo */
 void interpolate(field_t *field1, field_t *field2)
 {
-  static char func[] = "interpolate";
   int i;
   double *lono_array, *lato_array, *lono, *lato;
   double *lon_array, *lat_array, *lon, *lat;
@@ -527,6 +284,15 @@ void interpolate(field_t *field1, field_t *field2)
   gridInqXvals(gridIDi, lon);
   gridInqYvals(gridIDi, lat);
 
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridIDi, units);
+    gridToDegree(units, "grid1 center lon", nlon, lon);
+    gridInqYunits(gridIDi, units);
+    gridToDegree(units, "grid1 center lat", nlat, lat);
+  }
+
   if ( nlon > 1 )
     {
       lon[-1] = lon[nlon - 1] - 360 > 2*lon[0] - lon[1] ?
@@ -563,6 +329,15 @@ void interpolate(field_t *field1, field_t *field2)
 
   gridInqXvals(gridIDo, lono);
   gridInqYvals(gridIDo, lato);
+
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridIDo, units);
+    gridToDegree(units, "grid2 center lon", out_nlon, lono);
+    gridInqYunits(gridIDo, units);
+    gridToDegree(units, "grid2 center lat", out_nlat, lato);
+  }
 
   for ( i = 0; i < out_nlon - 1; i++ )
     if (lono[i + 1] <= lono[i]) break;
@@ -974,8 +749,6 @@ void interpolate(field_t *field1, field_t *field2)
 /* source code from pingo */
 void contrast(void)
 {
-  static char func[] = "contrast";
-
   int rec = 1;
   int nlat, nlon;
   int i, j, size = 0;

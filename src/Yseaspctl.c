@@ -21,15 +21,10 @@
       Yseaspctl  yseaspctl       Multi-year seasonally percentiles
 */
 
-
-#include <stdio.h>
-#include <math.h>
-
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "field.h"
 #include "percentiles.h"
 #include "util.h"
 
@@ -37,7 +32,6 @@
 
 void *Yseaspctl(void *argument)
 {
-  static char func[] = "Yseaspctl";
   int gridsize;
   int varID;
   int recID;
@@ -59,7 +53,7 @@ void *Yseaspctl(void *argument)
   double missval;
   field_t **vars1[NSEAS];
   field_t field;
-  int pn;
+  double pn;
   HISTOGRAM_SET *hsets[NSEAS];
   int season_start;
 
@@ -67,10 +61,10 @@ void *Yseaspctl(void *argument)
   cdoOperatorAdd("yseaspctl", func_pctl, 0, NULL);
 
   operatorInputArg("percentile number");
-  pn = atoi(operatorArgv()[0]);
+  pn = atof(operatorArgv()[0]);
       
-  if ( pn < 1 || pn > 99 )
-    cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
+  if ( !(pn > 0 && pn < 100) )
+    cdoAbort("Illegal argument: percentile number %g is not in the range 0..100!", pn);
 
   season_start = get_season_start();
   for ( seas = 0; seas < NSEAS; seas++ )
@@ -81,30 +75,26 @@ void *Yseaspctl(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = streamInqVlist(streamID3);
   vlistID4 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_hrd);
-  vlistCompare(vlistID1, vlistID3, func_hrd);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
+  vlistCompare(vlistID1, vlistID3, CMP_ALL);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = vlistInqTaxis(vlistID3);
   /* TODO - check that time axes 2 and 3 are equal */
 
-  taxisID4 = taxisCreate(TAXIS_ABSOLUTE);
+  taxisID4 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID4, taxisID4);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 
@@ -228,8 +218,11 @@ void *Yseaspctl(void *argument)
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
 
-	  recVarID[recID]   = varID;
-	  recLevelID[recID] = levelID;
+	  if ( tsID == 0 )
+	    {
+	      recVarID[recID]   = varID;
+	      recLevelID[recID] = levelID;
+	    }
 
 	  streamReadRecord(streamID1, vars1[seas][varID][levelID].ptr, &nmiss);
 	  vars1[seas][varID][levelID].nmiss = nmiss;
@@ -261,19 +254,20 @@ void *Yseaspctl(void *argument)
 
 	taxisDefVdate(taxisID4, vdates1[seas]);
 	taxisDefVtime(taxisID4, vtimes1[seas]);
-	streamDefTimestep(streamID4, otsID++);
+	streamDefTimestep(streamID4, otsID);
 
 	for ( recID = 0; recID < nrecords; recID++ )
 	  {
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	      {
-		streamDefRecord(streamID4, varID, levelID);
-		streamWriteRecord(streamID4, vars1[seas][varID][levelID].ptr, vars1[seas][varID][levelID].nmiss);
-	      }
+	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	    streamDefRecord(streamID4, varID, levelID);
+	    streamWriteRecord(streamID4, vars1[seas][varID][levelID].ptr, vars1[seas][varID][levelID].nmiss);
 	  }
+
+	otsID++;
       }
 
   for ( seas = 0; seas < NSEAS; seas++ )

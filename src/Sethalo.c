@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,22 +20,23 @@
 
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
-static int gentpngrid(int gridID1)
+static
+int gentpngrid(int gridID1)
 {
-  static char func[] = "gentpngrid";  
   int gridtype, gridID2;
   int nlon1, nlat1;
   int nlon2, nlat2;
   int prec;
   int ilat, ilon, ilonr, k, kr;
-  char xname[128], xlongname[128], xunits[128];
-  char yname[128], ylongname[128], yunits[128];
+  char xname[CDI_MAX_NAME], xlongname[CDI_MAX_NAME], xunits[CDI_MAX_NAME];
+  char yname[CDI_MAX_NAME], ylongname[CDI_MAX_NAME], yunits[CDI_MAX_NAME];
   double *xvals1 = NULL, *yvals1 = NULL;
   double *xvals2 = NULL, *yvals2 = NULL;
   double *xbounds1 = NULL, *ybounds1 = NULL;
@@ -174,10 +175,9 @@ static int gentpngrid(int gridID1)
   return (gridID2);
 }
 
-
-static int gengrid(int gridID1, int lhalo, int rhalo)
+static
+int gengrid(int gridID1, int lhalo, int rhalo)
 {
-  static char func[] = "gengrid";  
   int gridtype, gridID2;
   int nlon1, nlat1;
   int nlon2, nlat2;
@@ -185,14 +185,15 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
   int i;
   int prec;
   int ilat, ilon;
-  char xname[128], xlongname[128], xunits[128];
-  char yname[128], ylongname[128], yunits[128];
+  char xname[CDI_MAX_NAME], xlongname[CDI_MAX_NAME], xunits[CDI_MAX_NAME];
+  char yname[CDI_MAX_NAME], ylongname[CDI_MAX_NAME], yunits[CDI_MAX_NAME];
   double *xvals1 = NULL, *yvals1 = NULL;
   double *xvals2 = NULL, *yvals2 = NULL;
   double *xbounds1 = NULL, *ybounds1 = NULL;
   double *xbounds2 = NULL, *ybounds2 = NULL;
   double *pxvals2 = NULL, *pyvals2 = NULL;
   double *pxbounds2 = NULL, *pybounds2 = NULL;
+  double cpi2 = M_PI*2;
 
   nlon1 = gridInqXsize(gridID1);
   nlat1 = gridInqYsize(gridID1);
@@ -230,6 +231,8 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
   gridDefYname(gridID2, yname);
   gridDefYlongname(gridID2, ylongname);
   gridDefYunits(gridID2, yunits);
+
+  if ( memcmp(xunits, "degree", 6) == 0 ) cpi2 *= rad2deg;
 
   if ( gridInqXvals(gridID1, NULL) && gridInqYvals(gridID1, NULL) )
     {
@@ -279,9 +282,9 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
 	}
       else
 	{
-	  for ( i = nlon1-lhalo; i < nlon1; i++ ) *pxvals2++ = xvals1[i] - 360;
+	  for ( i = nlon1-lhalo; i < nlon1; i++ ) *pxvals2++ = xvals1[i] - cpi2;
 	  for ( i = nmin; i < nmax; i++ ) *pxvals2++ = xvals1[i];
-	  for ( i = 0; i < rhalo; i++ ) *pxvals2++ = xvals1[i] + 360;
+	  for ( i = 0; i < rhalo; i++ ) *pxvals2++ = xvals1[i] + cpi2;
 
 	  for ( i = 0; i < nlat1; i++ ) yvals2[i] = yvals1[i];
 	}
@@ -332,7 +335,7 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
 		  *pybounds2++ = ybounds1[4*ilat*nlon1 + ilon];
 		}
 
-	      for ( ilon = nmin; ilon < 4*nmax; ilon++ )
+	      for ( ilon = 4*nmin; ilon < 4*nmax; ilon++ )
 		{
 		  *pxbounds2++ = xbounds1[4*ilat*nlon1 + ilon];
 		  *pybounds2++ = ybounds1[4*ilat*nlon1 + ilon];
@@ -348,9 +351,9 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
       else
 	{
 	  gridDefNvertex(gridID2, 2);
-	  for ( i = 2*(nlon1-lhalo); i < 2*nlon1; i++ ) *pxbounds2++ = xbounds1[i] - 360;
+	  for ( i = 2*(nlon1-lhalo); i < 2*nlon1; i++ ) *pxbounds2++ = xbounds1[i] - cpi2;
 	  for ( i = 2*nmin; i < 2*nmax; i++ ) *pxbounds2++ = xbounds1[i];
-	  for ( i = 0; i < 2*rhalo; i++ ) *pxbounds2++ = xbounds1[i] + 360;
+	  for ( i = 0; i < 2*rhalo; i++ ) *pxbounds2++ = xbounds1[i] + cpi2;
 
 	  for ( i = 0; i < 2*nlat2; i++ ) ybounds2[i] = ybounds1[i];
 	}
@@ -368,7 +371,8 @@ static int gengrid(int gridID1, int lhalo, int rhalo)
 }
 
 
-static int genindexgrid(int gridID1, int *lhalo, int *rhalo)
+static
+int genindexgrid(int gridID1, int *lhalo, int *rhalo)
 {
   int gridID2;
   int nlon1;
@@ -410,7 +414,8 @@ static int genindexgrid(int gridID1, int *lhalo, int *rhalo)
 }
 
 
-static void halo(double *array1, int gridID1, double *array2, int lhalo, int rhalo)
+static
+void halo(double *array1, int gridID1, double *array2, int lhalo, int rhalo)
 {
   int nlon1, nlat;
   int ilat, ilon;
@@ -438,7 +443,8 @@ static void halo(double *array1, int gridID1, double *array2, int lhalo, int rha
 }
 
 
-static void tpnhalo(double *array1, int gridID1, double *array2)
+static
+void tpnhalo(double *array1, int gridID1, double *array2)
 {
   int nlon, nlat;
   int ilat, ilon, ilonr;
@@ -463,7 +469,6 @@ static void tpnhalo(double *array1, int gridID1, double *array2)
 
 void *Sethalo(void *argument)
 {
-  static char func[] = "Sethalo";
   int SETHALO, TPNHALO;
   int operatorID;
   int streamID1, streamID2;
@@ -490,7 +495,6 @@ void *Sethalo(void *argument)
   operatorID = cdoOperatorID();
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -553,7 +557,6 @@ void *Sethalo(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

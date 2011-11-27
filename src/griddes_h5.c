@@ -8,7 +8,7 @@
 #  include "hdf5.h"
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "griddes.h"
@@ -304,7 +304,6 @@ void correct_sinxvals(int xsize, int ysize, double *xvals)
 
 int gridFromH5file(const char *gridfile)
 {
-  static char func[] = "gridFromH5file";
   int gridID = -1;
 #if  defined  (HAVE_LIBHDF5)
   hid_t	  file_id;	/* HDF5 File ID	        	*/
@@ -542,10 +541,12 @@ int gridFromH5file(const char *gridfile)
 
   /* Close file */
   status = H5Fclose(file_id);
+
+ RETURN:
+
 #else
   cdoWarning("HDF5 support not compiled in!");
 #endif
 
- RETURN:
   return (gridID);
 }

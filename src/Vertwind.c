@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -35,7 +35,6 @@
 
 void *Vertwind(void *argument)
 {
-  static char func[] = "Vertwind";
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int taxisID1, taxisID2;
@@ -49,7 +48,7 @@ void *Vertwind(void *argument)
   int ngp = 0, ngrids;
   int temp_code, sq_code, ps_code, omega_code, lsp_code;
   int tempID = -1, sqID = -1, psID = -1, omegaID = -1, lnpsID = -1;
-  char varname[128];
+  char varname[CDI_MAX_NAME];
   double *vct = NULL;
   double tv, rho;
   double *level = NULL;
@@ -60,7 +59,6 @@ void *Vertwind(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -172,7 +170,7 @@ void *Vertwind(void *argument)
       if ( nlevel == (nvct/2 - 1) )
 	{
 	  vct = (double *) malloc(nvct*sizeof(double));
-	  memcpy(vct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
+	  zaxisInqVct(zaxisID, vct);
 	}
       else
 	cdoAbort("Unsupported vertical coordinate table format!");
@@ -198,7 +196,6 @@ void *Vertwind(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

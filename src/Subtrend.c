@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -30,7 +30,6 @@
 
 void *Subtrend(void *argument)
 {
-  static char func[] = "Subtrend";
   int gridsize;
   int nrecs, nrecords;
   int gridID, varID, levelID, recID;
@@ -47,28 +46,22 @@ void *Subtrend(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
-
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
-
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = streamInqVlist(streamID3);
   vlistID4 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
-  vlistCompare(vlistID1, vlistID3, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_DIM);
+  vlistCompare(vlistID1, vlistID3, CMP_DIM);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID4 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID4, taxisID4);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 
@@ -121,7 +114,7 @@ void *Subtrend(void *argument)
     }
 
 
-  tsID    = 0;
+  tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       taxisCopyTimestep(taxisID4, taxisID1);
@@ -140,7 +133,7 @@ void *Subtrend(void *argument)
 	  missval1 = missval;
 	  missval2 = missval;
 	  for ( i = 0; i < gridsize; i++ )
-	    field4.ptr[i] = SUB(field1.ptr[i], ADD(vars2[varID][levelID].ptr[i], MUL(vars3[varID][levelID].ptr[i], tsID+1)));
+	    field4.ptr[i] = SUB(field1.ptr[i], ADD(vars2[varID][levelID].ptr[i], MUL(vars3[varID][levelID].ptr[i], tsID)));
     
 	  nmiss = 0;
 	  for ( i = 0; i < gridsize; i++ )

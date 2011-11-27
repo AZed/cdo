@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@
 
 
 #include <stdio.h>
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -56,8 +56,8 @@ void *Showinfo(void *argument)
   int vlistID;
   int year, month, day;
   int month0 = 0, nmonth, year0 = 0, nyear;
-  char varname[256];
-  char stdname[256];
+  char varname[CDI_MAX_NAME];
+  char stdname[CDI_MAX_NAME];
   char vdatestr[32], vtimestr[32];
 
   cdoInitialize(argument);
@@ -78,7 +78,6 @@ void *Showinfo(void *argument)
   operatorID = cdoOperatorID();
 
   streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   vlistID = streamInqVlist(streamID);
 

@@ -288,9 +288,12 @@ void farselnec(field_t *field, double c);
 /**
  * reset the fields real values to the missval for all levels
  *
- * @param field the input field, also holds the result
+ * @param field     list of fields: 0 is index of the current values, 1 hold
+ *                  the values of the previous year
  * @param nlevels   number of available levels
  * @param gridsize  number of grid points
+ * @param yvals     list of latitudes
+ * @param onlyNorth boolean for processing only the norther hemisphere
  */
 void updateHist(field_t *field[2], int nlevels, int gridsize, double *yvals, int onlyNorth);
 
@@ -335,5 +338,4 @@ void writeGslStream(int ostreamID, int otaxisID, int otsID,
                     int first_var_id,
                     field_t *gslDuration, field_t *gslFirstDay,
                     int vdate, int vtime,  int nlevels);
-
 #endif /*ECAUTIL_H_*/

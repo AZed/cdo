@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo_int.h"
 
 
@@ -153,9 +153,7 @@ void writeNcFile(const char path[], const double array[], int length)
 /* creates the necessary storage for nvars variables with nts time steps on a single grid point */
 static
 double **createVars(int nvars, int nts)
-{
-  static const char func[] = "createVars";
-  
+{  
   double *array = (double *) malloc(nvars*nts*sizeof(double));
   double **vars = (double **) malloc(nvars*sizeof(double));
   
@@ -170,9 +168,7 @@ double **createVars(int nvars, int nts)
 /* destroys storage */
 static
 void destroyVars(double **vars)
-{
-  static const char func[] = "destroyVars";
-  
+{  
   if ( vars != NULL)
     {
       free(vars[0]);
@@ -206,9 +202,7 @@ char *getCdoPath()
 /* submits a CDO command */
 static
 int submitCdoCommand(const char *argument)
-{
-  static const char func[] = "submitCdoCommand";
-  
+{  
   const char *cdoPath = getCdoPath();
   char *cdoCommand = (char *) malloc(strlen(cdoPath) + strlen(argument) + 8);
   

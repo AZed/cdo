@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,18 +21,30 @@
 
 #include <ctype.h>  /* isspace */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "counter.h"
 
-int streamID = 0;
-int vlistID = 0;
-int varID = 0;
+
+typedef struct
+{
+  int   param;
+  char  name[CDI_MAX_NAME];
+  char  longname[CDI_MAX_NAME];
+  char  units[CDI_MAX_NAME];
+} vars_t;
+
+vars_t *all_vars = NULL;
+
+int gl_streamID = 0;
+int gl_vlistID = 0;
+int gl_varID = 0;
+int gl_nvars = 0;
 int levelID = 0;
-int tsID1 = 0;
-int tsID2 = 59;
-double *array = NULL;
+int gl_tsID1 = 0;
+int gl_tsID2 = 0;
+double *gl_data = NULL;
 
 #define MAX_LINE 256
 
@@ -42,6 +54,7 @@ int com_help(char *);
 int com_list(char *);
 int com_quit(char *);
 int com_stat(char *);
+int com_set(char *);
 int com_vars(char *);
 //int com_stat(char *);
 
@@ -59,6 +72,7 @@ command_t commands[] = {
   { "list", com_list, "List files in DIR" },
   { "quit", com_quit, "Quit using CDO" },
   { "stat", com_stat, "Statistic for selected field" },
+  { "set",  com_set,  "set variables" },
   { "vars", com_vars, "list variables" },
   //  { "stat", com_stat, "Print out statistics on FILE" },
   { NULL, NULL, NULL }
@@ -94,7 +108,7 @@ int com_help(char *arg)
 
   if ( !printed )
     {
-      printf ("No commands match â%sâ. Possibilties are:\n", arg);
+      printf ("No commands match '%s'. Possibilties are:\n", arg);
       for (i = 0; commands[i].name; i++)
 	{
 	  /* Print in six columns. */
@@ -137,9 +151,11 @@ int com_stat(char *arg)
   int nrecs;
   int tsID;
 
-  for ( tsID = tsID1; tsID <= tsID2; ++tsID )
+  fprintf(stdout, "name=%s\n", all_vars[gl_varID].name);
+
+  for ( tsID = gl_tsID1; tsID <= gl_tsID2; ++tsID )
     {
-      nrecs = streamInqTimestep(streamID, tsID);
+      nrecs = streamInqTimestep(gl_streamID, tsID);
       if ( nrecs == 0 )
 	{
 	  fprintf(stderr, "Timestep %d out of range!\n", tsID+1);
@@ -154,22 +170,31 @@ int com_stat(char *arg)
 	  counter_t counter;
 	  
 	  counter_start(&counter);
-	  streamReadVarSlice(streamID, varID, levelID, array, &nmiss);
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID, varID));
+	  streamReadVarSlice(gl_streamID, gl_varID, levelID, gl_data, &nmiss);
+	  gridsize = gridInqSize(vlistInqVarGrid(gl_vlistID, gl_varID));
 	  for ( i = 0; i < gridsize; ++i )
 	    {
-	      if ( array[i] < fmin ) fmin = array[i];
-	      if ( array[i] > fmax ) fmax = array[i];
-	      fmean += array[i];
+	      if ( gl_data[i] < fmin ) fmin = gl_data[i];
+	      if ( gl_data[i] > fmax ) fmax = gl_data[i];
+	      fmean += gl_data[i];
 	    }
 	  fmean /= gridsize;
 	  counter_stop(&counter);
 	  
-	  fprintf(stdout, "%d %d %d %g %g %g (%gs)\n",
-		  tsID+1, varID+1, levelID+1, fmin, fmean, fmax,
+	  fprintf(stdout, "timestep=%d %g %g %g (%gs)\n",
+		  tsID+1, fmin, fmean, fmax,
 		  counter_cputime(counter));
 	}
     }
+
+  return (0);
+}
+
+
+int com_set(char *arg)
+{
+  printf("com_set: %s\n", arg);
+
   return (0);
 }
 
@@ -177,22 +202,24 @@ int com_stat(char *arg)
 int com_vars(char *arg)
 {
   int varID;
-  int nvars = vlistNvars(vlistID);
+  char paramstr[32];
 
-  if (!arg)
-    arg = "";
-  printf("com_vars: %s %d\n", arg, nvars);
+  if ( !arg ) arg = "";
+  printf("com_vars: %s %d\n", arg, gl_nvars);
 
-  for ( varID = 0; varID < nvars; ++varID )
+  for ( varID = 0; varID < gl_nvars; ++varID )
     {
-      fprintf(stdout,"varID %d\n", varID);
+      cdiParamToString(all_vars[varID].param, paramstr, sizeof(paramstr));
+
+      fprintf(stdout,"varID=%3d, param=%s, name=%s %s %s\n",
+	      varID+1, paramstr, all_vars[varID].name, all_vars[varID].longname, all_vars[varID].units);
     }
 
   return (0);
 }
 
 /* Look up NAME as the name of a command, and return a pointer to that
-command. Return a NULL pointer if NAME isn't a command name. */
+   command. Return a NULL pointer if NAME isn't a command name. */
 command_t *find_command(char *name)
 {
   int i;
@@ -213,9 +240,9 @@ int execute_line(char *line)
 
   /* Isolate the command word. */
   i = 0;
-  while ( line[i] && isspace(line[i]))  i++;
+  while ( line[i] && isspace(line[i]) )  i++;
   word = line + i;
-  while ( line[i] && !isspace(line[i])) i++;
+  while ( line[i] && !isspace(line[i]) ) i++;
 
   if ( line[i] ) line[i++] = '\0';
 
@@ -265,15 +292,36 @@ void readcmd(const char *prompt, char *line, int size)
 }
 
 
+void command_init()
+{
+  int gridsize;
+  int taxisID;
+  int varID;
+
+  gl_vlistID = streamInqVlist(gl_streamID);
+  taxisID = vlistInqTaxis(gl_vlistID);
+
+  gridsize = vlistGridsizeMax(gl_vlistID);
+  gl_data = (double *) malloc(gridsize*sizeof(double));
+
+  gl_nvars = vlistNvars(gl_vlistID);
+  all_vars = (vars_t *) malloc(gl_nvars*sizeof(vars_t));
+
+  for ( varID = 0; varID < gl_nvars; ++varID )
+    {
+      all_vars[varID].param   = vlistInqVarParam(gl_vlistID, varID);
+      vlistInqVarName(gl_vlistID, varID, all_vars[varID].name);
+      vlistInqVarLongname(gl_vlistID, varID, all_vars[varID].longname);
+      vlistInqVarUnits(gl_vlistID, varID, all_vars[varID].units);
+    }
+}
+
 
 void *Command(void *argument)
 {
-  static char func[] = "Command";
   int nrecs;
   int recID, varID, levelID;
-  int gridsize;
   int nmiss;
-  int taxisID;
   double s_utime, s_stime;
   double e_utime, e_stime;
   double c_cputime = 0, c_usertime = 0, c_systime = 0;
@@ -284,15 +332,10 @@ void *Command(void *argument)
 
   processStartTime(&s_utime, &s_stime);
 
-  streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
+  gl_streamID = streamOpenRead(cdoStreamName(0));
+
+  command_init();
   
-  vlistID = streamInqVlist(streamID);
-  taxisID = vlistInqTaxis(vlistID);
-
-  gridsize = vlistGridsizeMax(vlistID);
-  array = (double *) malloc(gridsize*sizeof(double));
-
   /* Loop reading and executing lines until the user quits. */
   while ( !Done )
     {
@@ -315,7 +358,7 @@ void *Command(void *argument)
       else if ( strcmp(linep, "vars") == 0 )
 	{
 	  int varID;
-	  int nvars = vlistNvars(vlistID);
+	  int nvars = vlistNvars(gl_vlistID);
 	  for ( varID = 0; varID < nvars; ++nvars )
 	    {
 	      fprintf(stdout,"varID %d\n", varID);
@@ -324,9 +367,10 @@ void *Command(void *argument)
     }
 */
   
-  streamClose(streamID);
+  streamClose(gl_streamID);
 
-  if ( array ) free(array);
+  if ( gl_data ) free(gl_data);
+  if ( all_vars ) free(all_vars);
   
   cdoProcessTime(&e_utime, &e_stime);
 

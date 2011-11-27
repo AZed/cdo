@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,15 +21,16 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
-static void gen_index(int gridID1, int gridID2, int *index)
+static
+void gen_index(int gridID1, int gridID2, int *index)
 {
-  static char func[] = "gen_index";
   int nlat1, nlon1;
   int nlat2, nlon2;
   int gridtype1, gridtype2;
@@ -80,8 +81,26 @@ static void gen_index(int gridID1, int gridID2, int *index)
       gridInqXvals(gridID1, xvals1);
       gridInqYvals(gridID1, yvals1);
 
+      /* Convert lat/lon units if required */
+      {
+	char units[CDI_MAX_NAME];
+	gridInqXunits(gridID1, units);
+	gridToDegree(units, "grid1 center lon", nlon1, xvals1);
+	gridInqYunits(gridID1, units);
+	gridToDegree(units, "grid1 center lat", nlat1, yvals1);
+      }
+
       gridInqXvals(gridID2, xvals2);
       gridInqYvals(gridID2, yvals2);
+
+      /* Convert lat/lon units if required */
+      {
+	char units[CDI_MAX_NAME];
+	gridInqXunits(gridID2, units);
+	gridToDegree(units, "grid2 center lon", nlon2, xvals2);
+	gridInqYunits(gridID2, units);
+	gridToDegree(units, "grid2 center lat", nlat2, yvals2);
+      }
 
       for ( i2 = 0; i2 < nlat2; i2++ )
 	{
@@ -150,7 +169,6 @@ static void gen_index(int gridID1, int gridID2, int *index)
 
 void *Enlargegrid(void *argument)
 {
-  static char func[] = "Enlargegrid";
   int varID;
   int nrecs = 0;
   int tsID, recID, levelID;
@@ -172,7 +190,6 @@ void *Enlargegrid(void *argument)
   gridID2 = cdoDefineGrid(operatorArgv()[0]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   taxisID1 = vlistInqTaxis(vlistID1);
@@ -205,7 +222,6 @@ void *Enlargegrid(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistDefTaxis(vlistID2, taxisID2);
   streamDefVlist(streamID2, vlistID2);

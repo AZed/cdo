@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,22 +23,27 @@
       Setrtoc2    setrtoc2      Set range to new value others to value2
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "list.h"
 
+static
 double arg2val(char *arg)
 {
-  if (strcmp(arg,"inf")==0) return DBL_MAX;
-  else if (strcmp(arg,"-inf")==0) return -DBL_MAX;
-  else return atof(arg);
+  /*
+  if      ( strcmp(arg,"inf") == 0 )
+    return  DBL_MAX;
+  else if ( strcmp(arg,"-inf") == 0 )
+    return -DBL_MAX;
+  else
+  */
+    return atof(arg);
 }
 
 void *Replacevalues(void *argument)
 {
-  static char func[] = "Replacevalues";
   int  SETVALS, SETRTOC, SETRTOC2;
   int operatorID;
   int streamID1, streamID2;
@@ -60,8 +65,8 @@ void *Replacevalues(void *argument)
 
   cdoInitialize(argument);
 
-  SETVALS = cdoOperatorAdd("setvals", 0, 0, "I1,O1,...,In,On");
-  SETRTOC = cdoOperatorAdd("setrtoc", 0, 0, "range (min, max), value");
+  SETVALS  = cdoOperatorAdd("setvals" , 0, 0, "I1,O1,...,In,On");
+  SETRTOC  = cdoOperatorAdd("setrtoc",  0, 0, "range (min, max), value");
   SETRTOC2 = cdoOperatorAdd("setrtoc2", 0, 0, "range (min, max), value1, value2");
 
   operatorID = cdoOperatorID();
@@ -79,21 +84,20 @@ void *Replacevalues(void *argument)
   else if ( operatorID == SETRTOC )
     {
       operatorCheckArgc(3);
-      rmin = arg2val(operatorArgv()[0]);
-      rmax = arg2val(operatorArgv()[1]);
+      rmin   = arg2val(operatorArgv()[0]);
+      rmax   = arg2val(operatorArgv()[1]);
       newval = arg2val(operatorArgv()[2]);
     }
   else if ( operatorID == SETRTOC2 )
     {
       operatorCheckArgc(4);
-      rmin = arg2val(operatorArgv()[0]);
-      rmax = arg2val(operatorArgv()[1]);
-      newval = arg2val(operatorArgv()[2]);
+      rmin    = arg2val(operatorArgv()[0]);
+      rmax    = arg2val(operatorArgv()[1]);
+      newval  = arg2val(operatorArgv()[2]);
       newval2 = arg2val(operatorArgv()[3]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -103,7 +107,6 @@ void *Replacevalues(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

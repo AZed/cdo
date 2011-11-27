@@ -2,6 +2,11 @@
 #include <math.h>
 #include "grid.h"
 
+#ifndef IS_EQUAL
+#  define IS_NOT_EQUAL(x,y) (x < y || y < x)
+#  define IS_EQUAL(x,y)     (!IS_NOT_EQUAL(x,y))
+#endif
+
 #ifndef  M_PI
 #define  M_PI		3.14159265358979323846	/* pi */
 #endif
@@ -27,36 +32,44 @@ void map_init(proj_info_t *proj)
   proj->stdlon   = -999.9;
   proj->truelat1 = -999.9;
   proj->truelat2 = -999.9;
-  proj->hemi     = 0.0;
   proj->cone     = -999.9;
   proj->polei    = -999.9;
   proj->polej    = -999.9;
   proj->rsw      = -999.9;
+  proj->hemi     = 0;
   proj->init     = 0;
 }
 
 static
-void lc_cone(double truelat1, double truelat2, double *cone)
+double lc_cone(double truelat1, double truelat2)
 {
   // Subroutine to compute the cone factor of a Lambert Conformal projection
     
   // Input Args
-  // double, INTENT(IN)             :: truelat1  // (-90 -> 90 degrees N)
-  // double, INTENT(IN)             :: truelat2  //   "   "  "   "     "
+  //    truelat1   (-90 -> 90 degrees N)
+  //    truelat2     "   "  "   "     "
 
   // First, see if this is a secant or tangent projection.  For tangent
   // projections, truelat1 = truelat2 and the cone is tangent to the 
   // Earth's surface at this latitude.  For secant projections, the cone
   // intersects the Earth's surface at each of the distinctly different
   // latitudes
-  if (fabs(truelat1-truelat2) > 0.1) {
-    *cone = log10(cos(truelat1*rad_per_deg)) - 
-            log10(cos(truelat2*rad_per_deg));
-    *cone = *cone /(log10(tan((45.0 - fabs(truelat1)/2.0) * rad_per_deg)) -
-	 	    log10(tan((45.0 - fabs(truelat2)/2.0) * rad_per_deg)));   
-  } else {
-    *cone = sin(fabs(truelat1)*rad_per_deg );
-  }
+
+  double cone;
+
+  if (fabs(truelat1-truelat2) > 0.1)
+    {
+      cone = log10(cos(truelat1*rad_per_deg)) - 
+  	     log10(cos(truelat2*rad_per_deg));
+      cone = cone /(log10(tan((45.0 - fabs(truelat1)/2.0) * rad_per_deg)) -
+		    log10(tan((45.0 - fabs(truelat2)/2.0) * rad_per_deg)));   
+    }
+  else
+    {
+      cone = sin(fabs(truelat1)*rad_per_deg);
+    }
+
+  return cone;
 }
 
 static
@@ -71,7 +84,7 @@ void set_lc(proj_info_t *proj)
   double  ctl1r;
 
   // Compute cone factor
-  lc_cone(proj->truelat1, proj->truelat2, &(proj->cone));
+  proj->cone = lc_cone(proj->truelat1, proj->truelat2);
   // fprintf(stdout, "Computed cone factor: %g\n", proj->cone);
 
   // Compute longitude differences and ensure we stay out of the
@@ -136,23 +149,26 @@ void map_set(int proj_code, double lat1, double lon1, double dx, double stdlon,
       STOP 'MAP_INIT'
     }
   */
-  map_init(proj); 
-  proj->code  = proj_code;
-  proj->lat1 = lat1;
-  proj->lon1 = lon1;
-  proj->dx    = dx;
-  proj->stdlon = stdlon;
+  map_init(proj);
+
+  proj->code     = proj_code;
+  proj->lat1     = lat1;
+  proj->lon1     = lon1;
+  proj->dx       = dx;
+  proj->stdlon   = stdlon;
   proj->truelat1 = truelat1;
   proj->truelat2 = truelat2;
-  if (proj->code != PROJ_LATLON) {
-    proj->dx = dx;
-    if (truelat1 < 0.) {
-      proj->hemi = -1.0;
-    } else {
-      proj->hemi = 1.0;
+
+  if ( proj->code != PROJ_LATLON )
+    {
+      proj->dx = dx;
+      if (truelat1 < 0.)
+	proj->hemi = -1;
+      else
+	proj->hemi =  1;
+
+      proj->rebydx = earth_radius_m / dx;
     }
-    proj->rebydx = earth_radius_m / dx;
-  }
   /*
  pick_proj: SELECT CASE(proj->code)
 
@@ -163,11 +179,13 @@ void map_set(int proj_code, double lat1, double lon1, double dx, double stdlon,
       CASE(PROJ_LC)
   */
   // fprintf(stdout, "Setting up LAMBERT CONFORMAL map...\n");
-  if (fabs(proj->truelat2) > 90.) {
-    // fprintf(stdout, "Second true latitude not set, assuming a tangent\n");
-    // fprintf(stdout, "projection at truelat1: %g\n", proj->truelat1);
-    proj->truelat2=proj->truelat1;
-  }
+  if (fabs(proj->truelat2) > 90.)
+    {
+      // fprintf(stdout, "Second true latitude not set, assuming a tangent\n");
+      // fprintf(stdout, "projection at truelat1: %g\n", proj->truelat1);
+      proj->truelat2 = proj->truelat1;
+    }
+
   set_lc(proj);
   /*
       CASE (PROJ_MERC)
@@ -221,13 +239,16 @@ void ijll_lc(double i, double j, proj_info_t proj, double *lat, double *lon)
   chi2 = (90. - proj.hemi*proj.truelat2)*rad_per_deg;
     
   // See if we are in the southern hemispere and flip the indices if we are. 
-  if (proj.hemi == -1.) { 
-    inew = -i + 2.;
-    jnew = -j + 2.;
-  } else {
-    inew = i;
-    jnew = j;
-  }
+  if ( proj.hemi == -1 )
+    { 
+      inew = -i + 2.;
+      jnew = -j + 2.;
+    }
+  else
+    {
+      inew = i;
+      jnew = j;
+    }
 
   // Compute radius**2 to i/j location
   xx = inew - proj.polei;
@@ -236,31 +257,32 @@ void ijll_lc(double i, double j, proj_info_t proj, double *lat, double *lon)
   r  = sqrt(r2)/proj.rebydx;
    
   // Convert to lat/lon
-  if (r2 == 0.) {
-    *lat = proj.hemi * 90.;
-    *lon = proj.stdlon;
-  } else {
-       
-    // Longitude
-    *lon = proj.stdlon + deg_per_rad * atan2(proj.hemi*xx,yy)/proj.cone;
-    *lon = fmod(*lon+360., 360.);
-
-    // Latitude.  Latitude determined by solving an equation adapted 
-    // from:
-    //  Maling, D.H., 1973: Coordinate Systems and Map Projections
-    // Equations #20 in Appendix I.  
-        
-    if (chi1 == chi2) {
-      chi = 2.0*atan( pow( r/tan(chi1), (1./proj.cone) ) * tan(chi1*0.5) );
-    } else {
-      chi = 2.0*atan( pow( r*proj.cone/sin(chi1), (1./proj.cone) ) * tan(chi1*0.5)) ;
+  if ( IS_EQUAL(r2, 0.) )
+    {
+      *lat = proj.hemi * 90.;
+      *lon = proj.stdlon;
     }
-    *lat = (90.0-chi*deg_per_rad)*proj.hemi;
+  else
+    {
+      // Longitude
+      *lon = proj.stdlon + deg_per_rad * atan2(proj.hemi*xx,yy)/proj.cone;
+      *lon = fmod(*lon+360., 360.);
 
-  }
+      // Latitude.  Latitude determined by solving an equation adapted 
+      // from:
+      //  Maling, D.H., 1973: Coordinate Systems and Map Projections
+      // Equations #20 in Appendix I.  
+        
+      if ( IS_EQUAL(chi1, chi2) )
+	chi = 2.0*atan( pow( r/tan(chi1), (1./proj.cone) ) * tan(chi1*0.5) );
+      else
+	chi = 2.0*atan( pow( r*proj.cone/sin(chi1), (1./proj.cone) ) * tan(chi1*0.5)) ;
 
-  if (*lon > +180.) *lon = *lon - 360.;
-  if (*lon < -180.) *lon = *lon + 360.;
+      *lat = (90.0-chi*deg_per_rad)*proj.hemi;
+    }
+
+  if ( *lon > +180. ) *lon = *lon - 360.;
+  if ( *lon < -180. ) *lon = *lon + 360.;
 }
 
 /*

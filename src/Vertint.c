@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -36,7 +36,6 @@
 
 void *Vertint(void *argument)
 {
-  static char func[] = "Vertint";
   int ML2PL, ML2HL, ML2PLX, ML2HLX;
   int ML2PL_LP, ML2HL_LP, ML2PLX_LP, ML2HLX_LP;
   int operatorID;
@@ -59,10 +58,11 @@ void *Vertint(void *argument)
   int nvct;
   int geop_needed = FALSE;
   int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, gheightID = -1;
-  int code;
+  int code, param;
   int **varnmiss = NULL, *pnmiss = NULL;
   int *varinterp = NULL;
-  char varname[128], stdname[128];
+  char paramstr[32];
+  char varname[CDI_MAX_NAME], stdname[CDI_MAX_NAME];
   int *vars = NULL;
   double missval;
   double *plev = NULL, *phlev = NULL, *vct = NULL;
@@ -92,8 +92,8 @@ void *Vertint(void *argument)
   ML2HLX_LP = cdoOperatorAdd("ml2hlx_lp", func_hl, type_log, "height levels in meter");
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
-  opertype = cdoOperatorIntval(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
+  opertype = cdoOperatorF2(operatorID);
 
   if ( operatorID == ML2PL || operatorID == ML2HL || operatorID == ML2PL_LP || operatorID == ML2HL_LP )
     {
@@ -121,7 +121,6 @@ void *Vertint(void *argument)
   plev  = (double *) listArrayPtr(flist);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -197,7 +196,7 @@ void *Vertint(void *argument)
 		  nhlevh   = nhlevf + 1;
 	      
 		  vct = (double *) malloc(nvct*sizeof(double));
-		  memcpy(vct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
+		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
 		}
@@ -218,7 +217,7 @@ void *Vertint(void *argument)
 		  nhlevh   = nhlev;
 	      
 		  vct = (double *) malloc(nvct*sizeof(double));
-		  memcpy(vct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
+		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
 		}
@@ -234,9 +233,11 @@ void *Vertint(void *argument)
 		{
 		  int vctsize;
 		  int voff = 4;
-		  const double *pvct = zaxisInqVctPtr(zaxisID);
+		  
+		  rvct = (double *) malloc(nvct*sizeof(double));
+		  zaxisInqVct(zaxisID, rvct);
 
-		  if ( (int)(pvct[0]+0.5) == 100000 && pvct[voff] < pvct[voff+1] )
+		  if ( (int)(rvct[0]+0.5) == 100000 && rvct[voff] < rvct[voff+1] )
 		    {
 		      lhavevct = TRUE;
 		      zaxisIDh = zaxisID;
@@ -246,8 +247,6 @@ void *Vertint(void *argument)
 
 		      vctsize = 2*nhlevh;
 		      vct = (double *) malloc(vctsize*sizeof(double));
-		      rvct = (double *) malloc(nvct*sizeof(double));
-		      memcpy(rvct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
 
 		      vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
 
@@ -283,11 +282,6 @@ void *Vertint(void *argument)
 	}
     }
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
-
-  streamDefVlist(streamID2, vlistID2);
-
   nvars = vlistNvars(vlistID1);
 
   vars      = (int *) malloc(nvars*sizeof(int));
@@ -296,7 +290,7 @@ void *Vertint(void *argument)
   varnmiss  = (int **) malloc(nvars*sizeof(int*));
   varinterp = (int *) malloc(nvars*sizeof(int));
 
-  maxlev   = nhlev > nplev ? nhlev : nplev;
+  maxlev   = nhlevh > nplev ? nhlevh : nplev;
 
   if ( Extrapolate == 0 )
     pnmiss   = (int *) malloc(nplev*sizeof(int));
@@ -333,7 +327,7 @@ void *Vertint(void *argument)
 	}
     }
 
-  if ( cdoVerbose && useTable ) cdoPrint("Use code tables!");
+  if ( cdoVerbose && useTable ) cdoPrint("Using code tables!");
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -344,7 +338,10 @@ void *Vertint(void *argument)
       instNum  = institutInqCenter(vlistInqVarInstitut(vlistID1, varID));
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
 
-      code = vlistInqVarCode(vlistID1, varID);
+      param    = vlistInqVarParam(vlistID1, varID);
+      code     = vlistInqVarCode(vlistID1, varID);
+
+      cdiParamToString(param, paramstr, sizeof(paramstr));
 
       if ( useTable )
 	{
@@ -376,7 +373,7 @@ void *Vertint(void *argument)
 	}
 
       if ( cdoVerbose )
-	cdoPrint("Mode = %d  Center = %d  Table = %d  Code = %d", mode, instNum, tableNum, code);
+	cdoPrint("Mode = %d  Center = %d  Param = %s", mode, instNum, paramstr);
 
       if ( code <= 0 )
 	{
@@ -400,17 +397,17 @@ void *Vertint(void *argument)
 
       if ( mode == ECHAM_MODE )
 	{
-	  if      ( code == geop_code  && nlevel == 1     ) geopID    = varID;
-	  else if ( code == temp_code  && nlevel == nhlev ) tempID    = varID;
-	  else if ( code == ps_code    && nlevel == 1     ) psID      = varID;
-	  else if ( code == lsp_code   && nlevel == 1     ) lnpsID    = varID;
-	  else if ( code == 156        && nlevel == nhlev ) gheightID = varID;
+	  if      ( code == geop_code  && nlevel == 1      ) geopID    = varID;
+	  else if ( code == temp_code  && nlevel == nhlevf ) tempID    = varID;
+	  else if ( code == ps_code    && nlevel == 1      ) psID      = varID;
+	  else if ( code == lsp_code   && nlevel == 1      ) lnpsID    = varID;
+	  else if ( code == 156        && nlevel == nhlevf ) gheightID = varID;
 	}
       else if ( mode == WMO_MODE )
 	{
-	  if      ( code == geop_code  && nlevel == 1     ) geopID  = varID;
-	  else if ( code == temp_code  && nlevel == nhlev ) tempID  = varID;
-	  else if ( code == ps_code    && nlevel == 1     ) psID    = varID;
+	  if      ( code == geop_code  && nlevel == 1      ) geopID  = varID;
+	  else if ( code == temp_code  && nlevel == nhlevf ) tempID  = varID;
+	  else if ( code == ps_code    && nlevel == 1      ) psID    = varID;
 	}
 
       if ( gridInqType(gridID) == GRID_SPECTRAL && zaxisInqType(zaxisID) == ZAXIS_HYBRID )
@@ -426,7 +423,7 @@ void *Vertint(void *argument)
 
       /* if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlev ) */
       if ( zaxisID == zaxisIDh ||
-	   (zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlev) )
+	   (zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && (nlevel == nhlevh || nlevel == nhlevf)) )
 	{
 	  varinterp[varID] = TRUE;
 	  vardata2[varID]  = (double *) malloc(gridsize*nplev*sizeof(double));
@@ -436,8 +433,8 @@ void *Vertint(void *argument)
       else
 	{
 	  if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 )
-	    cdoWarning("Parameter %d has wrong number of levels, skipped! (code=%d nlevel=%d)",
-		       varID+1, code, nlevel);
+	    cdoWarning("Parameter %d has wrong number of levels, skipped! (param=%s nlevel=%d)",
+		       varID+1, paramstr, nlevel);
 	  varinterp[varID] = FALSE;
 	  vardata2[varID]  = vardata1[varID];
 	  varnmiss[varID]  = (int *) malloc(nlevel*sizeof(int));
@@ -451,7 +448,7 @@ void *Vertint(void *argument)
       geop = (double *) malloc(ngp*sizeof(double));
       if ( geopID == -1 )
 	{
-	  cdoWarning("Orography not found - using zero orography!");
+	  cdoWarning("Orography (surf. geopotential) not found - using zero orography!");
 	  memset(geop, 0, ngp*sizeof(double));
 	}
     }
@@ -463,13 +460,18 @@ void *Vertint(void *argument)
     {
       if ( psID != -1 )
 	{
-	  code = vlistInqVarCode(vlistID1, psID);
+	  param = vlistInqVarParam(vlistID1, psID);
+	  cdiParamToString(param, paramstr, sizeof(paramstr));
 	  if ( cdoVerbose )
-	    cdoPrint("LOG surface pressure not found - using surface pressure (code %d)!", code);
+	    cdoPrint("LOG surface pressure not found - using surface pressure (param=%s)!", paramstr);
 	}
       else
 	cdoAbort("Surface pressure not found!");
     }
+
+  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+
+  streamDefVlist(streamID2, vlistID2);
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
@@ -592,8 +594,11 @@ void *Vertint(void *argument)
 		      hyb_press = full_press;
 		    }
 		  else
-		    cdoAbort("Number of hybrid level differ from full/half level (code %d)!",
-			     vlistInqVarCode(vlistID1, varID));
+		    {
+		      param = vlistInqVarParam(vlistID1, varID);
+		      cdiParamToString(param, paramstr, sizeof(paramstr));
+		      cdoAbort("Number of hybrid level differ from full/half level (param=%s)!", paramstr);
+		    }
 
 		  if ( varID == tempID )
 		    {

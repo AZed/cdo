@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,22 +20,40 @@
 
       Set        setpartab       Set parameter table
       Set        setcode         Set code number
+      Set        setparam        Set parameter identifier
       Set        setname         Set variable name
       Set        setlevel        Set level
       Set        setltype        Set GRIB level type
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "namelist.h"
 
 
+int stringToParam(const char *paramstr)
+{
+  int param = 0;
+  int pnum = -1, pcat = 255, pdis = 255;
+  size_t len;
+
+  len = strlen(paramstr);
+
+  sscanf(paramstr, "%d.%d.%d", &pnum, &pcat, &pdis);
+  
+  if ( cdoVerbose ) cdoPrint("pnum, pcat, pdis: %d.%d.%d", pnum, pcat, pdis);
+
+  param = cdiEncodeParam(pnum, pcat, pdis);
+
+  return (param);
+}
+
+
 void *Set(void *argument)
 {
-  static char func[] = "Set";
-  int SETPARTAB, SETPARTABV, SETCODE, SETNAME, SETLEVEL, SETLTYPE, SETTABNUM;
+  int SETPARTAB, SETPARTABV, SETCODE, SETPARAM, SETNAME, SETLEVEL, SETLTYPE, SETTABNUM;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs, nvars, newval = -1, tabnum = 0;
@@ -48,6 +66,7 @@ void *Set(void *argument)
   int tableID = -1;
   int tableformat = 0;
   int zaxistype;
+  int newparam = 0;
   char *newname = NULL, *partab = NULL;
   double newlevel = 0;
   double *levels = NULL;
@@ -58,6 +77,7 @@ void *Set(void *argument)
   SETPARTAB  = cdoOperatorAdd("setpartab",  0, 0, "parameter table");
   SETPARTABV = cdoOperatorAdd("setpartabv", 0, 0, "parameter table");
   SETCODE    = cdoOperatorAdd("setcode",    0, 0, "code number");
+  SETPARAM   = cdoOperatorAdd("setparam",   0, 0, "parameter identifier (format: code[.tabnum] or num[.cat[.dis]])");
   SETNAME    = cdoOperatorAdd("setname",    0, 0, "variable name");
   SETLEVEL   = cdoOperatorAdd("setlevel",   0, 0, "level");
   SETLTYPE   = cdoOperatorAdd("setltype",   0, 0, "GRIB level type");
@@ -69,6 +89,10 @@ void *Set(void *argument)
   if ( operatorID == SETCODE || operatorID == SETLTYPE )
     {
       newval = atoi(operatorArgv()[0]);
+    }
+  else if ( operatorID == SETPARAM )
+    {
+      newparam = stringToParam(operatorArgv()[0]);
     }
   else if ( operatorID == SETNAME )
     {
@@ -115,7 +139,6 @@ void *Set(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -130,6 +153,10 @@ void *Set(void *argument)
       nvars = vlistNvars(vlistID2);
       for ( varID = 0; varID < nvars; varID++ )
 	vlistDefVarCode(vlistID2, varID, newval);
+    }
+  else if ( operatorID == SETPARAM )
+    {
+      vlistDefVarParam(vlistID2, 0, newparam);
     }
   else if ( operatorID == SETNAME )
     {
@@ -155,7 +182,7 @@ void *Set(void *argument)
       else
 	{
 	  FILE *fp;
-	  NAMELIST *nml;
+	  namelist_t *nml;
 	  int nml_code, nml_new_code, nml_table, nml_datatype, nml_name, nml_new_name, nml_stdname;
 	  int nml_longname, nml_units, nml_ltype;
 	  int locc, i;
@@ -163,8 +190,8 @@ void *Set(void *argument)
 	  int nml_index = 0;
 	  int codenum, tabnum, levtype;
 	  char *datatype = NULL;
-	  char *name = NULL, *new_name = NULL, *stdname = NULL, longname[256] = "", units[256] = "";
-	  char varname[256];
+	  char *name = NULL, *new_name = NULL, *stdname = NULL, longname[CDI_MAX_NAME] = "", units[CDI_MAX_NAME] = "";
+	  char varname[CDI_MAX_NAME];
 
 	  partab = operatorArgv()[0];
 	  fp = fopen(partab, "r");
@@ -186,7 +213,7 @@ void *Set(void *argument)
 	      
 	  while ( ! feof(fp) )
 	    {
-	      namelistClear(nml);
+	      namelistReset(nml);
 
 	      namelistRead(fp, nml);
 
@@ -311,11 +338,11 @@ void *Set(void *argument)
 
   /* vlistPrint(vlistID2);*/
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
-  gridsize = vlistGridsizeMax(vlistID2);
+  gridsize = vlistGridsizeMax(vlistID1);
+  if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
   array = (double *) malloc(gridsize*sizeof(double));
 
   tsID1 = 0;

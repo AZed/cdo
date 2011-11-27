@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Splitsel   splitsel        Split time selection
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -29,8 +29,6 @@
 
 void *Splitsel(void *argument)
 {
-  static char func[] = "Splitsel";
-
   /* from Selstat.c */
   int operatorID;
   int operfunc;
@@ -50,8 +48,8 @@ void *Splitsel(void *argument)
 
   /* from Splittime.c */
   int nchars;
-  char *filesuffix;
-  char filename[1024];
+  char filesuffix[32];
+  char filename[8192];
   int index = 0;
   int lcopy = FALSE;
   double *array = NULL;
@@ -61,7 +59,7 @@ void *Splitsel(void *argument)
   cdoOperatorAdd("splitsel",  0,  0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -81,11 +79,9 @@ void *Splitsel(void *argument)
   if ( nargc > 1 ) noffset = atof(operatorArgv()[1]);
   if ( nargc > 2 ) nskip   = atof(operatorArgv()[2]);
 
-/*   if ( cdoVerbose ) cdoPrint("nsets = %d, noffset = %d, nskip = %d", ndates, noffset, nskip); */
   if ( cdoVerbose ) cdoPrint("nsets = %f, noffset = %f, nskip = %f", ndates, noffset, nskip);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -97,7 +93,9 @@ void *Splitsel(void *argument)
 
   strcpy(filename, cdoStreamName(1));
   nchars = strlen(filename);
-  filesuffix = streamFilesuffix(cdoDefaultFileType);
+
+  filesuffix[0] = 0;
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   if ( ! lcopy )
     {
@@ -115,7 +113,7 @@ void *Splitsel(void *argument)
     }
   if ( tsID < noffset )
     {
-      cdoWarning("noffset larger than number of timesteps!");
+      cdoWarning("noffset is larger than number of timesteps!");
       goto LABEL_END;
     }
 
@@ -128,7 +126,6 @@ void *Splitsel(void *argument)
 	  
       if ( cdoVerbose ) cdoPrint("create file %s", filename);
       streamID2 = streamOpenWrite(filename, cdoFiletype());
-      if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", filename);
 
       streamDefVlist(streamID2, vlistID2);
 

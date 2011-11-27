@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,29 +20,80 @@
 
       Vargen     const           Create a constant field
       Vargen     random          Field with random values
+      Vargen     stdatm          Field values for pressure and temperature for
+                                 the standard atmosphere
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "list.h"
 
 
 #if defined (__GNUC__)
 #if __GNUC__ > 2
-#  define WITH_ETOPO 1
+#  define WITH_DATA 1
 #endif
 #endif
 
+
+#if defined(WITH_DATA)
+  static double etopo_scale  = 3;
+  static double etopo_offset = 11000;
+  static const unsigned short etopo[] = {
+#include "etopo.h"
+  };
+
+  static double temp_scale  =  500;
+  static double temp_offset = -220;
+  static const unsigned short temp[] = {
+#include "temp.h"
+  };
+
+  static double mask_scale  =  1;
+  static double mask_offset =  0;
+  static const unsigned short mask[] = {
+#include "mask.h"
+  };
+#endif
+
+/*  some Constants for creating temperatur and pressure for the standard atmosphere */
+#define T_ZERO          (213.0)
+#define T_DELTA          (75.0)
+#define SCALEHEIGHT   (10000.0)   /* [m] */
+#define P_ZERO         (1013.25)  /* surface pressure [hPa] */
+#define C_EARTH_GRAV      (9.80665)
+#define C_R             (287.05)  /*  specific gas constant for air */
+static double TMP4PRESSURE = (C_EARTH_GRAV*SCALEHEIGHT)/(C_R*T_ZERO);
+
+static double
+std_atm_temperatur(double height)
+{
+  /*
+    Compute the temperatur for the given height (in meters) according to the
+    solution of the hydrostatic atmosphere
+   */
+   return (T_ZERO + T_DELTA * exp((-1)*(height/SCALEHEIGHT)));
+}
+
+static double
+std_atm_pressure(double height)
+{
+  /*
+    Compute the pressure for the given height (in meters) according to the
+    solution of the hydrostatic atmosphere
+   */
+  return (P_ZERO * exp((-1)*TMP4PRESSURE*log((exp(height/SCALEHEIGHT)*T_ZERO + T_DELTA)/(T_ZERO + T_DELTA))));
+}
 
 void *Vargen(void *argument)
 {
-  static char func[] = "Vargen";
-  int RANDOM, CONST, TOPO, FOR;
+  int RANDOM, CONST, FOR, TOPO, TEMP, MASK, STDATM;
   int operatorID;
   int streamID;
-  int nrecs, ntimesteps;
-  int tsID, recID, varID, levelID;
+  int nrecs,nvars, ntimesteps, nlevels = 1;
+  int tsID, recID, varID, varID2, levelID;
   int gridsize, i;
   int vlistID;
   int gridID = -1, zaxisID, taxisID;
@@ -50,20 +101,18 @@ void *Vargen(void *argument)
   const char *gridfile;
   double rval, rstart = 0, rstop = 0, rinc = 0;
   double rconst = 0;
-  double *array;
-#if defined(WITH_ETOPO)
-  double etopo_scale = 3;
-  static const short etopo[] = {
-#include "etopo.h"
-  };
-#endif
+  double *array, *levels;
+  LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
 
   RANDOM = cdoOperatorAdd("random", 0, 0, "grid description file or name, <seed>");
   CONST  = cdoOperatorAdd("const",  0, 0, "constant value, grid description file or name");
-  TOPO   = cdoOperatorAdd("topo",   0, 0, "");
-  FOR    = cdoOperatorAdd("for",    0, 0, "start, end<, increment>");
+  FOR    = cdoOperatorAdd("for",    0, 0, "start, end, <increment>");
+  TOPO   = cdoOperatorAdd("topo",   0, 0, NULL);
+  TEMP   = cdoOperatorAdd("temp",   0, 0, NULL);
+  MASK   = cdoOperatorAdd("mask",   0, 0, NULL);
+  STDATM = cdoOperatorAdd("stdatm", 0, 0, "levels");
 
   operatorID = cdoOperatorID();
 
@@ -76,12 +125,12 @@ void *Vargen(void *argument)
       gridfile = operatorArgv()[0];
       gridID   = cdoDefineGrid(gridfile);
       if ( operatorArgc() == 2 )
-	{
-	  long idum;
-	  idum = atol(operatorArgv()[1]);
-	  if ( idum >= 0 && idum < 0x7FFFFFFF )
-	    seed = idum;
-	}
+        {
+          long idum;
+          idum = atol(operatorArgv()[1]);
+          if ( idum >= 0 && idum < 0x7FFFFFFF )
+            seed = idum;
+        }
       srand(seed);
     }
   else if ( operatorID == CONST )
@@ -92,7 +141,7 @@ void *Vargen(void *argument)
       gridfile = operatorArgv()[1];
       gridID   = cdoDefineGrid(gridfile);
     }
-  else if ( operatorID == TOPO )
+  else if ( operatorID == TOPO || operatorID == TEMP || operatorID == MASK )
     {
       int nlon, nlat, i;
       double lon[720], lat[360];
@@ -110,6 +159,7 @@ void *Vargen(void *argument)
     }
   else if ( operatorID == FOR )
     {
+      double lon = 0, lat = 0;
       operatorInputArg(cdoOperatorEnter(operatorID));
       if ( operatorArgc() < 2 ) cdoAbort("Too few arguments!");
       if ( operatorArgc() > 3 ) cdoAbort("Too many arguments!");
@@ -117,19 +167,48 @@ void *Vargen(void *argument)
       rstart = atof(operatorArgv()[0]);
       rstop  = atof(operatorArgv()[1]);
       if ( operatorArgc() == 3 )
-	rinc = atof(operatorArgv()[2]);
+        rinc = atof(operatorArgv()[2]);
       else
-	rinc = 1;
+        rinc = 1;
 
       if ( DBL_IS_EQUAL(rinc, 0.0) ) cdoAbort("Increment is zero!");
 
-      gridID = gridCreate(GRID_GENERIC, 1);
+      gridID = gridCreate(GRID_LONLAT, 1);
       gridDefXsize(gridID, 1);
       gridDefYsize(gridID, 1);
+      gridDefXvals(gridID, &lon);
+      gridDefYvals(gridID, &lat);
+    }
+  else if ( operatorID == STDATM )
+    {
+      double lon = 0, lat = 0;
+
+      operatorInputArg("levels");
+      nlevels = args2fltlist(operatorArgc(), operatorArgv(), flist);
+      levels  = (double *) listArrayPtr(flist);
+
+      if ( cdoVerbose ) for ( i = 0; i < nlevels; ++i ) printf("levels %d: %g\n", i, levels[i]);
+
+      gridID = gridCreate(GRID_LONLAT, 1);
+      gridDefXsize(gridID, 1);
+      gridDefYsize(gridID, 1);
+      gridDefXvals(gridID, &lon);
+      gridDefYvals(gridID, &lat);
     }
 
-
-  zaxisID = zaxisCreate(ZAXIS_SURFACE, 1);
+  if ( operatorID == STDATM )
+    {
+      zaxisID = zaxisCreate(ZAXIS_HEIGHT, nlevels);
+      zaxisDefLevels(zaxisID  , levels);
+      zaxisDefName(zaxisID    , "level");
+      zaxisDefLongname(zaxisID, "Level");
+      zaxisDefUnits(zaxisID   , "m");
+    }
+  else
+    {
+      zaxisID = zaxisCreate(ZAXIS_SURFACE, 1);
+      nlevels = 1;
+    }
 
   vlistID = vlistCreate();
 
@@ -137,15 +216,39 @@ void *Vargen(void *argument)
     varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
   else
     varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_CONSTANT);
+  /*
+     For the standard atmosphere two output variables are generated: pressure and
+     temperatur. The first (varID) is pressure, second (varID2) is temperatur.
+     Add an additional variable for the standard atmosphere.
+   */
+  if ( operatorID == STDATM )
+    varID2 = vlistDefVar(vlistID, gridID, zaxisID, TIME_CONSTANT);
+
+  if ( operatorID == MASK )
+    vlistDefVarDatatype(vlistID, varID, DATATYPE_INT8);
+
+  if ( operatorID != STDATM )
+    vlistDefVarName(vlistID, varID, cdoOperatorName(operatorID));
+  else
+    {
+      vlistDefVarName(vlistID    , varID , "P");
+      vlistDefVarStdname(vlistID , varID , "air_pressure");
+      vlistDefVarLongname(vlistID, varID , "pressure");
+      vlistDefVarUnits(vlistID   , varID , "hPa");
+      vlistDefVarName(vlistID    , varID2, "T");
+      vlistDefVarStdname(vlistID , varID2, "air_temperature");
+      vlistDefVarLongname(vlistID, varID2, "temperature");
+      vlistDefVarUnits(vlistID   , varID2, "K");
+    }
 
   taxisID = taxisCreate(TAXIS_RELATIVE);
   vlistDefTaxis(vlistID, taxisID);
 
-  if ( operatorID == RANDOM || operatorID == CONST || operatorID == TOPO )
+  if ( operatorID == RANDOM || operatorID == CONST || operatorID == TOPO ||
+       operatorID == TEMP || operatorID == MASK || operatorID == STDATM )
     vlistDefNtsteps(vlistID, 1);
 
   streamID = streamOpenWrite(cdoStreamName(0), cdoFiletype());
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   streamDefVlist(streamID, vlistID);
 
@@ -159,6 +262,9 @@ void *Vargen(void *argument)
 
   julday = date_to_julday(CALENDAR_PROLEPTIC, 10101);
 
+  nvars = vlistNvars(vlistID);
+  nrecs = vlistNrecs(vlistID);
+
   for ( tsID = 0; tsID < ntimesteps; tsID++ )
     {
       rval  = rstart + rinc*tsID;
@@ -168,38 +274,62 @@ void *Vargen(void *argument)
       taxisDefVtime(taxisID, vtime);
       streamDefTimestep(streamID, tsID);
 
-      nrecs = 1;
-      for ( recID = 0; recID < nrecs; recID++ )
-	{
-	  levelID = 0;
-	  streamDefRecord(streamID, varID, levelID);
+      for ( varID = 0; varID < nvars; varID++ )
+        {
+          nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID, varID));
+          for ( levelID = 0; levelID < nlevels; levelID++ )
+            {
+              streamDefRecord(streamID, varID, levelID);
 
-	  if ( operatorID == RANDOM )
-	    {
-	      for ( i = 0; i < gridsize; i++ )
-		array[i] = rand()/(RAND_MAX+1.0);
-	    }
-	  else if ( operatorID == CONST )
-	    {
-	      for ( i = 0; i < gridsize; i++ )
-		array[i] = rconst;
-	    }
-	  else if ( operatorID == TOPO )
-	    {
-#if defined(WITH_ETOPO)
-	      for ( i = 0; i < gridsize; i++ )
-		array[i] = (double)etopo[i]/etopo_scale;
+              if ( operatorID == RANDOM )
+                {
+                  for ( i = 0; i < gridsize; i++ )
+                    array[i] = rand()/(RAND_MAX+1.0);
+                }
+              else if ( operatorID == CONST )
+                {
+                  for ( i = 0; i < gridsize; i++ )
+                    array[i] = rconst;
+                }
+              else if ( operatorID == TOPO )
+                {
+#if defined(WITH_DATA)
+                  for ( i = 0; i < gridsize; i++ )
+                    array[i] = etopo[i]/etopo_scale - etopo_offset;
 #else
-	      cdoAbort("Operator support disabled!");
+                  cdoAbort("Operator support disabled!");
 #endif
-	    }
-	  else if ( operatorID == FOR )
-	    {
-	      array[0] = rval;
-	    }
+                }
+              else if ( operatorID == TEMP )
+                {
+#if defined(WITH_DATA)
+                  for ( i = 0; i < gridsize; i++ )
+                    array[i] = temp[i]/temp_scale - temp_offset;
+#else
+                  cdoAbort("Operator support disabled!");
+#endif
+                }
+              else if ( operatorID == MASK )
+                {
+#if defined(WITH_DATA)
+                  for ( i = 0; i < gridsize; i++ )
+                    array[i] = mask[i]/mask_scale - mask_offset;
+#else
+                  cdoAbort("Operator support disabled!");
+#endif
+                }
+              else if ( operatorID == FOR )
+                {
+                  array[0] = rval;
+                }
+              else if ( operatorID == STDATM )
+                {
+                  array[0] = (varID == varID2) ? std_atm_temperatur(levels[levelID]) : std_atm_pressure(levels[levelID]);
+                }
 
-	  streamWriteRecord(streamID, array, 0);
-	}
+              streamWriteRecord(streamID, array, 0);
+            }
+        }
     }
 
   streamClose(streamID);

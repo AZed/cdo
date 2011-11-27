@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -56,7 +56,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -64,7 +64,6 @@
 
 void *Timstat(void *argument)
 {
-  static char func[] = "Timstat";
   int operatorID;
   int operfunc;
   int cmplen;
@@ -131,7 +130,7 @@ void *Timstat(void *argument)
   cdoOperatorAdd("hourstd",  func_std,   4, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   if ( operfunc == func_mean )
     {
@@ -149,27 +148,21 @@ void *Timstat(void *argument)
 	cdoAbort("Too many arguments!");
     }
 
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
 
-  if ( cdoOperatorIntval(operatorID) == 31 ) vlistDefNtsteps(vlistID2, 1);
+  if ( cdoOperatorF2(operatorID) == 31 ) vlistDefNtsteps(vlistID2, 1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxis_has_bounds = taxisHasBounds(taxisID1);
   taxisID2 = taxisDuplicate(taxisID1);
-  /*
-  taxisID2 = taxisCreate(TAXIS_ABSOLUTE);
-  taxisDefCalendar(taxisID2, taxisInqCalendar(taxisID1));
-  */
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -178,13 +171,12 @@ void *Timstat(void *argument)
 
   if ( cdoDiag )
     {
-      char filename[4096];
+      char filename[8192];
 
       strcpy(filename, cdoOperatorName(operatorID));
       strcat(filename, "_");
       strcat(filename, cdoStreamName(1));
       streamID3 = streamOpenWrite(filename, cdoFiletype());
-      if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", filename);
 
       vlistID3 = vlistDuplicate(vlistID1);
 
@@ -417,29 +409,27 @@ void *Timstat(void *argument)
 	  streamDefTimestep(streamID3, otsID);
 	}
 
-      otsID++;
-
       for ( recID = 0; recID < nrecords; recID++ )
 	{
 	  varID   = recVarID[recID];
 	  levelID = recLevelID[recID];
 
-	  if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
+	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	  streamDefRecord(streamID2, varID, levelID);
+	  streamWriteRecord(streamID2, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);
+	  if ( cdoDiag )
 	    {
-	      streamDefRecord(streamID2, varID, levelID);
-	      streamWriteRecord(streamID2, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);
-	      if ( cdoDiag )
+	      if ( samp1[varID][levelID].ptr )
 		{
-		  if ( samp1[varID][levelID].ptr )
-		    {
-		      streamDefRecord(streamID3, varID, levelID);
+		  streamDefRecord(streamID3, varID, levelID);
 		      streamWriteRecord(streamID3, samp1[varID][levelID].ptr,  0);
-		    }
 		}
 	    }
 	}
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
 

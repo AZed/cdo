@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
       Splittime  splitseas       Split seasons
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -35,7 +35,6 @@
 
 void *Splittime(void *argument)
 {
-  static char func[] = "Splittime";
   int SPLITHOUR, SPLITDAY, SPLITMON, SPLITSEAS;
   int operatorID;
   int operfunc, operintval;
@@ -47,7 +46,7 @@ void *Splittime(void *argument)
   int vlistID1, vlistID2;
   int  streamIDs[MAX_STREAMS], tsIDs[MAX_STREAMS];
   char filesuffix[32];
-  char filename[1024];
+  char filename[8192];
   int index = 0;
   int i;
   int taxisID1, taxisID2;
@@ -67,8 +66,8 @@ void *Splittime(void *argument)
   SPLITSEAS = cdoOperatorAdd("splitseas", func_date,   100, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc   = cdoOperatorFunc(operatorID);
-  operintval = cdoOperatorIntval(operatorID);
+  operfunc   = cdoOperatorF1(operatorID);
+  operintval = cdoOperatorF2(operatorID);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -79,7 +78,6 @@ void *Splittime(void *argument)
   for ( i = 0; i < MAX_STREAMS; i++ ) tsIDs[i] = 0;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -92,13 +90,7 @@ void *Splittime(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   if ( ! lcopy )
     {
@@ -168,7 +160,6 @@ void *Splittime(void *argument)
 	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
 	  streamID2 = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", filename);
 
 	  streamDefVlist(streamID2, vlistID2);
 

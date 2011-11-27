@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "griddes.h"
@@ -33,7 +33,9 @@ int cdf_openread(const char *filename)
 #if  defined  (HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
 
+  openLock();
   nce(nc_open(filename, NC_NOWRITE, &nc_file_id));
+  openUnlock();
   fileID = nc_file_id;
 #else
   cdoWarning("netCDF support not compiled in!");
@@ -45,7 +47,6 @@ int cdf_openread(const char *filename)
 
 int gridFromNCfile(const char *gridfile)
 {
-  static char func[] = "gridFromNCfile";
   int gridID = -1;
 #if  defined  (HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
@@ -57,6 +58,7 @@ int gridFromNCfile(const char *gridfile)
   int nc_gridclon_id;  /* netCDF grid corner lon var id */
   int nc_gridlat_id;   /* netCDF grid center lat var id */
   int nc_gridlon_id;   /* netCDF grid center lon var id */
+  int nc_gridmask_id;  /* netCDF grid mask id           */
 
   nc_type xtype;
   size_t attlen;
@@ -69,7 +71,7 @@ int gridFromNCfile(const char *gridfile)
 
   /* open grid file and read grid size/name data */
   
-  nc_file_id = pcdf_openread(gridfile);
+  nc_file_id = cdf_openread(gridfile);
 
   if ( nc_inq_dimid(nc_file_id, "grid_size", &nc_gridsize_id)    == NC_NOERR &&
        nc_inq_dimid(nc_file_id, "grid_rank", &nc_gridrank_id)    == NC_NOERR &&
@@ -86,21 +88,22 @@ int gridFromNCfile(const char *gridfile)
 	   nc_inq_varid(nc_file_id, "grid_corner_lat", &nc_gridclat_id) != NC_NOERR || 
 	   nc_inq_varid(nc_file_id, "grid_corner_lon", &nc_gridclon_id) != NC_NOERR ) return (gridID);
 
-      nce(nc_inq_varid(nc_file_id, "grid_dims", &nc_griddims_id));
       nce(nc_get_var_int(nc_file_id, nc_griddims_id, grid_dims));
 
       if ( grid_rank == 1 )
 	{
-	  grid.type = GRID_CELL;
+	  grid.type = GRID_UNSTRUCTURED;
+	  if ( (size_t)grid_dims[0] != grid_size ) return(gridID);
 	}
       else
 	{
 	  grid.type = GRID_CURVILINEAR;
 	  if ( grid.nvertex != 4 )
-	    Error(func, "curvilinear grid with %d corners unsupported", grid.nvertex);
+	    Error("curvilinear grid with %d corners unsupported", grid.nvertex);
 
 	  grid.xsize = grid_dims[0];
 	  grid.ysize = grid_dims[1];
+	  if ( (size_t)grid_dims[0]*grid_dims[1] != grid_size ) return(gridID);
 	}
 
       /* allocate grid coordinates and read data */
@@ -109,11 +112,6 @@ int gridFromNCfile(const char *gridfile)
       grid.yvals   = (double *) malloc(grid.size*sizeof(double));
       grid.xbounds = (double *) malloc(grid.nvertex*grid.size*sizeof(double));
       grid.ybounds = (double *) malloc(grid.nvertex*grid.size*sizeof(double));
-
-      nce(nc_inq_varid(nc_file_id, "grid_center_lat", &nc_gridlat_id));
-      nce(nc_inq_varid(nc_file_id, "grid_center_lon", &nc_gridlon_id));
-      nce(nc_inq_varid(nc_file_id, "grid_corner_lat", &nc_gridclat_id));
-      nce(nc_inq_varid(nc_file_id, "grid_corner_lon", &nc_gridclon_id));
 
       nce(nc_inq_vartype(nc_file_id, nc_gridlat_id, &xtype));
       if ( xtype == NC_FLOAT )  grid.prec = DATATYPE_FLT32;
@@ -131,6 +129,21 @@ int gridFromNCfile(const char *gridfile)
       nce(nc_get_att_text(nc_file_id, nc_gridlat_id, "units", grid.yunits));
       grid.yunits[attlen] = 0;
 
+      if ( nc_inq_varid(nc_file_id, "grid_imask", &nc_gridmask_id) == NC_NOERR )
+	{
+	  int i;
+	  grid.mask = (int *) malloc(grid.size*sizeof(int));
+	  nce(nc_get_var_int(nc_file_id, nc_gridmask_id, grid.mask));
+	  for ( i = 0; i < grid.size; ++i )
+	    if ( grid.mask[i] != 1 ) break;
+
+	  if ( i == grid.size )
+	    {
+	      free(grid.mask);
+	      grid.mask = NULL;
+	    }
+	}
+
       gridID = gridDefine(grid);
     }
 
@@ -146,7 +159,6 @@ int gridFromNCfile(const char *gridfile)
 
 void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
 {
-  static char func[] = "writeNCgrid";
 #if  defined  (HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
   int nc_gridsize_id;  /* netCDF grid size dim id       */
@@ -166,7 +178,7 @@ void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
   int gridtype;
   int gridsize;
   double *vals;
-  char units[128];
+  char units[CDI_MAX_NAME];
 
 
   gridtype = gridInqType(gridID);
@@ -181,7 +193,7 @@ void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
       grid_dims[0] = gridInqXsize(gridID);
       grid_dims[1] = gridInqYsize(gridID);
     }
-  else if ( gridtype == GRID_CELL )
+  else if ( gridtype == GRID_UNSTRUCTURED )
     {
       grid_rank = 1;
       grid_dims[0] = gridInqSize(gridID);
@@ -315,6 +327,6 @@ void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
   nce(nc_close(nc_file_id));
 
 #else
-  Error(func, "netCDF support not compiled in!");
+  Error("netCDF support not compiled in!");
 #endif
 }

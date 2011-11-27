@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -42,8 +42,8 @@
 
 
 typedef struct {
-  int         func;
-  int         intval;
+  int         f1;
+  int         f2;
   const char *name;
   const char *enter;
 }
@@ -90,7 +90,6 @@ pthread_mutex_t processMutex = PTHREAD_MUTEX_INITIALIZER;
 
 int processCreate(void)
 {
-  static char func[] = "processCreate";
   int processID;
 
 #if  defined  (HAVE_LIBPTHREAD)
@@ -102,7 +101,7 @@ int processCreate(void)
 #endif
 
   if ( processID >= MAX_PROCESS )
-    Error(func, "Limit of %d processes reached!", MAX_PROCESS);
+    Error("Limit of %d processes reached!", MAX_PROCESS);
 
 #if  defined  (HAVE_LIBPTHREAD)
   Process[processID].threadID     = pthread_self();
@@ -128,7 +127,6 @@ int processCreate(void)
 
 int processSelf(void)
 {
-  static char func[] = "processSelf";
   int processID = 0;
 #if  defined  (HAVE_LIBPTHREAD)
   pthread_t thID = pthread_self();
@@ -141,7 +139,7 @@ int processSelf(void)
   if ( processID == NumProcess )
     {
       if ( NumProcess > 0 )
-	Error(func, "Internal problem, process not found!");
+	Error("Internal problem, process not found!");
       else
 	processID = 0;
     }
@@ -156,7 +154,6 @@ int processSelf(void)
 
 int processNums(void)
 {
-  static char func[] = "processNums";
   int pnums = 0;
 
 #if  defined  (HAVE_LIBPTHREAD)
@@ -175,7 +172,6 @@ int processNums(void)
 
 void processAddNvals(off_t nvals)
 {
-  static char func[] = "processAddNvals";
   int processID = processSelf();
 
   Process[processID].nvals += nvals;
@@ -184,7 +180,6 @@ void processAddNvals(off_t nvals)
 
 off_t processInqNvals(int processID)
 {
-  static char func[] = "processInqNvals";
   off_t nvals = 0;
 
   nvals = Process[processID].nvals;
@@ -195,7 +190,6 @@ off_t processInqNvals(int processID)
 
 void processAddStream(int streamID)
 {
-  static char func[] = "processAddStream";
   int processID = processSelf();
   int sindex;
 
@@ -204,7 +198,7 @@ void processAddStream(int streamID)
   sindex = Process[processID].nstream++;
 
   if ( sindex >= MAX_STREAM )
-    Error(func, "limit of %d streams per process reached!", MAX_STREAM);
+    Error("limit of %d streams per process reached!", MAX_STREAM);
 
   Process[processID].streams[sindex] = streamID;
 }
@@ -316,11 +310,10 @@ int cdoStreamCnt(void)
 
 const char *cdoStreamName(int cnt)
 {
-  static char func[] = "cdoInqStreamName";
   int processID = processSelf();
 
   if ( cnt > Process[processID].streamCnt || cnt < 0 )
-    Error(func, "count %d out of range!", cnt);
+    Error("count %d out of range!", cnt);
 
   return (Process[processID].streamNames[cnt]);
 }
@@ -336,7 +329,6 @@ const char *processOperator(void)
 static
 char *getOperatorArg(const char *xoperator)
 {
-  static char func[] = "getOperatorArg";
   char *commapos;
   char *operatorArg = NULL;
   size_t len;
@@ -368,6 +360,7 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
   int streamOutCnt;
   char *opername;
   char *comma_position;
+  const char *caller = processInqPrompt();
   /*
   { int i;
   for ( i = 0; i < argc; i++ )
@@ -394,14 +387,12 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
       */
       streamInCnt = 1;
       /*
-      Error(processInqPrompt(),
-	    "Unlimited input streams not allowed in CDO pipes (Operator %s)!", opername);
+      Errorc("Unlimited input streams not allowed in CDO pipes (Operator %s)!", opername);
       */
     }
 
-  if ( streamOutCnt != 1 )
-    Error(processInqPrompt(), 
-	  "More than one output stream not allowed in CDO pipes (Operator %s)!", opername);
+  if ( streamOutCnt > 1 )
+    Errorc("More than one output stream not allowed in CDO pipes (Operator %s)!", opername);
 
   globArgc++;
 
@@ -415,11 +406,13 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
 static
 int skipInputStreams(int argc, char *argv[], int globArgc, int nstreams)
 {
+  const char *caller = processInqPrompt();
+
   while ( nstreams > 0 )
     {
       if ( globArgc >= argc )
 	{
-	  Error(processInqPrompt(), "Not enough arguments. Check command line!");
+	  Errorc("Too few arguments. Check command line!");
 	  break;
 	}
       if ( argv[globArgc][0] == '-' )
@@ -459,7 +452,6 @@ int getStreamCnt(int argc, char *argv[])
 static
 void setStreamNames(int argc, char *argv[])
 {
-  static char func[] = "setStreamNames";
   int processID = processSelf();
   int i;
   int globArgc = 1;
@@ -469,18 +461,20 @@ void setStreamNames(int argc, char *argv[])
 
   while ( globArgc < argc )
     {
+      //     printf("arg %d %d %s\n", argc, globArgc, argv[globArgc]);
       if ( argv[globArgc][0] == '-' )
 	{
 	  globArgcStart = globArgc;
 
 	  globArgc = getGlobArgc(argc, argv, globArgc);
-
+	  //	  printf("globArgc %d\n", globArgc);
 	  len = 0;
 	  for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
 	  streamname = (char *) malloc(len);
 	  memcpy(streamname, argv[globArgcStart], len);
 	  for ( i = 1; i < (int) len-1; i++ ) if ( streamname[i] == '\0' ) streamname[i] = ' ';
 	  Process[processID].streamNames[Process[processID].streamCnt++] = streamname;
+	  //	  printf("streamname1: %s\n", streamname);
 	}
       else
 	{
@@ -488,6 +482,7 @@ void setStreamNames(int argc, char *argv[])
 	  streamname = (char *) malloc(len);
 	  strcpy(streamname, argv[globArgc]);
 	  Process[processID].streamNames[Process[processID].streamCnt++] = streamname;
+	  //	  printf("streamname2: %s\n", streamname);
 	  globArgc++;
 	}
     }
@@ -500,46 +495,58 @@ void checkStreamCnt(void)
   int streamInCnt, streamOutCnt;
   int streamCnt = 0;
   int i, j;
+  int obase = FALSE;
+  const char *caller = processInqPrompt();
 
   streamInCnt  = operatorStreamInCnt(Process[processID].operatorName);
   streamOutCnt = operatorStreamOutCnt(Process[processID].operatorName);
 
+  if ( streamOutCnt == -1 )
+    {
+      streamOutCnt = 1;
+      obase = TRUE;
+    }
+
   if ( streamInCnt == -1 && streamOutCnt == -1 )
-    Error(processInqPrompt(), "I/O stream counts unlimited no allowed");
+    Errorc("I/O stream counts unlimited no allowed!");
     
   if ( streamInCnt == -1 )
     {
       streamInCnt = Process[processID].streamCnt - streamOutCnt;
-      if ( streamInCnt < 1 ) Error(processInqPrompt(), "Input streams missing!");
+      if ( streamInCnt < 1 ) Errorc("Input streams missing!");
     }
 
   if ( streamOutCnt == -1 )
     {
       streamOutCnt = Process[processID].streamCnt - streamInCnt;
-      if ( streamInCnt < 1 ) Error(processInqPrompt(), "Output streams missing!");
+      if ( streamInCnt < 1 ) Errorc("Output streams missing!");
     }
 
   streamCnt = streamInCnt + streamOutCnt;
 
   if ( Process[processID].streamCnt > streamCnt )
-    Error(processInqPrompt(), "Too many streams!"
-	  " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
+    Errorc("Too many streams!"
+	   " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
   if ( Process[processID].streamCnt < streamCnt )
-    Error(processInqPrompt(), "Not enough streams specified!"
-	  " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
+    Errorc("Too few streams specified!"
+	   " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
 
   for ( i = streamInCnt; i < streamCnt; i++ )
     {
       if ( Process[processID].streamNames[i][0] == '-' )
-	Error(processInqPrompt(), "Output file name %s must not begin with \"-\"!\n",
-	      Process[processID].streamNames[i]);
-      else
-	for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
-	  if ( strcmp(Process[processID].streamNames[i], Process[processID].streamNames[j]) == 0 )
-	    Error(processInqPrompt(), "Output file name %s is equal to input file name"
-		  " on position %d!\n", Process[processID].streamNames[i], j+1);
+	{
+	  Errorc("Output file name %s must not begin with \"-\"!\n",
+		 Process[processID].streamNames[i]);
+	}
+      else if ( !obase )
+	{
+	  for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
+	    if ( strcmp(Process[processID].streamNames[i], Process[processID].streamNames[j]) == 0 )
+	      Errorc("Output file name %s is equal to input file name"
+		     " on position %d!\n", Process[processID].streamNames[i], j+1);
+	}
     }  
 }
 
@@ -548,7 +555,6 @@ void checkStreamCnt(void)
 static
 void setStreams(const char *argument)
 {
-  static char func[] = "setStreams";
   int processID = processSelf();
   int streamCnt;
   int i;
@@ -569,7 +575,7 @@ void setStreams(const char *argument)
 	  string[i] = '\0';
 	  argv[argc++] = &string[i+1];
 	  if ( argc >= MAX_ARGV )
-	    Error(func, "Internal problem! More than %d arguments.", argc);
+	    Error("Internal problem! More than %d arguments.", argc);
 	}
     }
 
@@ -589,7 +595,7 @@ void setStreams(const char *argument)
   checkStreamCnt();
 
   if ( Process[processID].streamCnt != streamCnt )
-    Error(func, "Internal problem with stream count %d %d", Process[processID].streamCnt, streamCnt);
+    Error("Internal problem with stream count %d %d", Process[processID].streamCnt, streamCnt);
   /*
   for ( i = 0; i < streamCnt; i++ )
     fprintf(stderr, "stream %d %s\n", i+1, Process[processID].streamNames[i]);
@@ -716,7 +722,6 @@ void operatorCheckArgc(int numargs)
 
 void operatorInputArg(const char *enter)
 {
-  static char func[] = "operatorInputArg";
   char line[1024];
   char *pline = line;
   int processID = processSelf();
@@ -773,15 +778,15 @@ void operatorInputArg(const char *enter)
 }
 
 
-int cdoOperatorAdd(const char *name, int func, int intval, const char *enter)
+int cdoOperatorAdd(const char *name, int f1, int f2, const char *enter)
 {
   int processID = processSelf();
   int operID = Process[processID].noper;
 
   if ( operID < MAX_OPERATOR )
     {
-      Process[processID].operator[operID].func   = func;
-      Process[processID].operator[operID].intval = intval;
+      Process[processID].operator[operID].f1     = f1;
+      Process[processID].operator[operID].f2     = f2;
       Process[processID].operator[operID].name   = name;
       Process[processID].operator[operID].enter  = enter;
 
@@ -819,19 +824,19 @@ int cdoOperatorID(void)
 }
 
 
-int cdoOperatorFunc(int operID)
+int cdoOperatorF1(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].func);
+  return (Process[processID].operator[operID].f1);
 }
 
 
-int cdoOperatorIntval(int operID)
+int cdoOperatorF2(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].intval);
+  return (Process[processID].operator[operID].f2);
 }
 
 

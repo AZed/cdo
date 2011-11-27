@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 #  include <omp.h>
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -56,7 +56,7 @@ int cmpx(const void *s1, const void *s2)
 }
 
 static
-int cmpxy(const void *s1, const void *s2)
+int cmpxy_lt(const void *s1, const void *s2)
 {
   int cmp = 0;
   xyinfo_t *xy1 = (xyinfo_t *) s1;
@@ -69,9 +69,22 @@ int cmpxy(const void *s1, const void *s2)
 }
 
 static
+int cmpxy_gt(const void *s1, const void *s2)
+{
+  int cmp = 0;
+  xyinfo_t *xy1 = (xyinfo_t *) s1;
+  xyinfo_t *xy2 = (xyinfo_t *) s2;
+
+  if      ( xy1->y > xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x < xy2->x) ) cmp = -1;
+  else if ( xy1->y < xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x > xy2->x) ) cmp =  1;
+
+  return (cmp);
+}
+
+static
 int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
 {
-  static char *func = "genGrid";
+  int lsouthnorth = TRUE;
   int fileID;
   int gridID;
   int gridID2 = -1;
@@ -89,10 +102,10 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
-      gridID = vlistGrid(ef[fileID].vlistID, igrid);
+      gridID   = vlistGrid(ef[fileID].vlistID, igrid);
       gridtype = gridInqType(gridID);
       if ( !(gridtype == GRID_LONLAT || gridtype == GRID_GAUSSIAN ||
-	     (gridtype == GRID_GENERIC && gridInqXsize(gridID) > 0 && gridInqYsize(gridID) > 0)) )
+	    (gridtype == GRID_GENERIC && gridInqXsize(gridID) > 0 && gridInqYsize(gridID) > 0)) )
 	cdoAbort("Unsupported grid type: %s!", gridNamePtr(gridtype));
 
       if ( xsize == 0 ) xsize = gridInqXsize(gridID);
@@ -110,21 +123,32 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
       xyinfo[fileID].x  = xvals[fileID][0];
       xyinfo[fileID].y  = yvals[fileID][0];
       xyinfo[fileID].id = fileID;
+
+      if ( fileID == 0 && ysize > 1 )
+	{
+	  if ( yvals[fileID][0] > yvals[fileID][ysize-1] ) lsouthnorth = FALSE;
+	}
     }
-  /*
-  for ( fileID = 0; fileID < nfiles; fileID++ )
-    printf("1 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
-  */
+  
+  if ( cdoVerbose )
+    for ( fileID = 0; fileID < nfiles; fileID++ )
+      printf("1 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
+  
   qsort(xyinfo, nfiles, sizeof(xyinfo_t), cmpx);  	      
-  /*
-  for ( fileID = 0; fileID < nfiles; fileID++ )
-    printf("2 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
-  */
-  qsort(xyinfo, nfiles, sizeof(xyinfo_t), cmpxy);  	      
-  /*
-  for ( fileID = 0; fileID < nfiles; fileID++ )
-    printf("3 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
-  */
+  
+  if ( cdoVerbose )
+    for ( fileID = 0; fileID < nfiles; fileID++ )
+      printf("2 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
+  
+  if ( lsouthnorth )
+    qsort(xyinfo, nfiles, sizeof(xyinfo_t), cmpxy_lt);  
+  else
+    qsort(xyinfo, nfiles, sizeof(xyinfo_t), cmpxy_gt);  	      
+
+  if ( cdoVerbose )
+    for ( fileID = 0; fileID < nfiles; fileID++ )
+      printf("3 %d %g %g \n",  xyinfo[fileID].id, xyinfo[fileID].x, xyinfo[fileID].y);
+
   nx = 1;
   for ( fileID = 1; fileID < nfiles; fileID++ )
     {
@@ -208,7 +232,6 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
 
 void *Gather(void *argument)
 {
-  static char func[] = "Gather";
   int i;
   int nvars;
   int cmpfunc;
@@ -238,7 +261,7 @@ void *Gather(void *argument)
 
   ofilename = cdoStreamName(nfiles);
 
-  if ( !cdoSilentMode )
+  if ( !cdoSilentMode && !cdoOverwriteMode )
     if ( fileExist(ofilename) )
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exist!", ofilename);
@@ -248,7 +271,6 @@ void *Gather(void *argument)
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
       streamID = streamOpenRead(cdoStreamName(fileID));
-      if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(fileID));
 
       vlistID = streamInqVlist(streamID);
 
@@ -259,9 +281,9 @@ void *Gather(void *argument)
   /* check that the contents is always the same */
   nvars = vlistNvars(ef[0].vlistID);
   if ( nvars == 1 ) 
-    cmpfunc = func_sftn;
+    cmpfunc = CMP_NAME | CMP_GRIDSIZE | CMP_NLEVEL;
   else
-    cmpfunc = func_sftn;
+    cmpfunc = CMP_NAME | CMP_GRIDSIZE | CMP_NLEVEL;
 
   for ( fileID = 1; fileID < nfiles; fileID++ )
     vlistCompare(ef[0].vlistID, ef[fileID].vlistID, cmpfunc);
@@ -301,7 +323,6 @@ void *Gather(void *argument)
     }
 
   streamID2 = streamOpenWrite(ofilename, cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", ofilename);
 
   streamDefVlist(streamID2, vlistID2);
 	  

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,17 +26,16 @@
       Invert     invertlondata   Invert longitude data
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
 #include "error.h"
 
 
-static void invertLonDes(int vlistID)
+static
+void invertLonDes(int vlistID)
 {
-  static char func[] = "invertLonDes";
   int index, ngrids;
   int gridID1, gridID2;
   int nlat, nlon, size;
@@ -133,9 +132,9 @@ static void invertLonDes(int vlistID)
     }
 }
 
-static void invertLatDes(int vlistID)
+static
+void invertLatDes(int vlistID)
 {
-  static char func[] = "invertLatDes";
   int index, ngrids;
   int gridID1, gridID2;
   int nlat, nlon, size;
@@ -169,21 +168,34 @@ static void invertLatDes(int vlistID)
 	  yv1 = (double *) malloc(size*sizeof(double));
 	  yv2 = (double *) malloc(size*sizeof(double));
 
-	  gridInqYvals(gridID1, yv1);
 
 	  if ( gridtype == GRID_CURVILINEAR )
 	    {
+	      gridInqXvals(gridID1, yv1);
+
 	      for ( ilat = 0; ilat < nlat; ilat++ )
 		for ( ilon = 0; ilon < nlon; ilon++ )
 		  yv2[(nlat-ilat-1)*nlon + ilon] = yv1[ilat*nlon + ilon];
+
+	      gridDefXvals(gridID2, yv2);
+
+	      gridInqYvals(gridID1, yv1);
+
+	      for ( ilat = 0; ilat < nlat; ilat++ )
+		for ( ilon = 0; ilon < nlon; ilon++ )
+		  yv2[(nlat-ilat-1)*nlon + ilon] = yv1[ilat*nlon + ilon];
+
+	      gridDefYvals(gridID2, yv2);
 	    }
 	  else
 	    {
+	      gridInqYvals(gridID1, yv1);
+
 	      for ( ilat = 0; ilat < nlat; ilat++ )
 		yv2[nlat-ilat-1] = yv1[ilat];
-	    }
 
-	  gridDefYvals(gridID2, yv2);
+	      gridDefYvals(gridID2, yv2);
+	    }
 
 	  if ( yv2 ) free(yv2);
 	  if ( yv1 ) free(yv1);
@@ -232,10 +244,9 @@ static void invertLatDes(int vlistID)
     }
 }
 
-
-static void invertLonData(double *array1, double *array2, int gridID1)
+static
+void invertLonData(double *array1, double *array2, int gridID1)
 {
-  static char func[] = "invertLonData";
   int nlat, nlon;
   int ilat, ilon;
   double **field1, **field2;
@@ -260,10 +271,9 @@ static void invertLonData(double *array1, double *array2, int gridID1)
   if ( field2 ) free(field2);
 }
 
-
-static void invertLatData(double *array1, double *array2, int gridID1)
+static
+void invertLatData(double *array1, double *array2, int gridID1)
 {
-  static char func[] = "invertLatData";
   int nlat, nlon;
   int ilat;
   double **field1, **field2;
@@ -290,7 +300,6 @@ static void invertLatData(double *array1, double *array2, int gridID1)
 
 void *Invert(void *argument)
 {
-  static char func[] = "Invert";
   int INVERTLAT, INVERTLON, INVERTLATDES, INVERTLONDES, INVERTLATDATA, INVERTLONDATA;
   int operatorID;
   int operfunc1, operfunc2;
@@ -314,14 +323,13 @@ void *Invert(void *argument)
   INVERTLONDATA = cdoOperatorAdd("invertlondata", func_fld, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc1 = cdoOperatorFunc(operatorID);
+  operfunc1 = cdoOperatorF1(operatorID);
   if ( operatorID == INVERTLAT || operatorID == INVERTLATDES || operatorID == INVERTLATDATA )
     operfunc2 = func_lat;
   else
     operfunc2 = func_lon;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -339,7 +347,6 @@ void *Invert(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

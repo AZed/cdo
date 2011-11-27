@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -54,7 +54,7 @@ void trms(field_t field1, field_t field2, double *dp, field_t *field3)
 	rsumw = ADD(rsumw, wp);
       }
 
-  ravg = ROOT(DIV(rsum, rsumw));
+  ravg = SQRT(DIV(rsum, rsumw));
 
   if ( DBL_IS_EQUAL(ravg, missval1) ) rnmiss++;
 
@@ -64,7 +64,6 @@ void trms(field_t field1, field_t field2, double *dp, field_t *field3)
 
 void *Trms(void *argument)
 {
-  static char func[] = "Trms";
   int streamID1, streamID2, streamID3;
   int vlistID1, vlistID2, vlistID3;
   int gridID1, gridID3, lastgrid = -1;
@@ -98,10 +97,7 @@ void *Trms(void *argument)
   needWeights = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
-
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -170,7 +166,6 @@ void *Trms(void *argument)
   if ( vctsize == 0 ) cdoAbort("VCT missing!");
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 

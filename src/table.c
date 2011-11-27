@@ -20,7 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "error.h"
 
@@ -32,7 +32,6 @@
 
 int defineTable(char *tablearg)
 {
-  static char func[] = "defineTable";
   char *tablename;
   int tableID = UNDEFID;
 
@@ -61,7 +60,7 @@ int defineTable(char *tablearg)
     tableID = tableInq(-1, 0, tablename);
 
   if ( tableID == UNDEFID )
-    Error(func, "table <%s> not found", tablename);
+    Error("table <%s> not found", tablename);
 
   return (tableID);
 }

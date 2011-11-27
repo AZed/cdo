@@ -27,7 +27,7 @@
 #if  defined  (HAVE_LIBPTHREAD)
 
 #include <pthread.h>
-#include <pthread_debug.h>
+#include "pthread_debug.h"
 
 #endif
 
@@ -41,7 +41,7 @@ typedef struct {
 } varlist_t;
 
 
-struct _PSTREAM {
+typedef struct {
   int            self;
   int            mode;
   int            fileID;
@@ -58,25 +58,23 @@ struct _PSTREAM {
   char         **mfnames;
   varlist_t     *varlist;
 #if  defined  (HAVE_LIBPTHREAD)
-  struct _PIPE  *pipe;
+  struct pipe_s *pipe;
   pthread_t     rthreadID; /* read  thread ID */
   pthread_t     wthreadID; /* write thread ID */
 #endif
-};
-
-typedef struct _PSTREAM PSTREAM;
+} pstream_t;
 
 
 #if  defined  (HAVE_LIBPTHREAD)
 
-struct _PIPE {
+struct pipe_s {
   int     nrecs, EOP;
   int     varID, levelID;
   int     recIDr, recIDw, tsIDr, tsIDw;
   int     hasdata, usedata;
   int     nmiss;
   double *data;
-  struct _PSTREAM *pstreamptr_in;
+  pstream_t *pstreamptr_in;
   /* unsigned long */ off_t nvals;
   pthread_mutex_t *mutex;
   pthread_cond_t *tsDef, *tsInq, *vlistDef, *isclosed;
@@ -84,25 +82,25 @@ struct _PIPE {
   pthread_cond_t *writeCond, *readCond;
 };
 
-typedef struct _PIPE PIPE;
+typedef struct pipe_s pipe_t;
 
-PIPE *pipeNew(void);
-void  pipeDelete(PIPE *pipe);
+pipe_t *pipeNew(void);
+void    pipeDelete(pipe_t *pipe);
 
 void  pipeDebug(int debug);
 
-void  pipeDefVlist(PSTREAM *pstreamptr, int vlistID);
-int   pipeInqVlist(PSTREAM *pstreamptr);
+void  pipeDefVlist(pstream_t *pstreamptr, int vlistID);
+int   pipeInqVlist(pstream_t *pstreamptr);
 
-void  pipeDefTimestep(PSTREAM *pstreamptr, int tsID);
-int   pipeInqTimestep(PSTREAM *pstreamptr, int tsID);
+void  pipeDefTimestep(pstream_t *pstreamptr, int tsID);
+int   pipeInqTimestep(pstream_t *pstreamptr, int tsID);
 
-void  pipeDefRecord(PSTREAM *pstreamptr, int  varID, int  levelID);
-int   pipeInqRecord(PSTREAM *pstreamptr, int *varID, int *levelID);
+void  pipeDefRecord(pstream_t *pstreamptr, int  varID, int  levelID);
+int   pipeInqRecord(pstream_t *pstreamptr, int *varID, int *levelID);
 
-void  pipeReadRecord(PSTREAM *pstreamptr, double *data, int *nmiss);
-void  pipeWriteRecord(PSTREAM *pstreamptr, double *data, int nmiss);
-void  pipeCopyRecord(PSTREAM *pstreamptr_dest, PSTREAM *pstreamptr_src);
+void  pipeReadRecord(pstream_t *pstreamptr, double *data, int *nmiss);
+void  pipeWriteRecord(pstream_t *pstreamptr, double *data, int nmiss);
+void  pipeCopyRecord(pstream_t *pstreamptr_dest, pstream_t *pstreamptr_src);
 
 #endif
 
