@@ -23,6 +23,21 @@ case "${HOSTNAME}" in
                     --with-szlib=$HOME/local \
 	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -Df2cFortran"
 	;;
+    cinglung*|feilung*)
+	./configure --prefix=$HOME/local \
+                    --enable-shared \
+                    --enable-maintainer-mode \
+                    --enable-swig \
+                    --enable-python \
+                    --with-jasper=/opt/local \
+                    --with-openjpeg=/opt/local \
+                    --with-libpng=/opt/local \
+                    --with-grib_api=/opt/local \
+                    --with-netcdf=/opt/local \
+                    --with-hdf5=/opt/local \
+                    --with-szlib=/opt/local \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -DpgiFortran"
+	;;
     hama*)
 	./configure --prefix=$HOME/local \
                     --enable-maintainer-mode \

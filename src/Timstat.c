@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -86,6 +86,7 @@ void *Timstat(void *argument)
   int *recVarID, *recLevelID;
   int taxis_has_bounds = FALSE;
   int lvfrac = FALSE;
+  char vdatestr[32], vtimestr[32];
   double vfrac = 1;
   double missval;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
@@ -354,7 +355,12 @@ void *Timstat(void *argument)
 	      }
 	  }
 
-      if ( cdoVerbose ) cdoPrint("vfrac = %g, nsets = %d", vfrac, nsets);
+      if ( cdoVerbose )
+	{
+	  date2str(vdate0, vdatestr, sizeof(vdatestr));
+	  time2str(vtime0, vtimestr, sizeof(vtimestr));
+	  cdoPrint("%s %s  vfrac = %g, nsets = %d", vdatestr, vtimestr, vfrac, nsets);
+	}
 
       if ( lvfrac && operfunc == func_mean )
 	for ( varID = 0; varID < nvars; varID++ )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,7 +29,6 @@
 
 void *Splitsel(void *argument)
 {
-  /* from Selstat.c */
   int operatorID;
   int operfunc;
   int gridsize;
@@ -41,6 +40,9 @@ void *Splitsel(void *argument)
   int streamID1, streamID2;
   int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
+  int gridID;
+  int nvars, nlevel;
+  int nconst;
 /*   int ndates = 0, noffset = 0, nskip = 0, nargc; */
   double ndates, noffset, nskip;
   int i2 = 0;
@@ -53,6 +55,7 @@ void *Splitsel(void *argument)
   int index = 0;
   int lcopy = FALSE;
   double *array = NULL;
+  field_t **vars = NULL;
 
   cdoInitialize(argument);
 
@@ -97,11 +100,39 @@ void *Splitsel(void *argument)
   filesuffix[0] = 0;
   cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
-  if ( ! lcopy )
+  //  if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
+    }
+
+  nvars = vlistNvars(vlistID1);
+  nconst = 0;
+  for ( varID = 0; varID < nvars; varID++ )
+    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) nconst++;
+
+  if ( nconst )
+    {
+      vars = (field_t **) malloc(nvars*sizeof(field_t *));
+
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+	    {
+	      gridID  = vlistInqVarGrid(vlistID1, varID);
+	      nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	      gridsize = gridInqSize(gridID);
+		  
+	      vars[varID] = (field_t *) malloc(nlevel*sizeof(field_t));
+
+	      for ( levelID = 0; levelID < nlevel; levelID++ )
+		{
+		  vars[varID][levelID].grid    = gridID;
+		  vars[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
+		}
+	    }
+	}
     }
 
 
@@ -109,12 +140,19 @@ void *Splitsel(void *argument)
   for ( tsID = 0; tsID < noffset; tsID++ )
     {
       nrecs = streamInqTimestep(streamID1, tsID);
-      if ( nrecs == 0 ) { /* printf ("break\n");*/ break; }
-    }
-  if ( tsID < noffset )
-    {
-      cdoWarning("noffset is larger than number of timesteps!");
-      goto LABEL_END;
+      if ( nrecs == 0 )
+	{
+	  cdoWarning("noffset is larger than number of timesteps!");
+	  goto LABEL_END;
+	}
+
+      if ( tsID == 0 && nconst )
+	for ( recID = 0; recID < nrecs; recID++ )
+	  {
+	    streamInqRecord(streamID1, &varID, &levelID);
+	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+	      streamReadRecord(streamID1, vars[varID][levelID].ptr, &vars[varID][levelID].nmiss);
+	  }
     }
 
   index = 0;
@@ -131,27 +169,41 @@ void *Splitsel(void *argument)
 
       tsID2 = 0;
 
-/*       printf("comp: %f %d\n",ndates*(index+1),(int)(ndates*(index+1))); */
       for ( ; nsets < (int)(ndates*(index+1)); nsets++ ) 
 	{
-
 	  nrecs = streamInqTimestep(streamID1, tsID);
 	  if ( nrecs == 0 ) break;
 
 	  vdate = taxisInqVdate(taxisID1);
 	  vtime = taxisInqVtime(taxisID1);
-
 	  /* printf("vdate: %d vtime: %d\n", vdate, vtime); */
 
 	  taxisCopyTimestep(taxisID2, taxisID1);
 	  streamDefTimestep(streamID2, tsID2);
+
+	  if ( tsID > 0 && tsID2 == 0 && nconst )
+	    {
+	      for ( varID = 0; varID < nvars; varID++ )
+		{
+		  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		    {
+		      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+		      for ( levelID = 0; levelID < nlevel; levelID++ )
+			{
+			  streamDefRecord(streamID2, varID, levelID);
+			  nmiss = vars[varID][levelID].nmiss;
+			  streamWriteRecord(streamID2, vars[varID][levelID].ptr, nmiss);
+			}
+		    }
+		}
+	    }
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
 	      
 	      streamInqRecord(streamID1, &varID, &levelID);
 	      streamDefRecord(streamID2,  varID,  levelID);
-	      if ( lcopy )
+	      if ( lcopy && !(tsID == 0 && nconst) )
 		{
 		  streamCopyRecord(streamID2, streamID1);
 		}
@@ -159,6 +211,17 @@ void *Splitsel(void *argument)
 		{
 		  streamReadRecord(streamID1, array, &nmiss);
 		  streamWriteRecord(streamID2, array, nmiss);
+
+		  if ( tsID == 0 && nconst )
+		    {
+		      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+			{
+			  gridID  = vlistInqVarGrid(vlistID1, varID);
+			  gridsize = gridInqSize(gridID);
+			  memcpy(vars[varID][levelID].ptr, array, gridsize*sizeof(double));
+			  vars[varID][levelID].nmiss = nmiss;
+			}
+		    }
 		}
 	    }
 	  
@@ -172,7 +235,6 @@ void *Splitsel(void *argument)
       nrecs = streamInqTimestep(streamID1, tsID);
       if ( nrecs == 0 ) break;
 
-/*       for ( i = 0; i < nskip; i++ ) */
       for ( ; i2 < (int)(nskip*(index+1)); i2++ )
 	{
 	  nrecs = streamInqTimestep(streamID1, tsID);
@@ -190,8 +252,27 @@ void *Splitsel(void *argument)
 
   streamClose(streamID1);
  
-  if ( ! lcopy )
-    if ( array ) free(array);
+  if ( array ) free(array);
+
+  if ( nconst )
+    {
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  if ( vlistInqVarTime(vlistID2, varID) == TIME_CONSTANT )
+	    {
+	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+	      for ( levelID = 0; levelID < nlevel; levelID++ )
+		if ( vars[varID][levelID].ptr )
+		  free(vars[varID][levelID].ptr);
+
+	      free(vars[varID]);
+	    }
+	}
+
+      if ( vars  ) free(vars);
+    }
+
+  vlistDestroy(vlistID2);
 
   cdoFinish();
 

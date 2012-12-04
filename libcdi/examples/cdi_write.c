@@ -49,7 +49,7 @@ int main(void)
   // Assign the Time axis to the variable list
   vlistDefTaxis(vlistID, taxisID);
 
-  // Create a dataset in netCDF fromat
+  // Create a dataset in netCDF format
   streamID = streamOpenWrite("example.nc", FILETYPE_NC);
   if ( streamID < 0 )
     {

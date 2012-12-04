@@ -166,9 +166,14 @@ void printGridInfo(int vlistID)
 	  yinc   = gridInqYinc(gridID);
 
 	  if ( gridtype == GRID_GAUSSIAN_REDUCED )
-	    fprintf(stdout, "size : dim = %d  nlat = %d\n", gridsize, ysize);
+	    fprintf(stdout, "size : dim = %d  nlat = %d", gridsize, ysize);
 	  else
-	    fprintf(stdout, "size      : dim = %d  nlon = %d  nlat = %d\n", gridsize, xsize, ysize);
+	    fprintf(stdout, "size      : dim = %d  nlon = %d  nlat = %d", gridsize, xsize, ysize);
+	  
+	  if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_GAUSSIAN_REDUCED )
+	    fprintf(stdout, "  np = %d", gridInqNP(gridID));
+
+	  fprintf(stdout, "\n");
 
 	  if ( xsize > 0 )
 	    {

@@ -22,6 +22,7 @@
       Arithc     subc            Subtract by constant
       Arithc     mulc            Multiply by constant
       Arithc     divc            Divide by constant
+      Arithc     mod             Modulo operator
 */
 
 
@@ -47,15 +48,16 @@ void *Arithc(void *argument)
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("addc", func_add, 0, NULL);
-  cdoOperatorAdd("subc", func_sub, 0, NULL);
-  cdoOperatorAdd("mulc", func_mul, 0, NULL);
-  cdoOperatorAdd("divc", func_div, 0, NULL);
+  cdoOperatorAdd("addc", func_add, 0, "constant value");
+  cdoOperatorAdd("subc", func_sub, 0, "constant value");
+  cdoOperatorAdd("mulc", func_mul, 0, "constant value");
+  cdoOperatorAdd("divc", func_div, 0, "constant value");
+  cdoOperatorAdd("mod",  func_mod, 0, "divisor");
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
-  operatorInputArg("constant value");
+  operatorInputArg(cdoOperatorEnter(operatorID));
   rconst = atof(operatorArgv()[0]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));

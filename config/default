@@ -116,6 +116,18 @@ case "${HOSTNAME}" in
                     --with-proj=/sw/etch-ia32/proj-4.6.0 \
 	            CC=gcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2"
         ;;
+# standard workstations at MPI-M x86_64-lenny
+    mpipc* )
+	${CONFPATH}configure \
+               --prefix=`pwd`/build \
+               --enable-maintainer-mode \
+               --with-netcdf='/sw/lenny-x64/netcdf-latest-gccsys' \
+               --with-hdf5='/sw/lenny-x64/hdf5-latest' \
+               --with-szlib='/sw/lenny-x64/szip-latest' \
+               --with-proj='/sw/lenny-x64/proj-latest' \
+               --enable-ruby --enable-swig --enable-python \
+	           CC=gcc CFLAGS="-g -fopenmp -Wall -W -Wfloat-equal -pedantic -O2"
+        ;;
 # dap enabled
     egmont | columbine)
  	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-ia32 \

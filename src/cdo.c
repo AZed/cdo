@@ -187,7 +187,7 @@ void usage(void)
   fprintf(stderr, "  Options:\n");
   fprintf(stderr, "    -a             Generate an absolute time axis\n");
   fprintf(stderr, "    -b <nbits>     Set the number of bits for the output precision\n");
-  fprintf(stderr, "                   (I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for srv/ext/ieg; 1 - 24 for grb/grb2)\n");
+  fprintf(stderr, "                   (I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for grb2/srv/ext/ieg; P1 - P24 for grb/grb2)\n");
   fprintf(stderr, "                   Add L or B to set the byteorder to Little or Big endian\n");
   fprintf(stderr, "    -f <format>    Format of the output file. (grb/grb2/nc/nc2/nc4/nc4c/srv/ext/ieg)\n");
   fprintf(stderr, "    -g <grid>      Set default grid name or file. Available grids: \n");
@@ -232,7 +232,7 @@ void usage(void)
   operatorPrintAll();
 
   fprintf(stderr, "\n");
-  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2011 Uwe Schulzweida\n", VERSION);
+  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2012 Uwe Schulzweida\n", VERSION);
   //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
   fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
@@ -409,7 +409,7 @@ void setDefaultDataType(char *datatypestr)
 	  else
 	    {
 	      fprintf(stderr, "Unsupported number of bits %d!\n", nbits);
-	      fprintf(stderr, "Use I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for srv/ext/ieg; 1 - 24 for grb/grb2.\n");
+	      fprintf(stderr, "Use I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for grb2/srv/ext/ieg; P1 - P24 for grb/grb2.\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
@@ -568,7 +568,7 @@ void setDefaultFileType(char *filetypestr, int labort)
 	      fprintf(stderr, "Unexpected character >%c< in file type >%s<!\n", *ftstr, filetypestr);
 	      fprintf(stderr, "Use format[_nbits] with:\n");
 	      fprintf(stderr, "    format = grb, grb2, nc, nc2, nc4, nc4c, srv, ext or ieg\n");
-	      fprintf(stderr, "    nbits  = 32/64 for nc/nc2/nc4/nc4c/srv/ext/ieg; 1 - 24 for grb/grb2\n");
+	      fprintf(stderr, "    nbits  = 32/64 for grb2/nc/nc2/nc4/nc4c/srv/ext/ieg; 1 - 24 for grb/grb2\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
@@ -780,6 +780,11 @@ int main(int argc, char *argv[])
 	  cdoOverwriteMode = TRUE;
 	  break;
 	case 'P':
+	  if ( *cdoOptarg < '1' || *cdoOptarg > '9' )
+	    {
+	      fprintf(stderr, "Unexpected character in number of OpenMP threads (-P <nthreads>): %s!\n", cdoOptarg);
+	      exit(EXIT_FAILURE);
+	    }
 	  numThreads = atoi(cdoOptarg);
 	  break;
 	case 'p':

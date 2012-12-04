@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,9 @@
 #include "interpol.h"
 
 
+int get_tunits(const char *unit, int *incperiod, int *incunit, int *tunit);
+
+
 void *Inttime(void *argument)
 {
   int streamID1, streamID2;
@@ -47,6 +50,7 @@ void *Inttime(void *argument)
   int *recVarID, *recLevelID;
   int **nmiss1, **nmiss2, nmiss3;
   const char *datestr, *timestr;
+  char *rstr;
   double missval1, missval2;
   juldate_t juldate1, juldate2, juldate;
   double fac1, fac2;
@@ -61,45 +65,37 @@ void *Inttime(void *argument)
   datestr = operatorArgv()[0];
   timestr = operatorArgv()[1];
 
-  if ( strchr(datestr, '-') == NULL )
-    {
-      vdate = atoi(datestr);
-    }
-  else
+  if ( strchr(datestr, '-') )
     {
       year = 1; month = 1; day = 1;
       sscanf(datestr, "%d-%d-%d", &year, &month, &day);
       vdate = cdiEncodeDate(year, month, day);
     }
-
-  if ( strchr(timestr, ':') == NULL )
-    {
-      vtime = atoi(timestr);
-    }
   else
+    {
+      vdate = (int)strtol(datestr, &rstr, 10);
+      if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", datestr);
+    }
+
+  if ( strchr(timestr, ':') )
     {
       hour = 0; minute = 0; second = 0;
       sscanf(timestr, "%d:%d:%d", &hour, &minute, &second);
       vtime = cdiEncodeTime(hour, minute, second);
     }
+  else
+    {
+      vtime = (int)strtol(timestr, &rstr, 10);
+      if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", timestr);
+    }
 
   if ( operatorArgc() == 3 )
     {
-      size_t len;
-      char *unit = operatorArgv()[2];
-      incperiod = atoi(unit);
-      while ( isdigit((int) *unit) ) unit++;
-      len = strlen(unit);
-      if ( len )
-	{
-	  if      ( memcmp(unit, "seconds", len) == 0 ) {incunit =     1; tunit = TUNIT_SECOND;}
-	  else if ( memcmp(unit, "minutes", len) == 0 ) {incunit =    60; tunit = TUNIT_MINUTE;}
-	  else if ( memcmp(unit, "hours", len)   == 0 ) {incunit =  3600; tunit = TUNIT_HOUR;  }
-	  else if ( memcmp(unit, "days", len)    == 0 ) {incunit = 86400; tunit = TUNIT_DAY;   }
-	  else if ( memcmp(unit, "months", len)  == 0 ) {incunit =     1; tunit = TUNIT_MONTH; }
-	  else if ( memcmp(unit, "years", len)   == 0 ) {incunit =    12; tunit = TUNIT_YEAR;  }
-	  else cdoAbort("unsupported time unit >%s<", unit);
-	}
+      const char *timeunits = operatorArgv()[2];
+      incperiod = (int)strtol(timeunits, NULL, 10);;
+      while ( isdigit((int) *timeunits) ) timeunits++;
+
+      get_tunits(timeunits, &incperiod, &incunit, &tunit);
     }
   /* increment in seconds */
   ijulinc = incperiod * incunit;

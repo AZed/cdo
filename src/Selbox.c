@@ -85,6 +85,8 @@ int gengrid(int gridID1, int lat1, int lat2, int lon11, int lon12, int lon21, in
   gridDefXsize(gridID2, nlon2);
   gridDefYsize(gridID2, nlat2);
 
+  gridDefNP(gridID2, gridInqNP(gridID1));
+
   gridDefPrec(gridID2, prec);
 
   gridInqXname(gridID1, xname);

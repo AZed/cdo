@@ -1319,7 +1319,7 @@ void gme_grid_restore(double *p, int ni, int nd)
 /*****************************************************************************/
 
 
-void gme_grid(int gridsize, double *rlon, double *rlat,
+void gme_grid(int lbounds, int gridsize, double *rlon, double *rlat,
 	      double *blon, double *blat, int *imask,
               int ni, int nd, int ni2, int ni3)
 {
@@ -1327,7 +1327,6 @@ void gme_grid(int gridsize, double *rlon, double *rlat,
   int i, j;
   double *xn;
   double *rlonx, *rlatx;
-  struct polygon *poly;
 
   /* check gridsize */
   if ( (ni+1)*(ni+1)*nd != gridsize )
@@ -1344,7 +1343,6 @@ void gme_grid(int gridsize, double *rlon, double *rlat,
   xn    = (double *) malloc(gridsize*3*sizeof(double));
   rlonx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double));
   rlatx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double));
-  poly  = (struct polygon *) malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon));
 
   im1s = 0;
   im1e = ni;
@@ -1358,26 +1356,33 @@ void gme_grid(int gridsize, double *rlon, double *rlat,
 
   initmask(imask,ni,nd);
 
-  neighbours(rlonx,rlatx,im1s-1,im1e+1,im2s-1,im2e+1,nd,
-             poly,im1s,im1e,im2s,im2e,nd);
-
-  boundary(poly,im1s,im1e,im2s,im2e,nd);
-
-  for ( i = 0; i < gridsize; i++ )
+  if ( lbounds )
     {
-      for ( j = 0; j < poly[i].type; j++ )
+      struct polygon *poly;
+      
+      poly  = (struct polygon *) malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon));
+
+      neighbours(rlonx,rlatx,im1s-1,im1e+1,im2s-1,im2e+1,nd, poly,im1s,im1e,im2s,im2e,nd);
+
+      boundary(poly,im1s,im1e,im2s,im2e,nd);
+
+      for ( i = 0; i < gridsize; i++ )
 	{
-	  blon[i*6+j] = poly[i].boundary[j].lon;
-	  blat[i*6+j] = poly[i].boundary[j].lat;
+	  for ( j = 0; j < poly[i].type; j++ )
+	    {
+	      blon[i*6+j] = poly[i].boundary[j].lon;
+	      blat[i*6+j] = poly[i].boundary[j].lat;
+	    }
+	  if ( poly[i].type == pentagon )
+	    {
+	      blon[i*6+5] = blon[i*6+4];
+	      blat[i*6+5] = blat[i*6+4];
+	    }
 	}
-      if ( poly[i].type == pentagon )
-	{
-	  blon[i*6+5] = blon[i*6+4];
-	  blat[i*6+5] = blat[i*6+4];
-	}
+      
+      free(poly);
     }
 
-  free(poly);
   free(rlatx);
   free(rlonx);
   free(xn);

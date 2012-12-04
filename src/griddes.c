@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,11 +23,7 @@
 #  include "netcdf.h"
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
-#include <math.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -74,6 +70,7 @@ void gridInit(grid_t *grid)
   grid->size          = 0;
   grid->xsize         = 0;
   grid->ysize         = 0;
+  grid->np            = 0;
   grid->lcomplex      = 1;
   grid->xpole         = 0;
   grid->ypole         = 0;
@@ -195,6 +192,7 @@ int gridDefine(grid_t grid)
 
 	if ( grid.xsize > 0 ) gridDefXsize(gridID, grid.xsize);
 	if ( grid.ysize > 0 ) gridDefYsize(gridID, grid.ysize);
+	if ( grid.np    > 0 ) gridDefNP(gridID, grid.np);
 
 	gridDefPrec(gridID, grid.prec);
 
@@ -727,6 +725,10 @@ int gridFromFile(FILE *gfp, const char *dname)
       else if ( cmpstr(pline, "truncation", len)  == 0 )
 	{
 	  grid.ntr = atoi(skipSeparator(pline + len));
+	}
+      else if ( cmpstr(pline, "np", len)  == 0 )
+	{
+	  grid.np = atoi(skipSeparator(pline + len));
 	}
       else if ( cmpstr(pline, "complexpacking", len)  == 0 )
 	{
@@ -1457,20 +1459,30 @@ int compNlon(int nlat)
   return (nlon);
 }
 
-
+static
 void gen_grid_lonlat(grid_t *grid, const char *pline, double inc, double lon1, double lon2, double lat1, double lat2)
 {
   int nlon, nlat, i;
+  int gridtype = GRID_LONLAT;
+  char *endptr;
 
-  grid->type = GRID_LONLAT;
-  
-  if ( *pline == '_' ) pline++;
-
-  if ( isdigit((int) *pline) || ispunct((int) *pline) )
+  if ( *pline != 0 )
     {
-      inc = atof(pline);
+      if ( *pline == '_' ) pline++;
+      else return;
+
+      if ( *pline == 0 ) return;
+
+      if ( ! isdigit((int) *pline) && !ispunct((int) *pline) ) return;
+
+      endptr = (char *) pline;
+      inc = strtod(pline, &endptr);
+      if ( *endptr != 0 ) return;
+
       if ( inc < 1e-9 ) inc = 1;
     }
+
+  grid->type = gridtype;
 
   nlon = (int) ((lon2 - lon1)/inc + 0.5);
   nlat = (int) ((lat2 - lat1)/inc + 0.5);
@@ -1491,6 +1503,7 @@ int gridFromName(const char *gridname)
   int gridID = UNDEFID;
   grid_t grid;
   size_t len;
+  char *endptr;
 
   gridInit(&grid);
 
@@ -1511,6 +1524,7 @@ int gridFromName(const char *gridname)
 	  if ( grid.type == GRID_GAUSSIAN )
 	    {
 	      grid.ysize = ntr2nlat_linear(grid.ntr);
+	      grid.np    = grid.ysize/2;
 	      if ( cmpstr(pline, "zon",  len) == 0 )
 		grid.xsize = 1;
 	      else
@@ -1538,6 +1552,7 @@ int gridFromName(const char *gridname)
 	  if ( grid.type == GRID_GAUSSIAN )
 	    {
 	      grid.ysize = ntr2nlat(grid.ntr);
+	      grid.np    = grid.ysize/2;
 	      if ( cmpstr(pline, "zon",  len) == 0 )
 		grid.xsize = 1;
 	      else
@@ -1593,11 +1608,15 @@ int gridFromName(const char *gridname)
       pline = &gridname[3];
       if ( isdigit((int) *pline) )
 	{
-	  grid.type = GRID_GME;
-	  grid.ni   = atoi(pline);
-	  grid.nd   = 10;
-	  factorni(grid.ni, &grid.ni2, &grid.ni3);
-	  grid.size = (grid.ni+1)*(grid.ni+1)*10;
+	  long ni = strtol(pline, &endptr, 10);
+	  if ( *endptr == 0 )
+	    {
+	      grid.type = GRID_GME;
+	      grid.ni   = ni;
+	      grid.nd   = 10;
+	      factorni(grid.ni, &grid.ni2, &grid.ni3);
+	      grid.size = (grid.ni+1)*(grid.ni+1)*10;
+	    }
 	}
     }
   else if ( gridname[0] == 'n' && gridname[1] == 'i' ) /* ni<NI> */
@@ -1605,11 +1624,15 @@ int gridFromName(const char *gridname)
       pline = &gridname[2];
       if ( isdigit((int) *pline) )
 	{
-	  grid.type = GRID_GME;
-	  grid.ni   = atoi(pline);
-	  grid.nd   = 10;
-	  factorni(grid.ni, &grid.ni2, &grid.ni3);
-	  grid.size = (grid.ni+1)*(grid.ni+1)*10;
+	  long ni = strtol(pline, &endptr, 10);
+	  if ( *endptr == 0 )
+	    {
+	      grid.type = GRID_GME;
+	      grid.ni   = ni;
+	      grid.nd   = 10;
+	      factorni(grid.ni, &grid.ni2, &grid.ni3);
+	      grid.size = (grid.ni+1)*(grid.ni+1)*10;
+	    }
 	}
     }
   else if ( gridname[0] == 'n' ) /* n<N> */
@@ -1617,21 +1640,30 @@ int gridFromName(const char *gridname)
       pline = &gridname[1];
       if ( isdigit((int) *pline) )
 	{
-	  int n;
-	  n = atoi(pline);
-	  while ( isdigit((int) *pline) ) pline++;
+	  long np = strtol(pline, &endptr, 10);
+	  pline = endptr;
 
-	  grid.type = GRID_GAUSSIAN;
-	  grid.ysize = n*2;
-	  grid.xsize = compNlon(grid.ysize);
-
-	  if ( cmpstr(pline, "zon",  len) == 0 ) 
-	    grid.xsize = 1;
+	  if ( cmpstr(pline, "zon",  len) == 0 )
+	    {
+	      grid.xsize = 1;
+	      pline += 3;
+	    }
 	  else if ( *pline == 'b' )
-	    grid.genBounds = TRUE;
+	    {
+	      grid.genBounds = TRUE;
+	      pline++;
+	    }
 
-	  grid.def_xfirst = TRUE;
-	  grid.def_yfirst = TRUE;	      
+	  if ( *pline == 0 )
+	    {
+	      grid.type  = GRID_GAUSSIAN;
+	      grid.np    = np;
+	      grid.ysize = np*2;
+	      if ( !grid.xsize ) grid.xsize = compNlon(grid.ysize);
+
+	      grid.def_xfirst = TRUE;
+	      grid.def_yfirst = TRUE;	      
+	    }
 	}
     }
   else if ( gridname[0] == 'g' && isdigit(gridname[1])) /* g<LON>x<LAT> or g<SIZE> */

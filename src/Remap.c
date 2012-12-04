@@ -157,6 +157,8 @@ int remap_extrapolate = FALSE;
 int lextrapolate = FALSE;
 int max_remaps = 0;
 int sort_mode = HEAP_SORT;
+double remap_area_min = 0;
+
 
 static
 void get_remap_env(void)
@@ -265,6 +267,19 @@ void get_remap_env(void)
 	  remap_threshhold = fval;
 	  if ( cdoVerbose )
 	    cdoPrint("Set REMAP_THRESHHOLD to %g", remap_threshhold);
+	}
+    }
+
+  envstr = getenv("REMAP_AREA_MIN");
+  if ( envstr )
+    {
+      double fval;
+      fval = atof(envstr);
+      if ( fval > 0 )
+	{
+	  remap_area_min = fval;
+	  if ( cdoVerbose )
+	    cdoPrint("Set REMAP_AREA_MIN to %g", remap_area_min);
 	}
     }
 
@@ -555,7 +570,7 @@ void *Remap(void *argument)
 	  remaps[0].grid.grid2_nvgp = gridInqSize(gridID2);
 	  remaps[0].grid.grid2_vgpm = (int *) realloc(remaps[0].grid.grid2_vgpm,
 						      gridInqSize(gridID2)*sizeof(int));
-	  gridID2_gme = gridToUnstructured(gridID2);
+	  gridID2_gme = gridToUnstructured(gridID2, 1);
 	  gridInqMaskGME(gridID2_gme, remaps[0].grid.grid2_vgpm);
 	  for ( i = 0; i < gridsize2; ++i )
 	    if ( remaps[0].grid.grid2_vgpm[i] ) isize++;
@@ -877,6 +892,7 @@ void *Remap(void *argument)
 
 	  gridsize2 = gridInqSize(gridID2);
 
+	  /* used only to check the result of remapcon */
 	  if ( operfunc == REMAPCON || operfunc == REMAPCON2 )
 	    {
 	      double grid2_err;
@@ -900,6 +916,15 @@ void *Remap(void *argument)
 			array2[i] = array2[i]/remaps[r].grid.grid2_frac[i];
 		      else
 			array2[i] = missval;
+		    }
+		}
+
+	      if ( remap_area_min > 0 )
+		{
+		  for ( i = 0; i < gridsize2; i++ )
+		    {
+		      //printf("%d %g %g\n", i, remaps[r].grid.grid2_frac[i], remaps[r].grid.grid2_area[i]);
+		      if ( remaps[r].grid.grid2_frac[i] < remap_area_min ) array2[i] = missval;
 		    }
 		}
 	    }

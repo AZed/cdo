@@ -17,6 +17,10 @@
 static size_t Vctsize = 0;
 static double *Vct = NULL;
 
+static int numberOfVerticalLevels = 0;
+static int numberOfVerticalGrid = 0;
+static char uuidVGrid[17];
+
 typedef struct
 {
   int      level1;
@@ -613,10 +617,16 @@ void varDefVCT(size_t vctsize, double *vctptr)
     {
       Vctsize = vctsize;
       Vct = (double *) malloc(vctsize*sizeof(double));
-      memcpy(Vct, vctptr, vctsize*sizeof(double)); 
+      memcpy(Vct, vctptr, vctsize*sizeof(double));
     }
 }
 
+void varDefZAxisReference(int nlev, int nvgrid, char *uuid)
+{
+  numberOfVerticalLevels = nlev;
+  numberOfVerticalGrid = nvgrid;
+  strncpy(uuidVGrid, uuid, 16);
+}
 
 int varDefGrid(int vlistID, grid_t grid, int mode)
 {

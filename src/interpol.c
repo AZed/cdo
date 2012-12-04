@@ -1,78 +1,172 @@
-#include <string.h>
-#include <math.h>
-
 #include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "grid.h"
+#include "util.h"  /* progressStatus */
 
 
-double intlinarr2p(int nxm, int nym, double **fieldm, const double *xm, const double *ym,
+/**
+* Find the interval i-1 .. i in which an element x fits
+* and return i, the bigger one of the interval borders
+* or x itself if it is an interval border.
+* If the index of x is 0, return 1, thus the bigger border. (strange?)
+*
+* If no interval can be found return the length of the array.
+* TODO: Check whether the as strange marked behavior is intended.
+
+* @param *array ascending sorted list        TODO: check whether descending also needed
+* @param nelem  length of the sorted list
+* @param x      the element to find a position for 
+*/
+static
+long find_element(double x, long nelem, const double *array)
+{
+  long ii;
+  long mid = 0;
+  long first = 1;
+  long last = nelem;
+
+  if ( array[0] < array[nelem-1] ) // ascending order
+    {
+      /* return the length of the array if x is out of bounds */
+      if ( x < array[0] || x > array[nelem-1] ) return (nelem);
+
+      /* search for the interval in which x fits */
+      // implementation: binary search algorithm
+      for ( ii = 1; ii < nelem; ii++ )
+	{
+	  // binary search: divide search room in the middle
+	  mid = first + ((last - first) / 2);
+      
+	  /* return the bigger interval border of the interval in which x fits */
+	  if ( x >= array[mid-1] && x <= array[mid] ) break;
+
+	  // binary search: ignore half of the search room
+	  if ( x > array[mid] )
+	    first = mid;
+	  else
+	    last = mid;
+	}
+    }
+  else
+    {
+      /* return the length of the array if x is out of bounds */
+      if ( x < array[nelem-1] || x > array[0] ) return (nelem);
+
+      /* search for the interval in which x fits */
+      // implementation: binary search algorithm
+      for ( ii = 1; ii < nelem; ii++ )
+	{
+	  // binary search: divide search room in the middle
+	  mid = first + ((last - first) / 2);
+      
+	  /* return the bigger interval border of the interval in which x fits */
+	  if ( x >= array[mid] && x <= array[mid-1] ) break;
+
+	  // binary search: ignore half of the search room
+	  if ( x < array[mid] )
+	    first = mid;
+	  else
+	    last = mid;
+	}
+    }
+
+  return (mid);
+}
+
+static
+long find_element_old(double x, long nelem, const double *array)
+{
+  long ii;
+
+  if ( array[0] < array[nelem-1] )
+    {
+      for ( ii = 1; ii < nelem; ii++ )
+	if ( x >= array[ii-1] && x <= array[ii] ) break;
+    }
+  else
+    {
+      for ( ii = 1; ii < nelem; ii++ )
+	if ( x >= array[ii] && x <= array[ii-1] ) break;
+    }
+
+  return (ii);
+}
+
+
+double intlinarr2p(long nxm, long nym, double **fieldm, const double *xm, const double *ym,
 		   double x, double y)
 {
-  int ii, jj;
+  long ii, jj;
   double value = 0;
 
   for ( jj = 1; jj < nym; jj++ )
+    if ( y >= MIN(ym[jj-1], ym[jj]) && y <= MAX(ym[jj-1], ym[jj]) ) break;
+
+  for ( ii = 1; ii < nxm; ii++ )
+    if ( x >= xm[ii-1] && x <= xm[ii] ) break;
+
+  if ( jj < nym && ii < nxm )
     {
-      if ( y < MIN(ym[jj-1], ym[jj]) || 
-	   y > MAX(ym[jj-1], ym[jj]) ) continue;
-      for ( ii = 1; ii < nxm; ii++ )
-	{
-	  if ( x < xm[ii-1] || x > xm[ii] ) continue;
-	  value = fieldm[jj-1][ii-1] * (x-xm[ii]) * (y-ym[jj])
-	              / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]))
-	        + fieldm[jj-1][ii] * (x-xm[ii-1]) * (y-ym[jj])
-                      / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]))
-                + fieldm[jj][ii-1] * (x-xm[ii]) * (y-ym[jj-1])
-                      / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]))
-                + fieldm[jj][ii] * (x-xm[ii-1]) * (y-ym[jj-1])
-	              / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
-	}
+      value = fieldm[jj-1][ii-1] * (x-xm[ii]) * (y-ym[jj])
+	          / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]))
+            + fieldm[jj-1][ii] * (x-xm[ii-1]) * (y-ym[jj])
+                  / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]))
+            + fieldm[jj][ii-1] * (x-xm[ii]) * (y-ym[jj-1])
+                  / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]))
+            + fieldm[jj][ii] * (x-xm[ii-1]) * (y-ym[jj-1])
+                  / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
     }
 
   return value;
 }
 
-
+static
 void intlinarr2(double missval,
-		int nxm, int nym,  double **fieldm, const double *xm, const double *ym,
-		int nx, int ny, double **field, const double *x, const double *y)
+		long nxm, long nym,  double **fieldm, const double *xm, const double *ym,
+		long gridsize2, double *field, const double *x, const double *y)
 {
-  int i, ii, j , jj;
-  double ymin, ymax;
+  long i, ii, jj;
+  double findex = 0;
 
-  for ( j = 0; j < ny; j++ )
-    for ( i = 0; i < nx; i++ )
-      field[j][i] = missval;
+  progressInit();
 
-  for ( jj = 1; jj < nym; jj++ )
-    {
-      ymin = MIN(ym[jj-1], ym[jj]);
-      ymax = MAX(ym[jj-1], ym[jj]);
-      for ( j = 0; j < ny; j++ )
-	{
-	  if ( y[j] < ymin || y[j] > ymax ) continue;
-	  for ( ii = 1; ii < nxm; ii++ )
-	    {
-#if defined (SX)
-#pragma vdir nodep
+#if defined (_OPENMP)
+#pragma omp parallel for default(none) \
+  shared(ompNumThreads, field, fieldm, x, y, xm, ym, nxm, nym, findex, gridsize2, missval) \
+  private(i, jj, ii)
 #endif
-	      for ( i = 0; i < nx; i++ )
-		{
-		  if ( x[i] < xm[ii-1] || x[i] > xm[ii] ) continue;
-		  field[j][i] = fieldm[jj-1][ii-1] * (x[i]-xm[ii]) * (y[j]-ym[jj])
-		                          / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]))
-		              + fieldm[jj-1][ii] * (x[i]-xm[ii-1]) * (y[j]-ym[jj])
-                                          / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]))
-                              + fieldm[jj][ii-1] * (x[i]-xm[ii]) * (y[j]-ym[jj-1])
-                                          / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]))
-                              + fieldm[jj][ii] * (x[i]-xm[ii-1]) * (y[j]-ym[jj-1])
-	               	                  / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
-		}
+  for ( i = 0; i < gridsize2; ++i )
+    {
+      field[i] = missval;
+
+#if defined (_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( ompNumThreads == 1 ) progressStatus(0, 1, findex/gridsize2);
+
+      jj = find_element(y[i], nym, ym);
+	  
+      if ( jj < nym )
+	{
+	  ii = find_element(x[i], nxm, xm);
+	  
+	  if ( ii < nxm )
+	    {
+	      field[i] = fieldm[jj-1][ii-1] * (x[i]-xm[ii]) * (y[i]-ym[jj])
+		                   / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]))
+		       + fieldm[jj-1][ii] * (x[i]-xm[ii-1]) * (y[i]-ym[jj])
+		                   / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]))
+		       + fieldm[jj][ii-1] * (x[i]-xm[ii]) * (y[i]-ym[jj-1])
+		                  / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]))
+		       + fieldm[jj][ii] * (x[i]-xm[ii-1]) * (y[i]-ym[jj-1])
+		                   / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
 	    }
 	}
     }
+ 
+  if ( findex < gridsize2 ) progressStatus(0, 1, 1);
 }
 
 
@@ -91,14 +185,14 @@ double intlin(double x, double y1, double x1, double y2, double x2)
 }
 
 
-void intlinarr(int nxm, double *ym, double *xm, int nx, double *y, double *x)
+void intlinarr(long nxm, double *ym, double *xm, int nx, double *y, double *x)
 {
   /*
     xlinarr - lineare interpolation over 1D array
 
     Uwe Schulzweida  04/05/1995
   */
-  int j, jj;
+  long j, jj;
 
   for ( jj = 1; jj < nxm; jj++ )
     for ( j = 0; j < nx; j++ )
@@ -109,117 +203,119 @@ void intlinarr(int nxm, double *ym, double *xm, int nx, double *y, double *x)
 
 void intgrid(field_t *field1, field_t *field2)
 {
-  int nlonIn, nlatIn;
-  int nlonOut, nlatOut;
-  int ilat, ilon;
-  int gridIDin, gridIDout;
+  int nlon1, nlat1;
+  int nlon2, nlat2;
+  int ilat;
+  int gridID1, gridID2;
   int i, nmiss;
-  double *lonIn, *latIn;
-  double *lonOut, *latOut;
-  double **fieldIn;
+  double *lon1, *lat1;
+  double **array1_2D = NULL;
   double **field;
   double *array = NULL;
-  double *arrayIn, *arrayOut;
+  double *array1, *array2;
   double missval;
   /* static int index = 0; */
 
-  gridIDin  = field1->grid;
-  gridIDout = field2->grid;
-  arrayIn   = field1->ptr;
-  arrayOut  = field2->ptr;
-  missval   = field1->missval;
+  gridID1 = field1->grid;
+  gridID2 = field2->grid;
+  array1  = field1->ptr;
+  array2  = field2->ptr;
+  missval = field1->missval;
 
-  if ( ! (gridInqXvals(gridIDin, NULL) && gridInqYvals(gridIDin, NULL)) )
+  if ( ! (gridInqXvals(gridID1, NULL) && gridInqYvals(gridID1, NULL)) )
     cdoAbort("Source grid has no values");
 
-  nlonIn = gridInqXsize(gridIDin);
-  nlatIn = gridInqYsize(gridIDin);
-  lonIn = (double *) malloc(nlonIn*sizeof(double));
-  latIn = (double *) malloc(nlatIn*sizeof(double));
-  gridInqXvals(gridIDin, lonIn);
-  gridInqYvals(gridIDin, latIn);
+  nlon1 = gridInqXsize(gridID1);
+  nlat1 = gridInqYsize(gridID1);
+  lon1 = (double *) malloc(nlon1*sizeof(double));
+  lat1 = (double *) malloc(nlat1*sizeof(double));
+  gridInqXvals(gridID1, lon1);
+  gridInqYvals(gridID1, lat1);
 
-  if ( ! (gridInqXvals(gridIDout, NULL) && gridInqYvals(gridIDout, NULL)) )
-    cdoAbort("Target grid has no values");
+  nlon2 = gridInqXsize(gridID2);
+  nlat2 = gridInqYsize(gridID2);
 
-  nlonOut = gridInqXsize(gridIDout);
-  nlatOut = gridInqYsize(gridIDout);
-  lonOut = (double *) malloc(nlonOut*sizeof(double));
-  latOut = (double *) malloc(nlatOut*sizeof(double));
-  gridInqXvals(gridIDout, lonOut);
-  gridInqYvals(gridIDout, latOut);
+  array1_2D = (double **) malloc(nlat1*sizeof(double *));
+  for ( ilat = 0; ilat < nlat1; ilat++ )
+    array1_2D[ilat] = array1 + ilat*nlon1;
 
-  fieldIn = (double **) malloc(nlatIn*sizeof(double *));
-
-  for ( ilat = 0; ilat < nlatIn; ilat++ )
-    fieldIn[ilat] = arrayIn + ilat*nlonIn;
-
-  if ( nlonOut == 1 && nlatOut == 1 )
+  if ( nlon2 == 1 && nlat2 == 1 )
     {
-      if ( lonOut[0] < lonIn[0] ) lonOut[0] += 360;
+      double lon2, lat2;
 
-      if ( lonOut[0] > lonIn[nlonIn-1] )
+      gridInqXvals(gridID2, &lon2);
+      gridInqYvals(gridID2, &lat2);
+
+      if ( lon2 < lon1[0] ) lon2 += 360;
+
+      if ( lon2 > lon1[nlon1-1] )
 	{
-	  field = fieldIn;
-	  fieldIn = (double **) malloc(nlatIn*sizeof(double *));
-	  lonIn = (double *) realloc(lonIn, (nlonIn+1)*sizeof(double));
-	  array = (double *) malloc(nlatIn*(nlonIn+1)*sizeof(double));
+	  field  = array1_2D;
+	  array1_2D = (double **) malloc(nlat1*sizeof(double *));
+	  lon1 = (double *) realloc(lon1, (nlon1+1)*sizeof(double));
+	  array = (double *) malloc(nlat1*(nlon1+1)*sizeof(double));
 
-	  for ( ilat = 0; ilat < nlatIn; ilat++ )
+	  for ( ilat = 0; ilat < nlat1; ilat++ )
 	    {
-	      fieldIn[ilat] = array + ilat*(nlonIn+1);  
-	      memcpy(fieldIn[ilat], field[ilat], nlonIn*sizeof(double));
-	      fieldIn[ilat][nlonIn] = fieldIn[ilat][0];
-	      lonIn[nlonIn] = lonIn[0] + 360;
+	      array1_2D[ilat] = array + ilat*(nlon1+1);  
+	      memcpy(array1_2D[ilat], field[ilat], nlon1*sizeof(double));
+	      array1_2D[ilat][nlon1] = array1_2D[ilat][0];
+	      lon1[nlon1] = lon1[0] + 360;
 	    }
-	  nlonIn++;
+	  nlon1++;
 	  free(field);
 	}
 
-      if ( lonOut[0] < lonIn[0] || lonOut[0] > lonIn[nlonIn-1] )
-	cdoAbort("Longitude %f out of bounds (%f to %f)!", lonOut[0], lonIn[0], lonIn[nlonIn-1]);
+      if ( lon2 < lon1[0] || lon2 > lon1[nlon1-1] )
+	cdoAbort("Longitude %f out of bounds (%f to %f)!", lon2, lon1[0], lon1[nlon1-1]);
 
-      if ( latOut[0] < MIN(latIn[0], latIn[nlatIn-1]) ||
-	   latOut[0] > MAX(latIn[0], latIn[nlatIn-1]) )
-	cdoAbort("Latitude %f out of bounds (%f to %f)!", latOut[0], latIn[0], latIn[nlatIn-1]);
+      if ( lat2 < MIN(lat1[0], lat1[nlat1-1]) ||
+	   lat2 > MAX(lat1[0], lat1[nlat1-1]) )
+	cdoAbort("Latitude %f out of bounds (%f to %f)!", lat2, lat1[0], lat1[nlat1-1]);
 
-      *arrayOut = intlinarr2p(nlonIn, nlatIn, fieldIn, lonIn, latIn, lonOut[0], latOut[0]);
+      *array2 = intlinarr2p(nlon1, nlat1, array1_2D, lon1, lat1, lon2, lat2);
       /*
-      printf("%5d %f %f %f\n", index++, lonOut[0], latOut[0], *arrayOut);
+      printf("%5d %f %f %f\n", index++, lon2, lat2, *array2);
       */
     }
   else
     {
-      double **fieldOut;
+      int gridsize2;
+      double *lon2, *lat2;
 
-      fieldOut = (double **) malloc(nlatOut * sizeof(double *));
+      if ( gridInqType(gridID2) == GRID_GME ) gridID2 = gridToUnstructured(gridID2, 0);
 
-      for ( ilat = 0; ilat < nlatOut; ilat++ )
-	fieldOut[ilat] = arrayOut + ilat*nlonOut;
+      if ( gridInqType(gridID2) != GRID_UNSTRUCTURED && gridInqType(gridID2) != GRID_CURVILINEAR )
+	gridID2 = gridToCurvilinear(gridID2, 0);
 
-      for ( ilat = 0; ilat < nlatOut; ilat++ )
-	for ( ilon = 0; ilon < nlonOut; ilon++ )
-	  fieldOut[ilat][ilon] = 0;
+      if ( ! (gridInqXvals(gridID2, NULL) && gridInqYvals(gridID2, NULL)) )
+	cdoAbort("Target grid has no values");
+
+      gridsize2 = gridInqSize(gridID2);
+
+      lon2 = (double *) malloc(gridsize2*sizeof(double));
+      lat2 = (double *) malloc(gridsize2*sizeof(double));
+      gridInqXvals(gridID2, lon2);
+      gridInqYvals(gridID2, lat2);
 
       intlinarr2(missval,
-		 nlonIn, nlatIn, fieldIn, lonIn, latIn,
-		 nlonOut, nlatOut, fieldOut, lonOut, latOut);
+		 nlon1, nlat1, array1_2D, lon1, lat1,
+		 gridsize2, array2, lon2, lat2);
 
       nmiss = 0;
-      for ( i = 0; i < nlatOut*nlonOut; i++ )
-	if ( DBL_IS_EQUAL(arrayOut[i], missval) ) nmiss++;
+      for ( i = 0; i < gridsize2; ++i )
+	if ( DBL_IS_EQUAL(array2[i], missval) ) nmiss++;
 
       field2->nmiss = nmiss;
 
-      free(fieldOut);
+      free(lon2);
+      free(lat2);
     }
 
   if (array) free(array);
-  free(lonIn);
-  free(latIn);
-  free(lonOut);
-  free(latOut);
-  free(fieldIn);
+  free(lon1);
+  free(lat1);
+  free(array1_2D);
 }
 
 

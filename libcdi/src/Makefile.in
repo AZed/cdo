@@ -35,8 +35,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@CREATE_ISOC_TRUE@am__append_1 = mo_cdi.o mo_cdi.$(FCMODEXT)
-@CREATE_ISOC_TRUE@am__append_2 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.o
+@ENABLE_CDI_LIB_TRUE@am__append_1 = pkgconfig/cdi.pc
+@CREATE_ISOC_TRUE@am__append_2 = mo_cdi.o mo_cdi.$(FCMODEXT)
+@CREATE_ISOC_TRUE@am__append_3 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.o
+@ENABLE_CDI_LIB_TRUE@am__append_4 = pkgconfig/cdi.pc
 subdir = src
 DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in
@@ -182,6 +184,7 @@ JASPER_LIBS = @JASPER_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
+LIBPNG_LIBS = @LIBPNG_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -199,6 +202,7 @@ NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
+OPENJPEG_LIBS = @OPENJPEG_LIBS@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -273,6 +277,7 @@ localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
+openjpeg_LIBS = @openjpeg_LIBS@
 pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
@@ -372,9 +377,9 @@ libcdi_la_SOURCES = \
         stream.c         \
         swap.c
 
-LOCALTARGETS = pkgconfig/cdi.pc $(am__append_1)
+LOCALTARGETS = $(am__append_1) $(am__append_2)
 #
-CLEANFILES = `ls *~` cdilib.c $(am__append_2)
+CLEANFILES = `ls *~` cdilib.c $(am__append_3) $(am__append_4)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -683,6 +688,8 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+@ENABLE_CDI_LIB_FALSE@uninstall-local:
+@ENABLE_CDI_LIB_FALSE@install-exec-local:
 clean: clean-am
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
@@ -707,13 +714,15 @@ info: info-am
 info-am:
 
 install-data-am: install-includeHEADERS
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-am
 
 install-dvi-am:
 
 install-exec-am: install-exec-local install-libLTLIBRARIES
-
+	@$(NORMAL_INSTALL)
+	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 install-html: install-html-am
 
 install-html-am:
@@ -755,15 +764,16 @@ ps-am:
 uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 	uninstall-local
 
-.MAKE: all install-am install-strip
+.MAKE: all install-am install-data-am install-exec-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am all-local check check-am clean \
 	clean-generic clean-libLTLIBRARIES clean-libtool \
 	clean-noinstLTLIBRARIES ctags distclean distclean-compile \
 	distclean-generic distclean-hdr distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-local \
+	install install-am install-data install-data-am \
+	install-data-hook install-dvi install-dvi-am install-exec \
+	install-exec-am install-exec-hook install-exec-local \
 	install-html install-html-am install-includeHEADERS \
 	install-info install-info-am install-libLTLIBRARIES \
 	install-man install-pdf install-pdf-am install-ps \
@@ -798,13 +808,18 @@ pkgconfig/cdi.pc: pkgconfig/cdi.pc.in ../config.status
 #
 all-local: $(LOCALTARGETS) 
 
-install-exec-local: pkgconfig/cdi.pc
-	$(mkinstalldirs) "$(DESTDIR)$(libdir)/pkgconfig"
-	$(install_sh_DATA) pkgconfig/cdi.pc "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
+@ENABLE_CDI_LIB_TRUE@install-exec-local: pkgconfig/cdi.pc
+@ENABLE_CDI_LIB_TRUE@	$(mkinstalldirs) "$(DESTDIR)$(libdir)/pkgconfig"
+@ENABLE_CDI_LIB_TRUE@	$(install_sh_DATA) pkgconfig/cdi.pc "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
 
-uninstall-local:
-	rm -f "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
-	rmdir "$(DESTDIR)$(libdir)/pkgconfig"
+@ENABLE_CDI_LIB_TRUE@uninstall-local:
+@ENABLE_CDI_LIB_TRUE@	rm -f "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
+@ENABLE_CDI_LIB_TRUE@	rmdir "$(DESTDIR)$(libdir)/pkgconfig"
+
+install-exec-hook:
+	-@rmdir "$(DESTDIR)$(libdir)"
+install-data-hook:
+	-@rmdir "$(DESTDIR)$(includedir)"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

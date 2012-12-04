@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,11 @@ void *Splittime(void *argument)
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
+  int gridID;
+  int nvars, nlevel;
+  int nconst;
   double *array = NULL;
+  field_t **vars = NULL;
   int season_start;
   const char *seas_name[4];
 
@@ -92,11 +96,39 @@ void *Splittime(void *argument)
   filesuffix[0] = 0;
   cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
-  if ( ! lcopy )
+  //  if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
+    }
+
+  nvars = vlistNvars(vlistID1);
+  nconst = 0;
+  for ( varID = 0; varID < nvars; varID++ )
+    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) nconst++;
+
+  if ( nconst )
+    {
+      vars = (field_t **) malloc(nvars*sizeof(field_t *));
+
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+	    {
+	      gridID  = vlistInqVarGrid(vlistID1, varID);
+	      nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	      gridsize = gridInqSize(gridID);
+		  
+	      vars[varID] = (field_t *) malloc(nlevel*sizeof(field_t));
+
+	      for ( levelID = 0; levelID < nlevel; levelID++ )
+		{
+		  vars[varID][levelID].grid    = gridID;
+		  vars[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
+		}
+	    }
+	}
     }
 
   tsID = 0;
@@ -167,14 +199,30 @@ void *Splittime(void *argument)
 	}
 
       taxisCopyTimestep(taxisID2, taxisID1);
+      streamDefTimestep(streamID2, tsIDs[index]);
 
-      streamDefTimestep(streamID2, tsIDs[index]++);
+      if ( tsID > 0 && tsIDs[index] == 0 && nconst )
+	{
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		{
+		  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+		  for ( levelID = 0; levelID < nlevel; levelID++ )
+		    {
+		      streamDefRecord(streamID2, varID, levelID);
+		      nmiss = vars[varID][levelID].nmiss;
+		      streamWriteRecord(streamID2, vars[varID][levelID].ptr, nmiss);
+		    }
+		}
+	    }
+	}
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  streamDefRecord(streamID2,  varID,  levelID);
-	  if ( lcopy )
+	  if ( lcopy && !(tsID == 0 && nconst) )
 	    {
 	      streamCopyRecord(streamID2, streamID1);
 	    }
@@ -182,9 +230,21 @@ void *Splittime(void *argument)
 	    {
 	      streamReadRecord(streamID1, array, &nmiss);
 	      streamWriteRecord(streamID2, array, nmiss);
+
+	      if ( tsID == 0 && nconst )
+		{
+		  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		    {
+		      gridID  = vlistInqVarGrid(vlistID1, varID);
+		      gridsize = gridInqSize(gridID);
+		      memcpy(vars[varID][levelID].ptr, array, gridsize*sizeof(double));
+		      vars[varID][levelID].nmiss = nmiss;
+		    }
+		}
 	    }
 	}
 
+      tsIDs[index]++;
       tsID++;
     }
 
@@ -193,11 +253,30 @@ void *Splittime(void *argument)
   for ( index = 0; index < MAX_STREAMS; index++ )
     {
       streamID2 = streamIDs[index];
-      if ( streamID2 >= 0 )  streamClose(streamID2);
+      if ( streamID2 >= 0 ) streamClose(streamID2);
     }
  
-  if ( ! lcopy )
-    if ( array ) free(array);
+  if ( array ) free(array);
+
+  if ( nconst )
+    {
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  if ( vlistInqVarTime(vlistID2, varID) == TIME_CONSTANT )
+	    {
+	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+	      for ( levelID = 0; levelID < nlevel; levelID++ )
+		if ( vars[varID][levelID].ptr )
+		  free(vars[varID][levelID].ptr);
+
+	      free(vars[varID]);
+	    }
+	}
+
+      if ( vars  ) free(vars);
+    }
+
+  vlistDestroy(vlistID2);
 
   cdoFinish();
 

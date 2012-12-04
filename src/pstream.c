@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -865,6 +865,12 @@ void pstreamClose(int pstreamID)
 	    }
 	}
 
+      if ( pstreamptr->name )
+	{
+	  free(pstreamptr->name);
+	  pstreamptr->name = NULL;
+	}
+
       if ( pstreamptr->varlist )
 	{
 	  free(pstreamptr->varlist);
@@ -885,7 +891,11 @@ int pstreamInqVlist(int pstreamID)
 
 #if  defined  (HAVE_LIBPTHREAD)
   if ( pstreamptr->ispipe )
-    vlistID = pipeInqVlist(pstreamptr);
+    {
+      vlistID = pipeInqVlist(pstreamptr);
+      if ( vlistID == -1 )
+	cdoAbort("Couldn't read data from input stream %s!", pstreamptr->name);
+    }
   else
 #endif
     {
@@ -1150,10 +1160,13 @@ void pstreamCheckDatarange(pstream_t *pstreamptr, int varID, double *array, int 
 
   smin = (arrmin - addoffset)/scalefactor;
   smax = (arrmax - addoffset)/scalefactor;
-  /* only for int's
-  smin = NINT(smin);
-  smax = NINT(smax);
-  */
+
+  if ( datatype == DATATYPE_INT8  || datatype == DATATYPE_UINT8 ||
+       datatype == DATATYPE_INT16 || datatype == DATATYPE_UINT16 )
+    {
+      smin = NINT(smin);
+      smax = NINT(smax);
+    }
 
   if      ( datatype == DATATYPE_INT8   ) { vmin =        -128.; vmax =        127.; }
   else if ( datatype == DATATYPE_UINT8  ) { vmin =           0.; vmax =        255.; }

@@ -101,7 +101,7 @@ void fill_att(cdi_att_t *attp, int indtype, int exdtype, size_t nelems, size_t x
 @Prototype int vlistInqNatts(int vlistID, int varID, int *nattsp)
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  nattsp   Pointer to location for returned number of variable attributes.
 
 @Description
@@ -132,11 +132,11 @@ int vlistInqNatts(int vlistID, int varID, int *nattsp)
 @Prototype int vlistInqAtt(int vlistID, int varID, int attnum, char *name, int *typep, int *lenp)
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  attnum   Attribute number (from 0 to natts-1).
     @Item  name     Pointer to the location for the returned attribute name. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
     @Item  typep    Pointer to location for returned attribute type.
     @Item  lenp     Pointer to location for returned attribute number.
 
@@ -315,9 +315,9 @@ int vlistCopyVarAtts(int vlistID1, int varID_1, int vlistID2, int varID_2)
 
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
-    @Item  type     External data type (DATATYPE_INT16 or DATATYPE_INT32).
+    @Item  type     External data type (@func{DATATYPE_INT16} or @func{DATATYPE_INT32}).
     @Item  len      Number of values provided for the attribute.
     @Item  ip       Pointer to one or more integer values.
 
@@ -343,9 +343,9 @@ int vlistDefAttInt(int vlistID, int varID, const char *name, int type, int len, 
 
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
-    @Item  type     External data type (DATATYPE_FLT32 or DATATYPE_FLT64).
+    @Item  type     External data type (@func{DATATYPE_FLT32} or @func{DATATYPE_FLT64}).
     @Item  len      Number of values provided for the attribute.
     @Item  dp       Pointer to one or more floating point values.
 
@@ -371,7 +371,7 @@ int vlistDefAttFlt(int vlistID, int varID, const char *name, int type, int len, 
 
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  len      Number of values provided for the attribute.
     @Item  tp       Pointer to one or more character values.
@@ -397,7 +397,7 @@ int vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char
 @Prototype int vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip)
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.
     @Item  ip       Pointer location for returned integer attribute value(s).
@@ -423,7 +423,7 @@ int vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip)
 @Prototype int vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, int *dp)
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.
     @Item  dp       Pointer location for returned floating point attribute value(s).
@@ -449,7 +449,7 @@ int vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *d
 @Prototype int vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, int *tp)
 @Parameter
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
-    @Item  varID    Variable identifier, or CDI_GLOBAL for a global attribute.
+    @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.
     @Item  tp       Pointer location for returned text attribute value(s).

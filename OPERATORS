@@ -19,7 +19,7 @@ Operator catalog:
    Ninfo         nyear           Number of years
    Ninfo         nmon            Number of months
    Ninfo         ndate           Number of dates
-   Ninfo         ntime           Number of time steps
+   Ninfo         ntime           Number of timesteps
    Showinfo      showformat      Show file format
    Showinfo      showcode        Show code numbers
    Showinfo      showname        Show variable names
@@ -72,7 +72,7 @@ Operator catalog:
    Selvar        selzaxis        Select z-axes
    Selvar        selltype        Select GRIB level types
    Selvar        seltabnum       Select parameter table numbers
-   Seltime       seltimestep     Select time steps
+   Seltime       seltimestep     Select timesteps
    Seltime       seltime         Select times
    Seltime       selhour         Select hours
    Seltime       selday          Select days
@@ -124,7 +124,7 @@ Operator catalog:
    Settime       settaxis        Set time axis
    Settime       setreftime      Set reference time
    Settime       setcalendar     Set calendar
-   Settime       shifttime       Shift time steps
+   Settime       shifttime       Shift timesteps
    Change        chcode          Change code number
    Change        chparam         Change parameter identifier
    Change        chname          Change variable name
@@ -357,10 +357,12 @@ Operator catalog:
    Ydrunstat     ydrunstd        Multi-year daily running standard deviation
    Ydrunpctl     ydrunpctl       Multi-year daily running percentiles
 -------------------------------------------------------------
-   Correlation
+   Correlation and co.
 -------------------------------------------------------------
    Fldcor        fldcor          Correlation in grid space
    Timcor        timcor          Correlation over time
+   Fldcovar      fldcovar        Covariance in grid space
+   Timcovar      timcovar        Covariance over time
 -------------------------------------------------------------
    Regression
 -------------------------------------------------------------
@@ -400,8 +402,8 @@ Operator catalog:
    Intlevel      intlevel        Linear level interpolation
    Intlevel3d    intlevel3d      Linear level interpolation onto a 3d vertical coordinate
    Intlevel3d    intlevelx3d     like intlevel3d but with extrapolation
-   Inttime       inttime         Interpolation between time steps
-   Inttime       intntime        Interpolation between time steps
+   Inttime       inttime         Interpolation between timesteps
+   Inttime       intntime        Interpolation between timesteps
    Intyear       intyear         Interpolation between two years
 -------------------------------------------------------------
    Transformation

@@ -99,7 +99,7 @@ static
 void grid_init_pointer(void)
 {
   int  i;
-  
+
   for ( i = 0; i < _grid_max; i++ )
     {
       _gridList[i].next = _gridList + i + 1;
@@ -151,7 +151,7 @@ int grid_from_pointer(grid_t *ptr)
 	  newptr->next = 0;
 	  idx	       = newptr->idx;
 	  newptr->ptr  = ptr;
-      
+
 	  if ( GRID_Debug )
 	    Message("Pointer %p has idx %d from grid list", ptr, idx);
 	}
@@ -216,6 +216,7 @@ void grid_init(grid_t *gridptr)
   gridptr->size         = 0;
   gridptr->xsize        = 0;
   gridptr->ysize        = 0;
+  gridptr->np           = 0;
   gridptr->xdef         = 0;
   gridptr->ydef         = 0;
   gridptr->isCyclic     = CDI_UNDEFID;
@@ -233,6 +234,7 @@ void grid_init(grid_t *gridptr)
   gridptr->yunits[0]    = 0;
   gridptr->xstdname[0]  = 0;
   gridptr->ystdname[0]  = 0;
+  gridptr->uuid[0]      = 0;
   gridptr->name         = NULL;
 }
 
@@ -506,7 +508,7 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
                      The valid CDI grid types are @func{GRID_GENERIC}, @func{GRID_GAUSSIAN},
                      @func{GRID_LONLAT}, @func{GRID_LCC}, @func{GRID_SPECTRAL},
                      @func{GRID_GME}, @func{GRID_CURVILINEAR}, @func{GRID_UNSTRUCTURED} and
-                     @func{GRID_REFERENCE}
+                     @func{GRID_REFERENCE}.
     @Item  size      Number of gridpoints.
 
 @Description
@@ -860,7 +862,7 @@ void gridDefYunits(int gridID, const char *yunits)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  name     Name of the X-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqXname} returns the name of a X-axis.
@@ -891,7 +893,7 @@ void gridInqXname(int gridID, char *xname)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  longname Longname of the X-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqXlongname} returns the longname of a X-axis.
@@ -922,7 +924,7 @@ void gridInqXlongname(int gridID, char *xlongname)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  units    Units of the X-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqXunits} returns the units of a X-axis.
@@ -965,7 +967,7 @@ void gridInqXstdname(int gridID, char *xstdname)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  name     Name of the Y-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqYname} returns the name of a Y-axis.
@@ -996,7 +998,7 @@ void gridInqYname(int gridID, char *yname)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  longname Longname of the Y-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqYlongname} returns the longname of a Y-axis.
@@ -1027,7 +1029,7 @@ void gridInqYlongname(int gridID, char *ylongname)
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
     @Item  units    Units of the Y-axis. The caller must allocate space for the 
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{gridInqYunits} returns the units of a Y-axis.
@@ -1098,7 +1100,7 @@ int gridInqType(int gridID)
 
 @Prototype int gridInqSize(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
 
 @Description
 The function @func{gridInqSize} returns the size of a Grid.
@@ -1218,7 +1220,7 @@ void gridDefXsize(int gridID, int xsize)
 
   gridptr->xsize = xsize;
 
-  if ( gridInqType(gridID) != GRID_UNSTRUCTURED && 
+  if ( gridInqType(gridID) != GRID_UNSTRUCTURED &&
        gridptr->xsize*gridptr->ysize > gridInqSize(gridID) )
     Error("inconsistent grid declaration! (xsize %d ysize %d gridsize %d)",
 	  gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
@@ -1226,10 +1228,10 @@ void gridDefXsize(int gridID, int xsize)
 
 
 /*
-@Function  
-@Title     
+@Function
+@Title
 
-@Prototype 
+@Prototype
 @Parameter
     @Item  Grid identifier
 
@@ -1273,7 +1275,7 @@ int gridInqPrec(int gridID)
 @Function  gridInqXsize
 @Title     Get the number of values of a X-axis
 
-@Prototype void gridInqXsize(int gridID)
+@Prototype int gridInqXsize(int gridID)
 @Parameter
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
 
@@ -1295,7 +1297,6 @@ int gridInqXsize(int gridID)
 
   return (gridptr->xsize);
 }
-
 
 /*
 @Function  gridDefYsize
@@ -1333,12 +1334,11 @@ void gridDefYsize(int gridID, int ysize)
 	  gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
 }
 
-
 /*
 @Function  gridInqYsize
 @Title     Get the number of values of a Y-axis
 
-@Prototype void gridInqYsize(int gridID)
+@Prototype int gridInqYsize(int gridID)
 @Parameter
     @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
 
@@ -1361,6 +1361,59 @@ int gridInqYsize(int gridID)
   return (gridptr->ysize);
 }
 
+/*
+@Function  gridDefNP
+@Title     Define the number of parallels between a pole and the equator
+
+@Prototype void gridDefNP(int gridID, int np)
+@Parameter
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  np       Number of parallels between a pole and the equator.
+
+@Description
+The function @func{gridDefNP} defines the number of parallels between a pole and the equator
+of a Gaussian grid.
+
+@EndFunction
+*/
+void gridDefNP(int gridID, int np)
+{
+  grid_t *gridptr;
+
+  gridptr = grid_to_pointer(gridID);
+
+  grid_check_ptr(gridID, gridptr);
+
+  gridptr->np = np;
+}
+
+/*
+@Function  gridInqNP
+@Title     Get the number of parallels between a pole and the equator
+
+@Prototype int gridInqNP(int gridID)
+@Parameter
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+
+@Description
+The function @func{gridInqNP} returns the number of parallels between a pole and the equator
+of a Gaussian grid.
+
+@Result
+@func{gridInqNP} returns the number of parallels between a pole and the equator.
+
+@EndFunction
+*/
+int gridInqNP(int gridID)
+{
+  grid_t *gridptr;
+
+  gridptr = grid_to_pointer(gridID);
+
+  grid_check_ptr(gridID, gridptr);
+
+  return (gridptr->np);
+}
 
 /*
 @Function  
@@ -2206,8 +2259,8 @@ void grid_check_cyclic(grid_t *gridptr)
 
 	      xinc = fabs(val2-val1);
 
-	      if ( val1 < 1 && valn > 300 ) val1 += 360;
-	      if ( valn < 1 && val1 > 300 ) valn += 360;
+	      if ( val1 <    1 && valn > 300 ) val1 += 360;
+	      if ( valn <    1 && val1 > 300 ) valn += 360;
 	      if ( val1 < -179 && valn > 120 ) val1 += 360;
 	      if ( valn < -179 && val1 > 120 ) valn += 360;
 
@@ -2237,8 +2290,8 @@ void grid_check_cyclic(grid_t *gridptr)
 		    {
 		      val2 = xbounds[i2+k2];
 
-		      if ( val1 < 1 && val2 > 300 ) val1 += 360;
-		      if ( val2 < 1 && val1 > 300 ) val2 += 360;
+		      if ( val1 <    1 && val2 > 300 ) val1 += 360;
+		      if ( val2 <    1 && val1 > 300 ) val2 += 360;
 		      if ( val1 < -179 && val2 > 120 ) val1 += 360;
 		      if ( val2 < -179 && val1 > 120 ) val2 += 360;
 
@@ -2470,7 +2523,7 @@ int gridCompare(int gridID, grid_t grid)
 	      printf("grid xlast  %f\n", gridInqXval(gridID, grid.size-1));
 	      printf("grid ylast  %f\n", gridInqYval(gridID, grid.size-1));
 	      printf("grid.nv     %d\n", grid.nvertex);
-	      printf("grid nv     %d\n", gridInqNvertex(gridID));	      	    
+	      printf("grid nv     %d\n", gridInqNvertex(gridID));
 	      */
 	      if ( grid.xsize == gridInqXsize(gridID) && grid.ysize == gridInqYsize(gridID) )
 		differ = compareXYvals2(gridID, grid.size, grid.xvals, grid.yvals);
@@ -2499,7 +2552,7 @@ int gridGenerate(grid_t grid)
   grid_check_ptr(gridID, gridptr);
 
   gridDefPrec(gridID, grid.prec);
-	  
+
   switch (grid.type)
     {
     case GRID_LONLAT:
@@ -2515,6 +2568,8 @@ int gridGenerate(grid_t grid)
       {
 	if ( grid.xsize > 0 ) gridDefXsize(gridID, grid.xsize);
 	if ( grid.ysize > 0 ) gridDefYsize(gridID, grid.ysize);
+
+        if ( grid.type == GRID_GAUSSIAN ) gridDefNP(gridID, grid.np);
 
 	if ( grid.nvertex > 0 )
 	  gridDefNvertex(gridID, grid.nvertex);
@@ -2594,6 +2649,7 @@ int gridGenerate(grid_t grid)
       }
     case GRID_GAUSSIAN_REDUCED:
       {
+	gridDefNP(gridID, grid.np);
 	gridDefYsize(gridID, grid.ysize);
 	gridDefRowlon(gridID, grid.ysize, grid.rowlon);
 
@@ -2638,6 +2694,7 @@ int gridGenerate(grid_t grid)
       {
 	gridDefNumber(gridID, grid.number);
 	gridDefPosition(gridID, grid.position);
+        gridDefUUID(gridID, grid.uuid);
 	if ( grid.reference ) gridDefReference(gridID, grid.reference);
 	break;
       }
@@ -3198,6 +3255,7 @@ void gridPrint(int gridID, int opt)
   int nbyte0, nbyte;
   int i;
   int nvertex, iv;
+  char uuid[17];
   const double *area    = gridInqAreaPtr(gridID);
   const double *xvals   = gridInqXvalsPtr(gridID);
   const double *yvals   = gridInqYvalsPtr(gridID);
@@ -3245,6 +3303,8 @@ void gridPrint(int gridID, int opt)
     case GRID_CURVILINEAR:
     case GRID_UNSTRUCTURED:
       {
+        if ( type == GRID_GAUSSIAN ) fprintf(fp, "np        = %d\n", gridptr->np);
+
 	if ( type == GRID_CURVILINEAR || type == GRID_UNSTRUCTURED )
 	  {
 	    xdim = gridsize;
@@ -3287,7 +3347,7 @@ void gridPrint(int gridID, int opt)
 	    if ( xsize > 0 ) fprintf(fp, "xnpole    = %g\n", gridptr->xpole);
 	    if ( ysize > 0 ) fprintf(fp, "ynpole    = %g\n", gridptr->ypole);
 	    if ( gridptr->angle > 0 ) fprintf(fp, "angle     = %g\n", gridptr->angle);
-	  }
+ 	  }
 
 	if ( xvals )
 	  {
@@ -3405,7 +3465,7 @@ void gridPrint(int gridID, int opt)
    case GRID_GAUSSIAN_REDUCED:
       {
 	int *rowlon;
-	fprintf(fp, "ysize = %d\n", ysize);	        
+	fprintf(fp, "ysize = %d\n", ysize);
 	nbyte0 = fprintf(fp, "rowlon = %d  ", ysize);
 	nbyte  = nbyte0;
 	rowlon = (int *) malloc(ysize*sizeof(int));
@@ -3466,8 +3526,14 @@ void gridPrint(int gridID, int opt)
       }
     case GRID_REFERENCE:
       {
+        const unsigned char *d;
 	fprintf(fp, "number    = %d\n", gridInqNumber(gridID));
 	fprintf(fp, "position  = %d\n", gridInqPosition(gridID));
+        gridInqUUID(gridID, uuid);
+        d = (unsigned char *) &uuid;
+	fprintf(fp, "uuid      = %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n", 
+                d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7],
+                d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
 	if ( gridInqReference(gridID, NULL) )
 	  {
 	    char reference_link[8192];
@@ -3839,6 +3905,34 @@ void gridDefReference(int gridID, const char *reference)
 
       gridptr->reference = strdupx(reference);
     }
+}
+
+
+char *gridInqUUID(int gridID, char *uuid)
+{
+  grid_t *gridptr;
+
+  gridptr = grid_to_pointer(gridID);
+
+  grid_check_ptr(gridID, gridptr);
+
+  strncpy(uuid, gridptr->uuid, 16);
+
+  return (uuid);
+}
+
+
+void gridDefUUID(int gridID, const char *uuid)
+{
+  grid_t *gridptr;
+
+  gridptr = grid_to_pointer(gridID);
+
+  grid_check_ptr(gridID, gridptr);
+
+  strncpy(gridptr->uuid, uuid, 16);
+
+  return;
 }
 /*
  * Local Variables:

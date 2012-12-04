@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -96,7 +96,7 @@ void *Arithlat(void *argument)
 		   gridtype == GRID_GAUSSIAN    ||
 		   gridtype == GRID_LCC )
 		{
-		  gridID = gridToCurvilinear(gridID);
+		  gridID = gridToCurvilinear(gridID, 0);
 		}
 	      else if ( gridtype == GRID_CURVILINEAR ||
 			gridtype == GRID_UNSTRUCTURED )
@@ -105,7 +105,7 @@ void *Arithlat(void *argument)
 		}
 	      else if ( gridtype == GRID_GME )
 		{
-		  gridID = gridToUnstructured(gridID);
+		  gridID = gridToUnstructured(gridID, 0);
 		}
 	      else
 		{

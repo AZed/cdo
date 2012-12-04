@@ -32,7 +32,7 @@ int main(void)
   // Get the Time axis from the variable list
   taxisID = vlistInqTaxis(vlistID1);
 
-  // Open the output dataset (GRIB fromat)
+  // Open the output dataset (GRIB format)
   streamID2  = streamOpenWrite("example.grb", FILETYPE_GRB);
   if ( streamID2 < 0 )
     {

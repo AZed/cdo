@@ -147,9 +147,10 @@ extern "C" {
 #define  ZAXIS_ALTITUDE          10  /* Altitude above mean sea level in meters */
 #define  ZAXIS_SIGMA             11  /* Sigma level                             */
 #define  ZAXIS_MEANSEA           12  /* Mean sea level                          */
-#define  ZAXIS_TOA       13  /* Norminal top of atmosphere              */
+#define  ZAXIS_TOA               13  /* Norminal top of atmosphere              */
 #define  ZAXIS_SEA_BOTTOM        14  /* Sea bottom                              */
 #define  ZAXIS_ATMOSPHERE        15  /* Entire atmosphere                       */
+#define  ZAXIS_REFERENCE         16  /* zaxis reference number                  */
 
 /* TAXIS types */
 
@@ -542,6 +543,12 @@ void    gridDefYsize(int gridID, int ysize);
 /*      gridInqYsize: Get the size of a Y-axis */
 int     gridInqYsize(int gridID);
 
+/*      gridDefNP: Define the number of parallels between a pole and the equator */
+void    gridDefNP(int gridID, int np);
+
+/*      gridInqNP: Get the number of parallels between a pole and the equator */
+int     gridInqNP(int gridID);
+
 /*      gridDefXvals: Define the values of a X-axis */
 void    gridDefXvals(int gridID, const double *xvals_vec);
 
@@ -638,6 +645,8 @@ int     gridInqPosition(int gridID);
 void    gridDefPosition(int gridID, int position);
 int     gridInqReference(int gridID, char *reference);
 void    gridDefReference(int gridID, const char *reference);
+char   *gridInqUUID(int gridID, char *uuid);
+void    gridDefUUID(int gridID, const char *uuid);
 
 
 /* Lambert Conformal Conic grid (GRIB version) */
@@ -717,6 +726,18 @@ void    zaxisDefLevel(int zaxisID, int levelID, double levels);
 
 /*      zaxisInqLevel: Get one level of a Z-axis */
 double  zaxisInqLevel(int zaxisID, int levelID);
+
+/*      zaxisDefReference: Define the reference of a generalized Z-axis */
+void    zaxisDefReference(int zaxisID, int refID);
+
+/*      zaxisDefUUID: Define the uuid of a generalized Z-axis */
+void    zaxisDefUUID(int zaxisID, const char *uuid);
+
+/*      zaxisInqUUID: Get the reference of a generalized Z-axis */
+char   *zaxisInqUUID(int zaxisID, char *uuid);
+
+/*      zaxisInqReference: Get the reference of a generalized Z-axis */
+int     zaxisInqReference(int zaxisID);
 
 /*      zaxisDefName: Define the name of a Z-axis */
 void    zaxisDefName(int zaxisID, const char *name);

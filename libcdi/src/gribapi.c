@@ -39,7 +39,7 @@ const char *gribapiLibraryVersion(void)
 void gribContainersNew(int streamID)
 {
   stream_t *streamptr;
-   
+
   streamptr = stream_to_pointer(streamID);
 
 #if  defined  (HAVE_LIBCGRIBEX)
@@ -69,7 +69,7 @@ void gribContainersNew(int streamID)
 void gribContainersDelete(int streamID)
 {
   stream_t *streamptr;
-   
+
   streamptr = stream_to_pointer(streamID);
 
   if ( streamptr->gribContainers )
@@ -85,12 +85,3 @@ void gribContainersDelete(int streamID)
       streamptr->gribContainers = NULL;
     }
 }
-/*
- * Local Variables:
- * c-file-style: "Java"
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * show-trailing-whitespace: t
- * require-trailing-newline: t
- * End:
- */

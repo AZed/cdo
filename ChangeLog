@@ -1,3 +1,56 @@
+2012-01-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.4
+	* Version 1.5.4 released
+
+2012-01-24  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapcon: added env REMAP_AREA_MIN, to set the minimum area fraction [request: Gernot Geppert]
+
+2012-01-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplaf: using binary search (speedup)
+	* Timstepstat: added support for time bounds
+
+2012-01-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplib: use grid2_bound_box only for conservativ remapping
+
+2012-01-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgridtype: added support for grid type lonlat 
+
+2012-01-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	splitsel: added support for constant fields [Bug #1701]
+	Splittime: added support for constant fields
+
+2011-12-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* timpctl: check index of bins (bug fix for NaNs) [report: Christopher Moseley]
+
+2011-12-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pipeInqVlist: use pthread_cond_timedwait to wait 30 sec (bug fix) [report: Carsten Ehbrecht]
+
+2011-12-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pstreamCheckDatarange: use nint() to round smin and smax [report: Kristina Fröhlich]
+
+2011-11-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator timcovar - covariance over time
+	* Added operator fldcovar - covariance in grid space
+
+2011-10-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* shifttime: added support for time bounds
+	* setvrange: don't set the attribute valid_range
+
+2011-10-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added operator mod - modulo [request: Swantje Preuschmann]
+
 2011-10-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.5.3

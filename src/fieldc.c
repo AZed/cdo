@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,6 @@
   GNU General Public License for more details.
 */
 
-#include <math.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include <cdi.h>
@@ -27,6 +26,7 @@ void farcfun(field_t *field, double rconst, int function)
   else if ( function == func_sub ) farcsub(field, rconst);
   else if ( function == func_mul ) farcmul(field, rconst);
   else if ( function == func_div ) farcdiv(field, rconst);
+  else if ( function == func_mod ) farmod(field, rconst);
   else    cdoAbort("function %d not implemented!", function);
 }
 
@@ -131,4 +131,20 @@ void farinv(field_t *field)
   field->nmiss = 0;
   for ( i = 0; i < len; i++ )
     if ( DBL_IS_EQUAL(array[i], missval1) ) field->nmiss++;
+}
+
+
+void farmod(field_t *field, double divisor)
+{
+  int i, len;
+  int    grid     = field->grid;
+  double missval1 = field->missval;
+  double *array   = field->ptr;
+
+  len    = gridInqSize(grid);
+
+  for ( i = 0; i < len; i++ )
+    {
+      array[i] = DBL_IS_EQUAL(array[i], missval1) ? missval1 : fmod(array[i], divisor);
+    }
 }

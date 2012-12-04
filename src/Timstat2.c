@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,19 +26,20 @@
 #include "cdo_int.h"
 #include "pstream.h"
 
-#define  NWORK  5
-
+/* correlation in time */
 static
-int correlation(long gridsize, double missval1, double missval2, int *nofvals, 
-		double *work0, double *work1, double *work2, double *work3, double *work4)
+int correlation_t(long gridsize, double missval1, double missval2, int *nofvals, 
+		  double *work0, double *work1, double *work2, double *work3, double *work4)
 {
   long i;
   int nvals, nmiss = 0;
   double temp0, temp1, temp2, temp3, temp4, temp5, temp6;
+  double cor;
 
   for ( i = 0; i < gridsize; i++ )
     {	  
       nvals = nofvals[i];
+
       if ( nvals > 0 )
 	{
 	  temp0 = MUL(work0[i], work1[i]);
@@ -49,18 +50,55 @@ int correlation(long gridsize, double missval1, double missval2, int *nofvals,
 	  temp5 = SUB(work3[i], DIV(temp3, nvals));
 	  temp6 = MUL(temp4, temp5);
 
-	  work0[i] = DIV(temp1, SQRT(temp6));
+	  cor = DIV(temp1, SQRT(temp6));
 	  /*
-	    if      ( work0[i] < -1)  work0[i] = -1;
-	    else if ( work0[i] >  1)  work0[i] =  1;
+	    if      ( cor < -1)  cor = -1;
+	    else if ( cor >  1)  cor =  1;
 	  */
-	  if ( DBL_IS_EQUAL(work0[i], missval1) ) nmiss++;
+	  if ( DBL_IS_EQUAL(cor, missval1) ) nmiss++;
 	}
-      else if ( nvals <= 0 ) 
+      else
 	{
 	  nmiss++;
-	  work0[i] = missval1;
+	  cor = missval1;
 	}
+
+      work0[i] = cor;
+    }
+
+  return nmiss;
+}
+
+/* covariance in time */
+static
+int covariance_t(long gridsize, double missval1, double missval2, int *nofvals, 
+		 double *work0, double *work1, double *work2)
+{
+  long i;
+  int nvals, nmiss = 0;
+  double temp;
+  double dnvals;
+  double covar;
+
+  for ( i = 0; i < gridsize; i++ )
+    {	  
+      nvals = nofvals[i];
+      dnvals = nvals;
+
+      if ( nvals > 0 )
+	{
+	  temp = DIV(MUL(work0[i], work1[i]), dnvals*dnvals);
+	  covar = SUB(DIV(work2[i], dnvals), temp);
+
+	  if ( DBL_IS_EQUAL(covar, missval1) ) nmiss++;
+	}
+      else
+	{
+	  nmiss++;
+	  covar = missval1;
+	}
+
+      work0[i] = covar;
     }
 
   return nmiss;
@@ -71,6 +109,7 @@ void *Timstat2(void *argument)
 {
   int operatorID;
   int operfunc;
+  int nwork = 0;
   int streamID1, streamID2, streamID3;
   int vdate = 0, vtime = 0;
   int nrecs, nrecs2, nrecs3, nvars, nlevs;
@@ -88,10 +127,14 @@ void *Timstat2(void *argument)
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("timcor", 2, 1, NULL);
+  cdoOperatorAdd("timcor",   func_cor,   0, NULL);
+  cdoOperatorAdd("timcovar", func_covar, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc   = cdoOperatorF1(operatorID);
+
+  if      ( operfunc == func_cor   ) nwork = 5;
+  else if ( operfunc == func_covar ) nwork = 3;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
@@ -138,8 +181,8 @@ void *Timstat2(void *argument)
 	  nofvals[varID][levelID] = (int *) malloc(gridsize*sizeof(int));
 	  memset(nofvals[varID][levelID], 0, gridsize*sizeof(int));
       
-	  work[varID][levelID] = (double **) malloc(NWORK*sizeof(double *));
-	  for ( i = 0; i < NWORK; i++ )
+	  work[varID][levelID] = (double **) malloc(nwork*sizeof(double *));
+	  for ( i = 0; i < nwork; i++ )
 	    {
 	      work[varID][levelID][i] = (double *) malloc(gridsize*sizeof(double));
 	      memset(work[varID][levelID][i], 0, gridsize*sizeof(double));
@@ -173,20 +216,37 @@ void *Timstat2(void *argument)
 
 	  streamReadRecord(streamID1, array1, &nmiss);
 	  streamReadRecord(streamID2, array2, &nmiss);
-	      	     
-	  for ( i = 0; i < gridsize; i++)
+
+	  if ( operfunc == func_cor )
 	    {
-	      if ( ( ! DBL_IS_EQUAL(array1[i], missval1) ) && 
-		   ( ! DBL_IS_EQUAL(array2[i], missval2) ) )
+	      for ( i = 0; i < gridsize; i++)
 		{
-		  work[varID][levelID][0][i] += array1[i];
-		  work[varID][levelID][1][i] += array2[i];
-		  work[varID][levelID][2][i] += ( array1[i]*array1[i] );
-		  work[varID][levelID][3][i] += ( array2[i]*array2[i] );
-		  work[varID][levelID][4][i] += ( array1[i]*array2[i] );
-		  nofvals[varID][levelID][i]++;
-		}
-	    }	 
+		  if ( ( ! DBL_IS_EQUAL(array1[i], missval1) ) && 
+		       ( ! DBL_IS_EQUAL(array2[i], missval2) ) )
+		    {
+		      work[varID][levelID][0][i] += array1[i];
+		      work[varID][levelID][1][i] += array2[i];
+		      work[varID][levelID][2][i] += array1[i]*array1[i];
+		      work[varID][levelID][3][i] += array2[i]*array2[i];
+		      work[varID][levelID][4][i] += array1[i]*array2[i];
+		      nofvals[varID][levelID][i]++;
+		    }
+		}	 
+	    }
+	  else if ( operfunc == func_covar )
+	    {
+	      for ( i = 0; i < gridsize; i++)
+		{
+		  if ( ( ! DBL_IS_EQUAL(array1[i], missval1) ) && 
+		       ( ! DBL_IS_EQUAL(array2[i], missval2) ) )
+		    {
+		      work[varID][levelID][0][i] += array1[i];
+		      work[varID][levelID][1][i] += array2[i];
+		      work[varID][levelID][2][i] += array1[i]*array2[i];
+		      nofvals[varID][levelID][i]++;
+		    }
+		}	 
+	    }
 	}
 
       tsID++;
@@ -207,10 +267,19 @@ void *Timstat2(void *argument)
       missval1 = vlistInqVarMissval(vlistID1, varID);
       missval2 = vlistInqVarMissval(vlistID2, varID);
 
-      nmiss = correlation(gridsize, missval1, missval2, nofvals[varID][levelID],
-			  work[varID][levelID][0], work[varID][levelID][1],
-			  work[varID][levelID][2], work[varID][levelID][3], 
-			  work[varID][levelID][4]);
+      if ( operfunc == func_cor )
+	{
+	  nmiss = correlation_t(gridsize, missval1, missval2, nofvals[varID][levelID],
+				work[varID][levelID][0], work[varID][levelID][1],
+				work[varID][levelID][2], work[varID][levelID][3], 
+				work[varID][levelID][4]);
+	}
+      else if ( operfunc == func_covar )
+	{
+	  nmiss = covariance_t(gridsize, missval1, missval2, nofvals[varID][levelID],
+			       work[varID][levelID][0], work[varID][levelID][1],
+			       work[varID][levelID][2]);
+	}
 
       streamDefRecord(streamID3, varID, levelID);
       streamWriteRecord(streamID3, work[varID][levelID][0], nmiss);
@@ -222,7 +291,7 @@ void *Timstat2(void *argument)
       for ( levelID = 0; levelID < nlevs; levelID++ )
 	{
 	  free(nofvals[varID][levelID]);
-	  for ( i = 0; i < NWORK; i++ )
+	  for ( i = 0; i < nwork; i++ )
 	    free(work[varID][levelID][i]);
 	  free(work[varID][levelID]);
 	}
@@ -240,7 +309,7 @@ void *Timstat2(void *argument)
 
   if ( array1 )     free(array1);
   if ( array2 )     free(array2);
-  if ( recVarID   ) free(recVarID);
+  if ( recVarID )   free(recVarID);
   if ( recLevelID ) free(recLevelID);
     
   cdoFinish();   

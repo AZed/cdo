@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,10 +27,6 @@
      pp. 559-570
 */
 
-#if defined (_OPENMP)
-#  include <omp.h>
-#endif
-
 #include <cdi.h>
 #include "cdo.h"
 #include "statistic.h"
@@ -49,17 +45,15 @@ void *Ensval(void *argument)
   int operatorID;
   int operfunc, datafunc;
   int i,k;
-  int nvars,nrecs = 0, nrecs0, nmiss, nens, nfiles,nlevs,valcount, nostreams, ngrids;
-  int cum;
-  int levelID, varID, recID, tsID, binID, ensID;
+  int nvars,nrecs = 0, nrecs0, nmiss, nens, nfiles,nlevs,valcount, nostreams = 0, ngrids;
+  int levelID, varID, recID, tsID;
   int gridsize = 0;
-  int gridID, gridID2;
+  int gridID = -1, gridID2;
   int have_miss = 0;
   int stream, streamID = 0, *streamID2;
   int vlistID, vlistID1, *vlistID2;
   int taxisID1, *taxisID2;
   int zaxisID1, *zaxisID2;
-  int ompthID;
   int *varID2;
   int xsize,ysize;
   double missval;
@@ -70,9 +64,9 @@ void *Ensval(void *argument)
   double xa, *x;
   double *val;
   double *weights, sum_weights = 0;
-  double crps_reli, crps_pot,sprd, crps;
+  double crps_reli, crps_pot, crps;
   double heavyside0, heavysideN;
-  double brs,brs_reli, brs_resol, brs_uncty, brs_thresh;
+  double brs_reli, brs_resol, brs_uncty, brs_thresh = 0;
   double g,o,p;
 
   int fileID;

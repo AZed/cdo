@@ -11,6 +11,7 @@
 
 int ECMWF  = UNDEFID;
 int MPIMET = UNDEFID;
+int DWD    = UNDEFID;
 int MCH    = UNDEFID;
 
 typedef struct
@@ -279,7 +280,7 @@ void institutsDefault(void)
   MPIMET  = institutDef( 98, 232, "MPIMET",    "Max-Planck-Institute for Meteorology");
      (void) institutDef( 98, 255, "MPIMET",    "Max-Planck-Institute for Meteorology");
      (void) institutDef( 98, 232, "MPIMET",    "Max-Planck Institute for Meteorology");
-     (void) institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst");
+  DWD     = institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst");
   MCH     = institutDef(215, 255, "MCH",       "MeteoSwiss");
      (void) institutDef(  7,   0, "NCEP",      "National Centers for Environmental Prediction");
      (void) institutDef(  7,   1, "NCEP",      "National Centers for Environmental Prediction");

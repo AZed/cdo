@@ -13,7 +13,7 @@ LIBDIR:=/usr/lib/$(DEB_HOST_MULTIARCH)
 CFLAGS += -fPIC
 
 ARCH:=$(shell dpkg --print-architecture)
-WITH_GRIB:= --with-grib-api=/usr --disable-cgribex
+WITH_GRIB:= --with-grib-api=/usr --enable-cgribex
 WITH_JASPER:= --with-jasper=/usr
 
 # grib-api not available on these arches; jasper is only needed for grib-api

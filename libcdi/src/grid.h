@@ -46,13 +46,15 @@ typedef struct {
   int     nd, ni, ni2, ni3;       /* parameter for GRID_GME         */
   int     number, position;       /* parameter for GRID_REFERENCE   */
   char   *reference;
+  char    uuid[17];               /* uuid for grid reference        */
   int     trunc;                  /* parameter for GRID_SPECTEAL    */
   int     nvertex;
   int    *rowlon;
   int     nrowlon;
   int     size;
-  int     xsize;
-  int     ysize;
+  int     xsize;                  /* number of values along X */
+  int     ysize;                  /* number of values along Y */
+  int     np;                     /* number of parallels between a pole and the equator */
   int     locked;
   int     lcomplex;
   char    xname[CDI_MAX_NAME];

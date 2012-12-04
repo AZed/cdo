@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -99,7 +99,6 @@ char *ch1,*ch2,*ch3,*ch4,cc1,cc2;
   }
 }
 
-#include <math.h>
 /*
  * convert an IMB float to single precision number v1.0
  *
@@ -751,7 +750,7 @@ void *Gradsdes(void *argument)
       fprintf(gdp, "PDEF %d %d lcc %g %g 1 1 %g %g %g %g %g\n", 
 	      xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
 
-      gridID = gridToCurvilinear(gridID);
+      gridID = gridToCurvilinear(gridID, 0);
       xvals = (double *) malloc(xsize*ysize*sizeof(double));
       yvals = (double *) malloc(xsize*ysize*sizeof(double));
       gridInqXvals(gridID, xvals);

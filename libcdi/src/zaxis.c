@@ -40,6 +40,7 @@ ZaxistypeEntry[] = {
   { /* 13 */ 0, "toa",        "top_of_atmosphere", "",               ""},
   { /* 14 */ 0, "seabottom",  "sea_bottom",        "",               ""},
   { /* 15 */ 0, "atmosphere", "atmosphere",        "",               ""},
+  { /* 16 */ 0, "height",     "generalized height","height",         "m"},
 };
 
 static int CDI_MaxZaxistype = sizeof(ZaxistypeEntry) / sizeof(ZaxistypeEntry[0]);
@@ -63,6 +64,8 @@ typedef struct {
   int      direction;
   int      vctsize;
   double  *vct;
+  int      reference;
+  char     uuid[17];
 }
 zaxis_t;
 
@@ -212,6 +215,8 @@ void zaxis_init_entry(zaxis_t *zaxisptr)
   zaxisptr->size        = 0;
   zaxisptr->vctsize     = 0;
   zaxisptr->vct         = NULL;
+  zaxisptr->reference   = CDI_UNDEFID;
+  zaxisptr->uuid[0]     = 0;
 }
 
 static
@@ -515,7 +520,7 @@ void zaxisDefUnits(int zaxisID, const char *units)
     @Item  zaxisID  Z-axis ID, from a previous call to @fref{zaxisCreate}.
     @Item  name     Name of the Z-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{zaxisInqName} returns the name of a Z-axis.
@@ -545,7 +550,7 @@ void zaxisInqName(int zaxisID, char *name)
     @Item  zaxisID  Z-axis ID, from a previous call to @fref{zaxisCreate}.
     @Item  longname Longname of the Z-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{zaxisInqLongname} returns the longname of a Z-axis.
@@ -575,7 +580,7 @@ void zaxisInqLongname(int zaxisID, char *longname)
     @Item  zaxisID  Z-axis ID, from a previous call to @fref{zaxisCreate}
     @Item  units    Units of the Z-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
-                    the string is given by the predefined constant CDI_MAX_NAME.
+                    the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
 @Description
 The function @func{zaxisInqUnits} returns the units of a Z-axis.
@@ -729,6 +734,115 @@ void zaxisDefLevel(int zaxisID, int levelID, double level)
 }
 
 /*
+@Function  zaxisDefReference
+@Title     Define the reference for a genralized Z-axis
+
+@Prototype void zaxisDefReference(int zaxisID, const int reference)
+@Parameter
+    @Item  zaxisID     Z-axis ID, from a previous call to @fref{zaxisCreate}.
+    @Item  reference   Reference for a generalized Z-axis.
+
+@Description
+The function @func{zaxisDefReference} defines the reference for a generalized  Z-axis.
+
+@EndFunction
+*/
+void zaxisDefReference(int zaxisID, const int reference)
+{
+  zaxis_t *zaxisptr;
+
+  zaxisptr = zaxis_to_pointer(zaxisID);
+
+  zaxis_check_ptr(zaxisID, zaxisptr);
+
+  zaxisptr->reference = reference;
+}
+
+/*
+@Function  zaxisDefUUID
+@Title     Define the UUID for a genralized Z-axis
+
+@Prototype void zaxisDefUUID(int zaxisID, const char *uuid)
+@Parameter
+    @Item  zaxisID     Z-axis ID, from a previous call to @fref{zaxisCreate}.
+    @Item  uuid        UUID for a generalized Z-axis.
+
+@Description
+The function @func{zaxisDefUUID} defines the UUID for a generalized  Z-axis.
+
+@EndFunction
+*/
+void zaxisDefUUID(int zaxisID, const char *uuid)
+{
+  zaxis_t *zaxisptr;
+
+  zaxisptr = zaxis_to_pointer(zaxisID);
+
+  zaxis_check_ptr(zaxisID, zaxisptr);
+
+  strncpy(zaxisptr->uuid, uuid, 16);
+
+  return;
+}
+
+/*
+@Function  zaxisInqUUID
+@Title     Get the uuid to a generalized Z-axis.
+
+@Prototype char *zaxisInqUUID(int zaxisID, char *uuid)
+@Parameter
+    @Item  zaxisID  Z-axis ID, from a previous call to @fref{zaxisCreate}.
+
+@Description
+The function @func{zaxisInqUUID} returns the UUID to a generalized Z-axis.
+
+@Result
+@func{zaxisInqUUID} returns the UUID to a generalized Z-axis.
+@EndFunction
+*/
+char *zaxisInqUUID(int zaxisID, char *uuid)
+{
+  zaxis_t *zaxisptr;
+
+  zaxisptr = zaxis_to_pointer(zaxisID);
+
+  zaxis_check_ptr(zaxisID, zaxisptr);
+
+  strncpy(uuid, zaxisptr->uuid, 16);
+
+  return (uuid);
+}
+
+/*
+@Function  zaxisInqReference
+@Title     Get the reference to a generalized Z-axis.
+
+@Prototype int zaxisInqReference(int zaxisID)
+@Parameter
+    @Item  zaxisID  Z-axis ID, from a previous call to @fref{zaxisCreate}.
+
+@Description
+The function @func{zaxisInqReference} returns the reference to a generalized Z-axis.
+
+@Result
+@func{zaxisInqReference} returns the reference to a generalized Z-axis.
+@EndFunction
+*/
+int zaxisInqReference(int zaxisID)
+{
+  int reference = -1;
+  zaxis_t *zaxisptr;
+
+  zaxisptr = zaxis_to_pointer(zaxisID);
+
+  zaxis_check_ptr(zaxisID, zaxisptr);
+
+  reference = zaxisptr->reference;
+
+  return (reference);
+}
+
+/*
 @Function  zaxisInqLevel
 @Title     Get one level of a Z-axis
 
@@ -758,7 +872,6 @@ double zaxisInqLevel(int zaxisID, int levelID)
 
   return (level);
 }
-
 
 double zaxisInqLbound(int zaxisID, int index)
 {
@@ -1252,6 +1365,7 @@ void zaxisPrint(int zaxisID)
 {
   FILE *fp = stdout;
   int type;
+  char uuid[17];
   int nlevels, levelID;
   int nbyte0, nbyte;
   double level;
@@ -1339,7 +1453,7 @@ void zaxisPrint(int zaxisID)
 	    {
 	      if ( nbyte > 70 )
 		{
-		  fprintf(fp, "\n%*s", nbyte0, "");
+                  fprintf(fp, "\n%*s", nbyte0, "");
 		  nbyte = nbyte0;
 		}
 	      nbyte += fprintf(fp, "%.9g ", vct[vctsize/2+i]);
@@ -1347,6 +1461,15 @@ void zaxisPrint(int zaxisID)
 	  fprintf(fp, "\n");
 	  */
 	}
+    }
+  if ( type == ZAXIS_REFERENCE )
+    {
+      const unsigned char *d;
+      zaxisInqUUID(zaxisID, uuid);
+      d = (unsigned char *) &uuid;
+      fprintf(fp, "uuid      = %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
+              d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7],
+              d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
     }
 }
 /*

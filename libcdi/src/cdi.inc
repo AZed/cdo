@@ -1,10 +1,10 @@
 ! This file was automatically generated, don't edit!
 !
-! Fortran interface for CDI library version 1.5.3
+! Fortran interface for CDI library version 1.5.4
 !
 ! Author:
 ! -------
-! Uwe Schulzweida, MPI-MET, Hamburg,   October 2011
+! Uwe Schulzweida, MPI-MET, Hamburg,   January 2012
 !
 
       INTEGER    CDI_MAX_NAME          
@@ -251,6 +251,8 @@
       PARAMETER (ZAXIS_SEA_BOTTOM       = 14)
       INTEGER    ZAXIS_ATMOSPHERE      
       PARAMETER (ZAXIS_ATMOSPHERE       = 15)
+      INTEGER    ZAXIS_REFERENCE       
+      PARAMETER (ZAXIS_REFERENCE        = 16)
 !
 !  TAXIS types
 !
@@ -1183,6 +1185,15 @@
 !                                    (INTEGER         gridID)
       EXTERNAL        gridInqYsize
 
+!                     gridDefNP
+!                                    (INTEGER         gridID,
+!                                     INTEGER         np)
+      EXTERNAL        gridDefNP
+
+      INTEGER         gridInqNP
+!                                    (INTEGER         gridID)
+      EXTERNAL        gridInqNP
+
 !                     gridDefXvals
 !                                    (INTEGER         gridID,
 !                                     DOUBLEPRECISION xvals_vec)
@@ -1414,6 +1425,16 @@
 !                                     CHARACTER*(*)   reference)
       EXTERNAL        gridDefReference
 
+      CHARACTER*80    gridInqUUID
+!                                    (INTEGER         gridID,
+!                                     CHARACTER*(*)   uuid)
+      EXTERNAL        gridInqUUID
+
+!                     gridDefUUID
+!                                    (INTEGER         gridID,
+!                                     CHARACTER*(*)   uuid)
+      EXTERNAL        gridDefUUID
+
 !
 !  Lambert Conformal Conic grid (GRIB version)
 !
@@ -1610,6 +1631,25 @@
 !                                    (INTEGER         zaxisID,
 !                                     INTEGER         levelID)
       EXTERNAL        zaxisInqLevel
+
+!                     zaxisDefReference
+!                                    (INTEGER         zaxisID,
+!                                     INTEGER         refID)
+      EXTERNAL        zaxisDefReference
+
+!                     zaxisDefUUID
+!                                    (INTEGER         zaxisID,
+!                                     CHARACTER*(*)   uuid)
+      EXTERNAL        zaxisDefUUID
+
+      CHARACTER*80    zaxisInqUUID
+!                                    (INTEGER         zaxisID,
+!                                     CHARACTER*(*)   uuid)
+      EXTERNAL        zaxisInqUUID
+
+      INTEGER         zaxisInqReference
+!                                    (INTEGER         zaxisID)
+      EXTERNAL        zaxisInqReference
 
 !                     zaxisDefName
 !                                    (INTEGER         zaxisID,

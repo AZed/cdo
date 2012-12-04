@@ -45,6 +45,9 @@
 /* Define to 1 for JPEG compression for GRIB2 */
 #undef HAVE_LIBJASPER
 
+/* Define to 1 for PNG compression for GRIB2 */
+#undef HAVE_LIBLIBPNG
+
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
@@ -56,6 +59,12 @@
 
 /* Define to 1 for NETCDF support */
 #undef HAVE_LIBNETCDF
+
+/* Define to 1 for JPEG compression for GRIB2 */
+#undef HAVE_LIBOPENJPEG
+
+/* Define to 1 if you have the <libpng14/png.h> header file. */
+#undef HAVE_LIBPNG14_PNG_H
 
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
@@ -89,6 +98,9 @@
 
 /* Define to 1 if you have the <netcdf.h> header file. */
 #undef HAVE_NETCDF_H
+
+/* Define to 1 if you have the <openjpeg.h> header file. */
+#undef HAVE_OPENJPEG_H
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
