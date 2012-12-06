@@ -5,7 +5,7 @@
 
 /* GRIB2 Level Types */
 #define  GRIB2_LTYPE_SURFACE               1
-#define  GRIB2_LTYPE_TOA           8
+#define  GRIB2_LTYPE_TOA                   8
 #define  GRIB2_LTYPE_SEA_BOTTOM            9
 #define  GRIB2_LTYPE_ATMOSPHERE           10
 #define  GRIB2_LTYPE_ISOBARIC            100

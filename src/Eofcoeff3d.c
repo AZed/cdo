@@ -2,7 +2,7 @@
  This file is part of CDO. CDO is a collection of Operators to
  manipulate and analyse Climate model Data.
  
- Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+ Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
  See COPYING file for copying and redistribution conditions.
  
  This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,6 @@
 #include "cdo_int.h"
 #include "pstream.h"
 
-void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 // NO MISSING VALUE SUPPORT ADDED SO FAR
 
@@ -159,10 +158,8 @@ void *Eofcoeff3d(void * argument)
   vlistID3 = vlistCreate();
   vlistDefTaxis(vlistID3,taxisID3);
   varID3 = (int *) malloc ( nvars * sizeof(int) );
-  for ( varID=0; varID<nvars; varID++ ) {
-    varID3[varID] = vlistDefVar(vlistID3,gridID3,zaxisID3,TIME_VARIABLE);
-    vlistDefVarTime(vlistID3, varID, TIME_VARIABLE);
-  }
+  for ( varID=0; varID<nvars; varID++ )
+    varID3[varID] = vlistDefVar(vlistID3, gridID3, zaxisID3, TSTEP_INSTANT);
   
   // open streams for eofcoeff output
   streamIDs = (int *) malloc (neof*sizeof(int)); 

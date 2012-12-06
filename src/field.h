@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -93,6 +93,7 @@ double fldroc(field_t field);
 void zonfun(field_t field1, field_t *field2, int function);
 void zonmin(field_t field1, field_t *field2);
 void zonmax(field_t field1, field_t *field2);
+void zonrange(field_t field1, field_t *field2);
 void zonsum(field_t field1, field_t *field2);
 void zonavg(field_t field1, field_t *field2);
 void zonmean(field_t field1, field_t *field2);

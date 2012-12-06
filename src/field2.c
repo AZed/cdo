@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,6 +19,9 @@
 #include "cdo_int.h"
 #include <cdi.h>
 
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
 
 void farfun(field_t *field1, field_t field2, int function)
 {
@@ -35,6 +38,35 @@ void farfun(field_t *field1, field_t field2, int function)
   else cdoAbort("function %d not implemented!", function);
 }
 
+static
+void arradd(const long n, double * const restrict a, const double * const restrict b)
+{
+  long i;
+ 
+  // SSE2 version is 15% faster than the original loop (tested with gcc47)
+#if 0
+  //#ifdef __SSE2__ /*__SSE2__*/ // bug in this code!!!
+  long residual =  n % 8;
+  long ofs = n - residual;
+
+  __m128d *av = (__m128d *) a; // assume 16-byte aligned
+  __m128d *bv = (__m128d *) b; // assume 16-byte aligned
+  for ( i = 0; i < n/2; i+=4 )
+    {
+      av[i  ] = _mm_add_pd(av[i  ], bv[i  ]);
+      av[i+1] = _mm_add_pd(av[i+1], bv[i+1]);
+      av[i+2] = _mm_add_pd(av[i+2], bv[i+2]);
+      av[i+3] = _mm_add_pd(av[i+3], bv[i+3]);
+    }
+  printf("residual, ofs, n %ld %ld %ld\n", residual, ofs, n);
+  for ( i = 0; i < residual; i++ )  a[ofs+i] += b[ofs+i];
+
+#else
+
+  for ( i = 0; i < n; i++ ) a[i] += b[i];
+
+#endif
+}
 
 void faradd(field_t *field1, field_t field2)
 {
@@ -49,7 +81,7 @@ void faradd(field_t *field1, field_t field2)
   double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
@@ -65,13 +97,7 @@ void faradd(field_t *field1, field_t field2)
     }
   else
     {
-      /*
-#if defined (_OPENMP)
-#pragma omp parallel for default(shared)
-#endif
-      */
-      for ( i = 0; i < len; i++ ) 
-	array1[i] += array2[i];
+      arradd(len, array1, array2);
     }
 }
 
@@ -89,7 +115,7 @@ void farsum(field_t *field1, field_t field2)
   double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
@@ -111,11 +137,9 @@ void farsum(field_t *field1, field_t field2)
     }
   else
     {
-      for ( i = 0; i < len; i++ ) 
-	array1[i] += array2[i];
+      arradd(len, array1, array2);
     }
 }
-
 
 /* 
  * Compute the occurrence of values in field, if they do not equal refval.

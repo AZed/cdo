@@ -69,17 +69,17 @@ static pthread_mutex_t streamOpenWriteMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t _pstream_init_thread = PTHREAD_ONCE_INIT;
 static pthread_mutex_t _pstream_mutex;
 
-#  define PSTREAM_LOCK           pthread_mutex_lock(&_pstream_mutex);
-#  define PSTREAM_UNLOCK         pthread_mutex_unlock(&_pstream_mutex);
-#  define PSTREAM_INIT                               \
-   if ( _pstream_init == FALSE ) pthread_once(&_pstream_init_thread, pstream_initialize);
+#  define PSTREAM_LOCK()           pthread_mutex_lock(&_pstream_mutex)
+#  define PSTREAM_UNLOCK()         pthread_mutex_unlock(&_pstream_mutex)
+#  define PSTREAM_INIT()	  \
+   if ( _pstream_init == FALSE ) pthread_once(&_pstream_init_thread, pstream_initialize)
 
 #else
 
-#  define PSTREAM_LOCK
-#  define PSTREAM_UNLOCK
-#  define PSTREAM_INIT                               \
-   if ( _pstream_init == FALSE ) pstream_initialize();
+#  define PSTREAM_LOCK()
+#  define PSTREAM_UNLOCK()
+#  define PSTREAM_INIT()	  \
+   if ( _pstream_init == FALSE ) pstream_initialize()
 
 #endif
 
@@ -131,15 +131,15 @@ pstream_t *pstream_to_pointer(int idx)
 {
   pstream_t *pstreamptr = NULL;
 
-  PSTREAM_INIT
+  PSTREAM_INIT();
 
   if ( idx >= 0 && idx < _pstream_max )
     {
-      PSTREAM_LOCK
+      PSTREAM_LOCK();
 
       pstreamptr = _pstreamList[idx].ptr;
 
-      PSTREAM_UNLOCK
+      PSTREAM_UNLOCK();
     }
   else
     Error("pstream index %d undefined!", idx);
@@ -156,7 +156,7 @@ int pstream_from_pointer(pstream_t *ptr)
 
   if ( ptr )
     {
-      PSTREAM_LOCK
+      PSTREAM_LOCK();
 
       if ( _pstreamAvail )
 	{
@@ -172,7 +172,7 @@ int pstream_from_pointer(pstream_t *ptr)
       else
 	Warning("Too many open pstreams (limit is %d)!", _pstream_max);
 
-      PSTREAM_UNLOCK
+      PSTREAM_UNLOCK();
     }
   else
     Error("Internal problem (pointer %p undefined)", ptr);
@@ -225,7 +225,7 @@ void pstream_delete_entry(pstream_t *pstreamptr)
 
   idx = pstreamptr->self;
 
-  PSTREAM_LOCK
+  PSTREAM_LOCK();
 
   free(pstreamptr);
 
@@ -233,7 +233,7 @@ void pstream_delete_entry(pstream_t *pstreamptr)
   _pstreamList[idx].ptr  = 0;
   _pstreamAvail   	 = &_pstreamList[idx];
 
-  PSTREAM_UNLOCK
+  PSTREAM_UNLOCK();
 
   if ( PSTREAM_Debug )
     Message("Removed idx %d from pstream list", idx);
@@ -306,7 +306,7 @@ int pstreamOpenRead(const char *argument)
   int pstreamID;
   pstream_t *pstreamptr;
 
-  PSTREAM_INIT
+  PSTREAM_INIT();
 
   pstreamptr = pstream_new_entry();
   if ( ! pstreamptr ) Error("No memory");
@@ -323,7 +323,7 @@ int pstreamOpenRead(const char *argument)
       int rval;
       pthread_t thrID;
       pthread_attr_t attr;
-      struct sched_param param;
+      // struct sched_param param;
       size_t len;
       size_t stacksize;
       int status;
@@ -627,7 +627,7 @@ int pstreamOpenWrite(const char *argument, int filetype)
   int ispipe;
   pstream_t *pstreamptr;
 
-  PSTREAM_INIT
+  PSTREAM_INIT();
 
   ispipe = memcmp(argument, "(pipe", 5) == 0;
 
@@ -673,9 +673,9 @@ int pstreamOpenWrite(const char *argument, int filetype)
 #if  defined  (HAVE_LIBPTHREAD)
       pthread_mutex_lock(&streamOpenWriteMutex);
 #endif
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
       fileID = streamOpenWrite(argument, filetype);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
 #if  defined  (HAVE_LIBPTHREAD)
       pthread_mutex_unlock(&streamOpenWriteMutex);
 #endif
@@ -755,9 +755,9 @@ int pstreamOpenAppend(const char *argument)
   
       if ( PSTREAM_Debug ) Message("file %s", argument);
 
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
       fileID = streamOpenAppend(argument);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
       if ( fileID < 0 ) cdiError(fileID, "Open failed on %s", argument);
       /*
       cdoInqHistory(fileID);
@@ -901,9 +901,9 @@ int pstreamInqVlist(int pstreamID)
     {
       extern int cdoDefaultTimeType;
 
-      if ( cdoTimer ) timer_start(timer_read);
+      if ( processNums() == 1 ) timer_start(timer_read);
       vlistID = streamInqVlist(pstreamptr->fileID);
-      if ( cdoTimer ) timer_stop(timer_read);
+      if ( processNums() == 1 ) timer_stop(timer_read);
 
       if ( cdoDefaultTimeType != CDI_UNDEFID )
 	taxisDefType(vlistInqTaxis(vlistID), cdoDefaultTimeType);
@@ -1048,9 +1048,9 @@ void pstreamDefVlist(int pstreamID, int vlistID)
 
       pstreamDefVarlist(pstreamptr, vlistID);
 
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
       streamDefVlist(pstreamptr->fileID, vlistID);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
     }
 }
 
@@ -1067,9 +1067,9 @@ int pstreamInqRecord(int pstreamID, int *varID, int *levelID)
   else
 #endif
     {
-      if ( cdoTimer ) timer_start(timer_read);
+      if ( processNums() == 1 ) timer_start(timer_read);
       streamInqRecord(pstreamptr->fileID, varID, levelID);
-      if ( cdoTimer ) timer_stop(timer_read);
+      if ( processNums() == 1 ) timer_stop(timer_read);
     }
 
   return (0);
@@ -1092,9 +1092,9 @@ void pstreamDefRecord(int pstreamID, int varID, int levelID)
   else
 #endif
     {
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
       streamDefRecord(pstreamptr->fileID, varID, levelID);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
     }
 }
 
@@ -1113,9 +1113,9 @@ void pstreamReadRecord(int pstreamID, double *data, int *nmiss)
   else
 #endif
     {
-      if ( cdoTimer ) timer_start(timer_read);
+      if ( processNums() == 1 ) timer_start(timer_read);
       streamReadRecord(pstreamptr->fileID, data, nmiss);
-      if ( cdoTimer ) timer_stop(timer_read);
+      if ( processNums() == 1 ) timer_stop(timer_read);
     }
 }
 
@@ -1156,32 +1156,36 @@ void pstreamCheckDatarange(pstream_t *pstreamptr, int varID, double *array, int 
 	  if ( array[i] < arrmin ) arrmin = array[i];
 	  if ( array[i] > arrmax ) arrmax = array[i];
 	}
+      ivals = gridsize;
     }
 
-  smin = (arrmin - addoffset)/scalefactor;
-  smax = (arrmax - addoffset)/scalefactor;
-
-  if ( datatype == DATATYPE_INT8  || datatype == DATATYPE_UINT8 ||
-       datatype == DATATYPE_INT16 || datatype == DATATYPE_UINT16 )
+  if ( ivals > 0 )
     {
-      smin = NINT(smin);
-      smax = NINT(smax);
+      smin = (arrmin - addoffset)/scalefactor;
+      smax = (arrmax - addoffset)/scalefactor;
+
+      if ( datatype == DATATYPE_INT8  || datatype == DATATYPE_UINT8 ||
+	   datatype == DATATYPE_INT16 || datatype == DATATYPE_UINT16 )
+	{
+	  smin = NINT(smin);
+	  smax = NINT(smax);
+	}
+
+      if      ( datatype == DATATYPE_INT8   ) { vmin =        -128.; vmax =        127.; }
+      else if ( datatype == DATATYPE_UINT8  ) { vmin =           0.; vmax =        255.; }
+      else if ( datatype == DATATYPE_INT16  ) { vmin =      -32768.; vmax =      32767.; }
+      else if ( datatype == DATATYPE_UINT16 ) { vmin =           0.; vmax =      65535.; }
+      else if ( datatype == DATATYPE_INT32  ) { vmin = -2147483648.; vmax = 2147483647.; }
+      else if ( datatype == DATATYPE_UINT32 ) { vmin =           0.; vmax = 4294967295.; }
+      else if ( datatype == DATATYPE_FLT32  ) { vmin = -3.40282e+38; vmax = 3.40282e+38; }
+      else                                    { vmin =     -1.e+300; vmax =     1.e+300; }
+
+      if ( smin < vmin || smax > vmax )
+	cdoWarning("Some data values (min=%g max=%g) are outside the\n"
+		   "    valid range (%g - %g) of the used output precision!\n"
+		   "    Use the CDO option%s -b 64 to increase the output precision.",
+		   smin, smax, vmin, vmax, (datatype == DATATYPE_FLT32) ? "" : " -b 32 or");
     }
-
-  if      ( datatype == DATATYPE_INT8   ) { vmin =        -128.; vmax =        127.; }
-  else if ( datatype == DATATYPE_UINT8  ) { vmin =           0.; vmax =        255.; }
-  else if ( datatype == DATATYPE_INT16  ) { vmin =      -32768.; vmax =      32767.; }
-  else if ( datatype == DATATYPE_UINT16 ) { vmin =           0.; vmax =      65535.; }
-  else if ( datatype == DATATYPE_INT32  ) { vmin = -2147483648.; vmax = 2147483647.; }
-  else if ( datatype == DATATYPE_UINT32 ) { vmin =           0.; vmax = 4294967295.; }
-  else if ( datatype == DATATYPE_FLT32  ) { vmin = -3.40282e+38; vmax = 3.40282e+38; }
-  else                                    { vmin =     -1.e+300; vmax =     1.e+300; }
-
-  if ( smin < vmin || smax > vmax )
-    cdoWarning("Some data values (min=%g max=%g) are outside the\n"
-               "valid range (%g - %g) of the used output precision!\n"
-	       "Use the CDO option%s -b 64 to increase the output precision.",
-	       smin, smax, vmin, vmax, (datatype == DATATYPE_FLT32) ? "" : " -b 32 or");
 }
 
 
@@ -1202,14 +1206,44 @@ void pstreamWriteRecord(int pstreamID, double *data, int nmiss)
 #endif
     {
       int varID = pstreamptr->varID;
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
 
       if ( pstreamptr->varlist )
 	if ( pstreamptr->varlist[varID].check_datarange )
 	  pstreamCheckDatarange(pstreamptr, varID, data, nmiss);
 
       streamWriteRecord(pstreamptr->fileID, data, nmiss);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
+    }
+}
+
+
+void pstreamWriteRecordF(int pstreamID, float *data, int nmiss)
+{
+  pstream_t *pstreamptr;
+
+  if ( data == NULL ) cdoAbort("Data pointer not allocated (pstreamWriteRecord)!");
+
+  pstreamptr = pstream_to_pointer(pstreamID);
+
+#if  defined  (HAVE_LIBPTHREAD)
+  if ( pstreamptr->ispipe )
+    {
+      cdoAbort("pipeWriteRecord not implemented for memtype float!");
+      //pipeWriteRecord(pstreamptr, data, nmiss);
+    }
+  else
+#endif
+    {
+      // int varID = pstreamptr->varID;
+      if ( processNums() == 1 ) timer_start(timer_write);
+      /*
+      if ( pstreamptr->varlist )
+	if ( pstreamptr->varlist[varID].check_datarange )
+	  pstreamCheckDatarange(pstreamptr, varID, data, nmiss);
+      */
+      streamWriteRecordF(pstreamptr->fileID, data, nmiss);
+      if ( processNums() == 1 ) timer_stop(timer_write);
     }
 }
 
@@ -1231,9 +1265,9 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 
       if ( pstreamptr->mfiles ) tsID -= pstreamptr->tsID0;
 
-      if ( cdoTimer ) timer_start(timer_read);
+      if ( processNums() == 1 ) timer_start(timer_read);
       nrecs = streamInqTimestep(pstreamptr->fileID, tsID);
-      if ( cdoTimer ) timer_stop(timer_read);
+      if ( processNums() == 1 ) timer_stop(timer_read);
 
       if ( nrecs == 0 && pstreamptr->mfiles &&
 	   (pstreamptr->nfiles < pstreamptr->mfiles) )
@@ -1259,10 +1293,10 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 #endif
 	  if ( cdoVerbose ) cdoPrint("Continuation file: %s", filename);
 
-	  if ( cdoTimer ) timer_start(timer_read);
+	  if ( processNums() == 1 ) timer_start(timer_read);
 	  fileID = streamOpenRead(filename);
 	  vlistIDnew = streamInqVlist(fileID);
-	  if ( cdoTimer ) timer_stop(timer_read);
+	  if ( processNums() == 1 ) timer_stop(timer_read);
 
 	  vlistCompare(vlistIDold, vlistIDnew, CMP_HRD);
 	  vlistDestroy(vlistIDold);
@@ -1276,9 +1310,9 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 	  pstreamptr->name   = filename;
 	  pstreamptr->fileID = fileID;
 
-	  if ( cdoTimer ) timer_start(timer_read);
+	  if ( processNums() == 1 ) timer_start(timer_read);
 	  nrecs = streamInqTimestep(pstreamptr->fileID, 0);
-	  if ( cdoTimer ) timer_stop(timer_read);
+	  if ( processNums() == 1 ) timer_stop(timer_read);
 	}
 
       if ( tsID == 0 && cdoDefaultTimeType != CDI_UNDEFID )
@@ -1316,11 +1350,11 @@ void pstreamDefTimestep(int pstreamID, int tsID)
       	  taxisDefType(taxisID, cdoDefaultTimeType);
 	}
 
-      if ( cdoTimer ) timer_start(timer_write);
+      if ( processNums() == 1 ) timer_start(timer_write);
       /* don't use sync -> very slow on GPFS */
       //  if ( tsID > 0 ) streamSync(pstreamptr->fileID);
       streamDefTimestep(pstreamptr->fileID, tsID);
-      if ( cdoTimer ) timer_stop(timer_write);
+      if ( processNums() == 1 ) timer_stop(timer_write);
     }
 }
 
@@ -1415,15 +1449,21 @@ void cdoFinish(void)
 		    (long) nvals, nvals > 1 ? "s" : "",
 		    nvars, nvars > 1 ? "s" : "");
 	}
+      else if ( nvars > 0 )
+	{
+	  fprintf(stderr, "%s: Processed %d variable%s",
+		  processInqPrompt(),
+		  nvars, nvars > 1 ? "s" : "");
+	}
       else
-	fprintf(stderr, "%s: Processed %d variable%s",
-		processInqPrompt(),
-		nvars, nvars > 1 ? "s" : "");
+	{
+	  fprintf(stderr, "%s: ", processInqPrompt());
+	}
 
       if ( ntimesteps > 0 )
 	fprintf(stderr, " over %d timestep%s", ntimesteps, ntimesteps > 1 ? "s" : "");
 
-      fprintf(stderr, ".");
+      //  fprintf(stderr, ".");
     }
   /*
     fprintf(stderr, "%s: Processed %d variable%s %d timestep%s.",

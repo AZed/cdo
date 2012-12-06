@@ -25,7 +25,7 @@ taxis_t;
 
 void    ptaxisInit(taxis_t *taxis);
 void    ptaxisCopy(taxis_t *dest, taxis_t *source);
-taxis_t  *taxisPtr(int timeID);
+taxis_t  *taxisPtr(int taxisID);
 void    cdiDecodeTimeval(double timevalue, taxis_t *taxis, int *date, int *time);
 double  cdiEncodeTimeval(int date, int time, taxis_t *taxis);
 void    timeval2vtime(double timevalue, taxis_t *taxis, int *vdate, int *vtime);

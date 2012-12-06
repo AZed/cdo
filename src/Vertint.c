@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -59,11 +59,13 @@ void *Vertint(void *argument)
   int geop_needed = FALSE;
   int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, gheightID = -1;
   int code, param;
+  int pnum, pcat, pdis;
   int **varnmiss = NULL, *pnmiss = NULL;
   int *varinterp = NULL;
   char paramstr[32];
   char varname[CDI_MAX_NAME], stdname[CDI_MAX_NAME];
   int *vars = NULL;
+  double minval, maxval;
   double missval;
   double *plev = NULL, *phlev = NULL, *vct = NULL;
   double *rvct = NULL; /* reduced VCT for LM */
@@ -320,10 +322,10 @@ void *Vertint(void *argument)
   for ( varID = 0; varID < nvars; varID++ )
     {
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
-
-      if ( tableNum > 0 )
+      if ( tableNum > 0 && tableNum != 255 )
 	{
 	  useTable = TRUE;
+	  break;
 	}
     }
 
@@ -338,10 +340,12 @@ void *Vertint(void *argument)
       instNum  = institutInqCenter(vlistInqVarInstitut(vlistID1, varID));
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
 
-      param    = vlistInqVarParam(vlistID1, varID);
       code     = vlistInqVarCode(vlistID1, varID);
+      param    = vlistInqVarParam(vlistID1, varID);
 
       cdiParamToString(param, paramstr, sizeof(paramstr));
+      cdiDecodeParam(param, &pnum, &pcat, &pdis);
+      if ( pdis >= 0 && pdis < 255 ) code = -1;
 
       if ( useTable )
 	{
@@ -373,7 +377,7 @@ void *Vertint(void *argument)
 	}
 
       if ( cdoVerbose )
-	cdoPrint("Mode = %d  Center = %d  Param = %s", mode, instNum, paramstr);
+	cdoPrint("Mode = %d  Center = %d  Code = %d  Param = %s", mode, instNum, code, paramstr);
 
       if ( code <= 0 )
 	{
@@ -432,7 +436,7 @@ void *Vertint(void *argument)
 	}
       else
 	{
-	  if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 )
+	  if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel > 1 )
 	    cdoWarning("Parameter %d has wrong number of levels, skipped! (param=%s nlevel=%d)",
 		       varID+1, paramstr, nlevel);
 	  varinterp[varID] = FALSE;
@@ -501,20 +505,11 @@ void *Vertint(void *argument)
 	      memcpy(geop, vardata1[geopID], ngp*sizeof(double));
 
 	      /* check range of geop */
-	      {
-		double minval = geop[0];
-		double maxval = geop[0];
-		for ( i = 1; i < ngp; i++ )
-		  {
-		    if      ( geop[i] > maxval ) maxval = geop[i];
-		    else if ( geop[i] < minval ) minval = geop[i];
-		  }
-
-		if ( minval < -9000 || maxval > 90000 )
-		  cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
-		if ( minval >= 0 && maxval <= 1000 )
-		  cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
-	      }
+	      minmaxval(ngp, geop, NULL, &minval, &maxval);
+	      if ( minval < MIN_FIS || maxval > MAX_FIS )
+		cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
+	      if ( minval >= 0 && maxval <= 1000 )
+		cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
 	    }
 
 	  if ( lnpsID != -1 )
@@ -523,18 +518,10 @@ void *Vertint(void *argument)
 	    memcpy(ps_prog, vardata1[psID], ngp*sizeof(double));
 
 	  /* check range of ps_prog */
-	  {
-	    double minval = ps_prog[0];
-	    double maxval = ps_prog[0];
-	    for ( i = 1; i < ngp; i++ )
-	      {
-		if      ( ps_prog[i] > maxval ) maxval = ps_prog[i];
-		else if ( ps_prog[i] < minval ) minval = ps_prog[i];
-	      }
+	  minmaxval(ngp, ps_prog, NULL, &minval, &maxval);
+	  if ( minval < MIN_PS || maxval > MAX_PS )
+	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 
-	    if ( minval < 20000 || maxval > 150000 )
-	      cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
-	  }
 
 	  presh(full_press, half_press, vct, ps_prog, nhlevf, ngp);
 
@@ -598,6 +585,12 @@ void *Vertint(void *argument)
 		      param = vlistInqVarParam(vlistID1, varID);
 		      cdiParamToString(param, paramstr, sizeof(paramstr));
 		      cdoAbort("Number of hybrid level differ from full/half level (param=%s)!", paramstr);
+		    }
+
+		  for ( levelID = 0; levelID < nlevel; levelID++ )
+		    {
+		      if ( varnmiss[varID][levelID] )
+			cdoAbort("Missing values unsupported for this operator!");
 		    }
 
 		  if ( varID == tempID )

@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([cdo], [1.5.4], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.5.6.1], [http://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -64,11 +64,12 @@ AC_CHECK_FUNCS(gethostname)
 
 # Check compiler version
 case "$CC" in
+  pgcc*)  COMP_VERSION=`$CC -V | head -2 | tail -n 1`;;
   *gcc*)  COMP_VERSION=`$CC --version | head -n 1`;;
   g++*)   COMP_VERSION=`$CC --version | head -n 1`;;
+  clang*) COMP_VERSION=`$CC --version | head -n 1`;;
   sxc*)   COMP_VERSION=`$CC -V 2>&1   | tail -n 1`;;
   xlc*)   COMP_VERSION=`$CC -qversion 2>&1   | head -n 1`;;
-  pgcc*)  COMP_VERSION=`$CC -V | head -2 | tail -n 1`;;
   *)      COMP_VERSION=`$CC -V 2>&1   | head -n 1`;;
 esac
 

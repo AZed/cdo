@@ -412,7 +412,7 @@ void *Ensval(void *argument)
 	    // Last Bin
 	    p=1.; g=0.;
 	    o = 1. - heavysideN/gridsize; 
-	    if ( o != 1. ) {
+	    if ( IS_EQUAL(o,1.) ) {
 	      g = alpha[nens] / (1-o);
 	      
 	      crps_reli    += g * (o-p) * (o-p);

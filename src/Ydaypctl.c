@@ -91,6 +91,7 @@ void *Ydaypctl(void *argument)
   /* TODO - check that time axes 2 and 3 are equal */
 
   taxisID4 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID4) ) taxisDeleteBounds(taxisID4);
   vlistDefTaxis(vlistID4, taxisID4);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
@@ -233,7 +234,7 @@ void *Ydaypctl(void *argument)
         
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      
 	    for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -249,7 +250,7 @@ void *Ydaypctl(void *argument)
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	    streamDefRecord(streamID4, varID, levelID);
 	    streamWriteRecord(streamID4, vars1[dayoy][varID][levelID].ptr, vars1[dayoy][varID][levelID].nmiss);

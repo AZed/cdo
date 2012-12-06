@@ -1,0 +1,3 @@
+version=3
+opts=downloadurlmangle=s/prcode/code/ \
+https://code.zmaw.de/projects/cdo/files https://prcode.zmaw.de/attachments/download/[\d]*/cdo-([\d\.]*).tar.gz

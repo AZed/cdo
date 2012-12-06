@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2007-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -94,37 +94,6 @@ long ncctop(double cptop, long nlev, long nlevp1, double *vct_a, double *vct_b)
     }
 
   return (nctop);
-}
-
-static
-void minmax(int nvals, double *array, int *imiss, double *minval, double *maxval)
-{
-  long i;
-  double xmin =  DBL_MAX;
-  double xmax = -DBL_MAX;
-
-  if ( imiss )
-    {
-      for ( i = 0; i < nvals; i++ )
-	{
-	  if ( ! imiss[i] )
-	    {
-	      if      ( array[i] > xmax ) xmax = array[i];
-	      else if ( array[i] < xmin ) xmin = array[i];
-	    }
-	}
-    }
-  else
-    {
-      for ( i = 0; i < nvals; i++ )
-	{
-	  if      ( array[i] > xmax ) xmax = array[i];
-	  else if ( array[i] < xmin ) xmin = array[i];
-	}
-    }
-
-  *minval = xmin;
-  *maxval = xmax;
 }
 
 
@@ -251,10 +220,6 @@ void *Remapeta(void *argument)
   double **vars1 = NULL, **vars2 = NULL;
   double minval, maxval;
   double missval = 0;
-  double ps_min =  20000, ps_max = 120000;
-  double fis_min = -100000, fis_max = 100000;
-  double t_min = 150, t_max = 400;
-  double q_min = 0, q_max = 0.1;
   double cconst = 1.E-6;
   const char *fname;
   char *envstr;
@@ -327,9 +292,8 @@ void *Remapeta(void *argument)
 	}
 
       /* check range of geop */
-      minmax(nfis2gp, fis2, imiss, &minval, &maxval);
-
-      if ( minval < -100000 || maxval > 100000 )
+      minmaxval(nfis2gp, fis2, imiss, &minval, &maxval);
+      if ( minval < MIN_FIS || maxval > MAX_FIS )
 	cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
 
       if ( minval < -1.e10 || maxval > 1.e10 )
@@ -654,17 +618,13 @@ void *Remapeta(void *argument)
       if ( zaxisIDh != -1 )
 	{
 	  /* check range of ps_prog */
-
-	  minmax(ngp, ps1, imiss, &minval, &maxval);
-
-	  if ( minval < ps_min || maxval > ps_max )
+	  minmaxval(ngp, ps1, imiss, &minval, &maxval);
+	  if ( minval < MIN_PS || maxval > MAX_PS )
 	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 
 	  /* check range of geop */
-
-	  minmax(ngp, fis1, imiss, &minval, &maxval);
-
-	  if ( minval < fis_min || maxval > fis_max )
+	  minmaxval(ngp, fis1, imiss, &minval, &maxval);
+	  if ( minval < MIN_FIS || maxval > MAX_FIS )
 	    cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
 	}
 
@@ -681,8 +641,8 @@ void *Remapeta(void *argument)
 	      offset   = gridsize*levelID;
 	      single2  = t1 + offset;
 
-	      minmax(ngp, single2, imiss, &minval, &maxval);
-	      if ( minval < t_min || maxval > t_max )
+	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      if ( minval < MIN_T || maxval > MAX_T )
 		cdoWarning("Input temperature at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 	    }
@@ -695,10 +655,10 @@ void *Remapeta(void *argument)
 	      offset   = gridsize*levelID;
 	      single2  = q1 + offset;
 
-	      corr_hum(gridsize, single2, q_min);
+	      corr_hum(gridsize, single2, MIN_Q);
 
-	      minmax(ngp, single2, imiss, &minval, &maxval);
-	      if ( minval < q_min || maxval > q_max )
+	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      if ( minval < MIN_Q || maxval > MAX_Q )
 		cdoWarning("Input humidity at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 	    }
@@ -753,8 +713,8 @@ void *Remapeta(void *argument)
 	      offset   = gridsize*levelID;
 	      single2  = t2 + offset;
 
-	      minmax(ngp, single2, imiss, &minval, &maxval);
-	      if ( minval < t_min || maxval > t_max )
+	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      if ( minval < MIN_T || maxval > MAX_T )
 		cdoWarning("Output temperature at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 
@@ -771,13 +731,13 @@ void *Remapeta(void *argument)
 	      offset   = gridsize*levelID;
 	      single2  = q2 + offset;
 
-	      corr_hum(gridsize, single2, q_min);
+	      corr_hum(gridsize, single2, MIN_Q);
 
 	      if ( levelID < nctop )
 		for ( i = 0; i < gridsize; ++i ) single2[i] = cconst;
 
-	      minmax(ngp, single2, imiss, &minval, &maxval);
-	      if ( minval < q_min || maxval > q_max )
+	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      if ( minval < MIN_Q || maxval > MAX_Q )
 		cdoWarning("Output humidity at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 

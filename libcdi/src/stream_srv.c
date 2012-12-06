@@ -310,7 +310,7 @@ void srvAddRecord(int streamID, int param, int level, int xsize, int ysize,
   datatype = srvInqDatatype(prec);
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0,
-	       datatype, &varID, &levelID, 0, 0, 0, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -490,7 +490,7 @@ void srvScanTimestep1(int streamID)
 	  streamptr->ntsteps = 0;
 	  for ( varID = 0; varID < streamptr->nvars; varID++ )
 	    {
-	      vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+	      vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	    }
 	}
     }
@@ -634,7 +634,7 @@ int srvScanTimestep2(int streamID)
       if ( ! streamptr->tsteps[tsID].records[recID].used )
 	{
 	  varID = streamptr->tsteps[tsID].records[recID].varID;
-	  vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+          vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	}
       else
 	{

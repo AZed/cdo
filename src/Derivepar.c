@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2007-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -45,7 +45,8 @@
 static double Grav          = C_EARTH_GRAV;
 static double RD            = C_EARTH_RD;
 
-void MakeGeopotHeight(double *geop, double* gt, double *gq, double *ph, double *pcw, double * pci, int nhor, int nlev)
+static
+void MakeGeopotHeight(double *geop, double* gt, double *gq, double *ph, int nhor, int nlev)
 {
   int i, j;
   double vtmp;
@@ -110,8 +111,8 @@ void MakeGeopotHeight(double *geop, double* gt, double *gq, double *ph, double *
   for ( i = 0; i < nhor * (nlev+1); i++ ) geop[i] *= zrg;
 }
 
-static
-void minmax(int nvals, double *array, int *imiss, double *minval, double *maxval)
+
+void minmaxval(long nvals, double *array, int *imiss, double *minval, double *maxval)
 {
   long i;
   double xmin =  DBL_MAX;
@@ -146,6 +147,9 @@ void *Derivepar(void *argument)
 {
   int GEOPOTHEIGHT;
   int operatorID;
+  int mode;
+  enum {ECHAM_MODE, WMO_MODE};
+  int geop_code = 0, temp_code = 0, ps_code = 0, lsp_code = 0, hum_code = 0;
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int gridsize, ngp = 0;
@@ -154,11 +158,13 @@ void *Derivepar(void *argument)
   int tsID, varID, levelID;
   int nvars;
   int zaxisID2, zaxisIDh = -1, nzaxis, surfaceID;
-  int ngrids, gridID, zaxisID;
+  int ngrids, gridID = -1, zaxisID;
   int nlevel;
   int nvct;
-  int geopID = -1, tempID = -1, humID = -1, psID = -1, lnpsID = -1, presID = -1, clwcID = -1, ciwcID = -1;
-  int code;
+  int geopID = -1, tempID = -1, humID = -1, psID = -1, lnpsID = -1, presID = -1;
+  // int clwcID = -1, ciwcID = -1;
+  int code, param;
+  char paramstr[32];
   char varname[CDI_MAX_NAME];
   double *single2;
   int taxisID1, taxisID2;
@@ -166,29 +172,25 @@ void *Derivepar(void *argument)
   int nhlevf = 0;
   double *lev2;
   double *vct = NULL;
-  double *geop = NULL, *ps = NULL, *temp = NULL, *hum = NULL, *lwater = NULL, *iwater = NULL;
+  double *geop = NULL, *ps = NULL, *temp = NULL, *hum = NULL;
+  // double *lwater = NULL, *iwater = NULL;
   double *geopotheight = NULL;
   int nmiss, nmissout = 0;
   int ltq = FALSE;
-  int *imiss = NULL;
   double *array = NULL;
   double *half_press = NULL;
   double minval, maxval;
   double missval = 0;
-  double ps_min =  20000, ps_max = 120000;
-  double fis_min = -100000, fis_max = 100000;
-  double t_min = 150, t_max = 400;
-  double q_min = 0, q_max = 0.1;
   double cconst = 1.E-6;
   const char *fname;
-
+  int instNum, tableNum;
+  int useTable;
 
   cdoInitialize(argument);
 
   GEOPOTHEIGHT = cdoOperatorAdd("geopotheight",   0, 0, NULL);
 
   operatorID = cdoOperatorID();
-
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -273,14 +275,68 @@ void *Derivepar(void *argument)
 
   nvars = vlistNvars(vlistID1);
 
+  useTable = FALSE;
   for ( varID = 0; varID < nvars; varID++ )
     {
-      gridID  = vlistInqVarGrid(vlistID1, varID);
-      zaxisID = vlistInqVarZaxis(vlistID1, varID);
-      nlevel  = zaxisInqSize(zaxisID);
+      tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
 
-      code = vlistInqVarCode(vlistID1, varID);
-      /* code = -1; */
+      if ( tableNum > 0  && tableNum != 255 )
+	{
+	  useTable = TRUE;
+	  break;
+	}
+    }
+
+  if ( cdoVerbose && useTable ) cdoPrint("Using code tables!");
+
+  for ( varID = 0; varID < nvars; varID++ )
+    {
+      gridID   = vlistInqVarGrid(vlistID1, varID);
+      zaxisID  = vlistInqVarZaxis(vlistID1, varID);
+      nlevel   = zaxisInqSize(zaxisID);
+      instNum  = institutInqCenter(vlistInqVarInstitut(vlistID1, varID));
+      tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
+
+      code     = vlistInqVarCode(vlistID1, varID);
+      param    = vlistInqVarParam(vlistID1, varID);
+
+      cdiParamToString(param, paramstr, sizeof(paramstr));
+
+      if ( useTable )
+	{
+	  if ( tableNum == 2 )
+	    {
+	      mode = WMO_MODE;
+	      geop_code  =   6;
+	      temp_code  =  11;
+	      hum_code   =  51;
+	      ps_code    =   1;
+	    }
+	  else if ( tableNum == 128 || tableNum == 0 )
+	    {
+	      mode = ECHAM_MODE;
+	      geop_code  = 129;
+	      temp_code  = 130;
+	      hum_code   = 133;
+	      ps_code    = 134;
+	      lsp_code   = 152;
+	    }
+	  else
+	    mode = -1;
+	}
+      else
+	{
+	  mode = ECHAM_MODE;
+	  geop_code  = 129;
+	  temp_code  = 130;
+	  hum_code   = 133;
+	  ps_code    = 134;
+	  lsp_code   = 152;
+	}
+
+      if ( cdoVerbose )
+	cdoPrint("Mode = %d  Center = %d  Param = %s", mode, instNum, paramstr);
+
       if ( code <= 0 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
@@ -299,36 +355,24 @@ void *Derivepar(void *argument)
 	    {
 	      if      ( strcmp(varname, "t")       == 0 ) code = 130;
 	      else if ( strcmp(varname, "q")       == 0 ) code = 133;
-	      else if ( strcmp(varname, "clwc")    == 0 ) code = 246;
-	      else if ( strcmp(varname, "ciwc")    == 0 ) code = 247;
+	      // else if ( strcmp(varname, "clwc")    == 0 ) code = 246;
+	      // else if ( strcmp(varname, "ciwc")    == 0 ) code = 247;
 	    }
 	}
 
-      if      ( code == 129 ) geopID    = varID;
-      else if ( code == 130 ) tempID    = varID;
-      else if ( code == 133 ) humID     = varID;
-      else if ( code == 134 ) psID      = varID;
-      else if ( code == 152 ) lnpsID    = varID;
-      else if ( code == 246 ) clwcID    = varID;
-      else if ( code == 247 ) ciwcID    = varID;
+      if      ( code == geop_code && nlevel == 1      ) geopID    = varID;
+      else if ( code == temp_code && nlevel == nhlevf ) tempID    = varID;
+      else if ( code == hum_code  && nlevel == nhlevf ) humID     = varID;
+      else if ( code == ps_code   && nlevel == 1      ) psID      = varID;
+      else if ( code == lsp_code  && nlevel == 1      ) lnpsID    = varID;
+      // else if ( code == 246 ) clwcID    = varID;
+      // else if ( code == 247 ) ciwcID    = varID;
 
       if ( gridInqType(gridID) == GRID_SPECTRAL && zaxisInqType(zaxisID) == ZAXIS_HYBRID )
 	cdoAbort("Spectral data on model level unsupported!");
 
       if ( gridInqType(gridID) == GRID_SPECTRAL )
 	cdoAbort("Spectral data unsupported!");
-
-
-      if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlevf )
-	{
-	}
-      else
-	{
-	  if ( code == 130 ) tempID = -1;
-	  if ( code == 133 ) humID  = -1;
-	  if ( code == 246 ) clwcID  = -1;
-	  if ( code == 247 ) ciwcID  = -1;
-	}
     }
 
   if ( tempID == -1 ) cdoAbort("Temperature not found!");
@@ -339,9 +383,14 @@ void *Derivepar(void *argument)
   ps     = (double *) malloc(ngp*sizeof(double));
 
   temp   = (double *) malloc(ngp*nhlevf*sizeof(double));
-  hum    = (double *) malloc(ngp*nhlevf*sizeof(double));
-  lwater = (double *) malloc(ngp*nhlevf*sizeof(double));
-  iwater = (double *) malloc(ngp*nhlevf*sizeof(double));
+
+  if ( humID == -1 )
+    cdoWarning("Humidity not found - using algorithm without humidity!");
+  else
+    hum    = (double *) malloc(ngp*nhlevf*sizeof(double));
+
+  // lwater = (double *) malloc(ngp*nhlevf*sizeof(double));
+  // iwater = (double *) malloc(ngp*nhlevf*sizeof(double));
 
   half_press   = (double *) malloc(ngp*(nhlevf+1)*sizeof(double));
   geopotheight = (double *) malloc(ngp*(nhlevf+1)*sizeof(double));
@@ -366,7 +415,7 @@ void *Derivepar(void *argument)
 
 
   vlistID2 = vlistCreate();
-  varID = vlistDefVar(vlistID2, gridID, zaxisIDh, TIME_VARIABLE);
+  varID = vlistDefVar(vlistID2, gridID, zaxisIDh, TSTEP_INSTANT);
   vlistDefVarParam(vlistID2, varID, cdiEncodeParam(156, 128, 255));
   vlistDefVarName(vlistID2, varID, "geopotheight");
   vlistDefVarStdname(vlistID2, varID, "geopotental_height");
@@ -413,27 +462,25 @@ void *Derivepar(void *argument)
 		memcpy(temp+offset, array, ngp*sizeof(double));
 	      else if ( varID == humID )
 		memcpy(hum+offset, array, ngp*sizeof(double));
+	      /*
 	      else if ( varID == clwcID )
 		memcpy(lwater+offset, array, ngp*sizeof(double));
 	      else if ( varID == ciwcID )
 		memcpy(iwater+offset, array, ngp*sizeof(double));
+	      */
 	    }
 	}
 
       if ( zaxisIDh != -1 )
 	{
 	  /* check range of ps_prog */
-
-	  minmax(ngp, ps, imiss, &minval, &maxval);
-
-	  if ( minval < ps_min || maxval > ps_max )
+	  minmaxval(ngp, ps, NULL, &minval, &maxval);
+	  if ( minval < MIN_PS || maxval > MAX_PS )
 	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 
 	  /* check range of geop */
-
-	  minmax(ngp, geop, imiss, &minval, &maxval);
-
-	  if ( minval < fis_min || maxval > fis_max )
+	  minmaxval(ngp, geop, NULL, &minval, &maxval);
+	  if ( minval < MIN_FIS || maxval > MAX_FIS )
 	    cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
 	}
 
@@ -445,13 +492,12 @@ void *Derivepar(void *argument)
 	  offset   = gridsize*levelID;
 	  single2  = temp + offset;
 
-	  minmax(ngp, single2, imiss, &minval, &maxval);
-	  if ( minval < t_min || maxval > t_max )
+	  minmaxval(ngp, single2, NULL, &minval, &maxval);
+	  if ( minval < MIN_T || maxval > MAX_T )
 	    cdoWarning("Input temperature at level %d out of range (min=%g max=%g)!",
 		       levelID+1, minval, maxval);
 	}
 
-      /*
       if ( humID != -1 )
 	{
 	  varID = humID;
@@ -462,19 +508,19 @@ void *Derivepar(void *argument)
 	      offset   = gridsize*levelID;
 	      single2  = hum + offset;
 
-	      corr_hum(gridsize, single2, q_min);
+	      // corr_hum(gridsize, single2, MIN_Q);
 
-	      minmax(ngp, single2, imiss, &minval, &maxval);
-	      if ( minval < q_min || maxval > q_max )
+	      minmaxval(ngp, single2, NULL, &minval, &maxval);
+	      if ( minval < -0.1 || maxval > MAX_Q )
 		cdoWarning("Input humidity at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 	    }
 	}
-      */
+
       presh(NULL, half_press, vct, ps, nhlevf, ngp);
 
       memcpy(geopotheight+ngp*nhlevf, geop, ngp*sizeof(double));
-      MakeGeopotHeight(geopotheight, temp, hum, half_press,lwater,iwater, ngp, nhlevf);
+      MakeGeopotHeight(geopotheight, temp, hum, half_press, ngp, nhlevf);
 
       nmissout = 0;
       varID = 0;
@@ -491,7 +537,7 @@ void *Derivepar(void *argument)
   streamClose(streamID2);
   streamClose(streamID1);
 
-  if ( imiss ) free(imiss);
+  vlistDestroy(vlistID2);
 
   free(ps);
   free(geop);

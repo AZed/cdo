@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,7 @@ void *Ensstat3(void *argument)
   double *uThresh = NULL, *lThresh = NULL;    // thresholds for histograms
   double **roc = NULL;                 // receiver operating characteristics table
   double val;
+  int ival;
   field_t *field;
   int fileID;
   const char *ofilename;
@@ -158,6 +159,7 @@ void *Ensstat3(void *argument)
 
   vlistID1 = ef[0].vlistID;
   vlistID2 = vlistCreate();
+  nvars = vlistNvars(vlistID1);
   varID2 = (int *) malloc( nvars*sizeof(int));
 
   levs = (double*) calloc ( nfiles, sizeof(double) );
@@ -167,7 +169,7 @@ void *Ensstat3(void *argument)
   zaxisDefLevels(zaxisID2,levs);
   zaxisDefName(zaxisID2, "histogram_binID");
 
-  time_mode = datafunc == TIME? TIME_VARIABLE : TIME_CONSTANT;
+  time_mode = datafunc == TIME? TSTEP_INSTANT : TSTEP_CONSTANT;
 
   for ( varID=0; varID<nvars; varID++) {
 
@@ -336,7 +338,7 @@ void *Ensstat3(void *argument)
 		      /* RECEIVER OPERATING CHARACTERISTICS */
 		      /* ********************************** */
 		      dat = &field[ompthID].ptr[1];
-		      val = field[ompthID].ptr[0] > 0.5? 1 : 0;
+		      ival = field[ompthID].ptr[0] > 0.5? 1 : 0;
 
 		      for ( binID=0; binID<nbins; binID++ )
 			hist[binID] = 0;
@@ -353,7 +355,7 @@ void *Ensstat3(void *argument)
 		      if ( chksum != nens )  exit(1);
 
 		      cum = 0;
-		      if ( val == 1. ) 
+		      if ( ival == 1 ) 
 			{
 			  // all true positives in first bin
 			  ctg_tab[0][TP] += nens;
@@ -368,7 +370,7 @@ void *Ensstat3(void *argument)
 			  ctg_tab[binID][TP] += nens-cum;
 			  ctg_tab[binID][FN] += cum;
 			}
-		      else if ( val == 0. ) 
+		      else if ( ival == 0 ) 
 			{
 			  // all false positives in first bin
 			  ctg_tab[0][FP] += nens;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -203,10 +203,10 @@ void *Seltime(void *argument)
   int lnts1;
   int ncts = 0, nts, it;
   int *selfound = NULL;
-  int year = 1, month = 1, day = 1, hour = 0, minute = 0, second = 0;
+  int hour = 0, minute = 0, second = 0;
   int nts1 = 0, nts2 = 0;
   int its1 = 0, its2 = 0;
-  double selfval = 0, *fltarr, fval = 0;
+  double selfval = 0, *fltarr;
   double *array = NULL;
   LIST *ilist = listNew(INT_LIST);
   LIST *flist = listNew(FLT_LIST);
@@ -335,7 +335,7 @@ void *Seltime(void *argument)
   nvars = vlistNvars(vlistID1);
   nconst = 0;
   for ( varID = 0; varID < nvars; varID++ )
-    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) nconst++;
+    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) nconst++;
       
   lnts1 = operatorID == SELSMON && nts1 > 0;
 
@@ -359,7 +359,7 @@ void *Seltime(void *argument)
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( lnts1 || (vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT) )
+	      if ( lnts1 || (vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT) )
 		{
 		  gridID  = vlistInqVarGrid(vlistID1, varID);
 		  missval = vlistInqVarMissval(vlistID1, varID);
@@ -473,7 +473,7 @@ void *Seltime(void *argument)
 		  
 		  for ( varID = 0; varID < nvars; varID++ )
 		    {
-		      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT && tsID2 > 1 ) continue;
+		      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT && tsID2 > 1 ) continue;
 		      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		      for ( levelID = 0; levelID < nlevel; levelID++ )
 			{
@@ -505,7 +505,7 @@ void *Seltime(void *argument)
 	      nts = nts1 - 1;
 	      for ( varID = 0; varID < nvars; varID++ )
 		{
-		  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		  if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT )
 		    {
 		      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		      for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -554,7 +554,7 @@ void *Seltime(void *argument)
 			vtime_list[it] = vtime_list[it+1];
 			for ( varID = 0; varID < nvars; varID++ )
 			  {
-			    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+			    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 			    gridID   = vlistInqVarGrid(vlistID1, varID);
 			    gridsize = gridInqSize(gridID);
 			    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
@@ -577,7 +577,7 @@ void *Seltime(void *argument)
 	      for ( recID = 0; recID < nrecs; recID++ )
 		{
 		  streamInqRecord(streamID1, &varID, &levelID);
-		  if ( lnts1 || (vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT) )
+		  if ( lnts1 || (vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT) )
 		    {
 		      single = vars[nts][varID][levelID].ptr;
 		      streamReadRecord(streamID1, single, &nmiss);
@@ -651,7 +651,7 @@ void *Seltime(void *argument)
 	{
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( lnts1 || (vlistInqVarTime(vlistID2, varID) == TIME_CONSTANT) )
+	      if ( lnts1 || (vlistInqVarTsteptype(vlistID2, varID) == TSTEP_CONSTANT) )
 		{
 		  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 		  for ( levelID = 0; levelID < nlevel; levelID++ )

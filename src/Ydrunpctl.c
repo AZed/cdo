@@ -97,6 +97,7 @@ void *Ydrunpctl(void *argument)
   /* TODO - check that time axes 2 and 3 are equal */
 
   taxisID4 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID4) ) taxisDeleteBounds(taxisID4);
   vlistDefTaxis(vlistID4, taxisID4);
 
   calendar = taxisInqCalendar(taxisID1);
@@ -263,7 +264,7 @@ void *Ydrunpctl(void *argument)
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
-	  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	  if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	  nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -309,7 +310,7 @@ void *Ydrunpctl(void *argument)
 
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      
 	    for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -325,7 +326,7 @@ void *Ydrunpctl(void *argument)
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	    streamDefRecord(streamID4, varID, levelID);
 	    streamWriteRecord(streamID4, vars2[dayoy][varID][levelID].ptr,

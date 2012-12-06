@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -1126,15 +1126,6 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	    cdoWarning("Missing value changes over levels!");	       
 	}
 
-      ((dsets_t *) opdata)->obj[nset].dtype    = dtype;
-
-      ((dsets_t *) opdata)->obj[nset].loffset  = laddoffset;
-      ((dsets_t *) opdata)->obj[nset].lscale   = lscalefactor;
-      ((dsets_t *) opdata)->obj[nset].lmissval = lmissval;
-      ((dsets_t *) opdata)->obj[nset].offset   = addoffset;
-      ((dsets_t *) opdata)->obj[nset].scale    = scalefactor;
-      ((dsets_t *) opdata)->obj[nset].missval  = missval;
-
       if ( nz == 1 ) ((dsets_t *) opdata)->nsets++;
 
       mask = (short *) malloc(gridsize*nt*sizeof(short));
@@ -1144,7 +1135,6 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
  
       minval =  1e35;
       maxval = -1e35;
-
       for ( i = 0; i < gridsize*nt; i++ )
 	{
 	  if ( array[i] < minval ) minval = array[i];
@@ -1156,24 +1146,16 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 		 varname, missval, addoffset, scalefactor);
 
       if ( cdoVerbose )
-	cdoPrint("Dataset %s: dtype = %d  minval = %g  maxval = %g",
-		 varname, dtype,  minval, maxval);
+	cdoPrint("Dataset %s: dtype = %d  minval = %g  maxval = %g  missval = %g",
+		 varname, dtype,  minval, maxval, missval);
 
       if ( dtype == DATATYPE_UINT8 )
 	{
-	  if ( minval >= 0 && maxval <= 127 )
-	    {
-	      dtype = DATATYPE_INT8;
-	      ((dsets_t *) opdata)->obj[nset].dtype    = dtype;	      
-	    }
+	  if ( minval >= 0 && maxval <= 127 ) dtype = DATATYPE_INT8;
 	}
       else if ( dtype == DATATYPE_UINT16 )
 	{
-	  if ( minval >= 0 && maxval <= 32767 )
-	    {
-	      dtype = DATATYPE_INT16;
-	      ((dsets_t *) opdata)->obj[nset].dtype    = dtype;	      
-	    }
+	  if ( minval >= 0 && maxval <= 32767 ) dtype = DATATYPE_INT16;
 	}
 
       laddoffset   = IS_NOT_EQUAL(addoffset,   0);
@@ -1198,7 +1180,6 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	    
       minval =  1e35;
       maxval = -1e35;
-
       for ( i = 0; i < gridsize*nt; i++ )
 	if ( mask[i] == 0 )
 	  {
@@ -1207,8 +1188,8 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	  }
 
       if ( cdoVerbose )
-	cdoPrint("Dataset %s: dtype = %d  minval = %g  maxval = %g",
-		 varname, dtype,  minval, maxval);
+	cdoPrint("Dataset %s: dtype = %d  minval = %g  maxval = %g  missval = %g",
+		 varname, dtype,  minval, maxval, missval);
 
       if ( nmiss > 0 )
 	{
@@ -1218,8 +1199,6 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 		{
 		  missval = -255;
 		  dtype   = DATATYPE_INT16;
-		  ((dsets_t *) opdata)->obj[nset].dtype    = dtype;
-		  ((dsets_t *) opdata)->obj[nset].missval  = missval;
 		  cdoPrint("Dataset %s: changed missval to %g and datatype to INT16!",
 			   varname, missval);
 
@@ -1232,6 +1211,14 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 			   varname, missval, minval, maxval);
 	    }
 	}
+
+      ((dsets_t *) opdata)->obj[nset].dtype    = dtype;
+      ((dsets_t *) opdata)->obj[nset].loffset  = laddoffset;
+      ((dsets_t *) opdata)->obj[nset].lscale   = lscalefactor;
+      ((dsets_t *) opdata)->obj[nset].lmissval = lmissval;
+      ((dsets_t *) opdata)->obj[nset].offset   = addoffset;
+      ((dsets_t *) opdata)->obj[nset].scale    = scalefactor;
+      ((dsets_t *) opdata)->obj[nset].missval  = missval;
 
       free(mask); 
       mask = NULL;
@@ -1564,9 +1551,9 @@ void *Importcmsaf(void *argument)
   for ( ivar = 0; ivar < dsets.nsets; ++ivar )
     {
       if ( dsets.obj[ivar].nt > 1 )
-	varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+	varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
       else
-	varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+	varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
 
       vlistDefVarName(vlistID, varID,  dsets.obj[ivar].name);
       if ( dsets.obj[ivar].description )

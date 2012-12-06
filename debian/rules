@@ -11,6 +11,7 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 LIBDIR:=/usr/lib/$(DEB_HOST_MULTIARCH)
 
 CFLAGS += -fPIC
+CPPFLAGS = -DgFortran
 
 ARCH:=$(shell dpkg --print-architecture)
 WITH_GRIB:= --with-grib-api=/usr --enable-cgribex
@@ -32,18 +33,29 @@ endif
 
 override_dh_auto_clean:
 	dh_auto_clean	|| echo "distclean ok"
+	rm -f Makefile missing config.status config.log libcdi/tests/libcdi.a
+	rm -f config/compile config/mkinstalldirs config/config.guess config/config.sub
+	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/ltmain.sh config/missing configure INSTALL
+	rm -f libcdi/INSTALL libcdi/aclocal.m4 m4/libtool.m4 m4/ltoptions.m4 m4/ltversion.m4
+	rm -f libcdi/m4/libtool.m4 libcdi/m4/ltoptions.m4 libcdi/m4/ltversion.m4 libcdi/configure
+	rm -f libcdi/config/config.guess libcdi/config/config.sub libcdi/config/depcomp libcdi/config/install-sh 
+	rm -f libcdi/config/ltmain.sh libcdi/config/missing libcdi/config/mkinstalldirs
 	find . -name Makefile.in -delete
 	find . -type l -delete
-	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/ltmain.sh config/missing configure INSTALL
 	rm -rf src/.deps
+
 
 override_dh_auto_configure:
 	ln -sf /usr/include/cfortran.h libcdi/src/cfortran.h 
-	autoreconf -if
-	LDFLAGS="-Wl,--as-needed"  \
+	dh_autoreconf
+	LDFLAGS="-Wl,--as-needed"  
 	  ./configure --prefix=/usr --libdir=$(LIBDIR) \
 		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr \
-		 $(WITH_GRIB) $(WITH_JASPER) CC=mpicc
+		--enable-iso-c-interface  \
+		 $(WITH_GRIB) $(WITH_JASPER)  FC=gfortran LIBS="-Wl,-Bstatic -lpng12 -ljasper -ljpeg -lz -Wl,-Bdynamic -lm -lcurl"
+	rm -f libtool libcdi/libtool
+	ln -sf /usr/bin/libtool libtool
+	ln -sf /usr/bin/libtool libcdi/libtool
 
 override_dh_auto_install:
 	dh_auto_install

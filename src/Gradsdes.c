@@ -100,11 +100,10 @@ char *ch1,*ch2,*ch3,*ch4,cc1,cc2;
 }
 
 /*
- * convert an IMB float to single precision number v1.0
+ * convert an IBM float to single precision number v1.0
  *
  *                      Wesley Ebisuzaki
  */
-
 static
 float ibm2flt(unsigned char *ibm) {
 
@@ -364,16 +363,472 @@ void dumpmap()
     }
 }
 
+static
+void ctl_xydef(FILE *gdp, int gridID, int *yrev)
+{
+  int gridtype;
+  int i, j;
+  int xsize, ysize;
+  double xfirst, yfirst, xinc, yinc;
+  double *xvals, *yvals;
+
+  *yrev = FALSE;
+
+  xsize  = gridInqXsize(gridID);
+  ysize  = gridInqYsize(gridID);
+
+  gridtype = gridInqType(gridID);
+
+  /* XDEF */
+
+  if ( gridtype == GRID_LCC )
+    {
+      double originLon, originLat, lonParY, lat1, lat2, xincm, yincm;
+      double xmin = 1.e10, xmax = -1.e10, ymin = 1.e10, ymax = -1.e10;
+      double xrange, yrange;
+      int projflag, scanflag;
+      int nx, ny, ni;
+      double inc[] = { 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001 };
+
+      gridInqLCC(gridID, &originLon, &originLat, &lonParY, &lat1, &lat2, &xincm, &yincm,
+		 &projflag, &scanflag);
+      fprintf(gdp, "PDEF %d %d lcc %g %g 1 1 %g %g %g %g %g\n", 
+	      xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
+
+      gridID = gridToCurvilinear(gridID, 0);
+      xvals = (double *) malloc(xsize*ysize*sizeof(double));
+      yvals = (double *) malloc(xsize*ysize*sizeof(double));
+      gridInqXvals(gridID, xvals);
+      gridInqYvals(gridID, yvals);
+      for ( i = 0; i < xsize*ysize; ++i )
+	{
+	  if ( xvals[i] > 180  ) xvals[i] -= 360;
+	  if ( xvals[i] < xmin ) xmin = xvals[i];
+	  if ( xvals[i] > xmax ) xmax = xvals[i];
+	  if ( yvals[i] < ymin ) ymin = yvals[i];
+	  if ( yvals[i] > ymax ) ymax = yvals[i];
+	}
+      free(xvals);
+      free(yvals);
+
+      xfirst = ((int)(xmin-0.0));
+      yfirst = ((int)(ymin-0.0));
+      xrange = ((int)(xmax+1.5)) - xfirst;
+      yrange = ((int)(ymax+1.5)) - yfirst;
+
+      ni = sizeof(inc)/sizeof(inc[0]);
+      for ( i = 0; i < ni; i++ )
+	{
+	  xinc = yinc = inc[i];
+	  nx = 1 + (int) (xrange / xinc);
+	  ny = 1 + (int) (yrange / yinc);
+
+	  if ( nx > 1.5*xsize && ny > 1.5*ysize ) break;
+	}
+
+      fprintf(gdp, "XDEF %d LINEAR %f %f\n", nx, xfirst, xinc);
+      fprintf(gdp, "YDEF %d LINEAR %f %f\n", ny, yfirst, yinc);
+
+      fprintf(gdp, "* XDEF 3600 LINEAR -179.95 0.1\n");
+      fprintf(gdp, "* YDEF 1800 LINEAR  -89.95 0.1\n");
+    }
+  else
+    {
+      xfirst = gridInqXval(gridID, 0);
+      xinc   = gridInqXinc(gridID);
+      if ( IS_EQUAL(xinc, 0) && gridInqXvals(gridID, NULL) )
+	{
+	  xvals = (double *) malloc(xsize*sizeof(double));
+	  gridInqXvals(gridID, xvals);
+	  fprintf(gdp ,"XDEF %d LEVELS ", xsize);
+	  j = 0;
+	  for ( i = 0; i < xsize; i++ )
+	    {
+	      fprintf(gdp, "%7.3f ", xvals[i]); 
+	      j++;
+	      if ( j == 6 )
+		{
+		  fprintf(gdp, "\n");
+		  j = 0;
+		  if ( i != xsize-1 ) fprintf(gdp, "               ");
+		}
+	    }
+	  if ( j ) fprintf(gdp, "\n");
+	  
+	  free(xvals);
+	}
+      else
+	{
+	  if ( IS_EQUAL(xinc, 0) ) xinc = 360.0/xsize;
+	  fprintf(gdp, "XDEF %d LINEAR %f %f\n", xsize, xfirst, xinc);	  
+	}
+    }
+
+  /* YDEF */
+
+  if ( gridtype != GRID_LCC )
+    {
+      yfirst = gridInqYval(gridID, 0);
+      yinc   = gridInqYinc(gridID);
+      if ( gridtype == GRID_GAUSSIAN ) yinc = 0;
+
+      if ( IS_EQUAL(yinc, 0) && gridInqYvals(gridID, NULL) )
+	{
+	  yvals = (double *) malloc(ysize*sizeof(double));
+	  gridInqYvals(gridID, yvals);
+	  fprintf(gdp ,"YDEF %d LEVELS ", ysize);
+	  j = 0;
+	  if ( yvals[0] > yvals[ysize-1] )
+	    {
+	      *yrev = TRUE;
+	      for ( i = ysize-1; i >= 0; i-- )
+		{
+		  fprintf(gdp, "%7.3f ", yvals[i]); 
+		  j++;
+		  if ( j == 6 )
+		    {
+		      fprintf(gdp, "\n");
+		      j = 0;
+		      if ( i != 0 ) fprintf(gdp, "               ");
+		    }
+		}
+	    }
+	  else
+	    {
+	      for ( i = 0; i < ysize; i++ )
+		{
+		  fprintf(gdp, "%7.3f ", yvals[i]); 
+		  j++;
+		  if ( j == 6 )
+		    {
+		      fprintf(gdp, "\n");
+		      j = 0;
+		      if ( i != ysize-1 ) fprintf(gdp, "               ");
+		    }
+		}
+	    }
+
+	  if ( j ) fprintf(gdp, "\n");
+
+	  free(yvals);
+	}
+      else
+	{
+	  if ( IS_EQUAL(yinc, 0) ) yinc = 180.0/ysize;
+	  if ( yinc < 0)
+	    {
+	      *yrev = TRUE;
+	      fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst + yinc * (ysize-1 ), -yinc);
+	    }
+	  else
+	    fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst, yinc);
+	}
+    }
+}
+
+static
+void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
+{
+  int i, j, index;
+  int zaxisIDmax = -1, nlevmax;
+  int nzaxis, zaxisID, nlev;
+  int lplev = FALSE;
+  double *levels, level0, levinc = 0;
+
+  *zrev = FALSE;
+  nzaxis  = vlistNzaxis(vlistID);
+
+  nlevmax = 0;
+  for ( index = 0; index < nzaxis; index++ )
+    {
+      zaxisID = vlistZaxis(vlistID, index);
+      nlev    = zaxisInqSize(zaxisID);
+      if ( nlev > nlevmax )
+	{
+	  nlevmax = nlev;
+	  zaxisIDmax = zaxisID;
+	}
+    }
+
+  levels = (double *) malloc(nlevmax*sizeof(double));
+  zaxisInqLevels(zaxisIDmax, levels);
+  if ( zaxisInqType(zaxisIDmax) == ZAXIS_PRESSURE ) lplev = TRUE;
+  level0 = levels[0];
+  if ( nlevmax > 1 )
+    {
+      if ( levels[0] < levels[1] && zaxisInqType(zaxisIDmax) != ZAXIS_HYBRID )
+	*zrev = TRUE;
+
+      levinc = levels[1] - levels[0];
+
+      if ( IS_EQUAL(levinc, 1) ) *zrev = FALSE;
+
+      for ( i = 1; i < nlevmax; i++ )
+	{
+	  if ( IS_NOT_EQUAL(levinc, (levels[i] - levels[i-1])) )
+	    {
+	      levinc = 0;
+	      break;
+	    }
+	}
+    }
+
+  if ( IS_NOT_EQUAL(levinc, 0) )
+    fprintf(gdp,"ZDEF %d LINEAR %g %g\n", nlevmax, level0, levinc);
+  else
+    {
+      fprintf(gdp, "ZDEF %d LEVELS ", nlevmax);
+      j  = 0;
+      /* zrev not needed !!!
+      if ( *zrev )
+	{
+	  for ( i = nlevmax-1; i >=0 ; i-- )
+	    {
+	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
+	      else         fprintf(gdp, "%d ", (int) levels[i]);
+	      j++;
+	      if ( j == 10 )
+		{
+		  fprintf(gdp, "\n");
+		  j = 0;
+		  if ( i != 0 ) fprintf(gdp, "               ");
+		}
+	    }
+	}
+      else
+      */
+	{
+	  for ( i = 0; i < nlevmax ; i++ )
+	    {
+	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
+	      else         fprintf(gdp, "%g ", levels[i]);
+	      j++;
+	      if ( j == 10 )
+		{
+		  fprintf(gdp, "\n");
+		  j = 0;
+		  if ( i != (nlevmax-1) ) fprintf(gdp, "               ");
+		}
+	    }
+	}
+      if ( j ) fprintf(gdp, "\n");
+    }
+
+  free(levels);
+}
+
+static
+void ctl_options(FILE *gdp, int yrev, int zrev, int sequential, int bigendian, int littleendian, int flt64)
+{
+  /* if ( filetype == FILETYPE_GRB ) zrev = FALSE; */
+
+  if ( yrev || zrev || sequential || bigendian || littleendian || flt64 )
+    {
+      fprintf(gdp, "OPTIONS");
+      if ( yrev )         fprintf(gdp, " yrev");
+      if ( zrev )         fprintf(gdp, " zrev");
+      if ( sequential )   fprintf(gdp, " sequential");
+      if ( bigendian )    fprintf(gdp, " big_endian");
+      if ( littleendian ) fprintf(gdp, " little_endian");
+      if ( flt64 )        fprintf(gdp, " flt64");
+      fprintf(gdp, "\n");
+    }
+}
+
+static
+void ctl_undef(FILE *gdp, int vlistID)
+{
+  double missval;
+
+  missval = vlistInqVarMissval(vlistID, 0);
+  fprintf(gdp, "UNDEF  %g\n", missval);
+}
+
+static
+void ctl_vars(FILE *gdp, int filetype, int vlistID, int nvarsout, int *vars)
+{
+  int varID, nvars;
+  int ltype, code;
+  int zaxisID, nlev;
+  int i, j;
+  int len;
+  char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
+
+  nvars   = vlistNvars(vlistID);
+
+  fprintf(gdp, "VARS  %d\n", nvarsout);
+
+  for ( varID = 0; varID < nvars; varID++ )
+    {
+      if ( vars[varID] == TRUE )
+	{
+	  zaxisID = vlistInqVarZaxis(vlistID, varID);
+	  ltype   = zaxisInqLtype(zaxisID);
+	  nlev    = zaxisInqSize(zaxisID);
+	  vlistInqVarName(vlistID, varID, varname);
+
+	  len = (int) strlen(varname);
+	  for ( i = 0; i < len; i++ )
+	    if ( varname[i] == '-' ) break;
+
+	  if ( i < len )
+	    for ( j = i; j < len; j++ )
+	      varname[j] = varname[j+1];
+
+	  vlistInqVarLongname(vlistID, varID, varlongname);
+	  vlistInqVarUnits(vlistID, varID, varunits);
+	  fprintf(gdp, "%-15s", varname);
+      
+	  if ( nlev == 1 ) nlev = 0;
+
+	  fprintf(gdp, "  %3d", nlev);
+
+	  if ( filetype == FILETYPE_GRB )
+	    {
+	      code = vlistInqVarCode(vlistID, varID);
+	      /*	      
+	      if      ( ltype == ZAXIS_SURFACE )  ltype = 1;
+	      else if ( ltype == ZAXIS_PRESSURE ) ltype = 99;
+	      else if ( nlev == 1 )  ltype = 1;
+	      else ltype = 99;
+	      */
+	      fprintf(gdp, "  %d,%d", code, ltype);
+	    }
+	  else
+	    fprintf(gdp, "  99");
+
+	  if ( varlongname[0] == 0 )
+	    fprintf(gdp, "  %s", varname);
+	  else
+	    fprintf(gdp, "  %s", varlongname);
+
+	  if ( varunits[0] != 0 )
+	    fprintf(gdp, "  [%s]", varunits);
+	
+	  fprintf(gdp, "\n");      
+	}
+    }
+
+  fprintf(gdp, "ENDVARS\n");
+}
+
+static
+void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *intnum, float *fltnum)
+{
+  int i;
+  struct gaindx indx;
+  FILE *mapfp;
+  int hinum[4];
+
+  mapfp = fopen(ctlfile, "w");
+  if ( mapfp == NULL ) cdoAbort("Open failed on %s", ctlfile);
+
+  indx.type   = 1;  /* GRIB type */
+  indx.hinum  = 4;
+  indx.hfnum  = 0;
+  indx.intnum = 3 * nrecords;
+  indx.fltnum = 3 * nrecords;
+  indx.hipnt  = NULL;
+  indx.hfpnt  = NULL;
+  indx.intpnt = NULL;
+  indx.fltpnt = NULL;
+
+  hinum[0] = 1;
+  hinum[1] = 1;
+  hinum[2] = nrecords;
+  hinum[3] = 255;
+
+  if ( map_version == 2 )
+    {
+      int nb, bcnt, rc, j;
+      float fdum;
+      unsigned char *map;
+      unsigned char ibmfloat[4];
+      
+      /* calculate the size of the ver==1 index file */
+      
+      nb = 2 + (4*4) +  /* version in byte 2, then 4 ints with number of each data type */
+	indx.hinum*sizeof(int)+
+	indx.hfnum*sizeof(int)+
+	indx.intnum*sizeof(int)+
+	indx.fltnum*sizeof(float) ;
+      
+      /* add additional info */
+      
+      nb += 7;      /* base time (+ sec)  for compatibility with earlier version 2 maps */
+      nb += 8*4;    /* grvals for time <-> grid conversion */
+      
+      map = (unsigned char *) malloc(nb);
+      
+      bcnt = 0;
+      Put1Byte(map, bcnt, 0);
+      Put1Byte(map, bcnt, 2); /* version 2 */
+      
+      Put4Byte(map, bcnt, indx.hinum);
+      Put4Byte(map, bcnt, indx.hfnum);
+      Put4Byte(map, bcnt, indx.intnum);
+      Put4Byte(map, bcnt, indx.fltnum);
+      
+      Put2Byte(map, bcnt, 0);   /* initial year   */
+      Put1Byte(map, bcnt, 0);   /* initial month  */ 
+      Put1Byte(map, bcnt, 0);   /* initial day    */
+      Put1Byte(map, bcnt, 0);   /* initial hour   */
+      Put1Byte(map, bcnt, 0);   /* initial minute */
+      Put1Byte(map, bcnt, 0);   /* initial second */
+      
+      if( indx.hinum )
+	for ( i = 0; i < indx.hinum; i++ )
+	  Put4Byte(map, bcnt, hinum[i]);
+      
+      if( indx.hfnum ) {
+	/* blank for now */
+      }
+      
+      for ( i = 0; i < indx.intnum; i++ )
+	PutInt(map, bcnt, intnum[i]);
+      
+      for ( i = 0; i < indx.fltnum; i++)
+	{
+	  fdum= fltnum[i];
+	  rc = flt2ibm(fdum, ibmfloat); 
+	  if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
+	  for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
+	}
+      
+      /* write out the factors for converting from grid to absolute time */ 
+      
+      for ( i = 0; i < 8; i++)
+	{
+	  fdum = 0;
+	  rc = flt2ibm(fdum, ibmfloat); 
+	  if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
+	  for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
+	}
+      
+      fwrite(map, 1, bcnt, mapfp);
+	  
+      free(map);
+    }
+  else
+    {
+      fwrite(&indx, sizeof(struct gaindx), 1, mapfp);
+      fwrite(hinum, sizeof(int), 4, mapfp);
+      fwrite(intnum, sizeof(int), 3*nrecords, mapfp);
+      fwrite(fltnum, sizeof(float), 3*nrecords, mapfp);
+    }
+  
+  fclose(mapfp);
+}
+
 
 void *Gradsdes(void *argument)
 {
   int GRADSDES1, GRADSDES2, DUMPMAP;
   int operatorID;
   int streamID = 0;
-  int gridID = -1, zaxisID;
-  int zaxisIDmax = -1, nlevmax;
+  int gridID = -1;
   int gridtype = -1;
-  int nvars, ngrids, nzaxis, nlev;
+  int nvars, ngrids;
   int nvarsout;
   int ntsteps;
   int index;
@@ -382,24 +837,20 @@ void *Gradsdes(void *argument)
   int filetype, byteorder;
   int taxisID, nrecs;
   int vdate, vtime;
-  int ltype, code;
   const char *datfile;
   char ctlfile[1024], *pctlfile;
   int len;
-  char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
+  char varname[CDI_MAX_NAME];
   FILE *gdp;
   int yrev = FALSE;
   int zrev = FALSE;
-  int i, j;
   int xsize = 0, ysize = 0;
-  int prec, res;
-  int lplev = FALSE;
+  int res;
   int xyheader = 0;
   int nrecords = 0;
   int bigendian = FALSE, littleendian = FALSE;
+  int flt64 = 0;
   int sequential = FALSE;
-  double *levels, level0, levinc = 0;
-  double missval = 0;
   char Time[30], Incr[10] = {"1mn"}, *IncrKey[] = {"mn","hr","dy","mo","yr"};
   int isd, imn, ihh, iyy, imm, idd;
   int isds = 0, imns = 0, ihhs = 0, iyys = 0, imms = 0, idds = 0;
@@ -409,6 +860,8 @@ void *Gradsdes(void *argument)
   int gridsize = 0;
   long checksize = 0;
   int nmiss;
+  int prec;
+  int map_version = 1;
   int nrecsout = 0;
   int maxrecs = 0;
   int monavg = -1;
@@ -417,8 +870,6 @@ void *Gradsdes(void *argument)
   int *intnum = NULL;
   float *fltnum = NULL;
   double *array = NULL;
-  double xfirst, yfirst, xinc, yinc;
-  double *xvals, *yvals;
   const char *cmons[]={"jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"};
       
   cdoInitialize(argument);
@@ -428,6 +879,8 @@ void *Gradsdes(void *argument)
   DUMPMAP   = cdoOperatorAdd("dumpmap",   0, 0, NULL);
 
   operatorID = cdoOperatorID();
+
+  if ( operatorID == GRADSDES2 ) map_version = 2;
 
   if ( cdoStreamName(0)[0] == '-' )
     cdoAbort("This operator does not work with pipes!");
@@ -446,7 +899,6 @@ void *Gradsdes(void *argument)
   nvars   = vlistNvars(vlistID);
   ntsteps = vlistNtsteps(vlistID);
   ngrids  = vlistNgrids(vlistID);
-  nzaxis  = vlistNzaxis(vlistID);
 
   filetype  = streamInqFiletype(streamID);
   byteorder = streamInqByteorder(streamID);
@@ -456,14 +908,15 @@ void *Gradsdes(void *argument)
        filetype != FILETYPE_IEG &&
        filetype != FILETYPE_GRB )
     {
-      if ( filetype == FILETYPE_NC )
+      if ( filetype == FILETYPE_NC || filetype == FILETYPE_NC2 || filetype == FILETYPE_NC4 )
 	cdoAbort("Unsupported file format: netCDF");
+      else if ( filetype == FILETYPE_GRB2 )
+	cdoAbort("Unsupported file format: GRIB2");
       else
 	cdoAbort("Unsupported file format!");
     }
 
   /* find the first lonlat or Gaussian grid */
-
   for ( index = 0; index < ngrids; index++ )
     {
       gridID = vlistGrid(vlistID, index);
@@ -478,7 +931,6 @@ void *Gradsdes(void *argument)
 	     gridNamePtr(gridtype));
 
   /* select all variables with used gridID */
-
   vars = (int *) malloc(nvars*sizeof(int));
   recoffset = (int *) malloc(nvars*sizeof(int));
   nvarsout = 0;
@@ -487,18 +939,25 @@ void *Gradsdes(void *argument)
     {
       if ( vlistInqVarGrid(vlistID, varID) == gridID )
 	{
+	  if ( filetype == FILETYPE_SRV ||
+	       filetype == FILETYPE_EXT ||
+	       filetype == FILETYPE_IEG )
+	    {
+	      prec = vlistInqVarDatatype(vlistID, varID);
+	      if ( prec == DATATYPE_FLT64 ) flt64 = 1;
+	    }
 	  vars[varID] = TRUE;
 	  recoffset[varID] = nrecsout;
 	  nvarsout++;
 	  nrecsout += zaxisInqSize(vlistInqVarZaxis(vlistID, varID));
-	  if ( ntsteps != 1 && ntsteps != 0 && vlistInqVarTime(vlistID, varID) == TIME_CONSTANT )
+	  if ( ntsteps != 1 && ntsteps != 0 && vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT )
 	    cdoAbort("Unsupported GrADS record structure! Variable %d has only 1 time step.",
 		     vlistInqVarCode(vlistID, varID));
 	}
       else
 	{
 	  vlistInqVarName(vlistID, varID, varname);
-	  cdoPrint("Unsupported grid type >%s<, skipped variable %s",
+	  cdoPrint("Unsupported grid type >%s<, skipped variable %s!",
 		   gridNamePtr(gridInqType(vlistInqVarGrid(vlistID, varID))), varname);
 	  vars[varID] = FALSE;
 	}
@@ -510,6 +969,7 @@ void *Gradsdes(void *argument)
   if ( filetype == FILETYPE_SRV )
     {
       xyheader = 40;
+      if ( flt64 ) xyheader = 72;
       sequential = TRUE;
       if ( byteorder == CDI_BIGENDIAN )    bigendian = TRUE;
       if ( byteorder == CDI_LITTLEENDIAN ) littleendian = TRUE;
@@ -518,6 +978,7 @@ void *Gradsdes(void *argument)
   if ( filetype == FILETYPE_EXT )
     {
       xyheader = 24;
+      if ( flt64 ) xyheader = 40;
       sequential = TRUE;
       if ( byteorder == CDI_BIGENDIAN )    bigendian = TRUE;
       if ( byteorder == CDI_LITTLEENDIAN ) littleendian = TRUE;
@@ -526,6 +987,7 @@ void *Gradsdes(void *argument)
   if ( filetype == FILETYPE_IEG )
     {
       xyheader = 644;
+      if ( flt64 ) xyheader = 1048;
       sequential = TRUE;
       if ( byteorder == CDI_BIGENDIAN )    bigendian = TRUE;
       if ( byteorder == CDI_LITTLEENDIAN ) littleendian = TRUE;
@@ -568,7 +1030,6 @@ void *Gradsdes(void *argument)
     }
 
   /* DTYPE */
-
   if ( filetype == FILETYPE_GRB )
     {
       fprintf(gdp, "DTYPE  GRIB\n");
@@ -592,8 +1053,7 @@ void *Gradsdes(void *argument)
     }
 
   /* XYHEADER */
-  if ( xyheader )
-  fprintf(gdp, "XYHEADER  %d\n", xyheader);
+  if ( xyheader ) fprintf(gdp, "XYHEADER  %d\n", xyheader);
 
   /* TIME */
 
@@ -698,7 +1158,7 @@ void *Gradsdes(void *argument)
 	  nrecords += nrecsout;
 	  if ( nrecords >= maxrecs )
 	    {
-	      maxrecs += nrecords;
+	      maxrecs = nrecords;
 	      intnum = (int *) realloc(intnum, 3*maxrecs*sizeof(int));
 	      fltnum = (float *) realloc(fltnum, 3*maxrecs*sizeof(float));
 	    }
@@ -718,8 +1178,7 @@ void *Gradsdes(void *argument)
 		  if ( checksize < 0L || checksize > 2147483647L )
 		    {
 		      nrecords -= nrecsout;
-		      cdoWarning("GRIB file too large for GrADS! Only the first %d time steps (2GB) are processed.",
-				 tsID);
+		      cdoWarning("GRIB file too large for GrADS! Only the first %d time steps (2GB) are processed.", tsID);
 		      goto LABEL_STOP;
 		    }
 		}
@@ -731,234 +1190,11 @@ void *Gradsdes(void *argument)
 
  LABEL_STOP:
 
-  xsize  = gridInqXsize(gridID);
-  ysize  = gridInqYsize(gridID);
-
-  /* XDEF */
-
-  if ( gridtype == GRID_LCC )
-    {
-      double originLon, originLat, lonParY, lat1, lat2, xincm, yincm;
-      double xmin = 1.e10, xmax = -1.e10, ymin = 1.e10, ymax = -1.e10;
-      double xrange, yrange;
-      int projflag, scanflag;
-      int nx, ny, ni;
-      double inc[] = { 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001 };
-
-      gridInqLCC(gridID, &originLon, &originLat, &lonParY, &lat1, &lat2, &xincm, &yincm,
-		 &projflag, &scanflag);
-      fprintf(gdp, "PDEF %d %d lcc %g %g 1 1 %g %g %g %g %g\n", 
-	      xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
-
-      gridID = gridToCurvilinear(gridID, 0);
-      xvals = (double *) malloc(xsize*ysize*sizeof(double));
-      yvals = (double *) malloc(xsize*ysize*sizeof(double));
-      gridInqXvals(gridID, xvals);
-      gridInqYvals(gridID, yvals);
-      for ( i = 0; i < xsize*ysize; ++i )
-	{
-	  if ( xvals[i] > 180  ) xvals[i] -= 360;
-	  if ( xvals[i] < xmin ) xmin = xvals[i];
-	  if ( xvals[i] > xmax ) xmax = xvals[i];
-	  if ( yvals[i] < ymin ) ymin = yvals[i];
-	  if ( yvals[i] > ymax ) ymax = yvals[i];
-	}
-      free(xvals);
-      free(yvals);
-
-      xfirst = ((int)(xmin-0.0));
-      yfirst = ((int)(ymin-0.0));
-      xrange = ((int)(xmax+1.5)) - xfirst;
-      yrange = ((int)(ymax+1.5)) - yfirst;
-
-      ni = sizeof(inc)/sizeof(inc[0]);
-      for ( i = 0; i < ni; i++ )
-	{
-	  xinc = yinc = inc[i];
-	  nx = 1 + (int) (xrange / xinc);
-	  ny = 1 + (int) (yrange / yinc);
-
-	  if ( nx > 1.5*xsize && ny > 1.5*ysize ) break;
-	}
-
-      fprintf(gdp, "XDEF %d LINEAR %f %f\n", nx, xfirst, xinc);
-      fprintf(gdp, "YDEF %d LINEAR %f %f\n", ny, yfirst, yinc);
-
-      fprintf(gdp, "* XDEF 3600 LINEAR -179.95 0.1\n");
-      fprintf(gdp, "* YDEF 1800 LINEAR  -89.95 0.1\n");
-    }
-  else
-    {
-      xfirst = gridInqXval(gridID, 0);
-      xinc   = gridInqXinc(gridID);
-      if ( IS_EQUAL(xinc, 0) && gridInqXvals(gridID, NULL) )
-	{
-	  xvals = (double *) malloc(xsize*sizeof(double));
-	  gridInqXvals(gridID, xvals);
-	  fprintf(gdp ,"XDEF %d LEVELS ", xsize);
-	  j = 0;
-	  for ( i = 0; i < xsize; i++ )
-	    {
-	      fprintf(gdp, "%7.3f ", xvals[i]); 
-	      j++;
-	      if ( j == 6 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != xsize-1 ) fprintf(gdp, "               ");
-		}
-	    }
-	  if ( j ) fprintf(gdp, "\n");
-	  
-	  free(xvals);
-	}
-      else
-	{
-	  if ( IS_EQUAL(xinc, 0) ) xinc = 360.0/xsize;
-	  fprintf(gdp, "XDEF %d LINEAR %f %f\n", xsize, xfirst, xinc);	  
-	}
-    }
-
-  /* YDEF */
-
-  if ( gridtype != GRID_LCC )
-    {
-      yfirst = gridInqYval(gridID, 0);
-      yinc   = gridInqYinc(gridID);
-      if ( gridtype == GRID_GAUSSIAN ) yinc = 0;
-
-      if ( IS_EQUAL(yinc, 0) && gridInqYvals(gridID, NULL) )
-	{
-	  yvals = (double *) malloc(ysize*sizeof(double));
-	  gridInqYvals(gridID, yvals);
-	  fprintf(gdp ,"YDEF %d LEVELS ", ysize);
-	  j = 0;
-	  if ( yvals[0] > yvals[ysize-1] )
-	    {
-	      yrev = TRUE;
-	      for ( i = ysize-1; i >= 0; i-- )
-		{
-		  fprintf(gdp, "%7.3f ", yvals[i]); 
-		  j++;
-		  if ( j == 6 )
-		    {
-		      fprintf(gdp, "\n");
-		      j = 0;
-		      if ( i != 0 ) fprintf(gdp, "               ");
-		    }
-		}
-	    }
-	  else
-	    {
-	      for ( i = 0; i < ysize; i++ )
-		{
-		  fprintf(gdp, "%7.3f ", yvals[i]); 
-		  j++;
-		  if ( j == 6 )
-		    {
-		      fprintf(gdp, "\n");
-		      j = 0;
-		      if ( i != ysize-1 ) fprintf(gdp, "               ");
-		    }
-		}
-	    }
-
-	  if ( j ) fprintf(gdp, "\n");
-
-	  free(yvals);
-	}
-      else
-	{
-	  if ( IS_EQUAL(yinc, 0) ) yinc = 180.0/ysize;
-	  if ( yinc < 0)
-	    {
-	      yrev = TRUE;
-	      fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst + yinc * (ysize-1 ), -yinc);
-	    }
-	  else
-	    fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst, yinc);
-	}
-    }
+  /* XYDEF */
+  ctl_xydef(gdp, gridID, &yrev);
 
   /* ZDEF */
-
-  nlevmax = 0;
-  for ( index = 0; index < nzaxis; index++ )
-    {
-      zaxisID = vlistZaxis(vlistID, index);
-      nlev    = zaxisInqSize(zaxisID);
-      if ( nlev > nlevmax )
-	{
-	  nlevmax = nlev;
-	  zaxisIDmax = zaxisID;
-	}
-    }
-
-  levels = (double *) malloc(nlevmax*sizeof(double));
-  zaxisInqLevels(zaxisIDmax, levels);
-  if ( zaxisInqType(zaxisIDmax) == ZAXIS_PRESSURE ) lplev = TRUE;
-  level0 = levels[0];
-  if ( nlevmax > 1 )
-    {
-      if ( levels[0] < levels[1] && zaxisInqType(zaxisIDmax) != ZAXIS_HYBRID )
-	zrev = TRUE;
-
-      levinc = levels[1] - levels[0];
-
-      if ( IS_EQUAL(levinc, 1) ) zrev = FALSE;
-
-      for ( i = 1; i < nlevmax; i++ )
-	{
-	  if ( IS_NOT_EQUAL(levinc, (levels[i] - levels[i-1])) )
-	    {
-	      levinc = 0;
-	      break;
-	    }
-	}
-    }
-
-  if ( IS_NOT_EQUAL(levinc, 0) )
-    fprintf(gdp,"ZDEF %d LINEAR %g %g\n", nlevmax, level0, levinc);
-  else
-    {
-      fprintf(gdp, "ZDEF %d LEVELS ", nlevmax);
-      j  = 0;
-      /* zrev not needed !!!
-      if ( zrev )
-	{
-	  for ( i = nlevmax-1; i >=0 ; i-- )
-	    {
-	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
-	      else         fprintf(gdp, "%d ", (int) levels[i]);
-	      j++;
-	      if ( j == 10 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != 0 ) fprintf(gdp, "               ");
-		}
-	    }
-	}
-      else
-      */
-	{
-	  for ( i = 0; i < nlevmax ; i++ )
-	    {
-	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
-	      else         fprintf(gdp, "%g ", levels[i]);
-	      j++;
-	      if ( j == 10 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != (nlevmax-1) ) fprintf(gdp, "               ");
-		}
-	    }
-	}
-      if ( j ) fprintf(gdp, "\n");
-    }
-
-  free(levels);
+  ctl_zdef(gdp, vlistID, &zrev);
 
   /* TDEF */
 
@@ -977,10 +1213,13 @@ void *Gradsdes(void *argument)
 
   sprintf (Time, "%02d:%02dZ%02d%s%04d", ihh0, imn0, idd0, cmons[imm0-1], iyy0);
   sprintf (Incr, "%d%s", dt, IncrKey[iik]);
-  
+
   fprintf (gdp, "TDEF %d LINEAR %s %s\n", tsID, Time, Incr);
 
   /* TITLE */
+
+  xsize  = gridInqXsize(gridID);
+  ysize  = gridInqYsize(gridID);
 
   res = 0;
   if ( gridtype == GRID_GAUSSIAN ) res = nlat2ntr(ysize);
@@ -991,201 +1230,21 @@ void *Gradsdes(void *argument)
     fprintf(gdp, "TITLE  %s  %dx%d grid\n", datfile, xsize, ysize);
 
   /* OPTIONS */
+  ctl_options(gdp, yrev, zrev, sequential, bigendian, littleendian, flt64);
 
-  /* if ( filetype == FILETYPE_GRB ) zrev = FALSE; */
-
-  if ( yrev || zrev || sequential || bigendian || littleendian )
-    {
-      fprintf(gdp, "OPTIONS");
-      if ( yrev )         fprintf(gdp, " yrev");
-      if ( zrev )         fprintf(gdp, " zrev");
-      if ( sequential )   fprintf(gdp, " sequential");
-      if ( bigendian )    fprintf(gdp, " big_endian");
-      if ( littleendian ) fprintf(gdp, " little_endian");
-      fprintf(gdp, "\n");
-    }
-    
   /* UNDEF */
+  ctl_undef(gdp, vlistID);
 
-  missval = vlistInqVarMissval(vlistID, 0);
-  fprintf(gdp, "UNDEF  %g\n", missval);
-  
   /* VARS */
+  ctl_vars(gdp, filetype, vlistID, nvarsout, vars);
 
-  fprintf(gdp, "VARS  %d\n", nvarsout);
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      if ( vars[varID] == TRUE )
-	{
-	  if ( filetype == FILETYPE_SRV ||
-	       filetype == FILETYPE_EXT ||
-	       filetype == FILETYPE_IEG )
-	    {
-	      prec = vlistInqVarDatatype(vlistID, varID);
-	      if ( prec != DATATYPE_FLT32 )
-		cdoAbort("datatype must be 4 bytes!");
-	    }
-
-	  zaxisID = vlistInqVarZaxis(vlistID, varID);
-	  ltype   = zaxisInqLtype(zaxisID);
-	  nlev    = zaxisInqSize(zaxisID);
-	  vlistInqVarName(vlistID, varID, varname);
-
-	  len = (int) strlen(varname);
-	  for ( i = 0; i < len; i++ )
-	    if ( varname[i] == '-' ) break;
-
-	  if ( i < len )
-	    for ( j = i; j < len; j++ )
-	      varname[j] = varname[j+1];
-
-	  vlistInqVarLongname(vlistID, varID, varlongname);
-	  vlistInqVarUnits(vlistID, varID, varunits);
-	  fprintf(gdp, "%-15s", varname);
-      
-	  if ( nlev == 1 ) nlev = 0;
-
-	  fprintf(gdp, "  %3d", nlev);
-
-	  if ( filetype == FILETYPE_GRB )
-	    {
-	      code = vlistInqVarCode(vlistID, varID);
-	      /*	      
-	      if      ( ltype == ZAXIS_SURFACE )  ltype = 1;
-	      else if ( ltype == ZAXIS_PRESSURE ) ltype = 99;
-	      else if ( nlev == 1 )  ltype = 1;
-	      else ltype = 99;
-	      */
-	      fprintf(gdp, "  %d,%d", code, ltype);
-	    }
-	  else
-	    fprintf(gdp, "  99");
-
-	  if ( varlongname[0] == 0 )
-	    fprintf(gdp, "  %s", varname);
-	  else
-	    fprintf(gdp, "  %s", varlongname);
-
-	  if ( varunits[0] != 0 )
-	    fprintf(gdp, "  [%s]", varunits);
-	
-	  fprintf(gdp, "\n");      
-	}
-    }
-
-  fprintf(gdp, "ENDVARS\n");
 
   /* INDEX file */
-
   if ( filetype == FILETYPE_GRB )
     {
-      struct gaindx indx;
-      FILE *mapfp;
-      int hinum[4];
-
-      mapfp = fopen(ctlfile, "w");
-      if ( mapfp == NULL ) cdoAbort("Open failed on %s", ctlfile);
-
-      indx.type   = 1;  /* GRIB type */
-      indx.hinum  = 4;
-      indx.hfnum  = 0;
-      indx.intnum = 3 * nrecords;
-      indx.fltnum = 3 * nrecords;
-      indx.hipnt  = NULL;
-      indx.hfpnt  = NULL;
-      indx.intpnt = NULL;
-      indx.fltpnt = NULL;
-
-      hinum[0] = 1;
-      hinum[1] = 1;
-      hinum[2] = nrecords;
-      hinum[3] = 255;
-
-      if ( operatorID == GRADSDES2 )
-	{
-	  int nb, bcnt, rc, j;
-	  float fdum;
-	  unsigned char *map;
-	  unsigned char ibmfloat[4];
-
-	  /* calculate the size of the ver==1 index file */
-
-	  nb = 2 + (4*4) +  /* version in byte 2, then 4 ints with number of each data type */
-	    indx.hinum*sizeof(int)+
-	    indx.hfnum*sizeof(int)+
-	    indx.intnum*sizeof(int)+
-	    indx.fltnum*sizeof(float) ;
-
-	  /* add additional info */
-
-	  nb += 7;      /* base time (+ sec)  for compatibility with earlier version 2 maps */
-	  nb += 8*4;    /* grvals for time <-> grid conversion */
-
-	  map = (unsigned char *) malloc(nb);
-
-	  bcnt = 0;
-	  Put1Byte(map, bcnt, 0);
-	  Put1Byte(map, bcnt, 2); /* version 2 */
-
-	  Put4Byte(map, bcnt, indx.hinum);
-	  Put4Byte(map, bcnt, indx.hfnum);
-	  Put4Byte(map, bcnt, indx.intnum);
-	  Put4Byte(map, bcnt, indx.fltnum);
-
-	  Put2Byte(map, bcnt, 0);   /* initial year   */
-	  Put1Byte(map, bcnt, 0);   /* initial month  */ 
-	  Put1Byte(map, bcnt, 0);   /* initial day    */
-	  Put1Byte(map, bcnt, 0);   /* initial hour   */
-	  Put1Byte(map, bcnt, 0);   /* initial minute */
-	  Put1Byte(map, bcnt, 0);   /* initial second */
-
-	  if( indx.hinum )
-	    for ( i = 0; i < indx.hinum; i++ )
-	      Put4Byte(map, bcnt, hinum[i]);
-
-	  if( indx.hfnum ) {
-	    /* blank for now */
-	  }
-
-	  for ( i = 0; i < indx.intnum; i++ )
-	    PutInt(map, bcnt, intnum[i]);
-
-	  for ( i = 0; i < indx.fltnum; i++)
-	    {
-	      fdum= fltnum[i];
-	      rc = flt2ibm(fdum, ibmfloat); 
-	      if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
-	      for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
-	    }
-
-	  /* write out the factors for converting from grid to absolute time */ 
-
-	  for ( i = 0; i < 8; i++)
-	    {
-	      fdum = 0;
-	      rc = flt2ibm(fdum, ibmfloat); 
-	      if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
-	      for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
-	    }
-
-	  fwrite(map, 1, bcnt, mapfp);
-
-	  free(map);
-	}
-      else
-	{
-	  fwrite(&indx, sizeof(struct gaindx), 1, mapfp);
-
-	  fwrite(hinum, sizeof(int), 4, mapfp);
-
-	  fwrite(intnum, sizeof(int), 3*nrecords, mapfp);
-
-	  fwrite(fltnum, sizeof(float), 3*nrecords, mapfp);
-	}
-
-      fclose(mapfp);
+      write_map_grib1(ctlfile, map_version, nrecords, intnum, fltnum);
     }
+
 
   streamClose(streamID);
 

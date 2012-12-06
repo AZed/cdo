@@ -209,12 +209,12 @@ int iegGetZaxisType(int iegleveltype)
 }
 
 
-void iegDefTime(int *pdb, int date, int time, int timeID)
+void iegDefTime(int *pdb, int date, int time, int taxisID)
 {
   int year, month, day, hour, minute, second;
   int timetype = -1;
 
-  if ( timeID != -1 ) timetype = taxisInqType(timeID);
+  if ( taxisID != -1 ) timetype = taxisInqType(taxisID);
 
   if ( timetype == TAXIS_ABSOLUTE || timetype == TAXIS_RELATIVE )
     {
@@ -802,7 +802,7 @@ void iegAddRecord(int streamID, int param, int *pdb, int *gdb, double *vct,
   datatype = iegInqDatatype(prec);
 
   varAddRecord(recID, param, gridID, leveltype, lbounds, level1, level2,
-	       datatype, &varID, &levelID, 0, 0, 0, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -1003,7 +1003,7 @@ void iegScanTimestep1(int streamID)
 	  streamptr->ntsteps = 0;
 	  for ( varID = 0; varID < streamptr->nvars; varID++ )
 	    {
-	      vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+	      vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	    }
 	}
     }
@@ -1153,7 +1153,7 @@ int iegScanTimestep2(int streamID)
       if ( ! streamptr->tsteps[tsID].records[recID].used )
 	{
 	  varID = streamptr->tsteps[tsID].records[recID].varID;
-	  vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+          vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	}
       else
 	{

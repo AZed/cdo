@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -93,7 +93,7 @@ void *Vargen(void *argument)
   int operatorID;
   int streamID;
   int nrecs,nvars, ntimesteps, nlevels = 1;
-  int tsID, recID, varID, varID2, levelID;
+  int tsID, recID, varID, varID2 = -1, levelID;
   int gridsize, i;
   int vlistID;
   int gridID = -1, zaxisID, taxisID;
@@ -101,7 +101,7 @@ void *Vargen(void *argument)
   const char *gridfile;
   double rval, rstart = 0, rstop = 0, rinc = 0;
   double rconst = 0;
-  double *array, *levels;
+  double *array, *levels = NULL;
   LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
@@ -213,16 +213,16 @@ void *Vargen(void *argument)
   vlistID = vlistCreate();
 
   if ( operatorID == FOR )
-    varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+    varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
   else
-    varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_CONSTANT);
+    varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_CONSTANT);
   /*
      For the standard atmosphere two output variables are generated: pressure and
      temperatur. The first (varID) is pressure, second (varID2) is temperatur.
      Add an additional variable for the standard atmosphere.
    */
   if ( operatorID == STDATM )
-    varID2 = vlistDefVar(vlistID, gridID, zaxisID, TIME_CONSTANT);
+    varID2 = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_CONSTANT);
 
   if ( operatorID == MASK )
     vlistDefVarDatatype(vlistID, varID, DATATYPE_INT8);
@@ -337,6 +337,7 @@ void *Vargen(void *argument)
   vlistDestroy(vlistID);
 
   if ( array ) free(array);
+  if ( levels ) free(levels); 
 
   cdoFinish();
 

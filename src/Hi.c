@@ -131,7 +131,7 @@ void *Hi(void *argument)
   vlistID4 = vlistCreate();
   gridID   = vlistInqVarGrid(vlistID1, FIRST_VAR);
   zaxisID  = vlistInqVarZaxis(vlistID1, FIRST_VAR);
-  varID4   = vlistDefVar(vlistID4, gridID, zaxisID, TIME_VARIABLE);
+  varID4   = vlistDefVar(vlistID4, gridID, zaxisID, TSTEP_INSTANT);
 
   taxisID4 = taxisCreate(TAXIS_RELATIVE);
   taxisDefTunit(taxisID4, TUNIT_MINUTE);

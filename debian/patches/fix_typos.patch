@@ -1,0 +1,57 @@
+Index: cdo-1.5.4+dfsg.1/libcdi/src/grid.c
+===================================================================
+--- cdo-1.5.4+dfsg.1.orig/libcdi/src/grid.c	2012-01-26 15:17:52.000000000 +0000
++++ cdo-1.5.4+dfsg.1/libcdi/src/grid.c	2012-02-17 12:31:32.000000000 +0000
+@@ -3603,8 +3603,8 @@
+     @Item  lonParY   The East longitude of the meridian which is parallel to the Y-axis.
+     @Item  lat1      First latitude from the pole at which the secant cone cuts the sphere.
+     @Item  lat2      Second latitude at which the secant cone cuts the sphere.
+-    @Item  xinc      X-direction grid lenght in meter.
+-    @Item  yinc      Y-direction grid lenght in meter.
++    @Item  xinc      X-direction grid length in meter.
++    @Item  yinc      Y-direction grid length in meter.
+     @Item  projflag  Projection centre flag.
+     @Item  scanflag  Scanning mode flag.
+  
+@@ -3654,8 +3654,8 @@
+     @Item  lonParY   The East longitude of the meridian which is parallel to the Y-axis.
+     @Item  lat1      First latitude from the pole at which the secant cone cuts the sphere.
+     @Item  lat2      Second latitude at which the secant cone cuts the sphere.
+-    @Item  xinc      X-direction grid lenght in meter.
+-    @Item  yinc      Y-direction grid lenght in meter.
++    @Item  xinc      X-direction grid length in meter.
++    @Item  yinc      Y-direction grid length in meter.
+     @Item  projflag  Projection centre flag.
+     @Item  scanflag  Scanning mode flag.
+  
+Index: cdo-1.5.4+dfsg.1/src/operator_help.h
+===================================================================
+--- cdo-1.5.4+dfsg.1.orig/src/operator_help.h	2012-01-30 10:14:04.000000000 +0000
++++ cdo-1.5.4+dfsg.1/src/operator_help.h	2012-02-17 12:32:00.000000000 +0000
+@@ -1334,7 +1334,7 @@
+     "",
+     "DESCRIPTION",
+     "    This module computes periods over all timesteps in ifile where a",
+-    "    certain property is valid. The propery can be chosen by creating a mask from",
++    "    certain property is valid. The property can be chosen by creating a mask from",
+     "    the original data, which is the expected input format for operators of this",
+     "    module. Depending on the operator full information about each period or",
+     "    just its length and ending date are computed.",
+@@ -1346,7 +1346,7 @@
+     "               multiple periods can be found. Timesteps from the input are preserved. Missing",
+     "               values are handled like 0, i.e. finish periods of consecutive timesteps.",
+     "    consects   Consecutive Timesteps",
+-    "               In contrast to the operator above consects only computes the lenght of each",
++    "               In contrast to the operator above consects only computes the length of each",
+     "               period together with its last timestep. To be able to perform statistical",
+     "               analysis like min, max or mean, everything else is set to missing value.",
+     NULL
+@@ -3800,7 +3800,7 @@
+     "    is the lower bound and the second value the upper bound of the",
+     "    first bin. The bounds of the second bin are defined by the",
+     "    second and third value, aso.",
+-    "    Only 2-dimensional input fields are allowed. The ouput file ",
++    "    Only 2-dimensional input fields are allowed. The output file ",
+     "    contains one vertical level for each of the bins requested.",
+     "",
+     "OPERATORS",

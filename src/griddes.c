@@ -188,6 +188,10 @@ int gridDefine(grid_t grid)
 
 	if ( grid.size == 0 ) grid.size = grid.xsize*grid.ysize;
 
+	if ( grid.size != grid.xsize*grid.ysize )
+	  Error("Inconsistent grid declaration: xsize*ysize!=gridsize! (xsize=%d ysize=%d gridsize=%d)",
+		grid.xsize, grid.ysize, grid.size);
+
 	gridID = gridCreate(grid.type, grid.size);
 
 	if ( grid.xsize > 0 ) gridDefXsize(gridID, grid.xsize);
@@ -288,7 +292,13 @@ int gridDefine(grid_t grid)
     case GRID_CURVILINEAR:
     case GRID_UNSTRUCTURED:
       {
-	if ( grid.size == 0 ) grid.size = grid.xsize*grid.ysize;
+	if ( grid.size == 0 )
+	  {
+	    if ( grid.type == GRID_CURVILINEAR )
+	      grid.size = grid.xsize*grid.ysize;
+	    else
+	      grid.size = grid.xsize;
+	  }
 
 	gridID = gridCreate(grid.type, grid.size);
 

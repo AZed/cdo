@@ -110,7 +110,7 @@ void *Splitsel(void *argument)
   nvars = vlistNvars(vlistID1);
   nconst = 0;
   for ( varID = 0; varID < nvars; varID++ )
-    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) nconst++;
+    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) nconst++;
 
   if ( nconst )
     {
@@ -118,7 +118,7 @@ void *Splitsel(void *argument)
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
-	  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+	  if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT )
 	    {
 	      gridID  = vlistInqVarGrid(vlistID1, varID);
 	      nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
@@ -150,7 +150,7 @@ void *Splitsel(void *argument)
 	for ( recID = 0; recID < nrecs; recID++ )
 	  {
 	    streamInqRecord(streamID1, &varID, &levelID);
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT )
 	      streamReadRecord(streamID1, vars[varID][levelID].ptr, &vars[varID][levelID].nmiss);
 	  }
     }
@@ -185,7 +185,7 @@ void *Splitsel(void *argument)
 	    {
 	      for ( varID = 0; varID < nvars; varID++ )
 		{
-		  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		  if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT )
 		    {
 		      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		      for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -214,7 +214,7 @@ void *Splitsel(void *argument)
 
 		  if ( tsID == 0 && nconst )
 		    {
-		      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT )
+		      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT )
 			{
 			  gridID  = vlistInqVarGrid(vlistID1, varID);
 			  gridsize = gridInqSize(gridID);
@@ -258,7 +258,7 @@ void *Splitsel(void *argument)
     {
       for ( varID = 0; varID < nvars; varID++ )
 	{
-	  if ( vlistInqVarTime(vlistID2, varID) == TIME_CONSTANT )
+	  if ( vlistInqVarTsteptype(vlistID2, varID) == TSTEP_CONSTANT )
 	    {
 	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 	      for ( levelID = 0; levelID < nlevel; levelID++ )

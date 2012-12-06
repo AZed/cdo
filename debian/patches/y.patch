@@ -1,0 +1,69 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ cdo (1.5.6.1+dfsg.1-1) unstable; urgency=low
+ .
+   * New upstream release
+   * Standards-Version: 3.9.3
+   * Don't use MPI builds. PIO code not included yet.
+Author: Alastair McKinstry <mckinstry@debian.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- cdo-1.5.6.1+dfsg.1.orig/m4/acx_options.m4
++++ cdo-1.5.6.1+dfsg.1/m4/acx_options.m4
+@@ -339,39 +339,6 @@ AC_ARG_WITH([proj],
+             [AC_MSG_CHECKING([for the PROJ library])
+              AC_MSG_RESULT([suppressed])])
+ #  ----------------------------------------------------------------------
+-#  Compile application with MAGICS
+-MAGICS_ROOT=''
+-MAGICS_INCLUDE=''
+-MAGICS_LIBS=''
+-AC_ARG_WITH([magics],
+-            [AS_HELP_STRING([--with-magics=<yes|no|directory>],[location of magics library (lib and include subdirs)])],
+-            [AS_CASE(["$with_magics"],
+-                     [no],[AC_MSG_CHECKING([for magics library])
+-                           AC_MSG_RESULT([suppressed])],
+-                     [yes],[AC_CHECK_HEADERS([magics_api.h])
+-                            AC_SEARCH_LIBS([mag_open],
+-                                           [MagPlus],
+-                                           [AC_DEFINE([HAVE_LIBMAGICS],[1],[Define to 1 for MAGICS support])],
+-                                           [AC_MSG_ERROR([Could not link to magics library])])
+-                            AC_SUBST([MAGICS_LIBS],[" -lMagPlus"])],
+-                     [*],[AS_IF([test -d "$with_magics"],
+-                                [MAGICS_ROOT=$with_magics
+-                                 LDFLAGS="-L$MAGICS_ROOT/lib $LDFLAGS"
+-                                 CPPFLAGS="-I$MAGICS_ROOT/include/magics $CPPFLAGS"
+-                                 AC_CHECK_HEADERS([magics_api.h])
+-                                 AC_SEARCH_LIBS([mag_open],
+-                                                [MagPlus],
+-                                                [AC_DEFINE([HAVE_LIBMAGICS],[1],[Define to 1 for MAGICS support])],
+-                                                [AC_MSG_ERROR([Could not link to magics library])])
+-                                 MAGICS_LIBS=" -L$MAGICS_ROOT/lib -lMagPlus"
+-                                 MAGICS_INCLUDE=" -I$MAGICS_ROOT/include/magics"],
+-                                [AC_MSG_NOTICE([$with_magics is not a directory! MAGICS suppressed])])])],
+-            [AC_MSG_CHECKING([for MAGICS library])
+-             AC_MSG_RESULT([suppressed])])
+-AC_SUBST([MAGICS_ROOT])
+-AC_SUBST([MAGICS_INCLUDE])
+-AC_SUBST([MAGICS_LIBS])
+-#  ----------------------------------------------------------------------
+ #  How to build CDI into CDO? 
+ INTERNAL_CDI_DIR=libcdi
+ # At the moment, there are two possible CDI bindings

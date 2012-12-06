@@ -101,6 +101,9 @@ char *strdup(const char *s);
 #define  TYPE_REC  0
 #define  TYPE_VAR  1
 
+#define  MEMTYPE_DOUBLE  1
+#define  MEMTYPE_FLOAT   2
+
 
 typedef struct
 {
@@ -182,7 +185,7 @@ typedef struct {
   int       isUsed;
   int       gridID;
   int       zaxisID;
-  int       timeID;      /* ( TIME_VARIABLE or TIME_CONSTANT ) */
+  int       tsteptype;   /* TSTEP_* */
   int       nlevel;
 }
 SVARINFO;
@@ -255,6 +258,7 @@ extern int cdiDefaultModelID;
 extern int cdiDefaultTableID;
 extern int cdiDefaultLeveltype;
 extern int cdiNcMissingValue;
+extern int cdiNcChunksizehint;
 extern int cdiSplitLtype105;
 
 extern char *cdiPartabPath;
@@ -306,6 +310,10 @@ void    streamDefDimgroupID(int streamID, int dimgroupID);
 int     streamInqDimgroupID(int streamID);
 
 int getByteswap(int byteorder);
+
+void  cdiInitialize(void);
+
+void stream_write_record(int streamID, int memtype, const void *data, int nmiss);
 
 
 #endif  /* _STREAM_INT_H */

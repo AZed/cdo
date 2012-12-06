@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -100,7 +100,6 @@ void exp_run(int argc, char *argv[], char *cdoExpName);
 
 
 int timer_total, timer_read, timer_write;
-int timer_remap, timer_remap_sort, timer_remap_con, timer_remap_con2, timer_remap_con3;
 
 
 #define PRINT_RLIMIT(resource) \
@@ -158,6 +157,9 @@ void cdo_version(void)
 #endif
 #if defined (HAVE_LIBPROJ)
   fprintf(stderr, " PROJ.4");
+#endif
+#if defined (HAVE_LIBMAGICS)
+  fprintf(stderr, " MAGICS");
 #endif
 #if defined (HAVE_LIBDRMAA)
   fprintf(stderr, " DRMAA");
@@ -242,7 +244,7 @@ static
 void cdoPrintHelp(char *phelp[]/*, char *xoperator*/)
 {
   if ( phelp == NULL )
-    printf("No help available for this operator!\n");
+    fprintf(stderr, "No help available for this operator!\n");
   else
     {
       int lprint;
@@ -253,7 +255,7 @@ void cdoPrintHelp(char *phelp[]/*, char *xoperator*/)
 	    if ( *(phelp+1) )
 	      if ( *(phelp+1)[0] == ' ' ) lprint = FALSE;
 	  
-	  if ( lprint ) printf("%s\n", *phelp);
+	  if ( lprint ) fprintf(stdout, "%s\n", *phelp);
 
 	  phelp++;
 	}
@@ -865,6 +867,23 @@ int main(int argc, char *argv[])
       if ( envstr ) fprintf(stderr, "MACHTYPE            = %s\n", envstr);
       fprintf(stderr, "\n");
 
+#if defined (__SSE2__)
+      fprintf(stderr, "Predefined: __SSE2__\n");
+#endif 
+#if defined (__SSE3__)
+      fprintf(stderr, "Predefined: __SSE3__\n");
+#endif 
+#if defined (__SSE4_1__)
+      fprintf(stderr, "Predefined: __SSE4_1__\n");
+#endif 
+#if defined (__SSE4_2__)
+      fprintf(stderr, "Predefined: __SSE4_2__\n");
+#endif 
+#if defined (__AVX__)
+      fprintf(stderr, "Predefined: __AVX__\n");
+#endif 
+      fprintf(stderr, "\n");
+
 #if defined (HAVE_MMAP)
       fprintf(stderr, "HAVE_MMAP\n");
 #endif
@@ -873,6 +892,18 @@ int main(int argc, char *argv[])
 #endif
       fprintf(stderr, "\n");
 
+#if defined (_OPENACC)
+      fprintf(stderr, "OPENACC VERSION     = %d\n", _OPENACC);
+#endif
+#if defined (_OPENMP)
+      fprintf(stderr, "OPENMP VERSION      = %d\n", _OPENMP);
+#endif
+#if defined (__GNUC__)
+      fprintf(stderr, "GNUC VERSION        = %d\n", __GNUC__);
+#endif
+#if defined (__ICC)
+      fprintf(stderr, "ICC VERSION         = %d\n", __ICC);
+#endif
 #if defined (__STDC__)
       fprintf(stderr, "STD ANSI C          = %d\n", __STDC__);
 #endif
@@ -950,11 +981,11 @@ int main(int argc, char *argv[])
 	      {
 		if ( status == 0 )
 		  {
-		    fprintf(stderr, "Set stack size to %ld\n", MIN_STACK_SIZE);
+		    fprintf(stderr, "Set stack size to %ld\n", (long) min_stack_size);
 		    PRINT_RLIMIT(RLIMIT_STACK);
 		  }
 		else
-		  fprintf(stderr, "Set stack size to %ld failed!\n", MIN_STACK_SIZE);
+		  fprintf(stderr, "Set stack size to %ld failed!\n", (long) min_stack_size);
 	      }
 	  }
       }
@@ -973,9 +1004,10 @@ int main(int argc, char *argv[])
   ompNumThreads = omp_get_max_threads();
   if ( omp_get_max_threads() > omp_get_num_procs() )
     fprintf(stderr, "Warning: Number of OMP threads is greater than number of CPUs=%d!\n", omp_get_num_procs());
+  if ( ompNumThreads < numThreads )
+    fprintf(stderr, "Warning: omp_get_max_threads() returns %d!\n", ompNumThreads);
   if ( cdoVerbose )
-    fprintf(stderr, " OpenMP:  num_procs = %d  max_threads = %d\n",
-	    omp_get_num_procs(), omp_get_max_threads());
+    fprintf(stderr, " OpenMP:  num_procs = %d  max_threads = %d\n", omp_get_num_procs(), omp_get_max_threads());
 #else
   if ( numThreads > 0 )
     {
@@ -1011,7 +1043,7 @@ int main(int argc, char *argv[])
 
   if ( Help )
     {
-      cdoPrintHelp(operatorHelp(operatorName)/*, operatorName*/);
+      cdoPrintHelp(operatorHelp(operatorName));
     }
   else if ( cdoExpMode == CDO_EXP_LOCAL )
     {
@@ -1019,23 +1051,15 @@ int main(int argc, char *argv[])
     }
   else
     {
-      if ( cdoTimer )
-	{
-	  timer_total      = timer_new("total");
-	  timer_read       = timer_new("read");
-	  timer_write      = timer_new("write");
-	  timer_remap      = timer_new("remap");
-	  timer_remap_sort = timer_new("remap sort");
-	  timer_remap_con  = timer_new("remap con");
-	  timer_remap_con2 = timer_new("remap con2");
-	  timer_remap_con3 = timer_new("remap con3");
-	}
+      timer_total      = timer_new("total");
+      timer_read       = timer_new("read");
+      timer_write      = timer_new("write");
 
-      if ( cdoTimer ) timer_start(timer_total);
+      timer_start(timer_total);
 
       operatorModule(operatorName)(argument);
 
-      if ( cdoTimer ) timer_stop(timer_total);
+      timer_stop(timer_total);
 
       if ( cdoTimer ) timer_report();
     }

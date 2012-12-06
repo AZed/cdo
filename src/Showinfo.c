@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,7 +41,7 @@
 
 void *Showinfo(void *argument)
 {
-  int SHOWYEAR, SHOWMON, SHOWDATE, SHOWTIME, SHOWTIMESTAMP, SHOWCODE;
+  int SHOWYEAR, SHOWMON, SHOWDATE, SHOWTIME, SHOWTIMESTAMP, SHOWCODE, SHOWUNIT;
   int SHOWPARAM, SHOWNAME, SHOWSTDNAME, SHOWLEVEL, SHOWLTYPE, SHOWFORMAT;
   int operatorID;
   int varID, zaxisID;
@@ -58,6 +58,7 @@ void *Showinfo(void *argument)
   int month0 = 0, nmonth, year0 = 0, nyear;
   char varname[CDI_MAX_NAME];
   char stdname[CDI_MAX_NAME];
+  char varunits[CDI_MAX_NAME];
   char vdatestr[32], vtimestr[32];
 
   cdoInitialize(argument);
@@ -68,6 +69,7 @@ void *Showinfo(void *argument)
   SHOWTIME      = cdoOperatorAdd("showtime",      0, 0, NULL);
   SHOWTIMESTAMP = cdoOperatorAdd("showtimestamp", 0, 0, NULL);
   SHOWCODE      = cdoOperatorAdd("showcode",      0, 0, NULL);
+  SHOWUNIT      = cdoOperatorAdd("showunit",      0, 0, NULL);
   SHOWPARAM     = cdoOperatorAdd("showparam",     0, 0, NULL);
   SHOWNAME      = cdoOperatorAdd("showname",      0, 0, NULL);
   SHOWSTDNAME   = cdoOperatorAdd("showstdname",   0, 0, NULL);
@@ -199,6 +201,20 @@ void *Showinfo(void *argument)
 	{
 	  /* if ( nout == 20 ) { nout = 0; fprintf(stdout, "\n"); } */
 	  fprintf(stdout, " %d", vlistInqVarCode(vlistID, varID));
+	  nout++;
+	}
+      fprintf(stdout, "\n");
+    }
+  else if ( operatorID == SHOWUNIT )
+    {
+      nout = 0;
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  varunits[0] = 0;
+	  vlistInqVarUnits(vlistID, varID, varunits);
+	  /* if ( nout == 20 ) { nout = 0; fprintf(stdout, "\n"); } */
+          if ( strlen(varunits) )
+            fprintf(stdout, " %s", varunits);
 	  nout++;
 	}
       fprintf(stdout, "\n");

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,32 @@
 #include "pstream.h"
 
 
-#define  NHOUR       8952  /* 31*12*24 */
+#define  MAX_HOUR  9301  /* 31*12*25 + 1 */
+
+static
+int hour_of_year(int vdate, int vtime)
+{
+  int year, month, day, houroy;
+  int hour, minute, second;
+
+  cdiDecodeDate(vdate, &year, &month, &day);
+  cdiDecodeTime(vtime, &hour, &minute, &second);
+      
+  if ( month >= 1 && month <= 12 && day >= 1 && day <=31 && hour >= 0 && hour < 24 )
+    houroy = ((month-1)*31 + day - 1)*25 + hour + 1;
+  else
+    houroy = 0;
+
+  if ( houroy < 0 || houroy >= MAX_HOUR )
+    {
+      char vdatestr[32], vtimestr[32];
+      date2str(vdate, vdatestr, sizeof(vdatestr));
+      time2str(vtime, vtimestr, sizeof(vtimestr));
+      cdoAbort("Hour of year %d out of range (%s %s)!", houroy, vdatestr, vtimestr);
+    }
+
+  return (houroy);
+}
 
 
 void *Yhourstat(void *argument)
@@ -46,21 +71,20 @@ void *Yhourstat(void *argument)
   int recID;
   int gridID;
   int vdate, vtime;
-  int year, month, day, houroy;
-  int hour, minute, second;
+  int houroy;
   int nrecs, nrecords;
   int levelID;
   int tsID;
   int otsID;
-  long nsets[NHOUR];
+  long nsets[MAX_HOUR];
   int streamID1, streamID2;
   int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
   int nvars, nlevel;
   int *recVarID, *recLevelID;
-  int vdates[NHOUR], vtimes[NHOUR];
+  int vdates[MAX_HOUR], vtimes[MAX_HOUR];
   double missval;
-  field_t **vars1[NHOUR], **vars2[NHOUR], **samp1[NHOUR];
+  field_t **vars1[MAX_HOUR], **vars2[MAX_HOUR], **samp1[MAX_HOUR];
   field_t field;
 
   cdoInitialize(argument);
@@ -76,7 +100,7 @@ void *Yhourstat(void *argument)
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
-  for ( houroy = 0; houroy < NHOUR; houroy++ )
+  for ( houroy = 0; houroy < MAX_HOUR; ++houroy )
     {
       vars1[houroy] = NULL;
       vars2[houroy] = NULL;
@@ -91,6 +115,7 @@ void *Yhourstat(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID2) ) taxisDeleteBounds(taxisID2);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -115,16 +140,7 @@ void *Yhourstat(void *argument)
 
       if ( cdoVerbose ) cdoPrint("process timestep: %d %d %d", tsID+1, vdate, vtime);
 
-      cdiDecodeDate(vdate, &year, &month, &day);
-      cdiDecodeTime(vtime, &hour, &minute, &second);
-
-      if ( month >= 1 && month <= 12 && hour >= 0 && hour < 24 )
-	houroy = ((month-1)*31 + day - 1)*24 + hour;
-      else
-	houroy = 0;
-
-      if ( houroy < 0 || houroy >= NHOUR )
-	cdoAbort("hour of year %d out of range (date=%d time=%d)!", houroy, vdate, vtime);
+      houroy = hour_of_year(vdate, vtime);
 
       vdates[houroy] = vdate;
       vtimes[houroy] = vtime;
@@ -234,7 +250,7 @@ void *Yhourstat(void *argument)
       if ( nsets[houroy] == 0 && (operfunc == func_std || operfunc == func_var) )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -245,13 +261,13 @@ void *Yhourstat(void *argument)
       tsID++;
     }
 
-  for ( houroy = 0; houroy < NHOUR; houroy++ )
+  for ( houroy = 0; houroy < MAX_HOUR; ++houroy )
     if ( nsets[houroy] )
       {
 	if ( operfunc == func_mean || operfunc == func_avg )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
@@ -264,7 +280,7 @@ void *Yhourstat(void *argument)
 	else if ( operfunc == func_std || operfunc == func_var )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
@@ -295,7 +311,7 @@ void *Yhourstat(void *argument)
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	    streamDefRecord(streamID2, varID, levelID);
 	    streamWriteRecord(streamID2, vars1[houroy][varID][levelID].ptr,
@@ -305,7 +321,7 @@ void *Yhourstat(void *argument)
 	otsID++;
       }
 
-  for ( houroy = 0; houroy < NHOUR; houroy++ )
+  for ( houroy = 0; houroy < MAX_HOUR; ++houroy )
     {
       if ( vars1[houroy] != NULL )
 	{

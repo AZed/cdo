@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,8 +29,6 @@
 #include "util.h"
 #include "list.h"
 #include "namelist.h"
-
-void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 
 #define  PML_INT         1
@@ -650,6 +648,10 @@ void *Select(void *argument)
 	  vlistCopyFlag(vlistID2, vlistID1);
 
 	  // if ( cdoVerbose ) vlistPrint(vlistID2);
+	  nvars = vlistNvars(vlistID2);
+	  for ( varID = 0; varID < nvars; ++varID )
+	    if ( vlistInqVarTsteptype(vlistID2, varID) != TSTEP_CONSTANT ) break;
+	  if ( varID == nvars ) vlistDefNtsteps(vlistID2, 0);
 
 	  taxisID2 = taxisDuplicate(taxisID1);
 	  vlistDefTaxis(vlistID2, taxisID2);
@@ -659,7 +661,7 @@ void *Select(void *argument)
 	  if ( ntsteps == 1 )
 	    {
 	      for ( varID = 0; varID < nvars; ++varID )
-		if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
+		if ( vlistInqVarTsteptype(vlistID1, varID) != TSTEP_CONSTANT ) break;
 	      
 	      if ( varID == nvars ) ntsteps = 0;
 	    }
@@ -667,7 +669,7 @@ void *Select(void *argument)
 	  if ( ntsteps == 0 && nfiles > 1 )
 	    {	      
 	      for ( varID = 0; varID < nvars; ++varID )
-		vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
+		vlistDefVarTsteptype(vlistID2, varID, TSTEP_INSTANT);
 	    }
 
 	  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());

@@ -309,7 +309,7 @@ void extAddRecord(int streamID, int param, int level, int xysize,
   leveltype = ZAXIS_GENERIC;
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0,
-	       extInqDatatype(prec, number), &varID, &levelID, 0, 0, 0, NULL, NULL, NULL);
+	       extInqDatatype(prec, number), &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -486,7 +486,7 @@ void extScanTimestep1(int streamID)
 	  streamptr->ntsteps = 0;
 	  for ( varID = 0; varID < streamptr->nvars; varID++ )
 	    {
-	      vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+	      vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	    }
 	}
     }
@@ -632,7 +632,7 @@ int extScanTimestep2(int streamID)
       if ( ! streamptr->tsteps[tsID].records[recID].used )
 	{
 	  varID = streamptr->tsteps[tsID].records[recID].varID;
-	  vlistDefVarTime(vlistID, varID, TIME_CONSTANT);
+          vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
 	}
       else
 	{

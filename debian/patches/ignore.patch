@@ -1,0 +1,43 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ cdo (1.5.5+dfsg.1-1) unstable; urgency=low
+ .
+   * New upstream release
+   * Standards-Version: 3.9.3
+   * Don't use MPI builds. PIO code not included yet.
+Author: Alastair McKinstry <mckinstry@debian.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+Index: cdo-1.5.6.1/libcdi/src/config.h.in
+===================================================================
+--- cdo-1.5.6.1.orig/libcdi/src/config.h.in	2012-07-19 08:55:06.000000000 +0100
++++ cdo-1.5.6.1/libcdi/src/config.h.in	2012-09-10 21:21:38.000000000 +0100
+@@ -185,6 +185,11 @@
+ /* Version number of package */
+ #undef VERSION
+ 
++/* Enable large inode numbers on Mac OS X 10.5.  */
++#ifndef _DARWIN_USE_64_BIT_INODE
++# define _DARWIN_USE_64_BIT_INODE 1
++#endif
++
+ /* Number of bits in a file offset, on hosts where this is settable. */
+ #undef _FILE_OFFSET_BITS
+ 

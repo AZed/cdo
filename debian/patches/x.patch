@@ -1,0 +1,175 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ cdo (1.5.6.1+dfsg.1-1) unstable; urgency=low
+ .
+   * New upstream release
+   * Standards-Version: 3.9.3
+   * Don't use MPI builds. PIO code not included yet.
+Author: Alastair McKinstry <mckinstry@debian.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- cdo-1.5.6.1+dfsg.1.orig/config/default
++++ cdo-1.5.6.1+dfsg.1/config/default
+@@ -17,32 +17,17 @@ fi
+ set -x
+ #
+ case "${HOSTNAME}" in
+-    icc)
+-	${CONFPATH}configure --prefix=$HOME/local \
+-                    --enable-maintainer-mode \
+-                    --with-jasper=$HOME/local \
+-                    --with-grib_api=$HOME/local/gribapi-1.9.16cgribex \
+-                    --with-netcdf=$HOME/local \
+-                    --with-hdf5=$HOME/local \
+-                    --with-szlib=$HOME/local \
+-                    --with-proj=/opt/local \
+-                    --with-magics=/Users/m214003/local/magics-2.14.9 \
+-	            CC=icc CFLAGS="-g  -D_REENTRANT -Wall -W -O3 -openmp -DHAVE_LIBXML -I/usr/include/libxml2 -I/opt/include" \
+-                    LIBS="-L/usr/lib -lxml2 -L/opt/local/lib -lopenjpeg"
+-	;;
+ # i386-apple-darwin10
+     bailung*)
+ 	${CONFPATH}configure --prefix=$HOME/local \
+                     --enable-maintainer-mode \
+                     --with-jasper=$HOME/local \
+-                    --with-grib_api=$HOME/local/gribapi-1.9.16cgribex \
++                    --with-grib_api=$HOME/local \
+                     --with-netcdf=$HOME/local \
+                     --with-hdf5=$HOME/local \
+                     --with-szlib=$HOME/local \
+                     --with-proj=/opt/local \
+-                    --with-magics=/Users/m214003/local/magics-2.14.9 \
+-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -fopenmp -DHAVE_LIBXML -I/usr/include/libxml2 -I/opt/include" \
+-                    LIBS="-L/usr/lib -lxml2 -L/opt/local/lib -lopenjpeg"
++	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
+ 	;;
+     hama*)
+ 	${CONFPATH}configure --prefix=$HOME/local \
+@@ -52,7 +37,7 @@ case "${HOSTNAME}" in
+                     --with-netcdf=/opt/local \
+                     --with-szlib=$HOME/local \
+                     --with-proj=/opt/local \
+-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -fopenmp"
++	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
+ 	;;
+ # ia64-xxx-linux
+     ds*)
+@@ -70,33 +55,30 @@ case "${HOSTNAME}" in
+     tornado*)
+  	${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/sles10-x64 \
+                     --enable-all-static \
+-	            --with-netcdf=/sw/sles10-x64/netcdf-4.2-static \
+-	            --with-hdf5=/sw/sles10-x64/hdf5-1.8.8-static \
++	            --with-netcdf=/sw/sles10-x64/netcdf-4.0.1 \
++	            --with-hdf5=/sw/sles10-x64/hdf5-1.8.2 \
+                     --with-szlib=/sw/sles10-x64/szip-2.1 \
+ 	            CC=gcc CFLAGS='-g -Wall -O2 -fopenmp'
+ #	            CC=suncc CFLAGS="-g -fast -xopenmp"
+ 	;;
+-# x86_64-squeeze-x64-linux
+-    thunder*)
+-        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/squeeze-x64 \
+-                    --with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
+-                    --with-grib_api=/sw/squeeze-x64/grib_api-1.9.9-static \
+-                    --with-netcdf=/sw/squeeze-x64/netcdf-4.2-static \
+-                    --with-hdf5=/sw/squeeze-x64/hdf5-1.8.8-static \
+-                    --with-szlib=/sw/squeeze-x64/szip-2.1 \
+-                    --with-proj=/sw/squeeze-x64/proj-4.7.0 \
+-                    CC=gcc CFLAGS='-g -Wall -O3 -fopenmp'
+-	;;
++# x86_64-etch-x64-linux
++#    squall*)
++#        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-x64 \
++#                    --enable-all-static \
++#                    --with-netcdf=/sw/etch-x64/netcdf-4.0.1 \
++#                    --with-hdf5=/sw/etch-x64/hdf5-1.8.2 \
++#                    --with-szlib=/sw/etch-x64/szip-2.1-static \
++#                    --with-proj=/sw/etch-x64/proj-4.7.0 \
++#                    CC=gcc CFLAGS='-g -Wall -O2 -fopenmp'
++#	;;
+ # x86_64-lenny-linux-gnu
+     squall*)
+         ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/lenny-x64 \
+-                    --with-jasper=/sw/lenny-x64/jasper-1.900.1-static \
+-                    --with-grib_api=/sw/lenny-x64/grib_api-1.9.9-static \
+-                    --with-netcdf=/sw/lenny-x64/netcdf-4.2-static \
+-                    --with-hdf5=/sw/lenny-x64/hdf5-1.8.8-static \
++                    --with-netcdf=/sw/lenny-x64/netcdf-4.0.1-gcc \
++                    --with-hdf5=/sw/lenny-x64/hdf5-1.8.4p1-gcc \
+                     --with-szlib=/sw/lenny-x64/szip-2.1 \
+                     --with-proj=/sw/lenny-x64/proj-4.7.0 \
+-                    CC=gcc CFLAGS='-g -Wall -O3 -fopenmp'
++                    CC=gcc CFLAGS='-g -Wall -O2 -fopenmp'
+ 	;;
+ # x86_64-archlinux
+     thingol*)
+@@ -121,6 +103,19 @@ case "${HOSTNAME}" in
+                     --with-szlib=$HOME/local \
+ 	            CC=colorgcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
+ 	;;
++# i686-linux
++    etch-ia32 | gata)
++ 	${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-ia32 \
++                    --enable-maintainer-mode \
++                    --with-jasper=/sw/etch-ia32/jasper-1.900.1 \
++                    --with-grib_api=$HOME/local/etch-ia32/grib_api-1.9.9 \
++	            --with-netcdf=/sw/etch-ia32/netcdf-4.1.1-gcc \
++	            --with-hdf5=/sw/etch-ia32/hdf5-1.8.4-threadsafe \
++                    --with-zlib=/sw/etch-ia32/zlib-1.2.3 \
++                    --with-szlib=$HOME/local/etch-ia32 \
++                    --with-proj=/sw/etch-ia32/proj-4.6.0 \
++	            CC=gcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2"
++        ;;
+ # standard workstations at MPI-M x86_64-lenny
+     mpipc* )
+ 	${CONFPATH}configure \
+@@ -172,13 +167,13 @@ case "${HOSTNAME}" in
+ 	;;
+ # x86_64-unknown-linux-gnu (rhel55)
+     lizard*)
+-        LDFLAGS="-lpng"
++        LDFLAGS="-Wl,-rpath=/sw/rhel55-x64/jasper-1.900.1/lib:/sw/rhel55-x64/hdf5-1.8.5-threadsafe/lib:/sw/rhel55-x64/szip-2.1/lib:/sw/rhel55-x64/netcdf-4.1.1/lib -lpng"
+         export LDFLAGS
+ 	${CONFPATH}configure --prefix=$HOME/local/rhel55-x64 \
+                     --with-jasper=/sw/rhel55-x64/jasper-1.900.1 \
+                     --with-grib_api=/sw/rhel55-x64/grib_api-1.9.0 \
+-                    --with-netcdf=/sw/rhel55-x64/netcdf-4.2 \
+-                    --with-hdf5=/sw/rhel55-x64/hdf5-1.8.8-threadsafe \
++                    --with-netcdf=/sw/rhel55-x64/netcdf-4.1.1 \
++                    --with-hdf5=/sw/rhel55-x64/hdf5-1.8.5-threadsafe \
+                     --with-szlib=/sw/rhel55-x64/szip-2.1 \
+                     --with-zlib=/usr \
+  	            CC=gcc44 CFLAGS="-g -Wall -O2 -fopenmp"
+@@ -198,10 +193,11 @@ case "${HOSTNAME}" in
+     blizzard*)
+ 	${CONFPATH}configure --prefix=$HOME/local \
+                     --with-jasper=/sw/aix53/jasper-1.900.1 \
+-                    --with-grib_api=/sw/aix61/grib_api-1.9.9 \
+-                    --with-netcdf=/sw/aix61/netcdf-4.2-threadsafe \
+-                    --with-hdf5=/sw/aix61/hdf5-1.8.8-threadsafe \
+-                    --with-szlib=/sw/aix61/szip-2.1-threadsafe \
++                    --with-grib_api=/sw/aix61/ECMWF \
++                    --with-netcdf=/sw/aix61/netcdf-4.1.2-hdf5-threadsafe \
++                    --with-hdf5=/sw/aix61/hdf5-1.8.6-threadsafe \
++                    --with-zlib=/sw/aix53/zlib-1.2.3 \
++                    --with-szlib=/sw/aix53/szip-2.1 \
+                     --with-proj=/sw/aix53/proj-4.6.1 \
+                     AR="ar -X 64"  LDFLAGS="-brtl" \
+  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"

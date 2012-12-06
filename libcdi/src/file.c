@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <string.h> 
+#include <string.h>
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
@@ -18,6 +18,14 @@ size_t getpagesize(void);
 #include "dmemory.h"
 #include "error.h"
 #include "file.h"
+
+#ifdef USE_MPI
+#include "cdi.h"
+#include "namespace.h"
+#include "pio.h"
+#include "pio_comm.h"
+#include "pio_util.h"
+#endif
 
 #if ! defined(O_BINARY)
 #define O_BINARY 0
@@ -68,17 +76,17 @@ static int _file_init = FALSE;
 static pthread_once_t  _file_init_thread = PTHREAD_ONCE_INIT;
 static pthread_mutex_t _file_mutex;
 
-#  define FILE_LOCK           pthread_mutex_lock(&_file_mutex);
-#  define FILE_UNLOCK         pthread_mutex_unlock(&_file_mutex);
-#  define FILE_INIT                               \
-   if ( _file_init == FALSE ) pthread_once(&_file_init_thread, file_initialize);
+#  define FILE_LOCK()         pthread_mutex_lock(&_file_mutex)
+#  define FILE_UNLOCK()       pthread_mutex_unlock(&_file_mutex)
+#  define FILE_INIT()        \
+   if ( _file_init == FALSE ) pthread_once(&_file_init_thread, file_initialize)
 
 #else
 
-#  define FILE_LOCK
-#  define FILE_UNLOCK
-#  define FILE_INIT                               \
-   if ( _file_init == FALSE ) file_initialize();
+#  define FILE_LOCK()
+#  define FILE_UNLOCK()
+#  define FILE_INIT()        \
+   if ( _file_init == FALSE ) file_initialize()
 
 #endif
 
@@ -145,7 +153,7 @@ static void file_table_print(void);
  * A version string.
  */
 #undef   LIBVERSION
-#define  LIBVERSION      1.7.1
+#define  LIBVERSION      1.8.0
 #define  XSTRING(x)	 #x
 #define  STRING(x) 	 XSTRING(x)
 const char file_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
@@ -164,6 +172,7 @@ const char file_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
                     use HAVE_STRUCT_STAT_ST_BLKSIZE
   22/08/2010  1.7.0 refactor
   11/11/2010  1.7.1 update for changed interface of error.h
+  02/02/2012  1.8.0 cleanup
  */
 
 
@@ -188,14 +197,18 @@ void file_list_new(void)
 static
 void file_list_delete(void)
 {
-  if ( _fileList ) free(_fileList);
+  if ( _fileList )
+    {
+      free(_fileList);
+      _fileList = NULL;
+    }
 }
 
 static
 void file_init_pointer(void)
 {
   int  i;
-  
+
   for ( i = 0; i < _file_max; i++ )
     {
       _fileList[i].next = _fileList + i + 1;
@@ -213,15 +226,15 @@ bfile_t *file_to_pointer(int idx)
 {
   bfile_t *fileptr = NULL;
 
-  FILE_INIT
+  FILE_INIT();
 
   if ( idx >= 0 && idx < _file_max )
     {
-      FILE_LOCK
+      FILE_LOCK();
 
       fileptr = _fileList[idx].ptr;
 
-      FILE_UNLOCK
+      FILE_UNLOCK();
     }
   else
     Error("file index %d undefined!", idx);
@@ -238,7 +251,7 @@ int file_from_pointer(bfile_t *ptr)
 
   if ( ptr )
     {
-      FILE_LOCK
+      FILE_LOCK();
 
       if ( _fileAvail )
 	{
@@ -247,14 +260,14 @@ int file_from_pointer(bfile_t *ptr)
 	  newptr->next = 0;
 	  idx	       = newptr->idx;
 	  newptr->ptr  = ptr;
-      
+
 	  if ( FILE_Debug )
 	    Message("Pointer %p has idx %d from file list", ptr, idx);
 	}
       else
 	Warning("Too many open files (limit is %d)!", _file_max);
 
-      FILE_UNLOCK
+      FILE_UNLOCK();
     }
   else
     Error("Internal problem (pointer %p undefined)", ptr);
@@ -308,7 +321,7 @@ void file_delete_entry(bfile_t *fileptr)
 
   idx = fileptr->self;
 
-  FILE_LOCK
+  FILE_LOCK();
 
   free(fileptr);
 
@@ -316,7 +329,7 @@ void file_delete_entry(bfile_t *fileptr)
   _fileList[idx].ptr  = 0;
   _fileAvail   	      = &_fileList[idx];
 
-  FILE_UNLOCK
+  FILE_UNLOCK();
 
   if ( FILE_Debug )
     Message("Removed idx %d from file list", idx);
@@ -547,7 +560,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
 		  if ( FILE_Debug )
 		    Message("Reset buffer pos from %ld to %ld",
 			    fileptr->bufferPos, fileptr->bufferEnd + 1);
-			    
+
 		  fileptr->bufferPos = fileptr->bufferEnd + 1;
 		}
 	      fileptr->bufferCnt = fileptr->bufferEnd - position + 1;
@@ -581,7 +594,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
 		  if ( FILE_Debug )
 		    Message("Reset buffer pos from %ld to %ld",
 			    fileptr->bufferPos, fileptr->bufferEnd + 1);
-			    
+
 		  fileptr->bufferPos = fileptr->bufferEnd + 1;
 		}
 	      fileptr->bufferCnt -= offset;
@@ -784,11 +797,11 @@ void file_initialize(void)
   file_list_new();
   atexit(file_list_delete);
 
-  FILE_LOCK
+  FILE_LOCK();
 
   file_init_pointer();
 
-  FILE_UNLOCK
+  FILE_UNLOCK();
 
   if ( FILE_Debug ) atexit(file_table_print);
 
@@ -852,7 +865,7 @@ void file_set_buffer(bfile_t *fileptr)
       fileptr->buffer = (char *) malloc(buffersize);
       if ( fileptr->buffer == NULL )
 	SysError("Allocation of file buffer failed!");
-    }	
+    }
 
   if ( fileptr->type == FILE_TYPE_FOPEN )
     if ( setvbuf(fileptr->fp, fileptr->buffer, _IOFBF, buffersize) )
@@ -869,14 +882,14 @@ int file_fill_buffer(bfile_t *fileptr)
   int ret;
   long offset = 0;
   off_t retseek;
-  
+
   if ( FILE_Debug )
     Message("file ptr = %p  Cnt = %ld", fileptr, fileptr->bufferCnt);
 
   if ( (fileptr->flag & FILE_EOF) != 0 ) return (EOF);
 
   if ( fileptr->buffer == NULL ) file_set_buffer(fileptr);
-  
+
   if ( fileptr->bufferSize == 0 ) return (EOF);
 
   fd = fileptr->fd;
@@ -919,7 +932,7 @@ int file_fill_buffer(bfile_t *fileptr)
       retseek = lseek(fileptr->fd, fileptr->bufferPos, SEEK_SET);
       if ( retseek == (off_t)-1 )
 	SysError("lseek error at pos %ld file %s", (long) fileptr->bufferPos, fileptr->name);
-	
+
       nread = (long) read(fd, fileptr->buffer, fileptr->bufferSize);
     }
 
@@ -1042,8 +1055,7 @@ void fileSetBufferSize(int fileID, long buffersize)
   if ( fileptr ) fileptr->bufferSize = buffersize;
 }
 
-
-/* 
+/*
  *   Open a file. Returns file ID, or -1 on error
  */
 int fileOpen(const char *filename, const char *mode)
@@ -1055,7 +1067,12 @@ int fileOpen(const char *filename, const char *mode)
   struct stat filestat;
   bfile_t *fileptr = NULL;
 
-  FILE_INIT
+#ifdef USE_MPI
+  if ( memcmp ( mode, "w", 1 ) == 0 && commInqIOMode () != PIO_NONE )
+      return pioFileOpenW ( filename );
+#endif
+
+  FILE_INIT();
 
   fmode = tolower((int) mode[0]);
 
@@ -1075,7 +1092,7 @@ int fileOpen(const char *filename, const char *mode)
 
   if ( FILE_Debug )
     if ( fp == NULL && fd == -1 )
-      Message("Open failed on %s mode %c", filename, fmode);
+      Message("Open failed on %s mode %c errno %d", filename, fmode, errno);
 
   if ( fp )
     {
@@ -1104,6 +1121,7 @@ int fileOpen(const char *filename, const char *mode)
     {
       fileptr->mode = fmode;
       fileptr->name = strdupx(filename);
+
 #if defined (HAVE_STRUCT_STAT_ST_BLKSIZE)
       fileptr->blockSize = (size_t) filestat.st_blksize;
 #else
@@ -1125,14 +1143,13 @@ int fileOpen(const char *filename, const char *mode)
       if ( fileptr->type == FILE_TYPE_FOPEN ) file_set_buffer(fileptr);
 
       if ( FILE_Debug )
-	Message("File %s opened with ID %d", filename, fileID);      
+	Message("File %s opened with ID %d", filename, fileID);
     }
 
   return (fileID);
 }
 
-
-/* 
+/*
  *   Close a file.
  */
 int fileClose(int fileID)
@@ -1142,6 +1159,11 @@ int fileClose(int fileID)
   char *fbtname[] = {"unknown", "standard", "mmap"};
   char *ftname[] = {"unknown", "open", "fopen"};
   bfile_t *fileptr;
+
+#ifdef USE_MPI
+  if ( commInqIOMode () != PIO_NONE )
+    return pioFileClose ( fileID );
+#endif
 
   fileptr = file_to_pointer(fileID);
 

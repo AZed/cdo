@@ -24,6 +24,7 @@ int cdiDefaultInstID   = CDI_UNDEFID;
 int cdiDefaultModelID  = CDI_UNDEFID;
 int cdiDefaultTableID  = CDI_UNDEFID;
 int cdiNcMissingValue  = CDI_UNDEFID;
+int cdiNcChunksizehint = CDI_UNDEFID;
 int cdiSplitLtype105   = CDI_UNDEFID;
 
 int cdiIgnoreAttCoordinates = FALSE;
@@ -144,6 +145,9 @@ void cdiInitialize(void)
       envString = getenv("NC_MISSING_VALUE");
       if ( envString ) cdiNcMissingValue = atoi(envString);
 
+      envString = getenv("NC_CHUNKSIZEHINT");
+      if ( envString ) cdiNcChunksizehint = atoi(envString);
+
       envString = getenv("SPLIT_LTYPE_105");
       if ( envString ) cdiSplitLtype105 = atoi(envString);
 
@@ -187,7 +191,9 @@ void cdiInitialize(void)
 	  if ( CDI_Debug )
 	    Message("Default calendar set to %s!", envString);
 	}
+#if  defined  (HAVE_LIBCGRIBEX)
       gribSetCalendar(cdiDefaultCalendar);
+#endif
 
       envString = getenv("PARTAB_INTERN");
       if ( envString ) cdiPartabIntern = atoi(envString);
@@ -531,6 +537,10 @@ void cdiDefGlobal(const char *string, int val)
     {
       cdiHaveMissval = val;
     }
+  else if ( strcmp(string, "NC_CHUNKSIZEHINT") == 0 )
+    {
+      cdiNcChunksizehint = val;
+    }
   else
     {
       Warning("Unsupported global key: %s", string);
@@ -573,7 +583,6 @@ void cdiCheckContents(int streamID)
       if ( zaxisInqType(zaxisID) == ZAXIS_GENERIC )
 	cdiCheckZaxis(zaxisID);
     }
-    
 }
 
 
@@ -597,12 +606,12 @@ void streamDefineTaxis(int streamID)
     {
       int varID, nvars;
       int vlistID;
-  
+
       vlistID = streamInqVlist(streamID);
 
       nvars = vlistNvars(vlistID);
       for ( varID = 0; varID < nvars; varID++ )
-	if ( vlistInqVarTime(vlistID, varID) == TIME_VARIABLE ) break;
+	if ( vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT ) break;
 
       if ( varID == nvars )
 	{
@@ -614,7 +623,7 @@ void streamDefineTaxis(int streamID)
 	      taxisID = taxisCreate(TAXIS_ABSOLUTE);
 	      vlistDefTaxis(vlistID, taxisID);
 	    }
-	    
+
 	  (void) streamDefTimestep(streamID, 0);
 	}
       else

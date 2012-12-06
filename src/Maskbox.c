@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -485,7 +485,7 @@ void *Maskbox(void *argument)
              
 	      for ( i = 0; i < gridsize; i++ )
 		{
-		  if( mask[i] != 0 ) array[i] = missval;
+		  if( mask[i] ) array[i] = missval;
 		}
 		
 	      nmiss = 0;

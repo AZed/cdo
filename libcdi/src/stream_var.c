@@ -24,9 +24,9 @@ void streamvarInitEntry(int streamID, int varID)
   streamptr->vars[varID].level        = NULL;
   streamptr->vars[varID].lindex       = NULL;
 
-  streamptr->vars[varID].timeID       = CDI_UNDEFID;
   streamptr->vars[varID].gridID       = CDI_UNDEFID;
   streamptr->vars[varID].zaxisID      = CDI_UNDEFID;
+  streamptr->vars[varID].tsteptype    = CDI_UNDEFID;
   streamptr->vars[varID].level        = NULL;
   streamptr->vars[varID].nlevs        = 0;
 }

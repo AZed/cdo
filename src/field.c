@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -132,6 +132,7 @@ double fldcrps(field_t field)
 
 }
 
+
 double fldbrs(field_t field) 
 {
   long      len   = field.size;
@@ -151,10 +152,10 @@ double fldbrs(field_t field)
     }
   else 
     {
-      if ( array[0] == missval ) 
-	return missval;
+      if ( DBL_IS_EQUAL(array[0], missval) ) return missval;
+
       for ( i=1; i<len; i++ )
-	if ( array[i] != missval ) 
+	if ( !DBL_IS_EQUAL(array[i], missval) ) 
 	  {
 	    brs += (array[i] - array[0]) * (array[i] - array[0]);
 	    count ++;
@@ -163,6 +164,7 @@ double fldbrs(field_t field)
 
   return brs/count;
 }
+
 
 double fldmin(field_t field)
 {

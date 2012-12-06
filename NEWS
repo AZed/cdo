@@ -1,5 +1,38 @@
 CDO NEWS
 --------
+Version 1.5.6.1 (26 July 2012):
+
+   Fixed bugs:
+     Wrong results with the following statistical functions:
+       *mean, *avg, *sum, *var, *std
+     only if all of the following conditions are complied:
+       - x86_64 machine (tornado, squall, thunder, lizard)
+       - dataset has no missing values
+       - the horizontal grid size is > 1 and not multiple of 8
+     This bug was introduced in CDO version 1.5.5.
+
+Version 1.5.6 (23 July 2012):
+
+   New features:
+     * Runstat: OpenMP parallelization over parameter nts
+     * import_binary: added support for 64-bit floats via extra OPTION keyword flt64 
+   New operators:
+     * showunit: show unit of a parameter
+   Changed operators:
+     * Arith: added support for 3D masks
+     * mastrfu: use grid coordinates from input file
+   Fixed bugs:
+     * ymonsub: added support for time bounds
+     * Wrong netCDF output for unscaled uint8, int8, int16, int32 variables [Bug #2516]
+
+Version 1.5.5 (15 May 2012):
+
+   New operators:
+     * yhouradd, yhoursub, yhourmul, yhourdiv: Multi-year hourly arithmetic
+   Fixed bugs:
+     * ECA operators: wrong result if missing value is not the default missing value (-9e33)
+     * ml2pl: added support for GRIB2 parameter names
+     * replace: removed debug output 
 
 Version 1.5.4 (30 January 2012):
 

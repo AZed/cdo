@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -106,10 +106,20 @@ void compareGrids(int gridID1, int gridID2)
     }
 }
 
+static
+int cmpnames(const void *s1, const void *s2)
+{
+  char *name1 = (char *) s1;
+  char *name2 = (char *) s2;
+
+  return (strcmp(name1, name2));
+}
+
 
 void vlistCompare(int vlistID1, int vlistID2, int flag)
 {
   int varID, nvars;
+  int lchecknames = FALSE;
 
   if ( vlistNvars(vlistID1) != vlistNvars(vlistID2) )
     cdoAbort("Input streams have different number of variables per timestep!");
@@ -133,7 +143,9 @@ void vlistCompare(int vlistID1, int vlistID2, int flag)
 	  if ( strcmp(name1, name2) != 0 )
 	    {
 	      cdoWarning("Input streams have different parameters!");
-	      break;
+	      lchecknames = TRUE;
+	      flag -= CMP_NAME;
+	      //    break;
 	    }
 	}
 
@@ -161,6 +173,65 @@ void vlistCompare(int vlistID1, int vlistID2, int flag)
 
       compareGrids(gridID1, gridID2);
     }
+
+  if ( lchecknames )
+    {
+      char names1[nvars][CDI_MAX_NAME], names2[nvars][CDI_MAX_NAME];
+      for ( varID = 0; varID < nvars; varID++ )
+	vlistInqVarName(vlistID1, varID, names1[varID]);
+      for ( varID = 0; varID < nvars; varID++ )
+	vlistInqVarName(vlistID2, varID, names2[varID]);
+
+      qsort(names1[0], nvars, CDI_MAX_NAME, cmpnames);
+
+      for ( varID = 0; varID < nvars; varID++ )
+	if ( strcmp(names1[varID], names2[varID]) != 0 ) break;
+
+      if ( varID == nvars )
+	cdoPrint("Use the CDO option -Q to sort the parameter names, if you have netCDF input files!");
+    }
+}
+
+
+int vlistCompareX(int vlistID1, int vlistID2, int flag)
+{
+  int varID, nvars, nvars2, nlevels2;
+
+  nvars = vlistNvars(vlistID1);
+  nvars2 = vlistNvars(vlistID2);
+  nlevels2 = zaxisInqSize(vlistInqVarZaxis(vlistID2, 0));
+
+  if ( nvars2 != 1 )
+    cdoAbort("Internal problem, vlistCompareX() called with unexpected vlistID2 argument!");
+
+  for ( varID = 0; varID < nvars; varID++ )
+    {
+      if ( flag & CMP_GRIDSIZE )
+	{
+	  if ( gridInqSize(vlistInqVarGrid(vlistID1, varID)) !=
+	       gridInqSize(vlistInqVarGrid(vlistID2, 0)) )
+	    cdoAbort("Grid size of the input parameters do not match!");
+	}
+      
+      if ( flag & CMP_NLEVEL )
+	{
+	  if ( (zaxisInqSize(vlistInqVarZaxis(vlistID1, varID)) !=
+                nlevels2) && nlevels2 > 1 )
+	    cdoAbort("Number of levels of the input parameters do not match!");
+	}
+    }
+
+  if ( flag & CMP_GRID )
+    {
+      int gridID1, gridID2;
+
+      gridID1 = vlistInqVarGrid(vlistID1, 0);
+      gridID2 = vlistInqVarGrid(vlistID2, 0);
+
+      compareGrids(gridID1, gridID2);
+    }
+
+  return (nlevels2);
 }
 
 

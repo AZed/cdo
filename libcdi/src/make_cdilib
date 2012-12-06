@@ -64,6 +64,51 @@ cat > ${PROG} << EOR
 #  include <szlib.h>
 #endif
 
+
+//#undef _GET_X86_COUNTER
+//#undef _GET_IBM_COUNTER
+//#undef _ARCH_PWR6
+
+#if   defined(__GNUC__) && (__GNUC__ >= 4)
+#elif defined(__ICC)    && (__ICC >= 1100)
+#else
+#define DISABLE_SIMD
+#endif
+
+#ifdef DISABLE_SIMD
+#ifndef ENABLE_AVX
+#undef __AVX__
+#endif
+#ifndef ENABLE_SSE2
+#undef __SSE2__
+#endif
+#endif
+
+#ifdef _GET_IBM_COUNTER
+#include <libhpc.h>
+#endif
+
+#ifdef __AVX__
+#include <float.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <immintrin.h>
+#ifdef _GET_X86_COUNTER
+#include <x86intrin.h>
+#endif
+#else
+#ifdef __SSE2__
+#include <float.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <emmintrin.h>
+#ifdef _GET_X86_COUNTER
+#include <x86intrin.h>
+#endif
+#endif
+#endif
+
+
 #if ! defined (HAVE_CONFIG_H)
 #  define  HAVE_LIBGRIB      1
 #  define  HAVE_LIBCGRIBEX   1

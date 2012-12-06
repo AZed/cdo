@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,7 @@ void *Ymonarith(void *argument)
   int offset;
   int vlistID1, vlistID2, vlistID3;
   int taxisID1, taxisID2, taxisID3;
-  int vdate, vtime, year, mon, day;
+  int vdate, year, mon, day;
   field_t field1, field2;
   int **varnmiss2[MAX_MON];
   double **vardata2[MAX_MON];
@@ -126,13 +126,11 @@ void *Ymonarith(void *argument)
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       vdate = taxisInqVdate(taxisID1);
-      vtime = taxisInqVtime(taxisID1);
 
       cdiDecodeDate(vdate, &year, &mon, &day);
       if ( mon < 0 || mon >= MAX_MON ) cdoAbort("Month %d out of range!", mon);
 
-      taxisDefVdate(taxisID3, vdate);
-      taxisDefVtime(taxisID3, vtime);
+      taxisCopyTimestep(taxisID3, taxisID1);
 
       streamDefTimestep(streamID3, tsID);
 

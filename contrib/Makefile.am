@@ -2,12 +2,17 @@ EXTRA_DIST = makecompl.rb cdoCompletion.bash cdoCompletion.tcsh cdoCompletion.zs
 CLEANFILES = 
 
 completions:
-	if test -x /usr/bin/ruby -o -x /usr/local/bin/ruby ; then \
+	if (hash ruby &> /dev/null) ; then \
 	  ruby -KN $(srcdir)/makecompl.rb -o cdoCompletion; \
 	fi
 
 test:
-	(cd ruby;ruby test/test_cdo.rb) && (cd python; python test/test_cdo.py)
+	if (hash ruby &> /dev/null) ; then \
+	    (cd ruby;ruby test/test_cdo.rb) \
+    fi
+	if (hash ruby &> /dev/null) ; then \
+	    (cd python; python test/test_cdo.py) \
+    fi
 
 if MAINTAINER_MODE
 all-local: completions

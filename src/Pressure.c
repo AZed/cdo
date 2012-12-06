@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,9 +18,9 @@
 /*
    This module contains the following operators:
 
-      Pressure    pressure_fl          Pressure on full hybrid level
-      Pressure    pressure_hl          Pressure on half hybrid level
-      Pressure    deltap               Difference of two half hybrid level
+      Pressure    pressure_fl          Pressure on full hybrid levels
+      Pressure    pressure_hl          Pressure on half hybrid levels
+      Pressure    deltap               Difference of two half hybrid levels
 */
 
 #include <ctype.h>
@@ -52,8 +52,10 @@ void *Pressure(void *argument)
   int nhlev = 0, nhlevf = 0, nhlevh = 0, nlevel;
   int nvct;
   int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, pvarID = -1;
-  int code;
+  int code, param;
+  char paramstr[32];
   char varname[CDI_MAX_NAME];
+  double minval, maxval;
   double *vct = NULL;
   double *ps_prog = NULL, *full_press = NULL, *half_press = NULL, *deltap = NULL;
   double *pout = NULL;
@@ -239,9 +241,10 @@ void *Pressure(void *argument)
     {
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
 
-      if ( tableNum > 0 )
+      if ( tableNum > 0 && tableNum != 255 )
 	{
 	  useTable = TRUE;
+	  break;
 	}
     }
 
@@ -256,7 +259,10 @@ void *Pressure(void *argument)
       instNum  = institutInqCenter(vlistInqVarInstitut(vlistID1, varID));
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
 
-      code = vlistInqVarCode(vlistID1, varID);
+      code     = vlistInqVarCode(vlistID1, varID);
+      param    = vlistInqVarParam(vlistID1, varID);
+
+      cdiParamToString(param, paramstr, sizeof(paramstr));
 
       if ( useTable )
 	{
@@ -288,7 +294,7 @@ void *Pressure(void *argument)
 	}
 
       if ( cdoVerbose )
-	cdoPrint("Mode = %d  Center = %d  Table = %d  Code = %d", mode, instNum, tableNum, code);
+	cdoPrint("Mode = %d  Center = %d  Param = %s", mode, instNum, paramstr);
 
       if ( code <= 0 )
 	{
@@ -348,7 +354,7 @@ void *Pressure(void *argument)
 
 
   vlistID2 = vlistCreate();
-  varID = vlistDefVar(vlistID2, gridID, zaxisIDp, TIME_VARIABLE);
+  varID = vlistDefVar(vlistID2, gridID, zaxisIDp, TSTEP_INSTANT);
   vlistDefVarCode(vlistID2, varID, 1);
   vlistDefVarName(vlistID2, varID, "pressure");
   vlistDefVarLongname(vlistID2, varID, "Air pressure");
@@ -378,7 +384,7 @@ void *Pressure(void *argument)
 	  if ( varID == pvarID )
 	    {	  
 	      streamReadRecord(streamID1, pdata, &nmiss);
-	      if ( nmiss > 0 ) cdoAbort("Missing values unsupported!");
+	      if ( nmiss > 0 ) cdoAbort("Missing valus unsupported!");
 	    }
 	}
 
@@ -390,19 +396,10 @@ void *Pressure(void *argument)
 	    memcpy(ps_prog, pdata, ngp*sizeof(double));
 
 	  /* check range of ps_prog */
-	  {
-	    double minval = ps_prog[0];
-	    double maxval = ps_prog[0];
-	    for ( i = 1; i < ngp; i++ )
-	      {
-		if      ( ps_prog[i] > maxval ) maxval = ps_prog[i];
-		else if ( ps_prog[i] < minval ) minval = ps_prog[i];
-	      }
-
-	    if ( minval < 20000 || maxval > 150000 )
-	      cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
-	  }
-
+	  minmaxval(ngp, ps_prog, NULL, &minval, &maxval);
+	  if ( minval < MIN_PS || maxval > MAX_PS )
+	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
+	    
 	  presh(full_press, half_press, vct, ps_prog, nhlevf, ngp);
 	}
 

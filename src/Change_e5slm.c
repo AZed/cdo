@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -10,7 +10,7 @@
   the Free Software Foundation; version 2 of the License.
 
   This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  but WITHOUT ANY WARRANTY; without even the implied 1warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 */
@@ -25,24 +25,6 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-
-
-static
-void minmax(int nvals, double *array, double *minval, double *maxval)
-{
-  long i;
-  double xmin =  DBL_MAX;
-  double xmax = -DBL_MAX;
-
-  for ( i = 0; i < nvals; i++ )
-    {
-      if      ( array[i] > xmax ) xmax = array[i];
-      else if ( array[i] < xmin ) xmin = array[i];
-    }
-
-  *minval = xmin;
-  *maxval = xmax;
-}
 
 
 void *Change_e5slm(void *argument)
@@ -102,8 +84,7 @@ void *Change_e5slm(void *argument)
 
   if ( nmiss > 0 ) cdoAbort("SLM with missing values are unsupported!");
 
-  minmax(gridsize, cland, &minval, &maxval);
-
+  minmaxval(gridsize, cland, NULL, &minval, &maxval);
   if ( minval < 0 || maxval > 1 )
     cdoWarning("Values of SLM out of bounds! (minval=%g, maxval=%g)", minval , maxval);
 

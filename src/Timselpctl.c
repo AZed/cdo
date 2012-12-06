@@ -227,7 +227,7 @@ void *Timselpctl(void *argument)
 
       for ( varID = 0; varID < nvars; varID++ )
         {
-          if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+          if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
           nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
           
           for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -243,7 +243,7 @@ void *Timselpctl(void *argument)
 	  varID   = recVarID[recID];
 	  levelID = recLevelID[recID];
 
-	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	  if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	  streamDefRecord(streamID4, varID, levelID);
 	  streamWriteRecord(streamID4, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);

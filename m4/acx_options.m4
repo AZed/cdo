@@ -339,6 +339,39 @@ AC_ARG_WITH([proj],
             [AC_MSG_CHECKING([for the PROJ library])
              AC_MSG_RESULT([suppressed])])
 #  ----------------------------------------------------------------------
+#  Compile application with MAGICS
+MAGICS_ROOT=''
+MAGICS_INCLUDE=''
+MAGICS_LIBS=''
+AC_ARG_WITH([magics],
+            [AS_HELP_STRING([--with-magics=<yes|no|directory>],[location of magics library (lib and include subdirs)])],
+            [AS_CASE(["$with_magics"],
+                     [no],[AC_MSG_CHECKING([for magics library])
+                           AC_MSG_RESULT([suppressed])],
+                     [yes],[AC_CHECK_HEADERS([magics_api.h])
+                            AC_SEARCH_LIBS([mag_open],
+                                           [MagPlus],
+                                           [AC_DEFINE([HAVE_LIBMAGICS],[1],[Define to 1 for MAGICS support])],
+                                           [AC_MSG_ERROR([Could not link to magics library])])
+                            AC_SUBST([MAGICS_LIBS],[" -lMagPlus"])],
+                     [*],[AS_IF([test -d "$with_magics"],
+                                [MAGICS_ROOT=$with_magics
+                                 LDFLAGS="-L$MAGICS_ROOT/lib $LDFLAGS"
+                                 CPPFLAGS="-I$MAGICS_ROOT/include/magics $CPPFLAGS"
+                                 AC_CHECK_HEADERS([magics_api.h])
+                                 AC_SEARCH_LIBS([mag_open],
+                                                [MagPlus],
+                                                [AC_DEFINE([HAVE_LIBMAGICS],[1],[Define to 1 for MAGICS support])],
+                                                [AC_MSG_ERROR([Could not link to magics library])])
+                                 MAGICS_LIBS=" -L$MAGICS_ROOT/lib -lMagPlus"
+                                 MAGICS_INCLUDE=" -I$MAGICS_ROOT/include/magics"],
+                                [AC_MSG_NOTICE([$with_magics is not a directory! MAGICS suppressed])])])],
+            [AC_MSG_CHECKING([for MAGICS library])
+             AC_MSG_RESULT([suppressed])])
+AC_SUBST([MAGICS_ROOT])
+AC_SUBST([MAGICS_INCLUDE])
+AC_SUBST([MAGICS_LIBS])
+#  ----------------------------------------------------------------------
 #  How to build CDI into CDO? 
 INTERNAL_CDI_DIR=libcdi
 # At the moment, there are two possible CDI bindings

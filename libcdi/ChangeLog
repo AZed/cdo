@@ -1,3 +1,81 @@
+2012-07-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.5.6 released
+	* using CGRIBEX library version 1.5.3
+
+2012-07-17  Modali Kameswarrao  <modali.kameswarrao@zmaw.de>
+
+	* added vlistDefVarEnsemble() for GRIB1 and netCDF
+
+2012-07-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added call to cdiInitialize() in all streamOpen functions (bug fix)
+	* added support for environment variable NC_CHUNKSIZEHINT [Feature #2142]
+
+2012-07-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* grib scan timestep: changed Error() to Warning() for inconsistent timesteps
+
+2012-07-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::define_all_grids: modify check for same x and y varids
+	* cdfInqContents: set all undefined 1D variables to data variables [request: Florian Prill]
+
+2012-06-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* cdf_write_var_data: bug fix for unscaled uint8, int8, int16, int32 (bug introduced in 1.5.5)
+
+2012-06-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* grib_api: use key significanceOfReferenceTime only for GRIB2
+
+2012-06-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added support for grib_api key stepType  [request: Dörte Liermann]
+	* changed TIME_CONSTANT and TIME_VARIABLE to TSTEP_CONSTANT and TSTEP_XXX
+	* renamed vlistInqVarTime() vlistInqVarTsteptype()
+
+2012-06-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_gribapi: added support for level type HYBRID_HALF	[request: Dörte Liermann]
+
+2012-05-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::cdfDefUnstructured: fixed memory bug [ICON - Bug #2398]
+
+2012-05-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.5.5 released
+	* using CGRIBEX library version 1.5.2
+
+2012-05-02 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* cdi.h: added vlistDefVarTime() [request: Florian Prill]
+
+2012-05-02 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_gribapi: bug fix for validation date and time
+
+2012-04-27 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::define_all_grids: changed scale_add() parameter from x to y (bug fix)
+
+2012-04-26 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added support for ZAXIS_DEPTH_BELOW_LAND units "mm",  "cm", "dm" and "m"
+
+2012-03-24 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added single precision support: streamWriteVarF, streamWriteVarSliceF
+
+2012-02-15 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::cdfDefDatatype: bug fix for DATATYPE_UINT8
+
+2012-02-02 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::cdfDefCurvilinear: bug fix for CLM s,u,v grids [report: Hans-Jürgen Panitz]
+
 2012-01-30 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Version 1.5.4 released

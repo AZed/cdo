@@ -77,7 +77,7 @@ typedef struct{ /* prs_sct */
   int    debug;
   int    gridID2;
   int    zaxisID2;
-  int    timeID2;
+  int    tsteptype2;
   double missval2;
   double **vardata1, **vardata2;
 } parse_parm_t;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,24 +18,25 @@
 #ifndef _PSTREAM_H
 #define _PSTREAM_H
 
-#define  streamOpenWrite     pstreamOpenWrite
-#define  streamOpenRead      pstreamOpenRead
-#define  streamOpenAppend    pstreamOpenAppend
-#define  streamClose         pstreamClose
+#define  streamOpenWrite          pstreamOpenWrite
+#define  streamOpenRead           pstreamOpenRead
+#define  streamOpenAppend         pstreamOpenAppend
+#define  streamClose              pstreamClose
 
-#define  streamInqFiletype   pstreamInqFiletype
+#define  streamInqFiletype        pstreamInqFiletype
 
-#define  streamInqVlist      pstreamInqVlist
-#define  streamDefVlist      pstreamDefVlist
+#define  streamInqVlist           pstreamInqVlist
+#define  streamDefVlist           pstreamDefVlist
 
-#define  streamDefTimestep   pstreamDefTimestep
-#define  streamInqTimestep   pstreamInqTimestep
+#define  streamDefTimestep        pstreamDefTimestep
+#define  streamInqTimestep        pstreamInqTimestep
 
-#define  streamDefRecord     pstreamDefRecord
-#define  streamInqRecord     pstreamInqRecord
+#define  streamDefRecord          pstreamDefRecord
+#define  streamInqRecord          pstreamInqRecord
 
-#define  streamWriteRecord   pstreamWriteRecord
-#define  streamReadRecord    pstreamReadRecord
+#define  streamWriteRecord        pstreamWriteRecord
+#define  streamWriteRecordF       pstreamWriteRecordF
+#define  streamReadRecord         pstreamReadRecord
 /*
 #define  streamCopyRecord    pstreamCopyRecord
 */
@@ -57,6 +58,7 @@ void    pstreamDefRecord(int pstreamID, int  varID, int  levelID);
 int     pstreamInqRecord(int pstreamID, int *varID, int *levelID);
 
 void    pstreamWriteRecord(int pstreamID, double *data, int nmiss);
+void    pstreamWriteRecordF(int pstreamID, float *data, int nmiss);
 void    pstreamReadRecord(int pstreamID, double *data, int *nmiss);
 void    pstreamCopyRecord(int pstreamIDdest, int pstreamIDsrc);
 

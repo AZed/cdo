@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,13 +25,14 @@
 
 void zonfun(field_t field1, field_t *field2, int function)
 {
-  if      ( function == func_min )  zonmin(field1, field2);
-  else if ( function == func_max )  zonmax(field1, field2);  
-  else if ( function == func_sum )  zonsum(field1, field2);  
-  else if ( function == func_mean ) zonmean(field1, field2);  
-  else if ( function == func_avg )  zonavg(field1, field2);  
-  else if ( function == func_std )  zonstd(field1, field2);  
-  else if ( function == func_var )  zonvar(field1, field2);
+  if      ( function == func_min   )  zonmin(field1, field2);
+  else if ( function == func_max   )  zonmax(field1, field2);  
+  else if ( function == func_range )  zonrange(field1, field2);  
+  else if ( function == func_sum   )  zonsum(field1, field2);  
+  else if ( function == func_mean  )  zonmean(field1, field2);  
+  else if ( function == func_avg   )  zonavg(field1, field2);  
+  else if ( function == func_std   )  zonstd(field1, field2);  
+  else if ( function == func_var   )  zonvar(field1, field2);
   else cdoAbort("function %d not implemented!", function);
 }
 
@@ -114,6 +115,64 @@ void zonmax(field_t field1, field_t *field2)
 	}
 
       field2->ptr[j] = rmax;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void zonrange(field_t field1, field_t *field2)
+{
+  long   i, j, nx, ny;
+  int    rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double rmin = 0;
+  double rmax = 0;
+  double rrange = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( j = 0; j < ny; j++ )
+    {
+      if ( nmiss > 0 )
+	{
+	  rmin =  DBL_MAX;
+	  rmax = -DBL_MAX;
+	  for ( i = 0; i < nx; i++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
+	      {
+		if      ( array[j*nx+i] < rmin ) rmin = array[j*nx+i];
+		else if ( array[j*nx+i] > rmax ) rmax = array[j*nx+i];
+	      }
+
+	  if ( IS_EQUAL(rmin, DBL_MAX) || IS_EQUAL(rmax, -DBL_MAX) )
+	    {
+	      rnmiss++;
+	      rrange = missval;
+	    }
+	  else
+	    {
+	      rrange = rmax - rmin;
+	    }
+	}
+      else
+	{
+	  rmin = array[j*nx];
+	  rmax = array[j*nx];
+	  for ( i = 1; i < nx; i++ )
+	    {
+	      if      ( array[j*nx+i] < rmin )  rmin = array[j*nx+i];
+	      else if ( array[j*nx+i] > rmax )  rmax = array[j*nx+i];
+	    }
+
+	  rrange = rmax - rmin;
+	}
+
+      field2->ptr[j] = rrange;
     }
 
   field2->nmiss  = rnmiss;

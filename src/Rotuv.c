@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -207,7 +207,7 @@ void *Rotuv(void *argument)
 	  single  = vardata[varID] + offset;
 	  streamReadRecord(streamID1, single, &varnmiss[varID][levelID]);
 	  if ( varnmiss[varID][levelID] )
-	    cdoAbort("missing values unsupported for this operator!");
+	    cdoAbort("Missing values unsupported for this operator!");
 	}
 
       for ( i = 0; i < nch; i += 2 )

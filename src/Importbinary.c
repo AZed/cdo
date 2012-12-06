@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -270,7 +270,7 @@ void *Importbinary(void *argument)
       if ( nlevels == 0 )
 	{
 	  nlevels = 1;
-	  varID = vlistDefVar(vlistID, gridID, zaxisIDsfc, TIME_VARIABLE);
+	  varID = vlistDefVar(vlistID, gridID, zaxisIDsfc, TSTEP_INSTANT);
 	}
       else
 	{
@@ -287,10 +287,10 @@ void *Importbinary(void *argument)
 		}
 
 	      if ( vid == ivar ) zid = define_level(&pfi, nlevels);
-	      varID = vlistDefVar(vlistID, gridID, zid, TIME_VARIABLE);
+	      varID = vlistDefVar(vlistID, gridID, zid, TSTEP_INSTANT);
 	    }
 	  else
-	    varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+	    varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
 	}
 
       var_zaxisID[varID] = vlistInqVarZaxis(vlistID, varID);
@@ -326,7 +326,9 @@ void *Importbinary(void *argument)
 	datatype = DATATYPE_INT32;
 	if ( missval < -2147483648 || missval > 2147483647 ) missval = -2147483646;
       }
-
+      else if ( pfi.flt64 )
+	datatype = DATATYPE_FLT64;
+      
       vlistDefVarDatatype(vlistID, varID, datatype);
       vlistDefVarMissval(vlistID, varID, missval);
 
@@ -354,10 +356,15 @@ void *Importbinary(void *argument)
 
 
   gridsize = pfi.dnum[0]*pfi.dnum[1];
-  recoffset = pfi.xyhdr*4;
+  if ( pfi.flt64 )
+    recoffset = pfi.xyhdr*8;
+  else
+    recoffset = pfi.xyhdr*4;
+
   if ( pfi.seqflg ) recoffset += 4;
 
-  recsize = pfi.gsiz*4;
+  //recsize = pfi.gsiz*4;
+  recsize = pfi.gsiz*8;
   rec = (char *) malloc(recsize);
 
   array = (double *) malloc(gridsize*sizeof(double));
@@ -415,7 +422,7 @@ void *Importbinary(void *argument)
 	    gr2t(pfi.grvals[3], (gadouble)tcur, &dtim); 
 	    gr2t(pfi.grvals[3], (gadouble)1, &dtimi);
 	    ch = gafndt(pfi.name, &dtim, &dtimi, pfi.abvals[3], pfi.pchsub1, NULL,tcur,e,&flag);
-	    if (ch==NULL) cdoAbort(" couldn't determine data file name for e=%d t=%d\n",e,tcur);
+	    if (ch==NULL) cdoAbort("Couldn't determine data file name for e=%d t=%d!",e,tcur);
 	  }
 	}
       else { 
@@ -476,10 +483,14 @@ void *Importbinary(void *argument)
 		recsize = pfi.gsiz*2;
 	      }
 	      else {
-		recsize = pfi.gsiz*4;
+		if ( pfi.flt64 )
+		  recsize = pfi.gsiz*8;
+		else
+		  recsize = pfi.gsiz*4;
 	      }
+
 	      rc = fread (rec, 1, recsize, pfi.infile);
-	      if ( rc < recsize ) cdoAbort("I/O error reading record!");
+	      if ( rc < recsize ) cdoAbort("I/O error reading record=%d of timestep=%d!", recID+1, tsID+1);
 
 	      /* convert */
 	      if (var_dfrm[recID] == 1) {
@@ -502,9 +513,18 @@ void *Importbinary(void *argument)
 		for (i = 0; i < gridsize; ++i) array[i] = (double) iarray[i];
 	      }
 	      else {
-		float *farray = (float *) (rec + recoffset);
-		if (pfi.bswap) gabswp(farray, gridsize);
-	        for ( i = 0; i < gridsize; ++i ) array[i] = (double) farray[i];
+		if ( pfi.flt64 )
+		  {
+		    double *darray = (double *) (rec + recoffset);
+		    if (pfi.bswap) gabswp(darray, gridsize);
+		    for ( i = 0; i < gridsize; ++i ) array[i] = darray[i];
+		  }
+		else
+		  {
+		    float *farray = (float *) (rec + recoffset);
+		    if (pfi.bswap) gabswp(farray, gridsize);
+		    for ( i = 0; i < gridsize; ++i ) array[i] = (double) farray[i];
+		  }
 	      }
 
 	      fmin =  1.e99;
