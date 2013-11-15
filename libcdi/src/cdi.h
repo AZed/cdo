@@ -106,56 +106,69 @@ extern "C" {
 #define  DATATYPE_UINT32        332
 
 /* internal data types */
-
 #define  DATATYPE_INT           251
 #define  DATATYPE_FLT           252
 #define  DATATYPE_TXT           253
 #define  DATATYPE_CPX           254
+#define  DATATYPE_UCHAR         255
 
+/* Chunks */
+
+#define  CHUNK_AUTO                 1  /* use default chunk size                                */
+#define  CHUNK_GRID                 2
+#define  CHUNK_LINES                3
 
 /* GRID types */
 
-#define  GRID_GENERIC             1  /* Generic grid                            */
-#define  GRID_GAUSSIAN            2  /* Regular Gaussian lon/lat grid           */
-#define  GRID_GAUSSIAN_REDUCED    3  /* Reduced Gaussian lon/lat grid           */
-#define  GRID_LONLAT              4  /* Regular longitude/latitude grid         */
-#define  GRID_SPECTRAL            5  /* Spherical harmonic coefficients         */
-#define  GRID_FOURIER             6  /* Fourier coefficients                    */
-#define  GRID_GME                 7  /* Icosahedral-hexagonal GME grid          */
-#define  GRID_TRAJECTORY          8  /* Trajectory                              */
-#define  GRID_UNSTRUCTURED        9  /* General unstructured grid               */
-#define  GRID_CURVILINEAR        10  /* Curvilinear grid                        */
-#define  GRID_LCC                11  /* Lambert Conformal Conic (GRIB)          */
-#define  GRID_LCC2               12  /* Lambert Conformal Conic (PROJ)          */
-#define  GRID_LAEA               13  /* Lambert Azimuthal Equal Area            */
-#define  GRID_SINUSOIDAL         14  /* Sinusoidal                              */
-#define  GRID_REFERENCE          15  /* Grid reference number                   */
-#define  GRID_PROJECTION         16  /* Projected coordiantes                   */
+#define  GRID_GENERIC               1  /* Generic grid                                          */
+#define  GRID_GAUSSIAN              2  /* Regular Gaussian lon/lat grid                         */
+#define  GRID_GAUSSIAN_REDUCED      3  /* Reduced Gaussian lon/lat grid                         */
+#define  GRID_LONLAT                4  /* Regular longitude/latitude grid                       */
+#define  GRID_SPECTRAL              5  /* Spherical harmonic coefficients                       */
+#define  GRID_FOURIER               6  /* Fourier coefficients                                  */
+#define  GRID_GME                   7  /* Icosahedral-hexagonal GME grid                        */
+#define  GRID_TRAJECTORY            8  /* Trajectory                                            */
+#define  GRID_UNSTRUCTURED          9  /* General unstructured grid                             */
+#define  GRID_CURVILINEAR          10  /* Curvilinear grid                                      */
+#define  GRID_LCC                  11  /* Lambert Conformal Conic (GRIB)                        */
+#define  GRID_LCC2                 12  /* Lambert Conformal Conic (PROJ)                        */
+#define  GRID_LAEA                 13  /* Lambert Azimuthal Equal Area                          */
+#define  GRID_SINUSOIDAL           14  /* Sinusoidal                                            */
+#define  GRID_PROJECTION           15  /* Projected coordiantes                                 */
 
 /* ZAXIS types */
 
-#define  ZAXIS_SURFACE            0  /* Surface level                           */
-#define  ZAXIS_GENERIC            1  /* Generic level                           */
-#define  ZAXIS_HYBRID             2  /* Hybrid level                            */
-#define  ZAXIS_HYBRID_HALF        3  /* Hybrid half level                       */
-#define  ZAXIS_PRESSURE           4  /* Isobaric pressure level in Pascal       */
-#define  ZAXIS_HEIGHT             5  /* Height above ground in meters           */
-#define  ZAXIS_DEPTH_BELOW_SEA    6  /* Depth below sea level in meters         */
-#define  ZAXIS_DEPTH_BELOW_LAND   7  /* Depth below land surface in centimeters */
-#define  ZAXIS_ISENTROPIC         8  /* Isentropic                              */
-#define  ZAXIS_TRAJECTORY         9  /* Trajectory                              */
-#define  ZAXIS_ALTITUDE          10  /* Altitude above mean sea level in meters */
-#define  ZAXIS_SIGMA             11  /* Sigma level                             */
-#define  ZAXIS_MEANSEA           12  /* Mean sea level                          */
-#define  ZAXIS_TOA               13  /* Norminal top of atmosphere              */
-#define  ZAXIS_SEA_BOTTOM        14  /* Sea bottom                              */
-#define  ZAXIS_ATMOSPHERE        15  /* Entire atmosphere                       */
-#define  ZAXIS_REFERENCE         16  /* zaxis reference number                  */
+#define  ZAXIS_SURFACE              0  /* Surface level                                         */
+#define  ZAXIS_GENERIC              1  /* Generic level                                         */
+#define  ZAXIS_HYBRID               2  /* Hybrid level                                          */
+#define  ZAXIS_HYBRID_HALF          3  /* Hybrid half level                                     */
+#define  ZAXIS_PRESSURE             4  /* Isobaric pressure level in Pascal                     */
+#define  ZAXIS_HEIGHT               5  /* Height above ground in meters                         */
+#define  ZAXIS_DEPTH_BELOW_SEA      6  /* Depth below sea level in meters                       */
+#define  ZAXIS_DEPTH_BELOW_LAND     7  /* Depth below land surface in centimeters               */
+#define  ZAXIS_ISENTROPIC           8  /* Isentropic                                            */
+#define  ZAXIS_TRAJECTORY           9  /* Trajectory                                            */
+#define  ZAXIS_ALTITUDE            10  /* Altitude above mean sea level in meters               */
+#define  ZAXIS_SIGMA               11  /* Sigma level                                           */
+#define  ZAXIS_MEANSEA             12  /* Mean sea level                                        */
+#define  ZAXIS_TOA                 13  /* Norminal top of atmosphere                            */
+#define  ZAXIS_SEA_BOTTOM          14  /* Sea bottom                                            */
+#define  ZAXIS_ATMOSPHERE          15  /* Entire atmosphere                                     */
+#define  ZAXIS_CLOUD_BASE          16  /* Cloud base level                                      */
+#define  ZAXIS_CLOUD_TOP           17  /* Level of cloud tops                                   */
+#define  ZAXIS_ISOTHERM_ZERO       18  /* Level of 0o C isotherm                                */
+#define  ZAXIS_SNOW                19  /* Snow level                                            */
+#define  ZAXIS_LAKE_BOTTOM         20  /* Lake or River Bottom                                  */
+#define  ZAXIS_SEDIMENT_BOTTOM     21  /* Bottom Of Sediment Layer                              */
+#define  ZAXIS_SEDIMENT_BOTTOM_TA  22  /* Bottom Of Thermally Active Sediment Layer             */
+#define  ZAXIS_SEDIMENT_BOTTOM_TW  23  /* Bottom Of Sediment Layer Penetrated By Thermal Wave   */
+#define  ZAXIS_MIX_LAYER           24  /* Mixing Layer                                          */
+#define  ZAXIS_REFERENCE           25  /* zaxis reference number                                */
 
 /* TIME types */
 
-#define  TIME_CONSTANT            0  /* obsolate, use TSTEP_CONSTANT            */
-#define  TIME_VARIABLE            1  /* obsolate, use TSTEP_INSTANT             */
+#define  TIME_CONSTANT              0  /* obsolate, use TSTEP_CONSTANT                          */
+#define  TIME_VARIABLE              1  /* obsolate, use TSTEP_INSTANT                           */
 
 /* TSTEP types */
 
@@ -201,8 +214,42 @@ extern "C" {
 #define  CALENDAR_366DAYS         4
 #define  CALENDAR_NONE            5
 
+/* parallel IO IOMode */
+
+#define  PIO_NONE                 0
+#define  PIO_MPI                  1
+#define  PIO_WRITER               2
+#define  PIO_ASYNCH               3
+#define  PIO_FPGUARD              4
+
+#define  PIO_MINIOMODE                  PIO_NONE
+#define  PIO_MAXIOMODE                  PIO_FPGUARD
+#define  PIO_MINIOMODEWITHSPECIALPROCS  PIO_WRITER
+
+/* parallel IO routines */
+#ifdef MPI_VERSION
+#  include <yaxt.h>
+#endif
+
+#ifdef MPI_VERSION /* make_fint keep */
+void     pioEndDef             ( void );
+void     pioEndTimestepping    ( void );
+void     pioFinalize           ( void );
+/*      pioInit: initialize I/O server processes and communication */
+MPI_Comm pioInit(MPI_Comm commSuper, int nProcsIO, int IOMode,
+                 int *pioNamespace, float partInflate);
+void     pioWriteTimestep();
+
+void     streamWriteVarPart    (int streamID, int varID,
+                                const void *data, int nmiss,
+                                Xt_idxlist partDesc);
+
+#endif /* make_fint keep */
+void     pioNamespaceSetActive ( int );
 
 /* CDI control routines */
+
+void    cdiReset(void);
 
 char   *cdiStringError(int cdiErrno);
 
@@ -210,6 +257,8 @@ void    cdiDebug(int debug);
 
 char   *cdiLibraryVersion(void);
 void    cdiPrintVersion(void);
+
+int     cdiHaveFiletype(int filetype);
 
 void    cdiDefMissval(double missval);
 double  cdiInqMissval(void);
@@ -255,6 +304,7 @@ void    streamDefVlist(int streamID, int vlistID);
 
 /*      streamInqVlist: Get the Vlist of a stream */
 int     streamInqVlist(int streamID);
+int     streamInqVlistIDorig(int streamID);
 
 /*      streamInqFiletype: Get the filetype */
 int     streamInqFiletype(int streamID);
@@ -288,6 +338,7 @@ char   *streamFilesuffix(int filetype);
 int     streamNtsteps(int streamID);
 off_t   streamNvals(int streamID);
 
+int     streamInqNvars ( int streamID );
 
 /* STREAM var I/O routines */
 
@@ -304,6 +355,9 @@ void    streamReadVarSlice(int streamID, int varID, int levelID, double *data_ve
 /*      streamWriteVarSlice: Write a horizontal slice of a variable */
 void    streamWriteVarSlice(int streamID, int varID, int levelID, const double *data_vec, int nmiss);
 void    streamWriteVarSliceF(int streamID, int varID, int levelID, const float *data_vec, int nmiss);
+
+void    streamWriteVarChunk(int streamID, int varID, const int rect[][2],
+                            const double *data_vec, int nmiss);
 
 
 /* STREAM record I/O routines */
@@ -424,6 +478,9 @@ void    vlistDefVarDatatype(int vlistID, int varID, int datatype);
 /*      vlistInqVarDatatype: Get the data type of a Variable */
 int     vlistInqVarDatatype(int vlistID, int varID);
 
+void    vlistDefVarChunkType(int vlistID, int varID, int chunktype);
+int     vlistInqVarChunkType(int vlistID, int varID);
+
 void    vlistDefVarXYZ(int vlistID, int varID, int xyz);
 int     vlistInqVarXYZ(int vlistID, int varID);
 
@@ -466,6 +523,12 @@ void    vlistDefVarMissval(int vlistID, int varID, double missval);
 /*      vlistInqVarMissval: Get the missing value of a Variable */
 double  vlistInqVarMissval(int vlistID, int varID);
 
+/*      vlistDefVarExtra: Define extra information of a Variable */
+void    vlistDefVarExtra(int vlistID, int varID, const char *extra);
+
+/*      vlistInqVarExtra: Get extra information of a Variable */
+void    vlistInqVarExtra(int vlistID, int varID, char *extra);
+
 void    vlistDefVarScalefactor(int vlistID, int varID, double scalefactor);
 double  vlistInqVarScalefactor(int vlistID, int varID);
 void    vlistDefVarAddoffset(int vlistID, int varID, double addoffset);
@@ -475,6 +538,9 @@ void    vlistDefVarTimave(int vlistID, int varID, int timave);
 int     vlistInqVarTimave(int vlistID, int varID);
 void    vlistDefVarTimaccu(int vlistID, int varID, int timaccu);
 int     vlistInqVarTimaccu(int vlistID, int varID);
+
+void    vlistDefVarTypeOfGeneratingProcess(int vlistID, int varID, int typeOfGeneratingProcess);
+int     vlistInqVarTypeOfGeneratingProcess(int vlistID, int varID);
 
 int     vlistInqVarSize(int vlistID, int varID);
 
@@ -491,6 +557,24 @@ int     vlistMergedLevel(int vlistID, int varID, int levelID);
 void    vlistDefVarEnsemble(int vlistID, int varID, int ensID, int ensCount, int forecast_type);
 int     vlistInqVarEnsemble(int vlistID, int varID, int *ensID, int *ensCount, int *forecast_type);
 
+/* cdiClearAdditionalKeys: Clear the list of additional GRIB keys. */
+void    cdiClearAdditionalKeys();
+/* cdiDefAdditionalKey: Register an additional GRIB key which is read when file is opened. */
+void    cdiDefAdditionalKey(const char *string);
+
+/* vlistDefVarIntKey: Set an arbitrary keyword/integer value pair for GRIB API */
+void    vlistDefVarIntKey(int vlistID, int varID, const char *name, int value);
+/* vlistDefVarDblKey: Set an arbitrary keyword/double value pair for GRIB API */
+void    vlistDefVarDblKey(int vlistID, int varID, const char *name, double value);
+
+/* vlistHasVarKey: returns 1 if meta-data key was read, 0 otherwise. */
+int     vlistHasVarKey(int vlistID, int varID, const char *name);
+/* vlistInqVarDblKey: raw access to GRIB meta-data */
+double  vlistInqVarDblKey(int vlistID, int varID, const char *name);
+/* vlistInqVarIntKey: raw access to GRIB meta-data */
+int     vlistInqVarIntKey(int vlistID, int varID, const char *name);
+
+
 /* VLIST attributes */
 
 /*      vlistInqNatts: Get number of variable attributes assigned to this variable */
@@ -504,14 +588,14 @@ int     vlistDefAttInt(int vlistID, int varID, const char *name, int type, int l
 /*      vlistDefAttFlt: Define a floating point attribute */
 int     vlistDefAttFlt(int vlistID, int varID, const char *name, int type, int len, const double *dp_vec);
 /*      vlistDefAttTxt: Define a text attribute */
-int     vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char *tp);
+int     vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char *tp_cbuf);
 
 /*      vlistInqAttInt: Get the value(s) of an integer attribute */
 int     vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip_vec);
 /*      vlistInqAttFlt: Get the value(s) of a floating point attribute */
 int     vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *dp_vec);
 /*      vlistInqAttTxt: Get the value(s) of a text attribute */
-int     vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char *tp);
+int     vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char *tp_cbuf);
 
 
 /* GRID routines */
@@ -528,7 +612,6 @@ void    gridDefMask(int gridID, const int *mask_vec);
 int     gridInqMask(int gridID, int *mask_vec);
 
 void    gridPrint(int gridID, int opt);
-int     gridSize(void);
 
 /*      gridCreate: Create a horizontal Grid */
 int     gridCreate(int gridtype, int size);
@@ -652,15 +735,31 @@ void    gridDefGMEni2(int gridID, int ni2);
 int     gridInqGMEni3(int gridID);
 void    gridDefGMEni3(int gridID, int ni3);
 
-/* Reference grid */
-int     gridInqNumber(int gridID);
+/* Reference of an unstructured grid */
+
+/*      gridDefNumber: Define the reference number for an unstructured grid */
 void    gridDefNumber(int gridID, int number);
-int     gridInqPosition(int gridID);
+
+/*      gridInqNumber: Get the reference number to an unstructured grid */
+int     gridInqNumber(int gridID);
+
+/*      gridDefPosition: Define the position of grid in the reference file */
 void    gridDefPosition(int gridID, int position);
-int     gridInqReference(int gridID, char *reference);
+
+/*      gridInqPosition: Get the position of grid in the reference file */
+int     gridInqPosition(int gridID);
+
+/*      gridDefReference: Define the reference URI for an unstructured grid */
 void    gridDefReference(int gridID, const char *reference);
-char   *gridInqUUID(int gridID, char *uuid);
-void    gridDefUUID(int gridID, const char *uuid);
+
+/*      gridInqReference: Get the reference URI to an unstructured grid */
+int     gridInqReference(int gridID, char *reference);
+
+/*      gridDefUUID: Define the UUID of an unstructured grid */
+void    gridDefUUID(int gridID, const char *uuid_cbuf);
+
+/*      gridInqUUID: Get the UUID of an unstructured grid */
+char   *gridInqUUID(int gridID, char *uuid_cbuf);
 
 
 /* Lambert Conformal Conic grid (GRIB version) */
@@ -727,7 +826,6 @@ int     zaxisDuplicate(int zaxisID);
 void    zaxisResize(int zaxisID, int size);
 
 void    zaxisPrint(int zaxisID);
-int     zaxisSize(void);
 
 /*      zaxisDefLevels: Define the levels of a Z-axis */
 void    zaxisDefLevels(int zaxisID, const double *levels_vec);
@@ -741,17 +839,23 @@ void    zaxisDefLevel(int zaxisID, int levelID, double levels);
 /*      zaxisInqLevel: Get one level of a Z-axis */
 double  zaxisInqLevel(int zaxisID, int levelID);
 
-/*      zaxisDefReference: Define the reference of a generalized Z-axis */
-void    zaxisDefReference(int zaxisID, int refID);
+/*      zaxisDefNlevRef: Define the number of half levels of a generalized Z-axis */
+void    zaxisDefNlevRef(int gridID, int nhlev);
 
-/*      zaxisDefUUID: Define the uuid of a generalized Z-axis */
-void    zaxisDefUUID(int zaxisID, const char *uuid);
+/*      zaxisInqNlevRef: Get the number of half levels of a generalized Z-axis */
+int     zaxisInqNlevRef(int gridID);
 
-/*      zaxisInqUUID: Get the reference of a generalized Z-axis */
-char   *zaxisInqUUID(int zaxisID, char *uuid);
+/*      zaxisDefNumber: Define the reference number for a generalized Z-axis */
+void    zaxisDefNumber(int gridID, int number);
 
-/*      zaxisInqReference: Get the reference of a generalized Z-axis */
-int     zaxisInqReference(int zaxisID);
+/*      zaxisInqNumber: Get the reference number to a generalized Z-axis */
+int     zaxisInqNumber(int gridID);
+
+/*      zaxisDefUUID: Define the UUID of a generalized Z-axis */
+void    zaxisDefUUID(int zaxisID, const char *uuid_cbuf);
+
+/*      zaxisInqUUID: Get the UUID of a generalized Z-axis */
+char   *zaxisInqUUID(int zaxisID, char *uuid_cbuf);
 
 /*      zaxisDefName: Define the name of a Z-axis */
 void    zaxisDefName(int zaxisID, const char *name);
@@ -777,6 +881,7 @@ void    zaxisInqUnits(int zaxisID, char *units);
 void    zaxisDefPrec(int zaxisID, int prec);
 int     zaxisInqPrec(int zaxisID);
 
+void    zaxisDefPositive(int zaxisID, int positive);
 int     zaxisInqPositive(int zaxisID);
 
 void    zaxisDefLtype(int zaxisID, int ltype);

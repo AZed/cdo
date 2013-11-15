@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #define  streamClose              pstreamClose
 
 #define  streamInqFiletype        pstreamInqFiletype
+#define  streamInqByteorder       pstreamInqByteorder
 
 #define  streamInqVlist           pstreamInqVlist
 #define  streamDefVlist           pstreamDefVlist
@@ -37,16 +38,17 @@
 #define  streamWriteRecord        pstreamWriteRecord
 #define  streamWriteRecordF       pstreamWriteRecordF
 #define  streamReadRecord         pstreamReadRecord
-/*
-#define  streamCopyRecord    pstreamCopyRecord
-*/
 
-int     pstreamOpenWrite(const char *streamname, int filetype);
-int     pstreamOpenRead(const char *streamname);
-int     pstreamOpenAppend(const char *streamname);
+#define  streamCopyRecord         pstreamCopyRecord
+
+
+int     pstreamOpenWrite(const argument_t *argument, int filetype);
+int     pstreamOpenRead(const argument_t *argument);
+int     pstreamOpenAppend(const argument_t *argument);
 void    pstreamClose(int pstreamID);
 
 int     pstreamInqFiletype(int pstreamID);
+int     pstreamInqByteorder(int pstreamID);
 
 void    pstreamDefVlist(int pstreamID, int vlistID);
 int     pstreamInqVlist(int pstreamID);

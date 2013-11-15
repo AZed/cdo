@@ -40,7 +40,7 @@ typedef struct {
   int    *rowlon;
   int     genBounds;
   int     nvertex;
-  int     size;
+  long    size;
   int     xsize;
   int     ysize;
   int     np;
@@ -53,6 +53,7 @@ typedef struct {
   int     def_yinc;
   int     nd, ni, ni2, ni3;
   int     number, position;
+  char    uuid[17];
   char    path[16384];
   char    xname[CDI_MAX_NAME];
   char    xlongname[CDI_MAX_NAME];
@@ -61,10 +62,10 @@ typedef struct {
   char    ylongname[CDI_MAX_NAME];
   char    yunits[CDI_MAX_NAME];
 }
-grid_t;
+griddes_t;
 
-void gridInit(grid_t *grid);
-int gridDefine(grid_t grid);
+void gridInit(griddes_t *grid);
+int gridDefine(griddes_t grid);
 
 int gridFromNCfile(const char *gridfile);
 int gridFromH5file(const char *gridfile);

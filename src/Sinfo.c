@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,15 +25,43 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 #include "printinfo.h"
 
 #define MAXCHARS 82
 
+const char * tunit2str(int tunits)
+{
+  if      ( tunits == TUNIT_YEAR )    return ("years");
+  else if ( tunits == TUNIT_MONTH )   return ("months");
+  else if ( tunits == TUNIT_DAY )     return ("days");
+  else if ( tunits == TUNIT_12HOURS ) return ("12hours");
+  else if ( tunits == TUNIT_6HOURS )  return ("6hours");
+  else if ( tunits == TUNIT_3HOURS )  return ("3hours");
+  else if ( tunits == TUNIT_HOUR )    return ("hours");
+  else if ( tunits == TUNIT_MINUTE )  return ("minutes");
+  else if ( tunits == TUNIT_SECOND )  return ("seconds");
+  else                                return ("unknown");
+}
+
+
+const char * calendar2str(int calendar)
+{
+  if      ( calendar == CALENDAR_STANDARD )  return ("standard");
+  else if ( calendar == CALENDAR_PROLEPTIC ) return ("proleptic_gregorian");
+  else if ( calendar == CALENDAR_360DAYS )   return ("360_day");
+  else if ( calendar == CALENDAR_365DAYS )   return ("365_day");
+  else if ( calendar == CALENDAR_366DAYS )   return ("366_day");
+  else                                       return ("unknown");
+}
+
+
 void *Sinfo(void *argument)
 {
-  int SINFO, SINFOP, SINFON, SINFOC;
+  enum {func_generic, func_param, func_name, func_code};
   int operatorID;
+  int operfunc, lensemble;
   int indf;
   int varID;
   int gridsize = 0;
@@ -60,12 +88,19 @@ void *Sinfo(void *argument)
 
   cdoInitialize(argument);
 
-  SINFO  = cdoOperatorAdd("sinfo",  0, 0, NULL);
-  SINFOP = cdoOperatorAdd("sinfop", 0, 0, NULL);
-  SINFON = cdoOperatorAdd("sinfon", 0, 0, NULL);
-  SINFOC = cdoOperatorAdd("sinfoc", 0, 0, NULL);
+  cdoOperatorAdd("sinfo",   func_generic, 0, NULL);
+  cdoOperatorAdd("sinfop",  func_param,   0, NULL);
+  cdoOperatorAdd("sinfon",  func_name,    0, NULL);
+  cdoOperatorAdd("sinfoc",  func_code,    0, NULL);
+  cdoOperatorAdd("seinfo",  func_generic, 1, NULL);
+  cdoOperatorAdd("seinfop", func_param,   1, NULL);
+  cdoOperatorAdd("seinfon", func_name,    1, NULL);
+  cdoOperatorAdd("seinfoc", func_code,    1, NULL);
 
   operatorID = cdoOperatorID();
+
+  operfunc  = cdoOperatorF1(operatorID);
+  lensemble = cdoOperatorF2(operatorID);
 
   for ( indf = 0; indf < cdoStreamCnt(); indf++ )
     {
@@ -73,18 +108,20 @@ void *Sinfo(void *argument)
 
       vlistID = streamInqVlist(streamID);
 
-      printf("   File format: ");
+      fprintf(stdout, "   File format: ");
       printFiletype(streamID, vlistID);
 
-      if ( operatorID == SINFON )
-	fprintf(stdout,
-		"%6d : Institut Source   Name        Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
-      else if ( operatorID == SINFOC )
-	fprintf(stdout,
-		"%6d : Institut Source  Table Code   Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
+      if ( lensemble )
+	fprintf(stdout, "%6d : Institut Source   Ttype    Einfo Levels Num  Gridsize Num Dtype : ",  -(indf+1));
       else
-	fprintf(stdout,
-		"%6d : Institut Source   Param       Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
+	fprintf(stdout, "%6d : Institut Source   Ttype    Levels Num  Gridsize Num Dtype : ",  -(indf+1));
+
+      if      ( operfunc == func_name ) fprintf(stdout, "Parameter name");
+      else if ( operfunc == func_code ) fprintf(stdout, "Table Code");
+      else                              fprintf(stdout, "Parameter ID");
+
+      if ( cdoVerbose ) fprintf(stdout, " : Extra" );              
+      fprintf(stdout, "\n" );              
 
       nvars = vlistNvars(vlistID);
 
@@ -96,80 +133,103 @@ void *Sinfo(void *argument)
 	  gridID  = vlistInqVarGrid(vlistID, varID);
 	  zaxisID = vlistInqVarZaxis(vlistID, varID);
 
-	  cdiParamToString(param, paramstr, sizeof(paramstr));
-
-	  if ( operatorID == SINFON ) vlistInqVarName(vlistID, varID, varname);
-
-	  gridsize = gridInqSize(gridID);
-
 	  fprintf(stdout, "%6d : ", varID + 1);
 
+	  /* institute info */
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  if ( instptr )
 	    fprintf(stdout, "%-8s ", instptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
+	  /* source info */
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  if ( modelptr )
-	    fprintf(stdout, "%-8s ", modelptr);
+	    {
+	      size_t len = strlen(modelptr);
+	      if ( len > 10 )
+		for ( size_t i = 3; i < len; ++i )
+		  if ( modelptr[i] == ' ' )
+		    {
+		      modelptr[i] = 0;
+		      break;
+		    }
+	      fprintf(stdout, "%-8s ", modelptr);
+	    }
 	  else
 	    fprintf(stdout, "unknown  ");
 
-	  if ( operatorID == SINFON )
-	    fprintf(stdout, "%-11s ", varname);
-	  else if ( operatorID == SINFOC )
-	    fprintf(stdout, "%4d %4d   ", tabnum, code);
-	  else
-	    fprintf(stdout, "%-11s ", paramstr);
-
+	  /* tsteptype */
 	  tsteptype = vlistInqVarTsteptype(vlistID, varID);
-	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s", "constant");
-	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s", "instant");
-	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s", "min");
-	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s", "max");
-	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s", "accum");
-	  else                                    fprintf(stdout, "%-8s", "unknown");
+	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s ", "constant");
+	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_INSTANT2 ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_INSTANT3 ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s ", "min");
+	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s ", "max");
+	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s ", "accum");
+	  else                                    fprintf(stdout, "%-8s ", "unknown");
 
+	  /* ensemble information */
+	  if ( lensemble )
+	    {
+	      int ensID, ensCount, forecast_type;
+	      if ( vlistInqVarEnsemble(vlistID, varID, &ensID, &ensCount, &forecast_type) )
+		fprintf(stdout, "%2d/%-2d ", ensID, ensCount);
+	      else
+		fprintf(stdout, "--/-- ");
+	    }
+
+	  /* layer info */
+	  levelsize = zaxisInqSize(zaxisID);
+	  fprintf(stdout, "%6d ", levelsize);
+	  fprintf(stdout, "%3d ", vlistZaxisIndex(vlistID, zaxisID) + 1);
+
+	  /* grid info */
+	  gridsize = gridInqSize(gridID);
+	  fprintf(stdout, "%9d ", gridsize);
+	  fprintf(stdout, "%3d ", vlistGridIndex(vlistID, gridID) + 1);
+
+	  /* datatype */
 	  datatype = vlistInqVarDatatype(vlistID, varID);
-
-	  if      ( datatype == DATATYPE_PACK   ) strcpy(pstr, "P0");
-	  else if ( datatype > 0 && datatype <= 32  ) sprintf(pstr, "P%d", datatype);
-	  else if ( datatype == DATATYPE_CPX32  ) strcpy(pstr, "C32");
-	  else if ( datatype == DATATYPE_CPX64  ) strcpy(pstr, "C64");
-	  else if ( datatype == DATATYPE_FLT32  ) strcpy(pstr, "F32");
-	  else if ( datatype == DATATYPE_FLT64  ) strcpy(pstr, "F64");
-	  else if ( datatype == DATATYPE_INT8   ) strcpy(pstr, "I8");
-	  else if ( datatype == DATATYPE_INT16  ) strcpy(pstr, "I16");
-	  else if ( datatype == DATATYPE_INT32  ) strcpy(pstr, "I32");
-	  else if ( datatype == DATATYPE_UINT8  ) strcpy(pstr, "U8");
-	  else if ( datatype == DATATYPE_UINT16 ) strcpy(pstr, "U16");
-	  else if ( datatype == DATATYPE_UINT32 ) strcpy(pstr, "U32");
-	  else                                    strcpy(pstr, "-1");
+	  datatype2str(datatype, pstr);
 
 	  fprintf(stdout, " %-3s", pstr);
 
 	  if ( vlistInqVarCompType(vlistID, varID) == COMPRESS_NONE )
-	    fprintf(stdout, " ");
+	    fprintf(stdout, "  ");
 	  else
-	    fprintf(stdout, "z");
+	    fprintf(stdout, "z ");
 
-	  fprintf(stdout, "%9d", gridsize);
+	  /* parameter info */
+	  fprintf(stdout, ": ");
 
-	  fprintf(stdout, " %3d ", vlistGridIndex(vlistID, gridID) + 1);
+	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
-	  levelsize = zaxisInqSize(zaxisID);
-	  fprintf(stdout, " %6d", levelsize);
-	  fprintf(stdout, " %3d", vlistZaxisIndex(vlistID, zaxisID) + 1);
+	  if ( operfunc == func_name ) vlistInqVarName(vlistID, varID, varname);
+
+	  if ( operfunc == func_name )
+	    fprintf(stdout, "%-14s", varname);
+	  else if ( operfunc == func_code )
+	    fprintf(stdout, "%4d %4d   ", tabnum, code);
+	  else
+	    fprintf(stdout, "%-14s", paramstr);
+
+	  if ( cdoVerbose )
+	    {
+	      char varextra[CDI_MAX_NAME];
+	      vlistInqVarExtra(vlistID, varID, varextra);
+	      fprintf(stdout, " : %s", varextra );              
+	    }
 
 	  fprintf(stdout, "\n");
 	}
 
-      fprintf(stdout, "   Horizontal grids :\n");
+      fprintf(stdout, "   Grid coordinates :\n");
       printGridInfo(vlistID);
 
       nzaxis = vlistNzaxis(vlistID);
-      fprintf(stdout, "   Vertical grids :\n");
+      fprintf(stdout, "   Vertical coordinates :\n");
       for ( index = 0; index < nzaxis; index++)
 	{
 	  zaxisID   = vlistZaxis(vlistID, index);
@@ -178,13 +238,13 @@ void *Sinfo(void *argument)
 	  levelsize = zaxisInqSize(zaxisID);
 	  /* zaxisInqLongname(zaxisID, longname); */
 	  zaxisName(zaxistype, longname);
-	  longname[17] = 0;
+	  longname[18] = 0;
 	  zaxisInqUnits(zaxisID, units);
 	  units[12] = 0;
 	  if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
 	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, ltype);
 	  else
-	    nbyte0    = fprintf(stdout, "  %4d : %-17s  %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
+	    nbyte0    = fprintf(stdout, "  %4d : %-18s %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {
@@ -202,7 +262,7 @@ void *Sinfo(void *argument)
 	    {
 	      double level1, level2;
 	      nbyte = nbyte0;
-	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
+	      fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
 		  if ( nbyte > MAXCHARS )
@@ -217,6 +277,30 @@ void *Sinfo(void *argument)
 		}
 	      fprintf(stdout, "\n");
 	    }
+
+          if ( zaxistype == ZAXIS_REFERENCE )
+            {
+              int number   = zaxisInqNumber(zaxisID);
+
+              if ( number > 0 )
+                {
+                  fprintf(stdout, "%33s : ", "zaxis");
+                  fprintf(stdout, "number = %d\n", number);
+                }
+
+              char uuidOfVGrid[17];
+              zaxisInqUUID(zaxisID, uuidOfVGrid);
+              if ( uuidOfVGrid[0] != 0 )
+                {
+                  char uuidOfVGridStr[37];
+                  uuid2str(uuidOfVGrid, uuidOfVGridStr);
+                  if ( uuidOfVGridStr[0] != 0  && strlen(uuidOfVGridStr) == 36 )
+                    {
+                      fprintf(stdout, "%33s : ", "uuid");
+                      fprintf(stdout, "%s\n", uuidOfVGridStr);
+                    }
+                }
+            }
 	}
 
       taxisID = vlistInqTaxis(vlistID);
@@ -225,16 +309,16 @@ void *Sinfo(void *argument)
       if ( ntsteps != 0 )
 	{
 	  if ( ntsteps == CDI_UNDEFID )
-	    fprintf(stdout, "   Time axis :  unlimited steps\n");
+	    fprintf(stdout, "   Time coordinate :  unlimited steps\n");
 	  else
-	    fprintf(stdout, "   Time axis :  %d step%s\n", ntsteps, ntsteps == 1 ? "" : "s");
+	    fprintf(stdout, "   Time coordinate :  %d step%s\n", ntsteps, ntsteps == 1 ? "" : "s");
 
 	  if ( taxisID != CDI_UNDEFID )
 	    {
-	      int calendar, tunits;
-
 	      if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
 		{
+		  int calendar, tunits;
+
 		  vdate = taxisInqRdate(taxisID);
 		  vtime = taxisInqRtime(taxisID);
 
@@ -244,46 +328,10 @@ void *Sinfo(void *argument)
 		  fprintf(stdout, "     RefTime = %s %s", vdatestr, vtimestr);
 		      
 		  tunits = taxisInqTunit(taxisID);
-		  if ( tunits != CDI_UNDEFID )
-		    {
-		      if ( tunits == TUNIT_YEAR )
-			fprintf(stdout, "  Units = years");
-		      else if ( tunits == TUNIT_MONTH )
-			fprintf(stdout, "  Units = months");
-		      else if ( tunits == TUNIT_DAY )
-			fprintf(stdout, "  Units = days");
-		      else if ( tunits == TUNIT_12HOURS )
-			fprintf(stdout, "  Units = 12hours");
-		      else if ( tunits == TUNIT_6HOURS )
-			fprintf(stdout, "  Units = 6hours");
-		      else if ( tunits == TUNIT_3HOURS )
-			fprintf(stdout, "  Units = 3hours");
-		      else if ( tunits == TUNIT_HOUR )
-			fprintf(stdout, "  Units = hours");
-		      else if ( tunits == TUNIT_MINUTE )
-			fprintf(stdout, "  Units = minutes");
-		      else if ( tunits == TUNIT_SECOND )
-			fprintf(stdout, "  Units = seconds");
-		      else
-			fprintf(stdout, "  Units = unknown");
-		    }
+		  if ( tunits != CDI_UNDEFID )  fprintf(stdout, "  Units = %s", tunit2str(tunits));
 	      
 		  calendar = taxisInqCalendar(taxisID);
-		  if ( calendar != CDI_UNDEFID )
-		    {
-		      if      ( calendar == CALENDAR_STANDARD )
-			fprintf(stdout, "  Calendar = STANDARD");
-		      else if ( calendar == CALENDAR_PROLEPTIC )
-			fprintf(stdout, "  Calendar = PROLEPTIC");
-		      else if ( calendar == CALENDAR_360DAYS )
-			fprintf(stdout, "  Calendar = 360DAYS");
-		      else if ( calendar == CALENDAR_365DAYS )
-			fprintf(stdout, "  Calendar = 365DAYS");
-		      else if ( calendar == CALENDAR_366DAYS )
-			fprintf(stdout, "  Calendar = 366DAYS");
-		      else
-			fprintf(stdout, "  Calendar = unknown");
-		    }
+		  if ( calendar != CDI_UNDEFID )  fprintf(stdout, "  Calendar = %s", calendar2str(calendar));
 
 		  if ( taxisHasBounds(taxisID) )
 		    fprintf(stdout, "  Bounds = true");

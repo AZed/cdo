@@ -3,7 +3,8 @@
 bin_PROGRAMS = cdo
 #
 cdo_SOURCES  = cdo.c
-cdo_SOURCES += Arith.c         \
+cdo_SOURCES += Adisit.c        \
+               Arith.c         \
                Arithc.c        \
                Arithdays.c     \
                Arithlat.c      \
@@ -72,10 +73,8 @@ cdo_SOURCES += Arith.c         \
                Invert.c        \
                Invertlev.c     \
                Isosurface.c    \
+               Kvl.c           \
                Log.c           \
-               Magplot.c       \
-               Magvector.c     \
-               Maggraph.c      \
                Maskbox.c       \
                Mastrfu.c       \
                Math.c          \
@@ -90,6 +89,7 @@ cdo_SOURCES += Arith.c         \
                Nmltest.c       \
                Output.c        \
                Outputgmt.c     \
+               Pack.c          \
                Pinfo.c         \
                Pressure.c      \
                Regres.c        \
@@ -117,6 +117,7 @@ cdo_SOURCES += Arith.c         \
                Setgrid.c       \
                Sethalo.c       \
                Setmiss.c       \
+               Setpartab.c     \
                Setrcaname.c    \
                Settime.c       \
                Setzaxis.c      \
@@ -135,6 +136,7 @@ cdo_SOURCES += Arith.c         \
                Splityear.c     \
                SSOpar.c        \
                Subtrend.c      \
+               Tee.c           \
                Templates.c     \
                Test.c          \
                Tests.c         \
@@ -162,6 +164,8 @@ cdo_SOURCES += Arith.c         \
                Wind.c          \
                Writegrid.c     \
                Writerandom.c   \
+               YAR.c           \
+               Yearmonstat.c   \
                Ydayarith.c     \
                Ydaypctl.c      \
                Ydaystat.c      \
@@ -179,16 +183,6 @@ cdo_SOURCES += Arith.c         \
                cdo_int.h       \
                cdo_pthread.c   \
                cdo_vlist.c     \
-               template_parser.h   \
-               template_parser.c   \
-               results_template_parser.h   \
-               results_template_parser.c   \
-               magics_template_parser.h   \
-               magics_template_parser.c   \
-               StringUtilities.h   \
-               StringUtilities.c   \
-               CdoMagicsMapper.h   \
-               CdoMagicsMapper.c   \
                color.c         \
                color.h         \
                commandline.c   \
@@ -210,6 +204,7 @@ cdo_SOURCES += Arith.c         \
                expr_lex.c      \
                expr_yacc.c     \
                expr_yacc.h     \
+               features.c      \
                field.c         \
                field.h         \
                field2.c        \
@@ -223,9 +218,11 @@ cdo_SOURCES += Arith.c         \
                gradsdeslib.h   \
                grid.c          \
                grid.h          \
+               grid_area.c     \
                grid_gme.c      \
                grid_lcc.c      \
                grid_rot.c      \
+               gridreference.c \
                griddes.c       \
                griddes.h       \
                griddes_h5.c    \
@@ -238,6 +235,8 @@ cdo_SOURCES += Arith.c         \
                interpol.h      \
                job.c           \
                juldate.c       \
+               kvlist.c        \
+               kvlist.h        \
                legendre.c      \
                list.c          \
                list.h          \
@@ -270,6 +269,7 @@ cdo_SOURCES += Arith.c         \
                remap.h         \
                remaplib.c      \
                remapsort.c     \
+               remap_scrip_io.c \
                specspace.c     \
                specspace.h     \
                statistic.c     \
@@ -283,6 +283,22 @@ cdo_SOURCES += Arith.c         \
                vinterp.c       \
                vinterp.h       \
                zaxis.c
+
+if ENABLE_MAGICS
+cdo_SOURCES += Magplot.c       \
+               Magvector.c     \
+               Maggraph.c      \
+               template_parser.h   \
+               template_parser.c   \
+               results_template_parser.h   \
+               results_template_parser.c   \
+               magics_template_parser.h   \
+               magics_template_parser.c   \
+               StringUtilities.h   \
+               StringUtilities.c   \
+               CdoMagicsMapper.h   \
+               CdoMagicsMapper.c
+endif
 
 cdo_CPPFLAGS = -I$(top_srcdir)/libcdi/src
 cdo_LDADD    = $(top_builddir)/libcdi/src/libcdi.la

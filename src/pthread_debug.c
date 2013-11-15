@@ -1,4 +1,4 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -6,7 +6,7 @@
 
 
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 #include <pthread.h>
 #include <errno.h>
 #include "error.h"
@@ -56,7 +56,7 @@ void print_pthread_attr(const char *caller, pthread_attr_t *attr)
   pthread_attr_getdetachstate(attr, &detachstate);
   POUT2(caller, detachstate, PTHREAD_CREATE_JOINABLE, PTHREAD_CREATE_DETACHED);
 
-#if defined (SCHED_FIFO)
+#if defined(SCHED_FIFO)
   pthread_attr_getschedpolicy(attr, &policy);
   POUT3(caller, policy, SCHED_FIFO, SCHED_RR, SCHED_OTHER);
   pthread_attr_getschedparam(attr, &param);
@@ -64,7 +64,7 @@ void print_pthread_attr(const char *caller, pthread_attr_t *attr)
   fprintf(stderr, "%-18s :  %-14s = %d\n", caller, "priority", priority);
 #endif
 
-#if defined (PTHREAD_INHERIT_SCHED)
+#if defined(PTHREAD_INHERIT_SCHED)
   pthread_attr_getinheritsched(attr, &inherit);
   POUT2(caller, inherit, PTHREAD_INHERIT_SCHED, PTHREAD_EXPLICIT_SCHED);
 #endif
@@ -80,7 +80,7 @@ void print_pthread_attr(const char *caller, pthread_attr_t *attr)
 void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
 {
   /*
-#if defined (_POSIX_THREAD_PRIO_PROTECT) && defined (_POSIX_THREAD_PRIO_INHERIT)
+#if defined(_POSIX_THREAD_PRIO_PROTECT) && defined(_POSIX_THREAD_PRIO_INHERIT)
   {
   int protocol;
   pthread_mutexattr_getprotocol(m_attr, &protocol);
@@ -88,7 +88,7 @@ void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
   }
 #endif
   */
-#if defined (PTHREAD_MUTEX_FAST_NP)
+#if defined(PTHREAD_MUTEX_FAST_NP)
   {
   int kind;
   pthread_mutexattr_getkind_np(m_attr, &kind);
@@ -96,7 +96,7 @@ void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
   }
 #endif
 
-#if defined (_POSIX_THREAD_PROCESS_SHARED)
+#if defined(_POSIX_THREAD_PROCESS_SHARED)
   {
   int pshared;
   pthread_mutexattr_getpshared(m_attr, &pshared);
@@ -108,7 +108,7 @@ void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
 
 void print_pthread_condattr(const char *caller, pthread_condattr_t *c_attr)
 {
-#if defined (_POSIX_THREAD_PROCESS_SHARED)
+#if defined(_POSIX_THREAD_PROCESS_SHARED)
   {
   int pshared;
   pthread_condattr_getpshared(c_attr, &pshared);
@@ -184,6 +184,7 @@ void Pthread_mutex_lock(const char *caller, pthread_mutex_t *mutex)
 	  break;
 	default:
 	  Error("Status %d unknown!", status, (void *) mutex);
+	  break;
 	}
     }
 
@@ -210,6 +211,7 @@ void Pthread_mutex_unlock(const char *caller, pthread_mutex_t *mutex)
 	  break;
 	default:
 	  Error("Status %d unknown!", status);
+	  break;
 	}
     }
 

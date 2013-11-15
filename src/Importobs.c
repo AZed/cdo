@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -157,15 +157,15 @@ void *Importobs(void *argument)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridID, units);
-    gridToDegree(units, "grid center lon", gridsize, xvals);
+    grid_to_degree(units, gridsize, xvals, "grid center lon");
     gridInqYunits(gridID, units);
-    gridToDegree(units, "grid center lat", gridsize, yvals);
+    grid_to_degree(units, gridsize, yvals, "grid center lat");
   }
 
-  fp = fopen(cdoStreamName(0), "r");
-  if ( fp == NULL ) { perror(cdoStreamName(0)); exit(EXIT_FAILURE); }
+  fp = fopen(cdoStreamName(0)->args, "r");
+  if ( fp == NULL ) { perror(cdoStreamName(0)->args); exit(EXIT_FAILURE); }
 
-  vdate = getDate(cdoStreamName(0));
+  vdate = getDate(cdoStreamName(0)->args);
   if ( vdate <= 999999 ) vdate = vdate*100 + 1;
 
   streamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());

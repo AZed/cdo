@@ -49,7 +49,6 @@ void *Ymonpctl(void *argument)
   int *recVarID, *recLevelID;
   int vdates1[NMONTH], vtimes1[NMONTH];
   int vdates2[NMONTH], vtimes2[NMONTH];
-  double missval;
   field_t **vars1[NMONTH];
   field_t field;
   double pn;
@@ -103,19 +102,20 @@ void *Ymonpctl(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID2, tsID)) )
     {
       if ( nrecs != streamInqTimestep(streamID3, tsID) )
-        cdoAbort("Number of records in time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Number of records at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
       
       vdate = taxisInqVdate(taxisID2);
       vtime = taxisInqVtime(taxisID2);
       
       if ( vdate != taxisInqVdate(taxisID3) || vtime != taxisInqVtime(taxisID3) )
-        cdoAbort("Verification dates for time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Verification dates at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
         
       if ( cdoVerbose ) cdoPrint("process timestep: %d %d %d", tsID+1, vdate, vtime);
 
@@ -128,26 +128,15 @@ void *Ymonpctl(void *argument)
 
       if ( vars1[month] == NULL )
 	{
-	  vars1[month] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  vars1[month] = field_malloc(vlistID1, FIELD_PTR);
           hsets[month] = hsetCreate(nvars);
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
 	      nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
 
-	      vars1[month][varID] = (field_t *)  malloc(nlevels*sizeof(field_t));
               hsetCreateVarLevels(hsets[month], varID, nlevels, gridID);
-	      
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		{
-		  vars1[month][varID][levelID].grid    = gridID;
-		  vars1[month][varID][levelID].nmiss   = 0;
-		  vars1[month][varID][levelID].missval = missval;
-		  vars1[month][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
 	    }
 	}
       
@@ -187,7 +176,7 @@ void *Ymonpctl(void *argument)
       vtimes1[month] = vtime;
 
       if ( vars1[month] == NULL )
-        cdoAbort("No data for month %d in %s and %s", month, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("No data for month %d in %s and %s", month, cdoStreamName(1)->args, cdoStreamName(2)->args);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -214,9 +203,9 @@ void *Ymonpctl(void *argument)
     if ( nsets[month] )
       {
         if ( vdates1[month] != vdates2[month] )
-          cdoAbort("Verification dates for month %d of %s, %s and %s are different!", month, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification dates for month %d of %s, %s and %s are different!", month, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
         if ( vtimes1[month] != vtimes2[month] )
-          cdoAbort("Verification times for month %d of %s, %s and %s are different!", month, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification times for month %d of %s, %s and %s are different!", month, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
 
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
@@ -249,14 +238,7 @@ void *Ymonpctl(void *argument)
     {
       if ( vars1[month] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		free(vars1[month][varID][levelID].ptr);
-	      free(vars1[month][varID]);
-	    }
-	  free(vars1[month]); 
+	  field_free(vars1[month], vlistID1); 
 	  hsetDestroy(hsets[month]);
 	}
     }

@@ -1214,7 +1214,7 @@ void initmask(int *mask, int ni, int nd)
 	*((int *)ptmp2) = 0;
 	ptmp2 += section.dim[0].mult;
       }
-
+      break;
     }
   }
 
@@ -1310,6 +1310,7 @@ void gme_grid_restore(double *p, int ni, int nd)
       for (j = 0; j <= ni; j++) {
 	p[ni+tmp4*(j+1)+tmp5*10+tmp3] = p[ni-j+tmp4*(ni+1)+tmp5*5+tmp3];
       }
+      break;
     }
   }
 

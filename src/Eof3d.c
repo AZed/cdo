@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@
  * number of contributing values during summation.
  */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #include <omp.h>
 #endif
 
@@ -68,7 +68,7 @@ void *EOF3d(void * argument)
   int timer_eig = 0, timer_post = 0, timer_write = 0, timer_finish = 0;
   int *varID2;
   int vdate=0, vtime=0;
-  int vlistID1, vlistID2=-1, vlistID3=-1;
+  int vlistID1, vlistID2 = -1, vlistID3 = -1;
   int zaxisID2;
 
   int calendar = CALENDAR_STANDARD;
@@ -128,7 +128,7 @@ void *EOF3d(void * argument)
   if ( cdoVerbose ) 
     cdoPrint("Set eigen_mode to %s\n",eigen_mode == JACOBI? "jacobi" : "danielson_lanczos");
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   if ( omp_get_max_threads() > 1 && eigen_mode == DANIELSON_LANCZOS )  {
     cdoWarning("Requested parallel computation with %i Threads ",omp_get_max_threads());
     cdoWarning("  but environmental setting CDO_SVD_MODE causes sequential ");
@@ -407,7 +407,7 @@ void *EOF3d(void * argument)
       }
 
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for private(j1,j2,sum,df1p,df2p) default(shared) schedule(static,2000)
 #endif 
       for ( j1 = 0; j1 < nts; j1++)
@@ -449,7 +449,7 @@ void *EOF3d(void * argument)
 
       for ( eofID = 0; eofID < n_eig; eofID++ )
 	{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for private(i,j,sum) shared(datafields, eigenvectors)
 #endif 
 	  for ( i = 0; i < npack; i++ )
@@ -462,7 +462,7 @@ void *EOF3d(void * argument)
 	  // NORMALIZING
 	  sum = 0;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for private(i) default(none) reduction(+:sum) \
   shared(eigenvectors,weight,pack,varID,eofID,npack,gridsize)
 #endif 
@@ -473,7 +473,7 @@ void *EOF3d(void * argument)
 
 	  if ( sum > 0 ) {
 	    sum = sqrt(sum);
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for private(i) default(none) \
   shared(sum,npack,eigenvectors,varID,eofID,pack)
 #endif
@@ -481,7 +481,7 @@ void *EOF3d(void * argument)
 	      eigenvectors[varID][eofID].ptr[pack[i]] /= sum;
 	  }
 	  else
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for private(i) default(none) \
   shared(eigenvectors,varID,eofID,pack,missval,npack)
 #endif

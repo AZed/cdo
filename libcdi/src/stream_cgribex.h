@@ -1,9 +1,9 @@
 #ifndef _STREAM_CGRIBEX_H
 #define _STREAM_CGRIBEX_H
 
-int cgribexScanTimestep1(int streamID);
-int cgribexScanTimestep2(int streamID);
-int cgribexScanTimestep(int streamID);
+int cgribexScanTimestep1(stream_t * streamptr);
+int cgribexScanTimestep2(stream_t * streamptr);
+int cgribexScanTimestep(stream_t * streamptr);
 
 int cgribexDecode(unsigned char *gribbuffer, int gribsize, double *data, int gridsize,
 		  int unreduced, int *nmiss, int *zip, double missval);

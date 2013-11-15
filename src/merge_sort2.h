@@ -10,7 +10,7 @@
 #include <time.h>
 #include "cdo.h"
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #include <omp.h>
 #endif
 

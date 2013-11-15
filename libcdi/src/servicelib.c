@@ -32,7 +32,7 @@ static int srvDefaultDprec = 0;
  */
 
 #undef  LIBVERSION
-#define LIBVERSION      1.3.0
+#define LIBVERSION      1.3.1
 #define XSTRING(x)	#x
 #define STRING(x)	XSTRING(x)
 static const char srv_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
@@ -98,6 +98,7 @@ void srvLibInit()
 	      }
 	    default:
 	      Message("Invalid character in %s: %s", envName, envString);
+	      break;
 	    }
 	  pos += 2;
 	}
@@ -296,6 +297,7 @@ int srvInqData(srvrec_t *srvp, int prec, void *data)
     default:
       {
 	Error("unexpected data precision %d", dprec);
+        break;
       }
     }
 
@@ -384,6 +386,7 @@ int srvDefData(srvrec_t *srvp, int prec, const void *data)
     default:
       {
 	Error("unexpected data precision %d", dprec);
+        break;
       }
     }
 
@@ -459,6 +462,7 @@ int srvRead(int fileID, srvrec_t *srvp)
     default:
       {
 	Error("unexpected header precision %d", hprec);
+        break;
       }
     }
 
@@ -559,6 +563,7 @@ int srvWrite(int fileID, srvrec_t *srvp)
     default:
       {
 	Error("unexpected header precision %d", hprec);
+        break;
       }
     }
   
@@ -588,6 +593,7 @@ int srvWrite(int fileID, srvrec_t *srvp)
     default:
       {
 	Error("unexpected data precision %d", dprec);
+        break;
       }
     }
 

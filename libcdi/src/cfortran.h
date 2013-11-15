@@ -64,6 +64,7 @@
 #define __CF__APOLLO67 /* __STDCPP__ is in Apollo 6.8 (i.e. ANSI) and onwards */
 #endif
 #endif
+#include <limits.h>    /* LONG_MAX */
 
 #if !defined(__GNUC__) && !defined(__sun) && (defined(sun)||defined(VAXUltrix)||defined(lynx))
 #define __CF__KnR     /* Sun, LynxOS and VAX Ultrix cc only supports K&R.     */
@@ -242,6 +243,18 @@ only C calling FORTRAN subroutines will work using K&R style.*/
 #else
 #define FORTRAN_REAL float
 #endif
+#endif
+
+/* INT64_T for 8 byte integers */
+#if ! defined (LONG_MAX)
+#  error LONG_MAX undefined
+#endif
+
+#undef  INT64_T
+#if LONG_MAX > 2147483647L
+#  define INT64_T long int
+#else
+#  define INT64_T long long int       /* c.f. typedef of int64_t in <stdint.h> */
 #endif
 
 #ifdef CRAYFortran
@@ -461,6 +474,10 @@ for (i=0; i<sizeofcstr/elem_len; i++) {
 } return cstr; }
 
 /* kill the trailing char t's in string s. */
+#if defined (__GNUC__)
+#pragma GCC push_options
+#pragma GCC optimize ("O2")
+#endif
 #ifndef __CF__KnR
 static char *kill_trailing(char *s, char t)
 #else
@@ -472,6 +489,9 @@ if (e>s) {                           /* Need this to handle NULL string.*/
   while (e>s && *--e==t);            /* Don't follow t's past beginning. */
   e[*e==t?0:1] = '\0';               /* Handle s[0]=t correctly.       */
 } return s; }
+#if defined (__GNUC__)
+#pragma GCC pop_options
+#endif
 
 /* kill_trailingn(s,t,e) will kill the trailing t's in string s. e normally 
 points to the terminating '\0' of s, but may actually point to anywhere in s.
@@ -1328,20 +1348,24 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #else
 #define INTEGER_BYTE        unsigned char
 #endif
-#define    BYTEVVVVVVV_cfTYPE INTEGER_BYTE
-#define  DOUBLEVVVVVVV_cfTYPE DOUBLE_PRECISION 
-#define   FLOATVVVVVVV_cfTYPE FORTRAN_REAL
-#define     INTVVVVVVV_cfTYPE int
-#define LOGICALVVVVVVV_cfTYPE int
-#define    LONGVVVVVVV_cfTYPE long
-#define   SHORTVVVVVVV_cfTYPE short
-#define          PBYTE_cfTYPE INTEGER_BYTE
-#define        PDOUBLE_cfTYPE DOUBLE_PRECISION 
-#define         PFLOAT_cfTYPE FORTRAN_REAL
-#define           PINT_cfTYPE int
-#define       PLOGICAL_cfTYPE int
-#define          PLONG_cfTYPE long
-#define         PSHORT_cfTYPE short
+#define     BYTEVVVVVVV_cfTYPE INTEGER_BYTE
+#define   DOUBLEVVVVVVV_cfTYPE DOUBLE_PRECISION 
+#define    FLOATVVVVVVV_cfTYPE FORTRAN_REAL
+#define      INTVVVVVVV_cfTYPE int
+#define  LOGICALVVVVVVV_cfTYPE int
+#define     LONGVVVVVVV_cfTYPE long
+#define LONGLONGVVVVVVV_cfTYPE long long
+#define    INT64VVVVVVV_cfTYPE INT64_T
+#define    SHORTVVVVVVV_cfTYPE short
+#define           PBYTE_cfTYPE INTEGER_BYTE
+#define         PDOUBLE_cfTYPE DOUBLE_PRECISION 
+#define          PFLOAT_cfTYPE FORTRAN_REAL
+#define            PINT_cfTYPE int
+#define        PLOGICAL_cfTYPE int
+#define           PLONG_cfTYPE long
+#define       PLONGLONG_cfTYPE long long
+#define          PINT64_cfTYPE INT64_T
+#define          PSHORT_cfTYPE short
 
 #define CFARGS0(A,T,V,W,X,Y,Z) _3(T,_cf,A)
 #define CFARGS1(A,T,V,W,X,Y,Z) _3(T,_cf,A)(V)
@@ -1358,6 +1382,8 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define            INT_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
 #define        LOGICAL_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
 #define           LONG_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
+#define       LONGLONG_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
+#define          INT64_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
 #define          SHORT_cfINT(N,A,B,X,Y,Z)        DOUBLE_cfINT(N,A,B,X,Y,Z)
 #define          PBYTE_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
 #define        PDOUBLE_cfINT(N,A,B,X,Y,Z) _(CFARGS,N)(A,PINT,B,X,Y,Z,0)
@@ -1365,6 +1391,8 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define           PINT_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
 #define       PLOGICAL_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
 #define          PLONG_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
+#define      PLONGLONG_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
+#define         PINT64_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
 #define         PSHORT_cfINT(N,A,B,X,Y,Z)       PDOUBLE_cfINT(N,A,B,X,Y,Z)
 #define          BYTEV_cfINT(N,A,B,X,Y,Z)       DOUBLEV_cfINT(N,A,B,X,Y,Z)
 #define         BYTEVV_cfINT(N,A,B,X,Y,Z)      DOUBLEVV_cfINT(N,A,B,X,Y,Z)
@@ -1605,6 +1633,8 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define            INT_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define        LOGICAL_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,LOGICAL,A,B,C,D,E)
 #define           LONG_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
+#define       LONGLONG_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
+#define          INT64_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define          SHORT_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define          BYTEV_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define         BYTEVV_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
@@ -1661,6 +1691,8 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define           PINT_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define       PLOGICAL_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,PLOGICAL,A,B,C,D,E)
 #define          PLONG_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
+#define      PLONGLONG_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
+#define         PINT64_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define         PSHORT_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,DEFAULT,A,B,C,D,E)
 #define         STRING_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,STRING,A,B,C,D,E)
 #define        PSTRING_cfSTR(N,T,A,B,C,D,E) _(CFARGS,N)(T,PSTRING,A,B,C,D,E)
@@ -1718,6 +1750,8 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 #define      INT_cfCCC(A,B) &A
 #define  LOGICAL_cfCCC(A,B) &A
 #define     LONG_cfCCC(A,B) &A
+#define LONGLONG_cfCCC(A,B) &A
+#define    INT64_cfCCC(A,B) &A
 #define    SHORT_cfCCC(A,B) &A
 #define    PBYTE_cfCCC(A,B)  A
 #define  PDOUBLE_cfCCC(A,B)  A
@@ -1973,6 +2007,8 @@ static _Icf(2,U,F,CFFUN(UN),0)() {_(F,_cfE) _Icf(3,GZ,F,UN,LN) ABSOFT_cf1(F));_(
 #define            INT_cfT(M,I,A,B,D) *A
 #define        LOGICAL_cfT(M,I,A,B,D)  F2CLOGICAL(*A)
 #define           LONG_cfT(M,I,A,B,D) *A
+#define       LONGLONG_cfT(M,I,A,B,D) *A
+#define          INT64_cfT(M,I,A,B,D) *A
 #define          SHORT_cfT(M,I,A,B,D) *A
 #define          BYTEV_cfT(M,I,A,B,D)  A
 #define        DOUBLEV_cfT(M,I,A,B,D)  A
@@ -2029,6 +2065,8 @@ static _Icf(2,U,F,CFFUN(UN),0)() {_(F,_cfE) _Icf(3,GZ,F,UN,LN) ABSOFT_cf1(F));_(
 #define           PINT_cfT(M,I,A,B,D)  A
 #define       PLOGICAL_cfT(M,I,A,B,D)  ((*A=F2CLOGICAL(*A)),A)
 #define          PLONG_cfT(M,I,A,B,D)  A
+#define      PLONGLONG_cfT(M,I,A,B,D)  A
+#define         PINT64_cfT(M,I,A,B,D)  A
 #define         PSHORT_cfT(M,I,A,B,D)  A
 #define          PVOID_cfT(M,I,A,B,D)  A
 #if defined(apolloFortran) || defined(hpuxFortran800) || defined(AbsoftUNIXFortran)
@@ -2377,12 +2415,3 @@ string. */
 
 
 #endif	 /* __CFORTRAN_LOADED */
-/*
- * Local Variables:
- * c-file-style: "Java"
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * show-trailing-whitespace: t
- * require-trailing-newline: t
- * End:
- */

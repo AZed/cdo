@@ -692,7 +692,7 @@ void *SSOpar(void *argument)
   int tsID, varID, levelID;
   int nvars;
   int zaxisID2, zaxisIDh = -1, nzaxis, surfaceID;
-  int ngrids, gridID, zaxisID;
+  int ngrids, gridID = -1, zaxisID;
   int nlevel;
   int nvct;
   int geopID = -1, tempID = -1, humID = -1, psID = -1, lnpsID = -1, presID = -1, clwcID = -1, ciwcID = -1;

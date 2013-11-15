@@ -1,0 +1,17 @@
+Author: Alastair McKinstry <mckinstry@debian.org>
+Description: Add explicit declaration.
+Last-Updated: 2013-06-06
+Forwarded: no
+
+Index: cdo-1.6.0+dfsg.1/src/griddes.c
+===================================================================
+--- cdo-1.6.0+dfsg.1.orig/src/griddes.c	2013-05-24 07:39:56.000000000 +0100
++++ cdo-1.6.0+dfsg.1/src/griddes.c	2013-06-06 13:23:42.000000000 +0100
+@@ -57,6 +57,7 @@
+ 
+ #define MAX_LINE_LEN 65536
+ 
++void str2uuid(const char *uuidstr, char *uuid);
+ 
+ void gridInit(griddes_t *grid)
+ {

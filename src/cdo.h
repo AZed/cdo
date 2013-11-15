@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include "dmemory.h"
+#include "util.h"
 
 #undef   TRUE
 #define  TRUE   1
@@ -32,15 +33,10 @@
 #define  MAX(a,b)  ((a) > (b) ? (a) : (b))
 #undef   NINT
 #define  NINT(x)   ((x) < 0 ? (int)((x)-0.5) : (int)((x)+0.5))
+#undef   NINTD
+#define  NINTD(x)   ((x) < 0 ? ((x)-0.5) : ((x)+0.5))
 
-#define  UNCHANGED_RECORD  (processSelf() == 0 && *cdoStreamName(0) != '-' && cdoRegulargrid == FALSE && cdoDefaultDataType == -1 && cdoDefaultByteorder == -1 )
-
-
-typedef struct {
-  int      argc;
-  char   **argv;
-}
-ARGUMENT;
+#define  UNCHANGED_RECORD  (processSelf() == 0 && cdoStreamName(0)->argv[0][0] != '-' && cdoRegulargrid == FALSE && cdoDefaultFileType == -1 && cdoDefaultDataType == -1 && cdoDefaultByteorder == -1 )
 
 
 extern int ompNumThreads;
@@ -51,6 +47,7 @@ extern int cdoDefaultByteorder;
 extern int cdoDefaultTableID;
 extern int cdoDefaultInstID;
 
+extern int cdoLockIO;
 extern int cdoCheckDatarange;
 
 extern int cdoSilentMode;
@@ -67,9 +64,14 @@ extern int cdoParIO;
 extern int cdoCompType;
 extern int cdoCompLevel;
 
+extern int cdoChunkType;
+
 extern int cdoExpMode;
 
 extern int cdoDiag;
+
+extern int cdoNumVarnames;
+extern char **cdoVarnames;
 
 void    cdiError(int cdiErrno, const char *fmt, ...);
 void    cdoAbort(const char *fmt, ...);
@@ -87,7 +89,7 @@ int     operatorArgc(void);
 char  **operatorArgv(void);
 void    operatorCheckArgc(int numargs);
 
-const char *cdoStreamName(int cnt);
+const argument_t *cdoStreamName(int cnt);
 
 void    cdoInitialize(void *argument);
 void    cdoFinish(void);
@@ -109,8 +111,10 @@ void    cdoDefHistory(int fileID, char *histstring);
 int     cdoDefineGrid(const char *gridfile);
 int     cdoDefineZaxis(const char *zaxisfile);
 
+int     vlistInqNWPV(int vlistID, int varID);
 int     vlistIsSzipped(int vlistID);
-void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID);
+
+void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID, const char *refname);
 
 int  gridWeights(int gridID, double *weights);
 int  gridGenArea(int gridID, double *area);

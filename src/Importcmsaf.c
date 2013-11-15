@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,13 +15,13 @@
   GNU General Public License for more details.
 */
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
 #define H5_USE_16_API
 
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
 #  include "hdf5.h"
 #endif
 
@@ -66,10 +66,11 @@ typedef struct {
   int lmetadata;
   dset_obj_t obj[MAX_DSETS];
 }
-dsets_t;
+datasets_t;
 
+#define  NINT(x)   ((x) < 0 ? (int)((x)-0.5) : (int)((x)+0.5))
 
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
 static
 void print_filter(hid_t dset_id, char *varname)
 {
@@ -96,10 +97,6 @@ void print_filter(hid_t dset_id, char *varname)
 
   H5Pclose(plist);
 }
-#endif
-
-
-#define  NINT(x)   ((x) < 0 ? (int)((x)-0.5) : (int)((x)+0.5))
 
 static
 void get_grid_info(double c0, double re, int *nrxp, int *nryp,
@@ -352,7 +349,6 @@ int scan_pcs_def(char *pcs_def, char proj[128], double *a, double *lon0, double 
   return (nfound);
 }
 
-#if  defined  (HAVE_LIBHDF5)
 static
 int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 {
@@ -617,9 +613,7 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 
   return (gridID);
 }
-#endif
 
-#if  defined  (HAVE_LIBHDF5)
 static
 int read_region(hid_t loc_id, int nx, int ny)
 {
@@ -759,9 +753,7 @@ int read_region(hid_t loc_id, int nx, int ny)
 
   return (gridID);
 }
-#endif
 
-#if  defined  (HAVE_LIBHDF5)
 static
 void read_dataset(hid_t loc_id, const char *name, void *opdata)
 {
@@ -866,7 +858,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 
 
   len = (int) strlen(varname);
-  if ( ((dsets_t *) opdata)->mergelevel )
+  if ( ((datasets_t *) opdata)->mergelevel )
     if ( isdigit(varname[len-1]) && memcmp(varname, "Data", 4) != 0 )
       {
 	if ( nt > 1 ) cdoAbort("Combination of nlevel > 1 and ntime > 1 not implemented!");
@@ -878,15 +870,15 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
   gridsize = nx*ny;
 
   if ( nz == 1 )
-    nset = ((dsets_t *) opdata)->nsets;
+    nset = ((datasets_t *) opdata)->nsets;
   else
     {
-      for ( nset = 0; nset < ((dsets_t *) opdata)->nsets; ++nset )
+      for ( nset = 0; nset < ((datasets_t *) opdata)->nsets; ++nset )
 	{
-	  if ( strcmp(varname, ((dsets_t *) opdata)->obj[nset].name) == 0 ) break;
+	  if ( strcmp(varname, ((datasets_t *) opdata)->obj[nset].name) == 0 ) break;
 	}
 
-      if ( nset >= ((dsets_t *) opdata)->nsets )
+      if ( nset >= ((datasets_t *) opdata)->nsets )
 	cdoAbort("3D var %s not found!", varname);
     }
 
@@ -1038,28 +1030,28 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	  else if ( strcmp(attname, "description") == 0 )
 	    {
 	      H5Aread(attr, atype_mem, attstring);
-	      if ( ((dsets_t *) opdata)->obj[nset].description )
-		free(((dsets_t *) opdata)->obj[nset].description);
-	      ((dsets_t *) opdata)->obj[nset].description = strdup(attstring);
+	      if ( ((datasets_t *) opdata)->obj[nset].description )
+		free(((datasets_t *) opdata)->obj[nset].description);
+	      ((datasets_t *) opdata)->obj[nset].description = strdup(attstring);
 	    }
 	  else if ( strcmp(attname, "title") == 0 )
 	    {
 	      H5Aread(attr, atype_mem, attstring);
-	      if ( ((dsets_t *) opdata)->obj[nset].title )
-		free(((dsets_t *) opdata)->obj[nset].title);
-	      ((dsets_t *) opdata)->obj[nset].title = strdup(attstring);
+	      if ( ((datasets_t *) opdata)->obj[nset].title )
+		free(((datasets_t *) opdata)->obj[nset].title);
+	      ((datasets_t *) opdata)->obj[nset].title = strdup(attstring);
 	    }
 	  else if ( strcmp(attname, "time") == 0 )
 	    {
 	      H5Aread(attr, atype_mem, attstring);
-	      if ( ((dsets_t *) opdata)->obj[nset].time )
-		free(((dsets_t *) opdata)->obj[nset].time);
-	      ((dsets_t *) opdata)->obj[nset].time = strdup(attstring);
+	      if ( ((datasets_t *) opdata)->obj[nset].time )
+		free(((datasets_t *) opdata)->obj[nset].time);
+	      ((datasets_t *) opdata)->obj[nset].time = strdup(attstring);
 	    }
 	  else if ( strcmp(attname, "unit") == 0 )
 	    {
 	      H5Aread(attr, atype_mem, attstring);
-	      ((dsets_t *) opdata)->obj[nset].units = strdup(attstring);
+	      ((datasets_t *) opdata)->obj[nset].units = strdup(attstring);
 	    }
 
 	  H5Tclose(atype_mem);
@@ -1068,9 +1060,9 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	}
       
       offset = gridsize*(nz-1);
-      array  = ((dsets_t *) opdata)->obj[nset].array;
+      array  = ((datasets_t *) opdata)->obj[nset].array;
       array  = (double *) realloc(array, gridsize*nz*nt*sizeof(double));
-      ((dsets_t *) opdata)->obj[nset].array    = array;
+      ((datasets_t *) opdata)->obj[nset].array    = array;
       array  = array+offset;
 
       if ( ftype )
@@ -1104,29 +1096,29 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	  free(iarray);
 	}
 
-      ((dsets_t *) opdata)->obj[nset].name     = strdup(varname);
-      ((dsets_t *) opdata)->obj[nset].nx       = nx;
-      ((dsets_t *) opdata)->obj[nset].ny       = ny;
-      ((dsets_t *) opdata)->obj[nset].nz       = nz;
-      ((dsets_t *) opdata)->obj[nset].nt       = nt;
-      ((dsets_t *) opdata)->obj[nset].gridsize = gridsize;
+      ((datasets_t *) opdata)->obj[nset].name     = strdup(varname);
+      ((datasets_t *) opdata)->obj[nset].nx       = nx;
+      ((datasets_t *) opdata)->obj[nset].ny       = ny;
+      ((datasets_t *) opdata)->obj[nset].nz       = nz;
+      ((datasets_t *) opdata)->obj[nset].nt       = nt;
+      ((datasets_t *) opdata)->obj[nset].gridsize = gridsize;
 
       if ( nz > 1 )
 	{
-	  if ( ((dsets_t *) opdata)->obj[nset].dtype != dtype )
+	  if ( ((datasets_t *) opdata)->obj[nset].dtype != dtype )
 	    cdoWarning("Data type changes over levels!");
 
-	  if ( laddoffset && !DBL_IS_EQUAL(((dsets_t *) opdata)->obj[nset].offset, addoffset) )
+	  if ( laddoffset && !DBL_IS_EQUAL(((datasets_t *) opdata)->obj[nset].offset, addoffset) )
 	    cdoWarning("Offset changes over levels!");
 
-	  if ( lscalefactor && !DBL_IS_EQUAL(((dsets_t *) opdata)->obj[nset].scale, scalefactor) )
+	  if ( lscalefactor && !DBL_IS_EQUAL(((datasets_t *) opdata)->obj[nset].scale, scalefactor) )
 	    cdoWarning("Scalefactor changes over levels!");
 
-	  if ( lmissval && !DBL_IS_EQUAL(((dsets_t *) opdata)->obj[nset].missval, missval) )
+	  if ( lmissval && !DBL_IS_EQUAL(((datasets_t *) opdata)->obj[nset].missval, missval) )
 	    cdoWarning("Missing value changes over levels!");	       
 	}
 
-      if ( nz == 1 ) ((dsets_t *) opdata)->nsets++;
+      if ( nz == 1 ) ((datasets_t *) opdata)->nsets++;
 
       mask = (short *) malloc(gridsize*nt*sizeof(short));
       memset(mask, 0, gridsize*nt*sizeof(short));
@@ -1212,13 +1204,13 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	    }
 	}
 
-      ((dsets_t *) opdata)->obj[nset].dtype    = dtype;
-      ((dsets_t *) opdata)->obj[nset].loffset  = laddoffset;
-      ((dsets_t *) opdata)->obj[nset].lscale   = lscalefactor;
-      ((dsets_t *) opdata)->obj[nset].lmissval = lmissval;
-      ((dsets_t *) opdata)->obj[nset].offset   = addoffset;
-      ((dsets_t *) opdata)->obj[nset].scale    = scalefactor;
-      ((dsets_t *) opdata)->obj[nset].missval  = missval;
+      ((datasets_t *) opdata)->obj[nset].dtype    = dtype;
+      ((datasets_t *) opdata)->obj[nset].loffset  = laddoffset;
+      ((datasets_t *) opdata)->obj[nset].lscale   = lscalefactor;
+      ((datasets_t *) opdata)->obj[nset].lmissval = lmissval;
+      ((datasets_t *) opdata)->obj[nset].offset   = addoffset;
+      ((datasets_t *) opdata)->obj[nset].scale    = scalefactor;
+      ((datasets_t *) opdata)->obj[nset].missval  = missval;
 
       free(mask); 
       mask = NULL;
@@ -1236,18 +1228,12 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
   H5Dclose(dset_id);
   H5Tclose(type_id);
 }
-#endif
 
-#if  defined  (HAVE_LIBHDF5)
 static herr_t
 obj_info(hid_t loc_id, const char *name, void *opdata)
 {
   H5G_obj_t obj_type;
   H5G_stat_t statbuf;
-
-  /* avoid compiler warnings */
-  loc_id = loc_id;
-  opdata = opdata;
 
   H5Gget_objinfo(loc_id, name, FALSE, &statbuf);
 
@@ -1258,16 +1244,16 @@ obj_info(hid_t loc_id, const char *name, void *opdata)
     if ( cdoVerbose ) cdoPrint(" Object with name %s is a group", name);
     if ( strcmp(name, "Data") == 0 )
       {
-	((dsets_t *) opdata)->mergelevel = TRUE;	
+	((datasets_t *) opdata)->mergelevel = TRUE;	
 	H5Giterate(loc_id, name, NULL, obj_info, opdata);
       }
     else if ( strcmp(name, "Geolocation") == 0 )
       {
-	((dsets_t *) opdata)->lgeoloc = TRUE;
+	((datasets_t *) opdata)->lgeoloc = TRUE;
       }
     else if ( strcmp(name, "Metadata") == 0 )
       {
-	((dsets_t *) opdata)->lmetadata = TRUE;
+	((datasets_t *) opdata)->lmetadata = TRUE;
       }
     break;
   case H5G_DATASET: 
@@ -1279,7 +1265,7 @@ obj_info(hid_t loc_id, const char *name, void *opdata)
     /*else if ( strstr(name, "egion") ) */
     else if ( strcmp(name, "region") == 0 )
       {
-	((dsets_t *) opdata)->lregion = TRUE;
+	((datasets_t *) opdata)->lregion = TRUE;
       }
     else
       {
@@ -1291,19 +1277,17 @@ obj_info(hid_t loc_id, const char *name, void *opdata)
     if ( cdoVerbose ) cdoPrint(" Object with name %s is a named datatype", name);
     if ( strcmp(name, "ProjType") == 0 )
       {
-	((dsets_t *) opdata)->lprojtype = TRUE;
+	((datasets_t *) opdata)->lprojtype = TRUE;
       }
     break;
   default:
     cdoAbort(" Unable to identify an object %s", name);
+    break;
   }
 
   return 0;
 }
-#endif
 
-
-#if  defined  (HAVE_LIBHDF5)
 static
 void get_global_att(hid_t file_id, const char *obj_path, int vlistID)
 {
@@ -1357,7 +1341,6 @@ void get_global_att(hid_t file_id, const char *obj_path, int vlistID)
   if ( grp_id >= 0 ) H5Gclose(grp_id);	
 
 }
-#endif
 
 static
 int get_vdate(int vlistID)
@@ -1391,7 +1374,7 @@ int get_vdate(int vlistID)
 }
 
 static
-void dsets_init(dsets_t *dsets)
+void dsets_init(datasets_t *dsets)
 {
   int i;
 
@@ -1420,11 +1403,11 @@ void dsets_init(dsets_t *dsets)
       dsets->obj[i].array       = NULL;   
     }
 }
-
+#endif
 
 void *Importcmsaf(void *argument)
 {
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
   int streamID;
   int gridID = -1, zaxisID, taxisID, vlistID;
   int i, offset;
@@ -1436,7 +1419,7 @@ void *Importcmsaf(void *argument)
   double missval, minval, maxval;
   hid_t	  file_id;	/* HDF5 File ID	        	*/
   herr_t  status;	/* Generic return value		*/
-  dsets_t dsets;
+  datasets_t dsets;
   int vdate, vtime;
   int *vtimes = NULL;
 #endif
@@ -1446,12 +1429,12 @@ void *Importcmsaf(void *argument)
   if ( cdoDefaultFileType == CDI_UNDEFID )
     cdoDefaultFileType = FILETYPE_NC;
 
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
   dsets_init(&dsets);
 
   /* Open an existing file. */
-  file_id = H5Fopen(cdoStreamName(0), H5F_ACC_RDONLY, H5P_DEFAULT);
-  if ( file_id < 0 ) cdoAbort("H5Fopen failed on %s", cdoStreamName(0));
+  file_id = H5Fopen(cdoStreamName(0)->args, H5F_ACC_RDONLY, H5P_DEFAULT);
+  if ( file_id < 0 ) cdoAbort("H5Fopen failed on %s", cdoStreamName(0)->args);
 
   /* cmsaf_type = get_cmsaf_type(file_id); */
 

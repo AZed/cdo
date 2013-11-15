@@ -1,10 +1,10 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
 #define H5_USE_16_API
 
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
 #  include "hdf5.h"
 #endif
 
@@ -15,21 +15,7 @@
 #include "error.h"
 
 
-#if  defined  (HAVE_LIBHDF5)
-static
-void nce(int istat)
-{
-  /*
-    This routine provides a simple interface to netCDF error message routine.
-  */
-  /*
-  if ( istat != NC_NOERR ) cdoAbort(nc_strerror(istat));
-  */
-}
-#endif
-
-
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
 static herr_t
 obj_info(hid_t loc_id, const char *name, void *objname)
 {
@@ -66,7 +52,7 @@ obj_info(hid_t loc_id, const char *name, void *objname)
 #endif
 
 
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
 static
 int h5find_object(hid_t file_id, char *name)
 {
@@ -305,7 +291,7 @@ void correct_sinxvals(int xsize, int ysize, double *xvals)
 int gridFromH5file(const char *gridfile)
 {
   int gridID = -1;
-#if  defined  (HAVE_LIBHDF5)
+#if defined(HAVE_LIBHDF5)
   hid_t	  file_id;	/* HDF5 File ID	        	*/
   hid_t	  lon_id = -1;	/* Dataset ID	        	*/
   hid_t	  lat_id = -1;	/* Dataset ID	        	*/
@@ -313,7 +299,7 @@ int gridFromH5file(const char *gridfile)
   hsize_t dims_out[9];  /* dataset dimensions           */
   herr_t  status;	/* Generic return value		*/
   int     rank;
-  grid_t    grid;
+  griddes_t    grid;
 
 
   gridInit(&grid);

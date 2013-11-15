@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -236,7 +236,7 @@ void *Mrotuv(void *argument)
 	  vid = 1;
 	}
       else
-	cdoAbort("U and V not found in %s",  cdoStreamName(0));
+	cdoAbort("U and V not found in %s",  cdoStreamName(0)->args);
     }
 
   nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, uid));
@@ -277,9 +277,9 @@ void *Mrotuv(void *argument)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridID1, units);
-    gridToDegree(units, "grid center lon", gridsize, grid1x);
+    grid_to_degree(units, gridsize, grid1x, "grid center lon");
     gridInqYunits(gridID1, units);
-    gridToDegree(units, "grid center lat", gridsize, grid1y);
+    grid_to_degree(units, gridsize, grid1y, "grid center lat");
   }
 
   p_to_uv_grid(nlon, nlat, grid1x, grid1y, gridux, griduy, gridvx, gridvy);

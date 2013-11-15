@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 #include <emmintrin.h>
 #endif
 
-void farfun(field_t *field1, field_t field2, int function)
+void farfun(field_t *field1, field_t field2, const int function)
 {
   if      ( function == func_add   ) faradd(field1, field2);
   else if ( function == func_min   ) farmin(field1, field2);
@@ -35,19 +35,19 @@ void farfun(field_t *field1, field_t field2, int function)
   else if ( function == func_mul   ) farmul(field1, field2);
   else if ( function == func_div   ) fardiv(field1, field2);
   else if ( function == func_atan2 ) faratan2(field1, field2);
-  else cdoAbort("function %d not implemented!", function);
+  else cdoAbort("%s: function %d not implemented!", __func__, function);
 }
 
 static
-void arradd(const long n, double * const restrict a, const double * const restrict b)
+void arradd(const size_t n, double * const restrict a, const double * const restrict b)
 {
-  long i;
+  size_t i;
  
   // SSE2 version is 15% faster than the original loop (tested with gcc47)
 #if 0
   //#ifdef __SSE2__ /*__SSE2__*/ // bug in this code!!!
-  long residual =  n % 8;
-  long ofs = n - residual;
+  const size_t residual =  n % 8;
+  const size_t ofs = n - residual;
 
   __m128d *av = (__m128d *) a; // assume 16-byte aligned
   __m128d *bv = (__m128d *) b; // assume 16-byte aligned
@@ -68,22 +68,26 @@ void arradd(const long n, double * const restrict a, const double * const restri
 #endif
 }
 
+
 void faradd(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
   /*  double *weight1 = field1->weight; */
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -104,20 +108,23 @@ void faradd(field_t *field1, field_t field2)
 
 void farsum(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
   /*  double *weight1 = field1->weight; */
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -149,21 +156,22 @@ void farsum(field_t *field1, field_t field2)
  * values do not change anything (they do not start a non-period by setting
  * occurrence to zero).
  */
-void farsumtr(field_t *occur, field_t field, double refval)
+void farsumtr(field_t *occur, field_t field, const double refval)
 {
-  long   i, len;
+  size_t   i, len;
   double omissval = occur->missval;
   double  *oarray = occur->ptr;
   double fmissval = field.missval;
   double  *farray = field.ptr;
 
-  len    = gridInqSize(occur->grid);
-  if ( len != gridInqSize(field.grid) )
+  len    = (size_t) gridInqSize(occur->grid);
+
+  if ( len != (size_t) gridInqSize(field.grid) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( occur->nmiss > 0 || field.nmiss > 0 )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) schedule(static)
 #endif
       for ( i = 0; i < len; i++ )
@@ -186,7 +194,7 @@ void farsumtr(field_t *occur, field_t field, double refval)
     }
   else
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared)
 #endif
       for ( i = 0; i < len; i++ ) 
@@ -197,20 +205,23 @@ void farsumtr(field_t *occur, field_t field, double refval)
 
 void farsumq(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
   /*  double *weight1 = field1->weight; */
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -238,19 +249,22 @@ void farsumq(field_t *field1, field_t field2)
 
 void farsub(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -272,19 +286,22 @@ void farsub(field_t *field1, field_t field2)
 
 void farmul(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -306,17 +323,20 @@ void farmul(field_t *field1, field_t field2)
 
 void fardiv(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   for ( i = 0; i < len; i++ ) 
@@ -330,17 +350,20 @@ void fardiv(field_t *field1, field_t field2)
 
 void faratan2(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   for ( i = 0; i < len; i++ ) 
@@ -354,19 +377,22 @@ void faratan2(field_t *field1, field_t field2)
 
 void farmin(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -392,19 +418,22 @@ void farmin(field_t *field1, field_t field2)
 
 void farmax(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
@@ -430,32 +459,39 @@ void farmax(field_t *field1, field_t field2)
 
 void farvar(field_t *field1, field_t field2, field_t field3)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
+  const int    nmiss3   = field3.nmiss;
+  const double missval3 = field3.missval;
   double *array3  = field3.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
-  if ( nmiss1 > 0 || nmiss2 > 0 )
+  if ( nmiss1 > 0 || nmiss2 > 0 || nmiss3 > 0 )
     {
       for ( i = 0; i < len; i++ )
-	if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) )
-	  {
-	    array1[i] = array2[i]*array3[i] - (array1[i]*array3[i])*(array1[i]*array3[i]);
-	    if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
-	  }
-	else
-	  array1[i] = missval1;
+	{
+	  if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) && !DBL_IS_EQUAL(array3[i], missval3) )
+	    {
+	      array1[i] = array2[i]*array3[i] - (array1[i]*array3[i])*(array1[i]*array3[i]);
+	      if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
+	    }
+	  else
+	    array1[i] = missval1;
+	}
     }
   else
     {
@@ -476,17 +512,57 @@ void farvar(field_t *field1, field_t field2, field_t field3)
 }
 
 
+void farvarx(field_t *field1, field_t field2, field_t field3, const double divisor)
+{
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
+  double *array1  = field1->ptr;
+  const int    grid2    = field2.grid;
+  const double missval2 = field2.missval;
+  double *array2  = field2.ptr;
+  double *array3  = field3.ptr;
+  double temp;
+
+  if ( nwpv != 2 ) nwpv = 1;
+
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
+    cdoAbort("Fields have different gridsize (%s)", __func__);
+
+  for ( i = 0; i < len; i++ )
+    {
+      temp      = DIV( MUL(array1[i], array1[i]), array3[i]);
+      array1[i] = DIV( SUB(array2[i], temp), array3[i]-divisor);
+      if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
+    }
+
+  field1->nmiss = 0;
+  for ( i = 0; i < len; i++ )
+    if ( DBL_IS_EQUAL(array1[i], missval1) || array1[i] < 0 )
+      {
+	array1[i] = missval1;
+	field1->nmiss++;
+      }
+}
+
+
 void farstd(field_t *field1, field_t field2, field_t field3)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
   int    grid2    = field2.grid;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   farvar(field1, field2, field3);
@@ -505,33 +581,73 @@ void farstd(field_t *field1, field_t field2, field_t field3)
 }
 
 
-void farcvar(field_t *field1, field_t field2, double rconst1)
+void farstdx(field_t *field1, field_t field2, field_t field3, const double divisor)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
-  double *array2  = field2.ptr;
+  const int    grid2    = field2.grid;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
-  if ( nmiss1 > 0 || nmiss2 > 0 )
+  farvarx(field1, field2, field3, divisor);
+
+  field1->nmiss = 0;
+  for ( i = 0; i < len; i++ )
+    if ( DBL_IS_EQUAL(array1[i], missval1) || array1[i] < 0 )
+      {
+	array1[i] = missval1;
+	field1->nmiss++;
+      }
+    else
+      {
+	array1[i] = IS_NOT_EQUAL(array1[i], 0) ? sqrt(array1[i]) : 0;
+      }
+}
+
+
+void farcvar(field_t *field1, field_t field2, const double rconst1)
+{
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
+  double *array1  = field1->ptr;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
+  double *array2  = field2.ptr;
+  int    nmiss3   = 0;
+
+  if ( nwpv != 2 ) nwpv = 1;
+
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
+    cdoAbort("Fields have different gridsize (%s)", __func__);
+
+  if ( DBL_IS_EQUAL(rconst1, missval1) ) nmiss3 = 1;
+
+  if ( nmiss1 > 0 || nmiss2 > 0 || nmiss3 > 0 )
     {
       for ( i = 0; i < len; i++ )
-	if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) )
-	  {
-	    array1[i] = array2[i]*rconst1 - (array1[i]*rconst1)*(array1[i]*rconst1);
-	    if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
-	  }
-	else
-	  array1[i] = missval1;
+	{
+	  if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) && nmiss3 == 0 )
+	    {
+	      array1[i] = array2[i]*rconst1 - (array1[i]*rconst1)*(array1[i]*rconst1);
+	      if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
+	    }
+	  else
+	    array1[i] = missval1;
+	}
     }
   else
     {
@@ -552,17 +668,56 @@ void farcvar(field_t *field1, field_t field2, double rconst1)
 }
 
 
-void farcstd(field_t *field1, field_t field2, double rconst1)
+void farcvarx(field_t *field1, field_t field2, const double rconst1, const double divisor)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
+  const int    grid2    = field2.grid;
+  const double missval2 = field2.missval;
+  double *array2  = field2.ptr;
+  double temp;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
+    cdoAbort("Fields have different gridsize (%s)", __func__);
+
+  for ( i = 0; i < len; i++ )
+    {
+      temp      = DIV( MUL(array1[i], array1[i]), rconst1);
+      array1[i] = DIV( SUB(array2[i], temp), rconst1-divisor);
+      if ( array1[i] < 0 && array1[i] > -1.e-5 ) array1[i] = 0;
+    }
+
+  field1->nmiss = 0;
+  for ( i = 0; i < len; i++ )
+    if ( DBL_IS_EQUAL(array1[i], missval1) || array1[i] < 0 )
+      {
+	array1[i] = missval1;
+	field1->nmiss++;
+      }
+}
+
+
+void farcstd(field_t *field1, field_t field2, const double rconst1)
+{
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
+  double *array1  = field1->ptr;
+  const int    grid2    = field2.grid;
+
+  if ( nwpv != 2 ) nwpv = 1;
+
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   farcvar(field1, field2, rconst1);
@@ -581,20 +736,55 @@ void farcstd(field_t *field1, field_t field2, double rconst1)
 }
 
 
+void farcstdx(field_t *field1, field_t field2, const double rconst1, const double divisor)
+{
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
+  double *array1  = field1->ptr;
+  const int    grid2    = field2.grid;
+
+  if ( nwpv != 2 ) nwpv = 1;
+
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
+    cdoAbort("Fields have different gridsize (%s)", __func__);
+
+  farcvarx(field1, field2, rconst1, divisor);
+
+  field1->nmiss = 0;
+  for ( i = 0; i < len; i++ )
+    if ( DBL_IS_EQUAL(array1[i], missval1) || array1[i] < 0 )
+      {
+	array1[i] = missval1;
+	field1->nmiss++;
+      }
+    else
+      {
+	array1[i] = IS_NOT_EQUAL(array1[i], 0) ? sqrt(array1[i]) : 0;
+      }
+}
+
+
 void farmoq(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
   double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss2 > 0 )
@@ -633,20 +823,23 @@ void farmoq(field_t *field1, field_t field2)
  */  
 void farcount(field_t *field1, field_t field2)
 {
-  long   i, len;
-  int    grid1    = field1->grid;
-  int    nmiss1   = field1->nmiss;
-  double missval1 = field1->missval;
+  size_t   i, len;
+  int          nwpv     = field1->nwpv;
+  const int    grid1    = field1->grid;
+  const int    nmiss1   = field1->nmiss;
+  const double missval1 = field1->missval;
   double *array1  = field1->ptr;
   /*  double *weight1 = field1->weight; */
-  int    grid2    = field2.grid;
-  int    nmiss2   = field2.nmiss;
-  double missval2 = field2.missval;
+  const int    grid2    = field2.grid;
+  const int    nmiss2   = field2.nmiss;
+  const double missval2 = field2.missval;
   double *array2  = field2.ptr;
 
-  len    = gridInqSize(grid1);
+  if ( nwpv != 2 ) nwpv = 1;
 
-  if ( len != gridInqSize(grid2) )
+  len = (size_t) (nwpv*gridInqSize(grid1));
+
+  if ( len != (size_t) (nwpv*gridInqSize(grid2)) )
     cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )

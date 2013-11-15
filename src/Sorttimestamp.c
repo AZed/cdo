@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -67,7 +67,6 @@ void *Sorttimestamp(void *argument)
   int nmiss;
   int nvars = 0, nlevel;
   int *vdate = NULL, *vtime = NULL;
-  double missval;
   field_t ***vars = NULL;
   timeinfo_t *timeinfo;
 
@@ -114,23 +113,7 @@ void *Sorttimestamp(void *argument)
 	  vdate[xtsID] = taxisInqVdate(taxisID1);
 	  vtime[xtsID] = taxisInqVtime(taxisID1);
 
-	  vars[xtsID] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      gridID  = vlistInqVarGrid(vlistID1, varID);
-	      missval = vlistInqVarMissval(vlistID1, varID);
-	      nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      
-	      vars[xtsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  vars[xtsID][varID][levelID].grid    = gridID;
-		  vars[xtsID][varID][levelID].missval = missval;
-		  vars[xtsID][varID][levelID].ptr     = NULL;
-		}
-	    }
+	  vars[xtsID] = field_malloc(vlistID1, FIELD_NONE);
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -171,7 +154,7 @@ void *Sorttimestamp(void *argument)
 
 
   vlistDefTaxis(vlistID2, taxisID2);
-	  
+
   streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
@@ -190,7 +173,7 @@ void *Sorttimestamp(void *argument)
 		  char vdatestr[32], vtimestr[32];
 		  date2str(vdate[xtsID], vdatestr, sizeof(vdatestr));
 		  time2str(vtime[xtsID], vtimestr, sizeof(vtimestr));
-		  cdoPrint("Timestep %4d %s %s already exist, skipped!", xtsID, vdatestr, vtimestr);
+		  cdoPrint("Timestep %4d %s %s already exists, skipped!", xtsID, vdatestr, vtimestr);
 		}
 	      continue;
 	    }
@@ -204,7 +187,7 @@ void *Sorttimestamp(void *argument)
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
-	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
 	      if ( vars[xtsID][varID][levelID].ptr )
@@ -212,12 +195,11 @@ void *Sorttimestamp(void *argument)
 		  nmiss = vars[xtsID][varID][levelID].nmiss;
 		  streamDefRecord(streamID2, varID, levelID);
 		  streamWriteRecord(streamID2, vars[xtsID][varID][levelID].ptr, nmiss);
-		  free(vars[xtsID][varID][levelID].ptr);
 		}
 	    }
-	  free(vars[xtsID][varID]);
 	}
-      free(vars[xtsID]);      
+
+      field_free(vars[xtsID], vlistID2);      
     }
 
   if ( vars  ) free(vars);

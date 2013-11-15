@@ -8,16 +8,12 @@
 #include "error.h"
 
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 
 
 static
-void streamvarInitEntry(int streamID, int varID)
+void streamvar_init_entry(stream_t *streamptr, int varID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
-
   streamptr->vars[varID].ncvarid      = CDI_UNDEFID;
   streamptr->vars[varID].defmiss      = 0;
   streamptr->vars[varID].nlevs        = 0;
@@ -27,19 +23,14 @@ void streamvarInitEntry(int streamID, int varID)
   streamptr->vars[varID].gridID       = CDI_UNDEFID;
   streamptr->vars[varID].zaxisID      = CDI_UNDEFID;
   streamptr->vars[varID].tsteptype    = CDI_UNDEFID;
-  streamptr->vars[varID].level        = NULL;
-  streamptr->vars[varID].nlevs        = 0;
 }
 
 static
-int streamvarNewEntry(int streamID)
+int streamvar_new_entry(stream_t *streamptr)
 {
   int varID = 0;
   int streamvarSize;
-  SVARINFO *streamvar;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  svarinfo_t *streamvar;
 
   streamvarSize = streamptr->varsAllocated;
   streamvar     = streamptr->vars;
@@ -52,11 +43,11 @@ int streamvarNewEntry(int streamID)
       int i;
 
       streamvarSize = 2;
-      streamvar = (SVARINFO *) malloc(streamvarSize*sizeof(SVARINFO));
+      streamvar = (svarinfo_t *) malloc(streamvarSize*sizeof(svarinfo_t));
       if ( streamvar == NULL )
 	{
           Message("streamvarSize = %d", streamvarSize);
-	  SysError("Allocation of SVARINFO failed");
+	  SysError("Allocation of svarinfo_t failed");
 	}
 
       for ( i = 0; i < streamvarSize; i++ )
@@ -78,11 +69,11 @@ int streamvarNewEntry(int streamID)
       int i;
 
       streamvarSize = 2*streamvarSize;
-      streamvar = (SVARINFO *) realloc(streamvar, streamvarSize*sizeof(SVARINFO));
+      streamvar = (svarinfo_t *) realloc(streamvar, streamvarSize*sizeof(svarinfo_t));
       if ( streamvar == NULL )
 	{
           Message("streamvarSize = %d", streamvarSize);
-	  SysError("Reallocation of SVARINFO failed");
+	  SysError("Reallocation of svarinfo_t failed");
 	}
       varID = streamvarSize/2;
 
@@ -93,7 +84,7 @@ int streamvarNewEntry(int streamID)
   streamptr->varsAllocated = streamvarSize;
   streamptr->vars          = streamvar;
 
-  streamvarInitEntry(streamID, varID);
+  streamvar_init_entry(streamptr, varID);
 
   streamptr->vars[varID].isUsed = TRUE;
 
@@ -101,21 +92,18 @@ int streamvarNewEntry(int streamID)
 }
 
 
-int streamNewVar(int streamID, int gridID, int zaxisID)
+int stream_new_var(stream_t *streamptr, int gridID, int zaxisID)
 {
   int varID;
   int *level;
   int *lindex;
   int nlevs;
   int levID;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
 
   if ( CDI_Debug )
     Message("gridID = %d  zaxisID = %d", gridID, zaxisID);
 
-  varID = streamvarNewEntry(streamID);
+  varID = streamvar_new_entry(streamptr);
 
   streamptr->nvars++;
 

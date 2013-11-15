@@ -93,6 +93,30 @@ void cdiParamToString(int param, char *paramstr, int maxlen)
   if ( len > ( maxlen-1) )
     fprintf(stderr, "Internal problem (%s): size of input string is too small!\n", __func__);
 }
+
+
+char *cdiUnitNamePtr(int cdi_unit)
+{
+  char *cdiUnits[] = {
+    /*  0 */  "undefined",
+    /*  1 */  "Pa",
+    /*  2 */  "hPa",
+    /*  3 */  "mm",
+    /*  4 */  "cm",
+    /*  5 */  "dm",
+    /*  6 */  "m",
+  };
+  char *name;
+  int size = (int) (sizeof(cdiUnits)/sizeof(char *));
+
+  if ( cdi_unit > 0 && cdi_unit < size )
+    name = cdiUnits[cdi_unit];
+  else
+    name = NULL;
+
+  return (name);
+}
+
 /*
  * Local Variables:
  * c-file-style: "Java"

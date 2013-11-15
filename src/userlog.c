@@ -1,4 +1,4 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -17,7 +17,7 @@
 #include "dtypes.h"
 #include "process.h"
 
-#if ! defined (VERSION)
+#if ! defined(VERSION)
 #  define  VERSION  "0.0.1"
 #endif
 
@@ -27,11 +27,11 @@
 #define  LOGOSIZE  40
 
 #undef HAVE_LOCK
-#if defined (F_UNLCK) && defined (F_RDLCK) && defined (F_WRLCK)
+#if defined(F_UNLCK) && defined(F_RDLCK) && defined(F_WRLCK)
 #define HAVE_LOCK
 #endif
 
-#if defined (HAVE_LOCK)
+#if defined(HAVE_LOCK)
 static
 void filestatus(struct flock *lock)
 {
@@ -52,8 +52,8 @@ void filestatus(struct flock *lock)
 
 void cdolog(const char *prompt, double cputime)
 {
-#if defined (HAVE_LOCK)
-#if defined (LOGPATH)
+#if defined(HAVE_LOCK)
+#if defined(LOGPATH)
 #define  XSTRING(x)	#x
 #define  STRING(x)	XSTRING(x)
   char logfilename[] = STRING(LOGPATH) "/cdo.log";
@@ -94,7 +94,7 @@ void cdolog(const char *prompt, double cputime)
 
   for ( streamID = 0; streamID < cdoStreamCnt(); streamID++ )
     {
-      streamName = cdoStreamName(streamID);
+      streamName = cdoStreamName(streamID)->args;
       pos = 0;
       while ( pos < (int) strlen(streamName) )
 	{
@@ -299,8 +299,8 @@ int flt2ibm(float x, unsigned char *ibm) {
 
 void cdologs(int noper)
 {
-#if defined (HAVE_LOCK)
-#if defined (LOGPATH)
+#if defined(HAVE_LOCK)
+#if defined(LOGPATH)
 #define  XSTRING(x)	#x
 #define  STRING(x)	XSTRING(x)
   char logfilename[] = STRING(LOGPATH) "/cdo.logs";
@@ -453,7 +453,7 @@ void cdologs(int noper)
 
 void dumplogs(const char *logfilename)
 {
-#if defined (HAVE_LOCK)
+#if defined(HAVE_LOCK)
   int  logfileno;
   int status;
   int date0 = 0, ncdo0, noper0, nhours0;
@@ -691,8 +691,8 @@ void monlogs(const char *logfilename)
 
 void cdologo(int noper)
 {
-#if defined (HAVE_LOCK)
-#if defined (LOGPATH)
+#if defined(HAVE_LOCK)
+#if defined(LOGPATH)
 #define  XSTRING(x)	#x
 #define  STRING(x)	XSTRING(x)
   char logfilename[] = STRING(LOGPATH) "/cdo.logo";
@@ -912,7 +912,7 @@ int cmplogname(const void *s1, const void *s2)
 
 void dumplogo(const char *logfilename, int dumptype)
 {
-#if defined (HAVE_LOCK)
+#if defined(HAVE_LOCK)
   int logfileno;
   int status;
   int nocc;

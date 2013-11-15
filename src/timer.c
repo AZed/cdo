@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,21 +15,21 @@
   GNU General Public License for more details.
 */
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#if defined (HAVE_SYS_TIMES_H)
+#if defined(HAVE_SYS_TIMES_H)
 #include <sys/times.h>
 #endif
 
 
 void cdoProcessTime(double *utime, double *stime)
 {
-#if defined (HAVE_SYS_TIMES_H)
+#if defined(HAVE_SYS_TIMES_H)
   struct tms tbuf;
   double clock_ticks = 0;
 
@@ -40,7 +40,7 @@ void cdoProcessTime(double *utime, double *stime)
     }
   else
     {
-#if defined (_SC_CLK_TCK)
+#if defined(_SC_CLK_TCK)
       clock_ticks = (double) sysconf(_SC_CLK_TCK);
 #endif
       if ( clock_ticks > 0 )

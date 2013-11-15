@@ -1,26 +1,25 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([cdo], [1.5.6.1], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.2], [http://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR([m4])
-
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER(src/config.h)
+AC_CONFIG_HEADERS([src/config.h])
 AM_MAINTAINER_MODE([disable])
 
 # Set up libtool.
 AC_MSG_NOTICE([setting up libtool])
 LT_INIT
+
 # Check building environment
 AC_CHECK_TOOL([CC],[gcc],[:])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
-#AC_PROG_RANLIB
 AC_CHECK_TOOL([AR],[ar],[:])
 AC_CHECK_TOOL([CPP],[cpp],[:])
 AC_CHECK_TOOL([LD],[ld],[:])
@@ -36,29 +35,31 @@ AC_PROG_CXX
 
 FC=no
 export FC
-
+#  ----------------------------------------------------------------------
 # Check large file support on 32 bit system
 AC_SYS_LARGEFILE
-
+#  ----------------------------------------------------------------------
 # Checks for library functions.
 AC_FUNC_MMAP
-
+#  ----------------------------------------------------------------------
 # Checks for library malloc.
 AC_CHECK_LIB(malloc, malloc)
-
+#  ----------------------------------------------------------------------
 # Checks for structures.
 AC_CHECK_MEMBERS([struct stat.st_blksize])
-
+#  ----------------------------------------------------------------------
 # Checks for header files
 AC_CHECK_HEADERS(sys/resource.h)
 AC_CHECK_HEADERS(sys/times.h)
 AC_CHECK_HEADERS(malloc.h)
-
+AC_CHECK_HEADERS(glob.h)
+#  ----------------------------------------------------------------------
 # Checks for the availability of functions
 AC_CHECK_FUNCS(mallinfo)
-
+#  ----------------------------------------------------------------------
 # Checks for the availability of ANSI-C99 functions
-AC_CHECK_FUNCS(isnan)
+AC_CHECK_DECLS([isnan],,,[AC_INCLUDES_DEFAULT
+@%:@include <math.h>])
 AC_CHECK_FUNCS(getrlimit)
 AC_CHECK_FUNCS(gethostname)
 
@@ -70,7 +71,7 @@ case "$CC" in
   clang*) COMP_VERSION=`$CC --version | head -n 1`;;
   sxc*)   COMP_VERSION=`$CC -V 2>&1   | tail -n 1`;;
   xlc*)   COMP_VERSION=`$CC -qversion 2>&1   | head -n 1`;;
-  *)      COMP_VERSION=`$CC -V 2>&1   | head -n 1`;;
+  *)      COMP_VERSION=`$CC -V 2>&1   | head -n 1` | grep -v error;;
 esac
 
 if test -z "$COMP_VERSION" ; then COMP_VERSION="unknown"; fi;
@@ -97,6 +98,18 @@ AC_SUBST([SYSTEM_TYPE],["$ac_cv_build"])
 #  Check for math library
 AC_CHECK_LIB([m],[floor])
 #  ----------------------------------------------------------------------
+#  Enable GRIB support
+AC_MSG_CHECKING([for DATA support])
+AC_ARG_ENABLE([data],
+              [AS_HELP_STRING([--enable-data],[DATA support [default=yes]])],
+              [AS_IF([test "x$enable_data" != 'xno'],
+                     [AC_DEFINE(ENABLE_DATA, [1], [Define to 1 for DATA support])
+                      enable_grib=yes])],
+              [AC_DEFINE(ENABLE_DATA, [1], [Define to 1 for DATA support])
+               enable_data=yes])
+AC_MSG_RESULT([$enable_data])
+AC_SUBST([ENABLE_DATA],[$enable_data])
+#  ----------------------------------------------------------------------
 # Add configure options
 ACX_OPTIONS
 #  ----------------------------------------------------------------------
@@ -111,7 +124,7 @@ AC_SUBST([AR])
 COMPILER="$CC $CFLAGS"
 AC_DEFINE_UNQUOTED(COMPILER, ["$COMPILER"], [Compiler])
 
-AC_OUTPUT(Makefile src/Makefile contrib/Makefile cdo.spec cdo.settings)
+AC_OUTPUT(Makefile src/Makefile contrib/Makefile test/Makefile test/data/Makefile cdo.spec cdo.settings)
 
 #  ----------------------------------------------------------------------
 #  Show configuration

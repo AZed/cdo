@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -254,21 +254,28 @@ void invertLonData(double *array1, double *array2, int gridID1)
   nlon = gridInqXsize(gridID1);
   nlat = gridInqYsize(gridID1);
 
-  field1 = (double **) malloc(nlat*sizeof(double *));
-  field2 = (double **) malloc(nlat*sizeof(double *));
-  
-  for ( ilat = 0; ilat < nlat; ilat++ )
+  if ( nlat > 0 )
     {
-      field1[ilat] = array1 + ilat*nlon;
-      field2[ilat] = array2 + ilat*nlon;
-    }
-
-  for ( ilat = 0; ilat < nlat; ilat++ )
-    for ( ilon = 0; ilon < nlon; ilon++ )
-      field2[ilat][nlon-ilon-1] = field1[ilat][ilon];
+      field1 = (double **) malloc(nlat*sizeof(double *));
+      field2 = (double **) malloc(nlat*sizeof(double *));
   
-  if ( field1 ) free(field1);
-  if ( field2 ) free(field2);
+      for ( ilat = 0; ilat < nlat; ilat++ )
+	{
+	  field1[ilat] = array1 + ilat*nlon;
+	  field2[ilat] = array2 + ilat*nlon;
+	}
+
+      for ( ilat = 0; ilat < nlat; ilat++ )
+	for ( ilon = 0; ilon < nlon; ilon++ )
+	  field2[ilat][nlon-ilon-1] = field1[ilat][ilon];
+  
+      if ( field1 ) free(field1);
+      if ( field2 ) free(field2);
+    }
+  else
+    {
+      array2[0] = array1[0];
+    }
 }
 
 static
@@ -281,20 +288,27 @@ void invertLatData(double *array1, double *array2, int gridID1)
   nlon = gridInqXsize(gridID1);
   nlat = gridInqYsize(gridID1);
 
-  field1 = (double **) malloc(nlat*sizeof(double *));
-  field2 = (double **) malloc(nlat*sizeof(double *));
-  
-  for ( ilat = 0; ilat < nlat; ilat++ )
+  if ( nlat > 0 )
     {
-      field1[ilat] = array1 + ilat*nlon;
-      field2[ilat] = array2 + ilat*nlon;
-    }
-
-  for ( ilat = 0; ilat < nlat; ilat++ )
-    memcpy(field2[nlat-ilat-1], field1[ilat], nlon*sizeof(double));
+      field1 = (double **) malloc(nlat*sizeof(double *));
+      field2 = (double **) malloc(nlat*sizeof(double *));
   
-  if ( field1 ) free(field1);
-  if ( field2 ) free(field2);
+      for ( ilat = 0; ilat < nlat; ilat++ )
+	{
+	  field1[ilat] = array1 + ilat*nlon;
+	  field2[ilat] = array2 + ilat*nlon;
+	}
+
+      for ( ilat = 0; ilat < nlat; ilat++ )
+	memcpy(field2[nlat-ilat-1], field1[ilat], nlon*sizeof(double));
+      
+      if ( field1 ) free(field1);
+      if ( field2 ) free(field2);
+    }
+  else
+    {
+      array2[0] = array1[0];
+    }
 }
 
 
@@ -365,8 +379,9 @@ void *Invert(void *argument)
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
-
 	  streamReadRecord(streamID1, array1, &nmiss);
+
+	  streamDefRecord(streamID2, varID, levelID);
 
 	  if ( operfunc1 == func_all || operfunc1 == func_fld )
 	    {
@@ -376,15 +391,13 @@ void *Invert(void *argument)
 		invertLatData(array1, array2, gridID1);
 	      else
 		invertLonData(array1, array2, gridID1);
+
+	      streamWriteRecord(streamID2, array2, nmiss);     
 	    }
 	  else
 	    {
-	      memcpy(array2, array1, gridsize*sizeof(double));
+	      streamWriteRecord(streamID2, array1, nmiss);     
 	    }
-
-	  streamDefRecord(streamID2, varID, levelID);
-
-	  streamWriteRecord(streamID2, array2, nmiss);     
 	}
       tsID++;
     }

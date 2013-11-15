@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 #ifndef _CDO_INT_H
 #define _CDO_INT_H
 
-#if defined (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -58,15 +58,15 @@ char *strdup(const char *s);
 #define  DATE_IS_NEQ(dtstr1, dtstr2, len) (memcmp(dtstr1, dtstr2, len) != 0)
 
 
-#if defined (__xlC__) /* performance problems on IBM */
+#if defined(__xlC__) /* performance problems on IBM */
 #ifndef DBL_IS_NAN
 #  define DBL_IS_NAN(x)     ((x) != (x))
 #endif
 #else
 #ifndef DBL_IS_NAN
-#if  defined  (HAVE_ISNAN)
+#if defined(HAVE_DECL_ISNAN)
 #  define DBL_IS_NAN(x)     (isnan(x))
-#elif  defined  (FP_NAN)
+#elif defined(FP_NAN)
 #  define DBL_IS_NAN(x)     (fpclassify(x) == FP_NAN)
 #else
 #  define DBL_IS_NAN(x)     ((x) != (x))
@@ -85,22 +85,14 @@ char *strdup(const char *s);
 #endif
 
 
-#ifndef  M_PI
-#define  M_PI        3.14159265358979323846  /* pi */
-#endif
-
 #ifndef  M_LN10
 #define  M_LN10      2.30258509299404568402  /* log_e 10 */
 #endif
 
-
-#ifndef  RAD2DEG
-#define  RAD2DEG  (180./M_PI)   /* conversion for rad to deg */
+#ifndef  M_PI
+#define  M_PI        3.14159265358979323846  /* pi */
 #endif
 
-#ifndef  DEG2RAD
-#define  DEG2RAD  (M_PI/180.)   /* conversion for deg to rad */
-#endif
 
 #define  IX2D(y,x,nx)  ((y)*(nx)+(x))
 
@@ -139,6 +131,10 @@ void param2str(int param, char *paramstr, int maxlen);
 void date2str(int date, char *datestr, int maxlen);
 void time2str(int time, char *timestr, int maxlen);
 
+const char * tunit2str(int tunits);
+const char * calendar2str(int calendar);
+
+
 typedef struct {
   int   date;
   int   time;
@@ -162,7 +158,9 @@ juldate_t juldate_sub(juldate_t juldate2, juldate_t juldate1);
 juldate_t juldate_add_seconds(int seconds, juldate_t juldate);
 double    juldate_to_seconds(juldate_t juldate);
 
+void    get_timestat_date(int *tstat_date);
 void    datetime_avg(int dpy, int ndates, datetime_t *datetime);
+void    datetime_avg_dtinfo(int dpy, int ndates, dtinfo_t *dtinfo);
 void    taxisInqDTinfo(int taxisID, dtinfo_t *dtinfo);
 void    taxisDefDTinfo(int taxisID, dtinfo_t dtinfo);
 

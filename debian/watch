@@ -1,0 +1,4 @@
+version=3
+opts=dversionmangle=s/\+dfsg\.\d+$// \
+	https://code.zmaw.de/projects/cdo/files \
+  	(?:|.*/)cdo(?:[_\-]v?|)(\d\S*)\.(?:tar\.xz|txz|tar\.bz2|tbz2|tar\.gz|tgz)

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -46,6 +46,7 @@ void *Harmonic(void *argument)
   int n_out, nout, n;
   char filesuffix[32];
   char filename[8192];
+  const char *refname;
   double missval;
   double sine, cosine;
   double *array;
@@ -75,12 +76,13 @@ void *Harmonic(void *argument)
   taxisID2 = taxisCreate(TAXIS_ABSOLUTE);
   vlistDefTaxis(vlistID2, taxisID2);
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   streamIDs = (int*) malloc(n_out*sizeof(int));
 
-  strcpy(filename, cdoStreamName(1));
+  strcpy(filename, cdoStreamName(1)->args);
   nchars = strlen(filename);
 
   for ( j = 0; j < n_out; ++j )
@@ -89,7 +91,9 @@ void *Harmonic(void *argument)
       if ( filesuffix[0] )
 	sprintf(filename+nchars+1, "%s", filesuffix);
 
-      streamID2 = streamOpenWrite(filename, cdoFiletype());
+      argument_t *fileargument = file_argument_new(filename);
+      streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+      file_argument_free(fileargument);
 
       streamIDs[j] = streamID2;
 

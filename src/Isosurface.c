@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -149,6 +149,7 @@ void *Isosurface(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   nvars = vlistNvars(vlistID1);
@@ -170,6 +171,7 @@ void *Isosurface(void *argument)
       else 
 	liso[varID] = FALSE;
 
+      field_init(&vars1[varID]);
       vars1[varID].grid    = gridID;
       vars1[varID].zaxis   = zaxisID;
       vars1[varID].nmiss   = 0;

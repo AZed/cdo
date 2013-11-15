@@ -53,7 +53,6 @@ void timpctl(int operatorID)
   int nmiss;
   int nvars, nlevels;
   int *recVarID, *recLevelID;
-  double missval;
   field_t **vars1 = NULL;
   field_t field;
   double pn;
@@ -101,28 +100,18 @@ void timpctl(int operatorID)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize * sizeof(double));
 
-  vars1 = (field_t **) malloc(nvars * sizeof(field_t *));
+  vars1 = field_malloc(vlistID1, FIELD_PTR);
   hset = hsetCreate(nvars);
   
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
       nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (field_t *) malloc(nlevels*sizeof(field_t));
       hsetCreateVarLevels(hset, varID, nlevels, gridID);
-
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-        {
-          vars1[varID][levelID].grid    = gridID;
-          vars1[varID][levelID].nmiss   = 0;
-          vars1[varID][levelID].missval = missval;
-          vars1[varID][levelID].ptr     = (double *) malloc(gridsize * sizeof(double));
-        } 
     }
 
   tsID    = 0;
@@ -133,14 +122,14 @@ void timpctl(int operatorID)
       
       nrecs = streamInqTimestep(streamID2, otsID);
       if ( nrecs != streamInqTimestep(streamID3, otsID) )
-        cdoAbort("Number of records in time step %d of %s and %s are different!", otsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Number of records at time step %d of %s and %s differ!", otsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
 
       vdate2 = taxisInqVdate(taxisID2);
       vtime2 = taxisInqVtime(taxisID2);
       vdate3 = taxisInqVdate(taxisID3);
       vtime3 = taxisInqVtime(taxisID3);
       if ( vdate2 != vdate3 || vtime2 != vtime3 )
-        cdoAbort("Verification dates for time step %d of %s and %s are different!", otsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Verification dates at time step %d of %s and %s differ!", otsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
       
       for ( recID = 0; recID < nrecs; recID++ )
         {
@@ -193,9 +182,11 @@ void timpctl(int operatorID)
       if ( nrecs == 0 && nsets == 0 ) break;
 
       if ( vdate2 != vdate4 )
-        cdoAbort("Verification dates for time step %d of %s, %s and %s are different!", otsID+1, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+        cdoAbort("Verification dates at time step %d of %s, %s and %s differ!",
+		 otsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
       if ( vtime2 != vtime4 )
-        cdoAbort("Verification times for time step %d of %s, %s and %s are different!", otsID+1, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+        cdoAbort("Verification times at time step %d of %s, %s and %s differ!",
+		 otsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
       
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -225,15 +216,7 @@ void timpctl(int operatorID)
       otsID++;
     }
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-	free(vars1[varID][levelID].ptr);
-      free(vars1[varID]);
-    }
-
-  free(vars1);
+  field_free(vars1, vlistID1);
   hsetDestroy(hset);
   
   if ( field.ptr ) free(field.ptr);

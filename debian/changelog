@@ -1,37 +1,91 @@
-cdo (1.5.6.1+dfsg.1-3ubuntu1) raring; urgency=low
+cdo (1.6.2+dfsg.1-1) unstable; urgency=low
 
-  * Merge from debian unstable. Remaining changes:
-    - Add -lm after -ljasper to LIBS in debian/rules, to allow cdo to build
-      with ld --as-needed (Closes: #692651).
+  * New upstream release. 
 
- -- Stefano Rivera <stefanor@ubuntu.com>  Thu, 06 Dec 2012 14:40:16 +0200
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 15 Nov 2013 10:26:58 +0000
 
-cdo (1.5.6.1+dfsg.1-3) unstable; urgency=low
+cdo (1.6.1+dfsg.1-3) unstable; urgency=low
 
-  * Fix for data loss due to '--enable-cgribex' not enabled. Thanks to 
-    Marco Galli. Closes: #695009. 
+  * Don't build-dep (or use) magics++ on mips, as magics++ requires grib-api
+    which doesn't build on mips (yet).  
 
- -- Alastair McKinstry <mckinstry@debian.org>  Mon, 03 Dec 2012 14:30:24 +0000
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 03 Sep 2013 09:53:27 +0100
 
-cdo (1.5.6.1+dfsg.1-2ubuntu2) raring; urgency=low
+cdo (1.6.1+dfsg.1-2) unstable; urgency=low
 
-  * Err, let's not link to libm statically (fixes FTBFS on non-x86).
+  * Add updated watch file. 
+  * grib-api now works on sparc. Re-enable dependency here.
+  * Don't use --as-needed and -fPIE on powerpc. armel. Closes: #720298.
+  * Building with serial hdf5: Closes: #712829.
 
- -- Stefano Rivera <stefanor@ubuntu.com>  Fri, 09 Nov 2012 10:00:18 +0200
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 02 Sep 2013 07:53:59 +0100
 
-cdo (1.5.6.1+dfsg.1-2ubuntu1) raring; urgency=low
+cdo (1.6.1+dfsg.1-1) unstable; urgency=low
 
-  * Add -lm after -ljasper to LIBS in debian/rules, to allow cdo to build with
-    ld --as-needed (Closes: #692651).
+  * New upstream release. 
 
- -- Stefano Rivera <stefanor@ubuntu.com>  Thu, 08 Nov 2012 10:23:37 +0200
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 27 Aug 2013 22:16:49 +0100
 
-cdo (1.5.6.1+dfsg.1-2) unstable; urgency=low
+cdo (1.6.0+dfsg.1-4) unstable; urgency=low
 
-  * Now need libpng12-dev, libcurl4-openssl-dev to be deliberately added
-    to B-D. What used to automatically pull them?
+  * Fix as-needed. Use dh_autoreconf. 
+  * Disable tests, to fix FTBFS due to auto* tools build issue. 
 
- -- Alastair McKinstry <mckinstry@debian.org>  Fri, 14 Sep 2012 18:11:52 +0100
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 20 Jun 2013 21:09:17 +0100
+
+cdo (1.6.0+dfsg.1-3) unstable; urgency=low
+
+  * Add build declaration to silence warning.
+  * Change Priorities to match override. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 06 Jun 2013 13:25:32 +0100
+
+cdo (1.6.0+dfsg.1-2) unstable; urgency=low
+
+  * Need to add path explicitly to find cdo in python test case. 
+  * Make cdo Priority: optional to match override.
+  * release fixed FTBFS on amd64; Closes: #707366.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 24 May 2013 06:59:54 +0100
+
+cdo (1.6.0+dfsg.1-1) unstable; urgency=low
+
+  * Don't use -fPIE on amd64, arm*. FTBFS then. 
+  * New Upstream. 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 05 Apr 2013 17:19:09 +0100
+
+cdo (1.5.9+dfsg.1-4) unstable; urgency=low
+
+  * Should be libpng12-dev. Closes: #696971, #697020.
+    How did libpng15-dev build in 2 separate chroots & pbuilder?? 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 30 Dec 2012 23:01:38 +0000
+
+cdo (1.5.9+dfsg.1-3) unstable; urgency=low
+
+  * Also need a dependency on libpng12-dev.
+    New years promise: Build in a CLEAN chroot EVERY TIME. 
+  * Debhelper depend (>= 9) now.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 30 Dec 2012 19:00:55 +0000
+
+cdo (1.5.9+dfsg.1-2) unstable; urgency=low
+
+  * Add explicit dependency on multiple flavours of libcurl-*-dev.
+    Closes: #696971.
+  * Add "-lm" to link line for -as-needed on Ubuntu. Closes: #692651.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sun, 30 Dec 2012 12:08:26 +0000
+
+cdo (1.5.9+dfsg.1-1) unstable; urgency=low
+
+  * New upstream release. 
+  * Standards-Version: 3.9.4. No changes required.
+  * Apply hardening.
+  * Now depend on libmagics++
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 29 Dec 2012 17:13:31 +0000
 
 cdo (1.5.6.1+dfsg.1-1) unstable; urgency=low
 
@@ -256,4 +310,3 @@ cdo (1.3.0-1) unstable; urgency=low
   * Initial Debian release. 
 
  -- Alastair McKinstry <mckinstry@debian.org>  Mon,  6 Apr 2009 16:15:52 +0100
-

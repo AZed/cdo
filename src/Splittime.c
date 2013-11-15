@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -30,8 +30,28 @@
 #include "pstream.h"
 #include "util.h"
 
+#include <time.h>
 
 #define  MAX_STREAMS 32
+
+struct tm datetime_to_tm(int date, int time)
+{
+  int year, month, day, hour, minute, second;
+  cdiDecodeDate(date, &year, &month, &day);
+  cdiDecodeTime(time, &hour, &minute, &second);
+
+  struct tm stime;
+  memset(&stime, 0, sizeof(struct tm));
+
+  stime.tm_sec  = second;
+  stime.tm_min  = minute;
+  stime.tm_hour = hour;
+  stime.tm_mday = day;
+  stime.tm_mon  = month-1;
+  stime.tm_year = year-1900;
+
+  return stime;
+}
 
 void *Splittime(void *argument)
 {
@@ -47,6 +67,7 @@ void *Splittime(void *argument)
   int  streamIDs[MAX_STREAMS], tsIDs[MAX_STREAMS];
   char filesuffix[32];
   char filename[8192];
+  const char *refname;
   int index = 0;
   int i;
   int taxisID1, taxisID2;
@@ -61,6 +82,7 @@ void *Splittime(void *argument)
   field_t **vars = NULL;
   int season_start;
   const char *seas_name[4];
+  const char *format = NULL;
 
   cdoInitialize(argument);
 
@@ -74,6 +96,11 @@ void *Splittime(void *argument)
   operintval = cdoOperatorF2(operatorID);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
+
+  if ( operatorID == SPLITMON )
+    {
+      if ( operatorArgc() == 1 ) format = operatorArgv()[0];
+    }
 
   season_start = get_season_start();
   get_season_name(seas_name);
@@ -90,11 +117,12 @@ void *Splittime(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  strcpy(filename, cdoStreamName(1));
+  strcpy(filename, cdoStreamName(1)->args);
   nchars = strlen(filename);
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   //  if ( ! lcopy )
     {
@@ -124,6 +152,7 @@ void *Splittime(void *argument)
 
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
+		  field_init(&vars[varID][levelID]);
 		  vars[varID][levelID].grid    = gridID;
 		  vars[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 		}
@@ -140,6 +169,7 @@ void *Splittime(void *argument)
       if ( operfunc == func_date )
 	{
 	  index = (vdate/operintval)%100;
+	  if ( index < 0 ) index = -index;
 
 	  if ( operatorID == SPLITSEAS )
 	    {
@@ -184,14 +214,29 @@ void *Splittime(void *argument)
 	    }
 	  else
 	    {
-	      sprintf(filename+nchars, "%02d", index);
+	      size_t slen;
+	      char oformat[32];
+	      strcpy(oformat, "%02d");
+
+	      if ( operatorID == SPLITMON && format )
+		{
+		  char sbuf[32];
+		  struct tm stime = datetime_to_tm(vdate, vtime);
+		  slen = strftime(sbuf, 32, format, &stime);
+
+		  if ( slen ) strcpy(oformat, sbuf);
+		}
+
+	      slen = sprintf(filename+nchars, oformat, index);
 	      if ( filesuffix[0] )
-		sprintf(filename+nchars+2, "%s", filesuffix);
+		sprintf(filename+nchars+slen, "%s", filesuffix);
 	    }
 
 	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
-	  streamID2 = streamOpenWrite(filename, cdoFiletype());
+	  argument_t *fileargument = file_argument_new(filename);
+	  streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+	  file_argument_free(fileargument);
 
 	  streamDefVlist(streamID2, vlistID2);
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -165,7 +165,6 @@ void *Spectrum(void *argument)
   int *vdate = NULL, *vtime = NULL;
   int freq, nfreq;
   int seg_l, seg_n, detrend, which_window;
-  double missval;
   double wssum;
   double *array1, *array2;
   double *real, *imag, *window;
@@ -203,23 +202,7 @@ void *Spectrum(void *argument)
       vdate[tsID] = taxisInqVdate(taxisID1);
       vtime[tsID] = taxisInqVtime(taxisID1);
 
-      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-
-	  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    {
-	      vars[tsID][varID][levelID].grid    = gridID;
-	      vars[tsID][varID][levelID].missval = missval;
-	      vars[tsID][varID][levelID].ptr     = NULL;
-	    }
-	}
+      vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -270,30 +253,9 @@ void *Spectrum(void *argument)
 
   vars2 = (field_t ***) malloc(nfreq*sizeof(field_t **));
   for ( freq = 0; freq < nfreq; freq++ )
-    {
-      vars2[freq] = (field_t **) malloc(nvars*sizeof(field_t *));
+    vars2[freq] = field_malloc(vlistID1, FIELD_PTR);
 
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  gridsize = gridInqSize(gridID);
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      
-	  vars2[freq][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-      
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    {
-	      vars2[freq][varID][levelID].grid    = gridID;
-	      vars2[freq][varID][levelID].missval = missval;
-	      vars2[freq][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	    }
-	}
-    }
-
-
-  array1  = (double *) malloc(nts*sizeof(double));
-
+  array1  = (double *) malloc(nts   * sizeof(double));
   array2  = (double *) malloc(nfreq * sizeof(double));
   real    = (double *) malloc(seg_l * sizeof(double));
   imag    = (double *) malloc(seg_l * sizeof(double));
@@ -323,6 +285,7 @@ void *Spectrum(void *argument)
       break;
     default:
       cdoAbort("Invalid window type %d!", which_window);
+      break;
     }
   
   wssum = 0;
@@ -333,7 +296,6 @@ void *Spectrum(void *argument)
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridID   = vlistInqVarGrid(vlistID1, varID);
-      missval  = vlistInqVarMissval(vlistID1, varID);
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -356,19 +318,7 @@ void *Spectrum(void *argument)
   if ( array1 ) free(array1);
   if ( array2 ) free(array2);
 
-  for ( tsID = 0; tsID < nts; tsID++ )
-    {
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    if ( vars[tsID][varID][levelID].ptr )
-	      free(vars[tsID][varID][levelID].ptr);
-
-	  free(vars[tsID][varID]);
-	}
-      free(vars[tsID]);
-    }
+  for ( tsID = 0; tsID < nts; tsID++ ) field_free(vars[tsID], vlistID1);
 
   for ( tsID = 0; tsID < nfreq; tsID++ )
     {
@@ -386,12 +336,11 @@ void *Spectrum(void *argument)
 		  nmiss = vars2[tsID][varID][levelID].nmiss;
 		  streamDefRecord(streamID2, varID, levelID);
 		  streamWriteRecord(streamID2, vars2[tsID][varID][levelID].ptr, 0);
-		  free(vars2[tsID][varID][levelID].ptr);
 		}
 	    }
-	  free(vars2[tsID][varID]);
 	}
-      free(vars2[tsID]);
+
+      field_free(vars2[tsID], vlistID1);
     }
 
   if ( vars  ) free(vars);

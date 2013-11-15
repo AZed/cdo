@@ -1,4 +1,4 @@
 fix_typos.patch
 ignore.patch
-x.patch
-y.patch
+build-fixes.patch
+disable-tests.patch

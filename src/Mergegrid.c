@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -86,9 +86,9 @@ void gen_index(int gridID1, int gridID2, int *index)
       {
 	char units[CDI_MAX_NAME];
 	gridInqXunits(gridID1, units);
-	gridToDegree(units, "grid1 center lon", nlon1, xvals1);
+	grid_to_degree(units, nlon1, xvals1, "grid1 center lon");
 	gridInqYunits(gridID1, units);
-	gridToDegree(units, "grid1 center lat", nlat1, yvals1);
+	grid_to_degree(units, nlat1, yvals1, "grid1 center lat");
       }
 
       gridInqXvals(gridID2, xvals2);
@@ -98,9 +98,9 @@ void gen_index(int gridID1, int gridID2, int *index)
       {
 	char units[CDI_MAX_NAME];
 	gridInqXunits(gridID2, units);
-	gridToDegree(units, "grid2 center lon", nlon2, xvals2);
+	grid_to_degree(units, nlon2, xvals2, "grid2 center lon");
 	gridInqYunits(gridID2, units);
-	gridToDegree(units, "grid2 center lat", nlat2, yvals2);
+	grid_to_degree(units, nlat2, yvals2, "grid2 center lat");
       }
 
       for ( i2 = 0; i2 < nlat2; i2++ )
@@ -205,14 +205,14 @@ void *Mergegrid(void *argument)
     if ( vlistGrid(vlistID1, 0) != vlistGrid(vlistID1, index) )
       ndiffgrids++;
 
-  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(0));
+  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(0)->args);
 
   ndiffgrids = 0;
   for ( index = 1; index < vlistNgrids(vlistID2); index++ )
     if ( vlistGrid(vlistID2, 0) != vlistGrid(vlistID2, index))
       ndiffgrids++;
 
-  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(1));
+  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(1)->args);
 
   gridID1 = vlistGrid(vlistID1, 0);
   gridID2 = vlistGrid(vlistID2, 0);

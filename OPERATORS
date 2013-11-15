@@ -41,6 +41,8 @@ Operator catalog:
    Copy          copy            Copy datasets
    Copy          cat             Concatenate datasets
    Replace       replace         Replace variables
+   Duplicate     duplicate       Duplicates a dataset
+   Mergegrid     mergegrid       Merge grid
    Merge         merge           Merge datasets with different fields
    Merge         mergetime       Merge datasets sorted by date and time
    Split         splitcode       Split code numbers
@@ -52,13 +54,15 @@ Operator catalog:
    Split         splittabnum     Split parameter table numbers
    Splittime     splithour       Split hours
    Splittime     splitday        Split days
-   Splittime     splitmon        Split months
    Splittime     splitseas       Split seasons
    Splittime     splityear       Split years
+   Splittime     splitmon        Split months
    Splitsel      splitsel        Split time selection
 -------------------------------------------------------------
    Selection
 -------------------------------------------------------------
+   Select        select          Select fields
+   Select        delete          Delete fields
    Selvar        selparam        Select parameters by identifier
    Selvar        delparam        Delete parameters by identifier
    Selvar        selcode         Select parameters by code number
@@ -113,6 +117,7 @@ Operator catalog:
    Set           setcode         Set code number
    Set           setparam        Set parameter identifier
    Set           setname         Set variable name
+   Set           setunit         Set variable unit
    Set           setlevel        Set level
    Set           setltype        Set GRIB level type
    Settime       setdate         Set date
@@ -128,6 +133,7 @@ Operator catalog:
    Change        chcode          Change code number
    Change        chparam         Change parameter identifier
    Change        chname          Change variable name
+   Change        chunit          Change variable unit
    Change        chlevel         Change level
    Change        chlevelc        Change level of one code
    Change        chlevelv        Change level of one variable
@@ -211,8 +217,10 @@ Operator catalog:
    Ensstat       enssum          Ensemble sum
    Ensstat       ensmean         Ensemble mean
    Ensstat       ensavg          Ensemble average
-   Ensstat       ensvar          Ensemble variance
    Ensstat       ensstd          Ensemble standard deviation
+   Ensstat       ensstd1         Ensemble standard deviation
+   Ensstat       ensvar          Ensemble variance
+   Ensstat       ensvar1         Ensemble variance
    Ensstat       enspctl         Ensemble percentiles
    Ensstat2      ensrkhistspace  Ranked Histogram averaged over time
    Ensstat2      ensrkhisttime   Ranked Histogram averaged over space
@@ -224,8 +232,10 @@ Operator catalog:
    Fldstat       fldsum          Field sum
    Fldstat       fldmean         Field mean
    Fldstat       fldavg          Field average
-   Fldstat       fldvar          Field variance
    Fldstat       fldstd          Field standard deviation
+   Fldstat       fldstd1         Field standard deviation
+   Fldstat       fldvar          Field variance
+   Fldstat       fldvar1         Field variance
    Fldstat       fldpctl         Field percentiles
    Zonstat       zonmin          Zonal minimum
    Zonstat       zonmax          Zonal maximum
@@ -262,56 +272,71 @@ Operator catalog:
    Timselstat    timselsum       Time range sum
    Timselstat    timselmean      Time range mean
    Timselstat    timselavg       Time range average
-   Timselstat    timselvar       Time range variance
    Timselstat    timselstd       Time range standard deviation
+   Timselstat    timselstd1      Time range standard deviation
+   Timselstat    timselvar       Time range variance
+   Timselstat    timselvar1      Time range variance
    Timselpctl    timselpctl      Time range percentiles
    Runstat       runmin          Running minimum
    Runstat       runmax          Running maximum
    Runstat       runsum          Running sum
    Runstat       runmean         Running mean
    Runstat       runavg          Running average
-   Runstat       runvar          Running variance
    Runstat       runstd          Running standard deviation
+   Runstat       runstd1         Running standard deviation
+   Runstat       runvar          Running variance
+   Runstat       runvar1         Running variance
    Runpctl       runpctl         Running percentiles
    Timstat       timmin          Time minimum
    Timstat       timmax          Time maximum
    Timstat       timsum          Time sum
    Timstat       timmean         Time mean
    Timstat       timavg          Time average
-   Timstat       timvar          Time variance
    Timstat       timstd          Time standard deviation
+   Timstat       timstd1         Time standard deviation
+   Timstat       timvar          Time variance
+   Timstat       timvar1         Time variance
    Timpctl       timpctl         Time percentiles
    Hourstat      hourmin         Hourly minimum
    Hourstat      hourmax         Hourly maximum
    Hourstat      hoursum         Hourly sum
    Hourstat      hourmean        Hourly mean
    Hourstat      houravg         Hourly average
-   Hourstat      hourvar         Hourly variance
    Hourstat      hourstd         Hourly standard deviation
+   Hourstat      hourstd1        Hourly standard deviation
+   Hourstat      hourvar         Hourly variance
+   Hourstat      hourvar1        Hourly variance
    Hourpctl      hourpctl        Hourly percentiles
    Daystat       daymin          Daily minimum
    Daystat       daymax          Daily maximum
    Daystat       daysum          Daily sum
    Daystat       daymean         Daily mean
    Daystat       dayavg          Daily average
-   Daystat       dayvar          Daily variance
    Daystat       daystd          Daily standard deviation
+   Daystat       daystd1         Daily standard deviation
+   Daystat       dayvar          Daily variance
+   Daystat       dayvar1         Daily variance
    Daypctl       daypctl         Daily percentiles
    Monstat       monmin          Monthly minimum
    Monstat       monmax          Monthly maximum
    Monstat       monsum          Monthly sum
    Monstat       monmean         Monthly mean
    Monstat       monavg          Monthly average
-   Monstat       monvar          Monthly variance
    Monstat       monstd          Monthly standard deviation
+   Monstat       monstd1         Monthly standard deviation
+   Monstat       monvar          Monthly variance
+   Monstat       monvar1         Monthly variance
    Monpctl       monpctl         Monthly percentiles
+   Yearmonstat   yearmonmean     Yearly mean from monthly data
    Yearstat      yearmin         Yearly minimum
    Yearstat      yearmax         Yearly maximum
    Yearstat      yearsum         Yearly sum
    Yearstat      yearmean        Yearly mean
    Yearstat      yearavg         Yearly average
-   Yearstat      yearvar         Yearly variance
    Yearstat      yearstd         Yearly standard deviation
+   Yearstat      yearstd1        Yearly standard deviation
+   Yearstat      yearvar         Yearly variance
+   Yearstat      yearvar1        Yearly variance
    Yearpctl      yearpctl        Yearly percentiles
    Seasstat      seasmin         Seasonal minimum
    Seasstat      seasmax         Seasonal maximum
@@ -326,23 +351,29 @@ Operator catalog:
    Yhourstat     yhoursum        Multi-year hourly sum
    Yhourstat     yhourmean       Multi-year hourly mean
    Yhourstat     yhouravg        Multi-year hourly average
-   Yhourstat     yhourvar        Multi-year hourly variance
    Yhourstat     yhourstd        Multi-year hourly standard deviation
+   Yhourstat     yhourstd1       Multi-year hourly standard deviation
+   Yhourstat     yhourvar        Multi-year hourly variance
+   Yhourstat     yhourvar1       Multi-year hourly variance
    Ydaystat      ydaymin         Multi-year daily minimum
    Ydaystat      ydaymax         Multi-year daily maximum
    Ydaystat      ydaysum         Multi-year daily sum
    Ydaystat      ydaymean        Multi-year daily mean
    Ydaystat      ydayavg         Multi-year daily average
-   Ydaystat      ydayvar         Multi-year daily variance
    Ydaystat      ydaystd         Multi-year daily standard deviation
+   Ydaystat      ydaystd1        Multi-year daily standard deviation
+   Ydaystat      ydayvar         Multi-year daily variance
+   Ydaystat      ydayvar1        Multi-year daily variance
    Ydaypctl      ydaypctl        Multi-year daily percentiles
    Ymonstat      ymonmin         Multi-year monthly minimum
    Ymonstat      ymonmax         Multi-year monthly maximum
    Ymonstat      ymonsum         Multi-year monthly sum
    Ymonstat      ymonmean        Multi-year monthly mean
    Ymonstat      ymonavg         Multi-year monthly average
-   Ymonstat      ymonvar         Multi-year monthly variance
    Ymonstat      ymonstd         Multi-year monthly standard deviation
+   Ymonstat      ymonstd1        Multi-year monthly standard deviation
+   Ymonstat      ymonvar         Multi-year monthly variance
+   Ymonstat      ymonvar1        Multi-year monthly variance
    Ymonpctl      ymonpctl        Multi-year monthly percentiles
    Yseasstat     yseasmin        Multi-year seasonal minimum
    Yseasstat     yseasmax        Multi-year seasonal maximum
@@ -357,8 +388,10 @@ Operator catalog:
    Ydrunstat     ydrunsum        Multi-year daily running sum
    Ydrunstat     ydrunmean       Multi-year daily running mean
    Ydrunstat     ydrunavg        Multi-year daily running average
-   Ydrunstat     ydrunvar        Multi-year daily running variance
    Ydrunstat     ydrunstd        Multi-year daily running standard deviation
+   Ydrunstat     ydrunstd1       Multi-year daily running standard deviation
+   Ydrunstat     ydrunvar        Multi-year daily running variance
+   Ydrunstat     ydrunvar1       Multi-year daily running variance
    Ydrunpctl     ydrunpctl       Multi-year daily running percentiles
 -------------------------------------------------------------
    Correlation and co.
@@ -456,6 +489,9 @@ Operator catalog:
    Vargen        stdatm          Create values for pressure and temperature for hydrostatic atmosphere
    Rotuv         rotuvb          Backward rotation
    Mastrfu       mastrfu         Mass stream function
+   Adisit        adisit          Potential temperature to in-situ temperature
+   Adisit        adipot          In-situ temperature to potential temperature
+   Rhopot        rhopot          Calculates potential density
    Histogram     histcount       Histogram count
    Histogram     histsum         Histogram sum
    Histogram     histmean        Histogram mean
@@ -467,6 +503,8 @@ Operator catalog:
    Strbre        strbre          Strong breeze days index per time period
    Strgal        strgal          Strong gale days index per time period
    Hurr          hurr            Hurricane days index per time period
+   Fillmiss      fillmiss        Fill missing values
+   Fillmiss      fillmiss2       Fill missing values
 -------------------------------------------------------------
    Climate indices
 -------------------------------------------------------------
@@ -483,9 +521,6 @@ Operator catalog:
    EcaHwdi       eca_hwdi        Heat wave duration index wrt mean of reference period
    EcaHwfi       eca_hwfi        Warm spell days index wrt 90th percentile of reference period
    EcaId         eca_id          Ice days index per time period
-   EcaPd         eca_pd          Precipitation days index per time period
-   EcaPd         eca_r10mm       Heavy precipitation days index per time period
-   EcaPd         eca_r20mm       Very heavy precipitation days index per time period
    EcaR75p       eca_r75p        Moderate wet days wrt 75th percentile of reference period
    EcaR75ptot    eca_r75ptot     Precipitation percent due to R75p days
    EcaR90p       eca_r90p        Wet days wrt 90th percentile of reference period
@@ -494,6 +529,9 @@ Operator catalog:
    EcaR95ptot    eca_r95ptot     Precipitation percent due to R95p days
    EcaR99p       eca_r99p        Extremely wet days wrt 99th percentile of reference period
    EcaR99ptot    eca_r99ptot     Precipitation percent due to R99p days
+   EcaPd         eca_pd          Precipitation days index per time period
+   EcaPd         eca_r10mm       Heavy precipitation days index per time period
+   EcaPd         eca_r20mm       Very heavy precipitation days index per time period
    EcaRr1        eca_rr1         Wet days index per time period
    EcaRx1day     eca_rx1day      Highest one day precipitation amount per time period
    EcaRx5day     eca_rx5day      Highest five-day precipitation amount per time period

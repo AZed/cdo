@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@
       Ydaystat   ydaymean        Multi-year daily mean
       Ydaystat   ydayavg         Multi-year daily average
       Ydaystat   ydayvar         Multi-year daily variance
+      Ydaystat   ydayvar1        Multi-year daily variance [Divisor is (n-1)]
       Ydaystat   ydaystd         Multi-year daily standard deviation
+      Ydaystat   ydaystd1        Multi-year daily standard deviation [Divisor is (n-1)]
 */
 
 #include <cdi.h>
@@ -44,7 +46,6 @@ void *Ydaystat(void *argument)
   int i;
   int varID;
   int recID;
-  int gridID;
   int vdate, vtime;
   int year, month, day, dayoy;
   int nrecs, nrecords;
@@ -58,7 +59,8 @@ void *Ydaystat(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   int vdates[NDAY], vtimes[NDAY];
-  double missval;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
+  double divisor;
   field_t **vars1[NDAY], **vars2[NDAY], **samp1[NDAY];
   field_t field;
 
@@ -70,10 +72,17 @@ void *Ydaystat(void *argument)
   cdoOperatorAdd("ydaymean", func_mean, 0, NULL);
   cdoOperatorAdd("ydayavg",  func_avg,  0, NULL);
   cdoOperatorAdd("ydayvar",  func_var,  0, NULL);
+  cdoOperatorAdd("ydayvar1", func_var1, 0, NULL);
   cdoOperatorAdd("ydaystd",  func_std,  0, NULL);
+  cdoOperatorAdd("ydaystd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   for ( dayoy = 0; dayoy < NDAY; dayoy++ )
     {
@@ -104,6 +113,7 @@ void *Ydaystat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
@@ -130,42 +140,10 @@ void *Ydaystat(void *argument)
 
       if ( vars1[dayoy] == NULL )
 	{
-	  vars1[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  samp1[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
-	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
-
-	      vars1[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      samp1[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[dayoy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  vars1[dayoy][varID][levelID].grid    = gridID;
-		  vars1[dayoy][varID][levelID].nmiss   = 0;
-		  vars1[dayoy][varID][levelID].missval = missval;
-		  vars1[dayoy][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		  samp1[dayoy][varID][levelID].grid    = gridID;
-		  samp1[dayoy][varID][levelID].nmiss   = 0;
-		  samp1[dayoy][varID][levelID].missval = missval;
-		  samp1[dayoy][varID][levelID].ptr     = NULL;
-		  if ( operfunc == func_std || operfunc == func_var )
-		    {
-		      vars2[dayoy][varID][levelID].grid    = gridID;
-		      vars2[dayoy][varID][levelID].nmiss   = 0;
-		      vars2[dayoy][varID][levelID].missval = missval;
-		      vars2[dayoy][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		    }
-		}
-	    }
+	  vars1[dayoy] = field_malloc(vlistID1, FIELD_PTR);
+	  samp1[dayoy] = field_malloc(vlistID1, FIELD_NONE);
+	  if ( lvarstd )
+	    vars2[dayoy] = field_malloc(vlistID1, FIELD_PTR);
 	}
 
       for ( recID = 0; recID < nrecs; recID++ )
@@ -218,7 +196,7 @@ void *Ydaystat(void *argument)
 		      samp1[dayoy][varID][levelID].ptr[i]++;
 		}
 
-	      if ( operfunc == func_std || operfunc == func_var )
+	      if ( lvarstd )
 		{
 		  farsumq(&vars2[dayoy][varID][levelID], field);
 		  farsum(&vars1[dayoy][varID][levelID], field);
@@ -230,7 +208,7 @@ void *Ydaystat(void *argument)
 	    }
 	}
 
-      if ( nsets[dayoy] == 0 && (operfunc == func_std || operfunc == func_var) )
+      if ( nsets[dayoy] == 0 && lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -247,7 +225,7 @@ void *Ydaystat(void *argument)
   for ( dayoy = 0; dayoy < NDAY; dayoy++ )
     if ( nsets[dayoy] )
       {
-	if ( operfunc == func_mean || operfunc == func_avg )
+	if ( lmean )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -260,7 +238,7 @@ void *Ydaystat(void *argument)
 		    fardiv(&vars1[dayoy][varID][levelID], samp1[dayoy][varID][levelID]);
 		}
 	    }
-	else if ( operfunc == func_std || operfunc == func_var )
+	else if ( lvarstd )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -269,18 +247,17 @@ void *Ydaystat(void *argument)
 		{
 		  if ( samp1[dayoy][varID][levelID].ptr == NULL )
 		    {
-		      if ( operfunc == func_std )
-			farcstd(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], 1.0/nsets[dayoy]);
+		      if ( lstd )
+			farcstdx(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], nsets[dayoy], divisor);
 		      else
-			farcvar(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], 1.0/nsets[dayoy]);
+			farcvarx(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], nsets[dayoy], divisor);
 		    }
 		  else
 		    {
-		      farinv(&samp1[dayoy][varID][levelID]);
-		      if ( operfunc == func_std )
-			farstd(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], samp1[dayoy][varID][levelID]);
+		      if ( lstd )
+			farstdx(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], samp1[dayoy][varID][levelID], divisor);
 		      else
-			farvar(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], samp1[dayoy][varID][levelID]);
+			farvarx(&vars1[dayoy][varID][levelID], vars2[dayoy][varID][levelID], samp1[dayoy][varID][levelID], divisor);
 		    }
 		}
 	    }
@@ -308,24 +285,9 @@ void *Ydaystat(void *argument)
     {
       if ( vars1[dayoy] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  free(vars1[dayoy][varID][levelID].ptr);
-		  if ( samp1[dayoy][varID][levelID].ptr ) free(samp1[dayoy][varID][levelID].ptr);
-		  if ( operfunc == func_std || operfunc == func_var ) free(vars2[dayoy][varID][levelID].ptr);
-		}
-	      
-	      free(vars1[dayoy][varID]);
-	      free(samp1[dayoy][varID]);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[dayoy][varID]);
-	    }
-
-	  free(vars1[dayoy]);
-	  free(samp1[dayoy]);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[dayoy]);
+	  field_free(vars1[dayoy], vlistID1);
+	  field_free(samp1[dayoy], vlistID1);
+	  if ( lvarstd ) field_free(vars2[dayoy], vlistID1);
 	}
     }
 

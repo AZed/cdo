@@ -50,9 +50,24 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-check_PROGRAMS = test_grib$(EXEEXT)
+TESTS = test_grib.sh cksum_verify$(EXEEXT) test_cksum_grib \
+	test_cksum_nc test_cksum_extra test_cksum_service \
+	test_cksum_nc2 test_cksum_nc4 test_cksum_ieg test_chunk_cksum \
+	pio_write_run pio_cksum_mpinonb pio_cksum_fpguard \
+	pio_cksum_asynch pio_cksum_writer pio_cksum_cdf \
+	test_resource_copy$(EXEEXT)
+check_PROGRAMS = cksum_verify$(EXEEXT) test_grib$(EXEEXT) \
+	cksum_write$(EXEEXT) cksum_read$(EXEEXT) pio_write$(EXEEXT) \
+	test_resource_copy$(EXEEXT) cksum_write_chunk$(EXEEXT)
 subdir = tests
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/pio_cksum_asynch.in $(srcdir)/pio_cksum_cdf.in \
+	$(srcdir)/pio_cksum_fpguard.in $(srcdir)/pio_cksum_mpinonb.in \
+	$(srcdir)/pio_cksum_writer.in $(srcdir)/pio_write_run.in \
+	$(srcdir)/test_chunk_cksum.in $(srcdir)/test_cksum_extra.in \
+	$(srcdir)/test_cksum_grib.in $(srcdir)/test_cksum_ieg.in \
+	$(srcdir)/test_cksum_nc.in $(srcdir)/test_cksum_nc2.in \
+	$(srcdir)/test_cksum_nc4.in $(srcdir)/test_cksum_service.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
@@ -70,12 +85,43 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = test_cksum_grib test_cksum_nc test_cksum_nc2 \
+	test_cksum_nc4 test_cksum_extra test_cksum_service \
+	test_cksum_ieg test_chunk_cksum pio_write_run \
+	pio_cksum_mpinonb pio_cksum_fpguard pio_cksum_asynch \
+	pio_cksum_writer pio_cksum_cdf
 CONFIG_CLEAN_VPATH_FILES =
+am_cksum_read_OBJECTS = cksum_read.$(OBJEXT) var_cksum.$(OBJEXT) \
+	stream_cksum.$(OBJEXT) cksum.$(OBJEXT) \
+	ensure_array_size.$(OBJEXT)
+cksum_read_OBJECTS = $(am_cksum_read_OBJECTS)
+cksum_read_LDADD = $(LDADD)
+cksum_read_DEPENDENCIES = ../src/libcdi.la
+am_cksum_verify_OBJECTS = cksum_verify.$(OBJEXT) cksum.$(OBJEXT)
+cksum_verify_OBJECTS = $(am_cksum_verify_OBJECTS)
+cksum_verify_LDADD = $(LDADD)
+cksum_verify_DEPENDENCIES = ../src/libcdi.la
+am_cksum_write_OBJECTS = cksum_write.$(OBJEXT) cksum.$(OBJEXT)
+cksum_write_OBJECTS = $(am_cksum_write_OBJECTS)
+cksum_write_LDADD = $(LDADD)
+cksum_write_DEPENDENCIES = ../src/libcdi.la
+am_cksum_write_chunk_OBJECTS = cksum_write_chunk.$(OBJEXT) \
+	cksum.$(OBJEXT)
+cksum_write_chunk_OBJECTS = $(am_cksum_write_chunk_OBJECTS)
+cksum_write_chunk_LDADD = $(LDADD)
+cksum_write_chunk_DEPENDENCIES = ../src/libcdi.la
+am_pio_write_OBJECTS = pio_write.$(OBJEXT) cksum.$(OBJEXT)
+pio_write_OBJECTS = $(am_pio_write_OBJECTS)
+pio_write_LDADD = $(LDADD)
+pio_write_DEPENDENCIES = ../src/libcdi.la
 am_test_grib_OBJECTS = test_grib.$(OBJEXT)
 test_grib_OBJECTS = $(am_test_grib_OBJECTS)
 test_grib_LDADD = $(LDADD)
-test_grib_DEPENDENCIES =
+test_grib_DEPENDENCIES = ../src/libcdi.la
+am_test_resource_copy_OBJECTS = test_resource_copy.$(OBJEXT)
+test_resource_copy_OBJECTS = $(am_test_resource_copy_OBJECTS)
+test_resource_copy_LDADD = $(LDADD)
+test_resource_copy_DEPENDENCIES = ../src/libcdi.la
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -89,8 +135,14 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(test_grib_SOURCES)
-DIST_SOURCES = $(test_grib_SOURCES)
+SOURCES = $(cksum_read_SOURCES) $(cksum_verify_SOURCES) \
+	$(cksum_write_SOURCES) $(cksum_write_chunk_SOURCES) \
+	$(pio_write_SOURCES) $(test_grib_SOURCES) \
+	$(test_resource_copy_SOURCES)
+DIST_SOURCES = $(cksum_read_SOURCES) $(cksum_verify_SOURCES) \
+	$(cksum_write_SOURCES) $(cksum_write_chunk_SOURCES) \
+	$(pio_write_SOURCES) $(test_grib_SOURCES) \
+	$(test_resource_copy_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -98,8 +150,21 @@ am__can_run_installinfo = \
   esac
 ETAGS = etags
 CTAGS = ctags
+# If stdout is a non-dumb tty, use colors.  If test -t is not supported,
+# then this fails; a conservative approach.  Of course do not redirect
+# stdout here, just stderr.
 am__tty_colors = \
-red=; grn=; lgn=; blu=; std=
+red=; grn=; lgn=; blu=; std=; \
+test "X$(AM_COLOR_TESTS)" != Xno \
+&& test "X$$TERM" != Xdumb \
+&& { test "X$(AM_COLOR_TESTS)" = Xalways || test -t 1 2>/dev/null; } \
+&& { \
+  red='[0;31m'; \
+  grn='[0;32m'; \
+  lgn='[1;32m'; \
+  blu='[1;34m'; \
+  std='[m'; \
+}
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -109,6 +174,13 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CC = @BUILD_CC@
+BUILD_CFLAGS = @BUILD_CFLAGS@
+BUILD_CXX = @BUILD_CXX@
+BUILD_F77 = @BUILD_F77@
+BUILD_FC = @BUILD_FC@
+BUILD_FCFLAGS = @BUILD_FCFLAGS@
+BUILD_LDFLAGS = @BUILD_LDFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDI_F90_INTERFACE_FCFLAGS = @CDI_F90_INTERFACE_FCFLAGS@
@@ -134,6 +206,9 @@ ENABLE_CGRIBEX = @ENABLE_CGRIBEX@
 ENABLE_EXTRA = @ENABLE_EXTRA@
 ENABLE_GRIB = @ENABLE_GRIB@
 ENABLE_IEG = @ENABLE_IEG@
+ENABLE_NC2 = @ENABLE_NC2@
+ENABLE_NC4 = @ENABLE_NC4@
+ENABLE_NETCDF = @ENABLE_NETCDF@
 ENABLE_PYTHON = @ENABLE_PYTHON@
 ENABLE_RUBY = @ENABLE_RUBY@
 ENABLE_SERVICE = @ENABLE_SERVICE@
@@ -154,6 +229,7 @@ FPP_INCOPT = @FPP_INCOPT@
 GREP = @GREP@
 GRIB_API_INCLUDE = @GRIB_API_INCLUDE@
 GRIB_API_LIBS = @GRIB_API_LIBS@
+HAVE_PARALLEL_NC4 = @HAVE_PARALLEL_NC4@
 HDF5_INCLUDE = @HDF5_INCLUDE@
 HDF5_LIBS = @HDF5_LIBS@
 HDF5_ROOT = @HDF5_ROOT@
@@ -177,6 +253,7 @@ MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MPI_LAUNCH = @MPI_LAUNCH@
 NC_CONFIG = @NC_CONFIG@
 NETCDF_INCLUDE = @NETCDF_INCLUDE@
 NETCDF_LIBS = @NETCDF_LIBS@
@@ -196,6 +273,11 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PPM_CORE_CFLAGS = @PPM_CORE_CFLAGS@
+PPM_CORE_LIBS = @PPM_CORE_LIBS@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_LIBS = @PTHREAD_LIBS@
@@ -213,7 +295,10 @@ SZLIB_LIBS = @SZLIB_LIBS@
 THREADS_INCLUDE = @THREADS_INCLUDE@
 THREADS_LIBS = @THREADS_LIBS@
 USER_NAME = @USER_NAME@
+USE_MPI = @USE_MPI@
 VERSION = @VERSION@
+YAXT_CFLAGS = @YAXT_CFLAGS@
+YAXT_LIBS = @YAXT_LIBS@
 ZLIB_INCLUDE = @ZLIB_INCLUDE@
 ZLIB_LIBS = @ZLIB_LIBS@
 abs_builddir = @abs_builddir@
@@ -273,19 +358,29 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-
-#
-TESTS = test_grib.sh
 #
 test_grib_SOURCES = test_grib.c
+cksum_verify_SOURCES = cksum_verify.c cksum.c cksum.h
+cksum_write_SOURCES = cksum_write.c cksum.c cksum.h
+cksum_write_chunk_SOURCES = cksum_write_chunk.c cksum.c cksum.h
+cksum_read_SOURCES = cksum_read.c \
+	var_cksum.c var_cksum.h \
+	stream_cksum.c stream_cksum.h \
+	cksum.c cksum.h \
+	ensure_array_size.h ensure_array_size.c
+
+pio_write_SOURCES = pio_write.c cksum.h cksum.c
+test_resource_copy_SOURCES = test_resource_copy.c
 #
-LDADD = -L../src -lcdi -lm
-AM_LDFLAGS = -L$(top_srcdir)/src
+AM_CFLAGS = $(YAXT_CFLAGS)
+LDADD = ../src/libcdi.la -lm
 INCLUDES = -I$(top_srcdir)/src
 #
 EXTRA_DIST = $(TESTS)
 #
-CLEANFILES = `ls *~ *.grb *.nc *.srv *.ext`
+CLEANFILES = `ls *~ *.grb *.nc *.srv *.ext example_*.cksum`
+#
+AUTOMAKE_OPTIONS = color-tests
 all: all-am
 
 .SUFFIXES:
@@ -320,6 +415,34 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+test_cksum_grib: $(top_builddir)/config.status $(srcdir)/test_cksum_grib.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_nc: $(top_builddir)/config.status $(srcdir)/test_cksum_nc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_nc2: $(top_builddir)/config.status $(srcdir)/test_cksum_nc2.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_nc4: $(top_builddir)/config.status $(srcdir)/test_cksum_nc4.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_extra: $(top_builddir)/config.status $(srcdir)/test_cksum_extra.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_service: $(top_builddir)/config.status $(srcdir)/test_cksum_service.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_cksum_ieg: $(top_builddir)/config.status $(srcdir)/test_cksum_ieg.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_chunk_cksum: $(top_builddir)/config.status $(srcdir)/test_chunk_cksum.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_write_run: $(top_builddir)/config.status $(srcdir)/pio_write_run.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_cksum_mpinonb: $(top_builddir)/config.status $(srcdir)/pio_cksum_mpinonb.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_cksum_fpguard: $(top_builddir)/config.status $(srcdir)/pio_cksum_fpguard.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_cksum_asynch: $(top_builddir)/config.status $(srcdir)/pio_cksum_asynch.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_cksum_writer: $(top_builddir)/config.status $(srcdir)/pio_cksum_writer.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+pio_cksum_cdf: $(top_builddir)/config.status $(srcdir)/pio_cksum_cdf.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 
 clean-checkPROGRAMS:
 	@list='$(check_PROGRAMS)'; test -n "$$list" || exit 0; \
@@ -329,9 +452,27 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+cksum_read$(EXEEXT): $(cksum_read_OBJECTS) $(cksum_read_DEPENDENCIES) $(EXTRA_cksum_read_DEPENDENCIES) 
+	@rm -f cksum_read$(EXEEXT)
+	$(LINK) $(cksum_read_OBJECTS) $(cksum_read_LDADD) $(LIBS)
+cksum_verify$(EXEEXT): $(cksum_verify_OBJECTS) $(cksum_verify_DEPENDENCIES) $(EXTRA_cksum_verify_DEPENDENCIES) 
+	@rm -f cksum_verify$(EXEEXT)
+	$(LINK) $(cksum_verify_OBJECTS) $(cksum_verify_LDADD) $(LIBS)
+cksum_write$(EXEEXT): $(cksum_write_OBJECTS) $(cksum_write_DEPENDENCIES) $(EXTRA_cksum_write_DEPENDENCIES) 
+	@rm -f cksum_write$(EXEEXT)
+	$(LINK) $(cksum_write_OBJECTS) $(cksum_write_LDADD) $(LIBS)
+cksum_write_chunk$(EXEEXT): $(cksum_write_chunk_OBJECTS) $(cksum_write_chunk_DEPENDENCIES) $(EXTRA_cksum_write_chunk_DEPENDENCIES) 
+	@rm -f cksum_write_chunk$(EXEEXT)
+	$(LINK) $(cksum_write_chunk_OBJECTS) $(cksum_write_chunk_LDADD) $(LIBS)
+pio_write$(EXEEXT): $(pio_write_OBJECTS) $(pio_write_DEPENDENCIES) $(EXTRA_pio_write_DEPENDENCIES) 
+	@rm -f pio_write$(EXEEXT)
+	$(LINK) $(pio_write_OBJECTS) $(pio_write_LDADD) $(LIBS)
 test_grib$(EXEEXT): $(test_grib_OBJECTS) $(test_grib_DEPENDENCIES) $(EXTRA_test_grib_DEPENDENCIES) 
 	@rm -f test_grib$(EXEEXT)
 	$(LINK) $(test_grib_OBJECTS) $(test_grib_LDADD) $(LIBS)
+test_resource_copy$(EXEEXT): $(test_resource_copy_OBJECTS) $(test_resource_copy_DEPENDENCIES) $(EXTRA_test_resource_copy_DEPENDENCIES) 
+	@rm -f test_resource_copy$(EXEEXT)
+	$(LINK) $(test_resource_copy_OBJECTS) $(test_resource_copy_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -339,7 +480,17 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum_read.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum_verify.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum_write.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum_write_chunk.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ensure_array_size.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_write.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_cksum.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_grib.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_resource_copy.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/var_cksum.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

@@ -1,3 +1,352 @@
+2013-11-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.6.2
+	* Version 1.6.2 released
+
+2013-11-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added test/test_Remap.sh
+
+2013-10-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eca_gsl: start date of growing season is wrong if the length of growing season is zero (bug fix) 
+
+2013-10-21  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* splitmon: added optional parameter to set the format string for the month [Feature #4131]
+	* Sort: added support for multi level variables (bug fix) [report: Irina Fast]
+
+2013-10-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridarea: replace cell_area_tri() by huiliers_area()
+	* outputf: make second parameter (nelem) optional
+
+2013-10-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridarea: numeric inaccuracy for triangles located directly on the pole (bug fix)
+
+2013-09-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Consecstat: init vars with 0 (bug fix)
+	* Seascount: added support for complex numbers
+	* Timcount: added support for complex numbers
+
+2013-08-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Timstat: added support for complex numbers
+
+2013-08-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgridtype: parameter regular: added support for reduced grids on sub area
+
+2013-08-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* mastrfu: added missing value support
+
+2013-08-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* select: added support for key >timestep_of_year<
+
+2013-08-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* selyear: fixed wrong result for negative years [Bug #3836]
+
+2013-08-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added support of ASCII grid description for GRID_LAEA
+
+2013-07-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridGenArea: added warning message if grid cell corner not available
+	* gp2sp: added warning message if gp data not found
+
+2013-07-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* split*: use filename extension from input file
+
+2013-06-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridCurvilinearToRegular: set tolerance to 1.e-6
+
+2013-06-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.6.1
+	* Version 1.6.1 released
+
+2013-06-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* select: added support for key >minute< [request: Beate Gayer]
+
+2013-06-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* inttime: removes last time step [Bug #3611]
+
+2013-05-24  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* mrotuvb: added option >noint< to disable the interpolation to the grid cell centre
+
+2013-05-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* scatter: fails with missing values [Bug #3492]
+
+2013-04-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: added support for netCDF files
+
+2013-04-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Info: add chunking information of netcdf files (only with verbose output) [Feature #3489]
+
+2013-04-17 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* select: added support to expand integer parameter
+	* select: added support for key >hour<
+
+2013-04-10 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* shifttime: wrong result for negative hours and days [Bug #3440]
+	* selmon: month not found for negative years [Bug #3439]
+	* splitmon: month not found for negative years
+
+2013-04-05 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* expr: wrong results if left operand has one level and right operand has more than one level (bug fix) [report: Walter Sauf]
+
+2013-04-02 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* enscrps: wrong result since CDO version 1.5.6 [Bug #3403]
+
+2013-03-19 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* fldcor: check missing value of 2. input file (bug fix) [report: Hans-Jürgen Panitz]
+
+2013-03-14 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.6.0
+	* Version 1.6.0 released
+
+2013-03-01 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridarea: set number of timesteps to 0 (bug fix for operator chaining) [report: Dirk Notz]
+
+2013-02-25 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* merge: uses size of the first input file for the output buffer [Bug #3290]
+
+2013-02-22 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: yearmonmean - yearly mean from monthly data
+
+2013-02-21 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added cdoDefaultFileType to UNCHANGED_RECORD (bug fix)
+
+2013-02-19 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* masklonlatbox: added support for curvilinear grids
+
+2013-02-09 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: duplicate  - Duplicates a dataset
+
+2013-02-08 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: wrong result with overlapped lonlatbox on curvilinear grids (bug fix) [report: Dirk Notz]
+
+2013-02-06 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: timselvar1  - Time range variance [Divisor is (n-1)]
+	* New operator: timselstd1  - Time range standard deviation [Divisor is (n-1)]
+	* New operator: runvar1  -  Running variance [Divisor is (n-1)]
+	* New operator: runstd1  -  Running standard deviation [Divisor is (n-1)]
+
+2013-02-05 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ensrkhisttime: fixed memory fault [https://code.zmaw.de/boards/1/topics/1657]
+
+2013-02-04 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added CDO option -W to print extra warning messages
+
+2013-01-30 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: ymonvar1    - Multi-year monthly variance [Divisor is (n-1)]
+	* New operator: ymonstd1    - Multi-year monthly standard deviation [Divisor is(n-1)]
+	* New operator: ydayvar1   - Multi-year daily variance [Divisor is (n-1)]
+	* New operator: ydaystd1   - Multi-year daily standard deviation [Divisor is (n-1)]
+	* New operator: yhourvar1   - Multi-year hourly variance [Divisor is (n-1)]
+	* New operator: yhourstd1   - Multi-year hourly standard deviation [Divisor is (n-1)]
+	* New operator: ydrunvar1    - Multi-year daily running variance [Divisor is (n-1)]
+	* New operator: ydrunstd1    - Multi-year daily running standard deviation [Divisor is (n-1)]
+
+
+2013-01-25 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * New operator: timvar1    - Time variance [Divisor is (n-1)]
+	* New operator: timstd1    - Time standard deviation [Divisor is (n-1)]
+        * New operator: hourvar1   - Hourly variance [Divisor is (n-1)]
+	* New operator: hourstd1   - Hourly standard deviation [Divisor is (n-1)]
+	* New operator: dayvar1    - Daily variance [Divisor is (n-1)]
+	* New operator: daystd1    - Daily standard deviation [Divisor is (n-1)]
+	* New operator: monvar1    - Monthly variance [Divisor is (n-1)]
+	* New operator: monstd1    - Monthly standard deviation [Divisor is (n-1)]
+	* New operator: yearvar1   - Yearly variance [Divisor is (n-1)]
+	* New operator: yearstd1   - Yearly standard deviation [Divisor is (n-1)]
+
+2013-01-23 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: ensstd1 - Ensemble standard deviation [Divisor is (n-1)]
+	* New operator: ensvar1 - Ensemble variance [Divisor is (n-1)]
+	* New operator: fldstd1 - Field standard deviation [Divisor is (n-1)]
+	* New operator: fldvar1 - Field variance [Divisor is (n-1)]
+
+2013-01-22 Helmut Haak <Helmut.Haak@zmaw.de>
+
+	* New operator: adisit - Potential temperature to in-situ temperature
+
+2013-01-21 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New operator: rhopot - Calculates potential density
+	* New operator: select - select fields from an unlimited number of input files
+
+2013-01-17 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* diff: print only records that differ
+	* setpartab: added namelist entry 'delete'
+
+2013-01-11 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* expr: wrong result for operation var1/var2 where var2 = 0
+
+2013-01-10 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Settime: set number of output timesteps to unlimited
+
+2013-01-08 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Runstat: added support for time bounds (Bug #3127)
+        * runpctl: added support for time bounds
+	* setcalendar: changed CDO calendar names to CF calendar names
+                    (standard, proleptic_gregorian, 360_day, 365_day, 366_day)
+
+2012-12-17 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.9
+	* Version 1.5.9 released
+
+2012-12-06 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* PROJ.4: use proj_api.h instead of projects.h
+
+2012-11-27 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: use pstreamInqByteorder() [Bug #3041]
+	* zonSTAT: check whether a zonal grid already exists (bug fix)
+
+2012-11-26 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added workaround to combine CDO operators with the result of	mergetime, merge, copy, cat, ens<STAT>
+	* Selbox: extend check for latitude indices
+
+2012-11-21 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* enlarge: added missing value support [request: Chris Fletcher]
+
+2012-11-15 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Split: added parameter swap to swap the position of <obase> and <xxx>  in the filename
+	* splitgrid: bug fix for gridID output in filename <xxx>
+	* splitzaxis: bug fix for zaxisID output in filename <xxx>
+
+2012-11-14 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* cdo: added option -k <chunktype> to set the chunk type to auto, grid or lines
+	* cdo option -z zip: added optional compression level -z zip[_1-9] [request: Etienne Tourigny]
+
+2012-11-08 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pipeInqVlist: wait MIN_WAIT_CYCLES if processNumsActive() == 1 (bug fix) [report:  Jaison Ambadan]
+
+2012-11-07 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* bug fix for user defined lon/lat grids
+             This bug was introduced in CDO version 1.5.8.
+
+2012-10-30 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.8
+	* Version 1.5.8 released
+
+2012-10-29 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* mastrfu: set datatype to 32-bit float
+
+2012-10-23 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Fldstat: set weight to 1 if gridsize is 1
+
+2012-10-19 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added operator seinfo
+
+2012-10-17 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eca_rr1: result has wrong long name attribute [Bug #2763]
+	* eca_pd: disabled, use eca_rr1  (same functionallity) [Bug #2763]
+
+2012-10-14 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added operator tee
+
+2012-10-13 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplaf: fixed bug in binary_search_int()
+
+2012-10-05 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* use read/write timer only for single threaded CDO version [Support #2854]
+
+2012-10-05 Modali Kameswarrao  <modali.kameswarrao@zmaw.de>
+
+	* Maggraph update
+
+2012-09-25 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* replace: change streamNtsteps() to vlistNtsteps() (bug fix for CDI 1.5.7)
+
+2012-09-13 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added support for netCDF4(HDF5) formatted SCRIP grids
+
+2012-09-07 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Info: changed output format
+	* Diff: changed output format
+
+2012-09-04 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* processDelete: set Process[processID].threadID = 0 (bug fix)
+
+2012-09-03 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added CDO option -L to lock all I/O calls. This option is neccessary if external I/O libraries like 
+	  netCDF4 (HDF5) were installed without thread-safe support.
+
+2012-08-30 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Sinfo: changed output format
+
+2012-08-28 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.7 (merged from cdi-pio)
+	* activate pstreamCopyRecord()
+	* Version 1.5.7 released
+
+2012-08-23 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Arith: bug fix for NVARS1 == NVARS2
+                    This bug was introduced in CDO version 1.5.6.
+
 2012-07-26 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Version 1.5.6.1 released
@@ -8,7 +357,7 @@
 	       - x86_64 machine (tornado, squall, thunder, lizard)
 	       - dataset has no missing values
 	       - the horizontal grid size is > 1 and not multiple of 8
-            This bug was introduced in CDO version 1.5.5.
+            This bug was introduced in CDO version 1.5.6.
 
 2012-07-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
@@ -488,7 +837,7 @@ w.de>
 2010-09-27  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Fldstat2: replaced macros FDIV and FSQRT by function calls DIV and SQRT
-	
+
 2010-09-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* New module: Ydayarith (ydayadd, ydaysub, ydaymul, ydaydiv)
@@ -503,12 +852,12 @@ w.de>
 	* using libtool for linking (rpath)
 	* include libcdi as subproject
 	* eca_gsl: adjust implementation to fit definition by ECA [report: Stefan Fronzek]
-	* eca_gsl: make useable in pipes (bug fix) [report: Stefan Fronzek]
+	* eca_gsl: make usable in pipes (bug fix) [report: Stefan Fronzek]
 
 2010-08-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* sellevel: copy zaxis meta data name and units (bug fix) [report: Don Murray]
-	
+
 2010-08-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
         * pstreamDefTimestep: removed call to streamSync (very slow on GPFS)
@@ -516,19 +865,19 @@ w.de>
 2010-08-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* changed percentile parameter type from integer to float [request: Nikolaus Groll]
-	
+
 2010-08-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* changed predefined gaussian grid names from t<RES>grid to n<N>
-	
+
 2010-08-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* added grid mask support
-	
+
 2010-07-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* sellonlatbox: fix rounding error of the last lon index [report: Flore Mounier]
-	
+
 2010-07-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Module Expr: added missing value support [request: Marco van Hulten]
@@ -592,7 +941,7 @@ w.de>
 2010-04-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Added support for time units 3hours and 6hours [request: Jaison-Thomas Ambadan]
-	
+
 2010-04-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Remap: bypass variables with gridtype generic and only one gridpoint
@@ -605,7 +954,7 @@ w.de>
 2010-04-01  Martin Claus  <mclaus@ifm-geomar.de>
 
 	* vertwind: added missing value support
-	
+
 2010-03-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* standard deviation (bug fix): change the result from missval to zero, if variance is zero [report: Jaison-Thomas Ambadan]
@@ -627,7 +976,7 @@ w.de>
 
 	* pstreamWriteRecord: check pstreamptr->varlist (bug fix) [report: Kevin Sieck]
 	* added operator fldcor to correlate two fields
-	
+
 2010-03-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* added predefined grid t<RES>zon
@@ -660,15 +1009,15 @@ w.de>
 	* using CDI library version 1.4.2
 	* Added new module Gridboxstat (testversion)
 	* Version 1.4.2 released
-	
+
 2010-02-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* netCDF+packed data: check that all values are inside the valid range
-	
+
 2010-02-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* remove netCDF offset/scalefactor if option -b 32 is set
-	
+
 2010-01-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Ensstat: don't overwrite existing files
@@ -685,11 +1034,11 @@ w.de>
 2010-01-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* replace: added support for time constant fields [request: Wei Wei]
-	
+
 2010-01-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Genweights: use netCDF2 (64bit) for large remap weights files [request: Daniel Goll]
-	
+
 2010-01-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* added module Fourier
@@ -762,7 +1111,7 @@ w.de>
 	* IEG format: bug fix for identification of lonlat grids
 	* GRIB format: bug fix for decoding of missing values (scalar version only)
 	* Version 1.4.0.1 released
-	
+
 2009-10-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* cdotest:eca_gsl: bug fix [report: Harald Anlauf]
@@ -857,7 +1206,7 @@ w.de>
 	* Settime: added "seconds" support to "settunits", "settaxis" and "shifttime"
 
 2009-01-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
-	
+
 	* using CDI library version 1.3.0
 	* New operator: remapcon2 - Second order conservative remapping
 	* New operator: remaplaf - Largest area fraction remapping
@@ -886,7 +1235,7 @@ w.de>
 	* Version 1.3.0 released
 
 2008-11-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
-	
+
 	* using CDI library version 1.2.1
 	* New operator: import_cmsaf - import CM-SAF files
 	* New operator: gengrid - generate grid [request: Michael Boettinger]
@@ -936,7 +1285,7 @@ w.de>
 	* ntime: bug fix for datasets with time constant parameter only [report: David Wang]
 	  (also affected: ndate, nmon, nyear, showdate, showtime, showmon, showyear)
 	* Version 1.2.0 released
-	
+
 2008-04-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.1.1
@@ -983,7 +1332,7 @@ w.de>
 	* gradsdes: bug fix for monthly mean data with start day > 28 [report: Renate Brokopf]
 	* expr: change exponent precedence from left to right (bug fix)[report: Claas Teichmann]
 	* Version 1.0.9.1 released
-	
+
 2007-10-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.0.8
@@ -1048,13 +1397,13 @@ w.de>
 2007-05-30  Ralf Quast  <ralf.quast@brockmann-consult.de>
 
 	* New operator: timcount, hourcount, daycount, moncount, yearcount, seascount
-	* Renamed eca_fdns, eca_strwin, eca_strbre, eca_strgal, eca_hurr   
+	* Renamed eca_fdns, eca_strwin, eca_strbre, eca_strgal, eca_hurr
 	       to fdns, strwin, strbre, strgal, hurr
-	
+
 2007-04-18  Cedrick Ansorge  <Cedrick.Ansorge@zmaw.de>
 
 	* New operator: maskregion
-	
+
 2007-03-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.0.6
@@ -1109,14 +1458,14 @@ w.de>
 	* New module: Tchill (tchill)
 	* New module: Hi (hi)
 	* New module: ECA Indices of Daily Temperature and Precipitation Extremes
-	              (eca_cfd, eca_csu, eca_cwdi, eca_cwfi, eca_etr, eca_fd, 
-	               eca_gsl, eca_hd, eca_hwdi, eca_hwfi, eca_id, eca_su,       
-                       eca_tg10p, eca_tg90p, eca_tn10p, eca_tn90p,    
-                       eca_tr, eca_tx10p, eca_tx90p,    
-                       eca_cdd, eca_cwd, eca_r10mm, eca_r20mm,    
-                       eca_r75p, eca_r75ptot, eca_r90p, eca_r90ptot,  
-                       eca_r95p, eca_r95ptot, eca_r99p, eca_r99ptot,  
-                       eca_rr1, eca_sdii, eca_fdns, eca_strwind)  
+	              (eca_cfd, eca_csu, eca_cwdi, eca_cwfi, eca_etr, eca_fd,
+	               eca_gsl, eca_hd, eca_hwdi, eca_hwfi, eca_id, eca_su,
+                       eca_tg10p, eca_tg90p, eca_tn10p, eca_tn90p,
+                       eca_tr, eca_tx10p, eca_tx90p,
+                       eca_cdd, eca_cwd, eca_r10mm, eca_r20mm,
+                       eca_r75p, eca_r75ptot, eca_r90p, eca_r90ptot,
+                       eca_r95p, eca_r95ptot, eca_r99p, eca_r99ptot,
+                       eca_rr1, eca_sdii, eca_fdns, eca_strwind)
 
 2006-11-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
@@ -1138,8 +1487,8 @@ w.de>
 	* New operator: enspctl (Ensstat)
 	* New operator: fldpctl (Fldstat)
 	* New operator: zonpctl (Zonstat)
-	* New operator: merpctl (Merstat)	
-	
+	* New operator: merpctl (Merstat)
+
 2006-11-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.0.3
@@ -1524,7 +1873,7 @@ w.de>
 	* Copy: changed from one to unlimited inputfiles
 	* Split: bug fix for splitcode
 	* Version 0.8.5 released
-	
+
 2003-12-14  Uwe Schulzweida  <schulzweida@dkrz.de>
 
 	* changes for CDI library version 0.7.7
@@ -1544,12 +1893,12 @@ w.de>
 	* changes for CDI library version 0.7.2 (HDF test interface)
 	* New operator: intarea, setctomiss, setmisstoc, setrangetomiss
 	* Version 0.8.2 released
-	
+
 2003-09-22  Uwe Schulzweida  <schulzweida@dkrz.de>
 
 	* New operator: interpolate (source from PINGO)
 	* Version 0.8.1 released
-	
+
 2003-09-10  Uwe Schulzweida  <schulzweida@dkrz.de>
 
 	* renamed to CDO (Climate Data Operators)
@@ -1563,7 +1912,7 @@ w.de>
 	* changes for gdi library version 0.6.0
 	* Info.c: handle missing values
 	* Version 0.7.0 released
-	
+
 2003-06-25  Uwe Schulzweida  <schulzweida@dkrz.de>
 
 	* gdi library version 0.5.11
@@ -1580,7 +1929,7 @@ w.de>
 	* gdi library version 0.5.9
 	* grib library version 0.4.5
 	* Version 0.6.2 released
-	
+
 2003-05-17  Uwe Schulzweida  <schulzweida@dkrz.de>
 
 	* add module Spectral with operator sp2gp, gp2sp and sp2sp

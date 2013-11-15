@@ -47,7 +47,6 @@ void *Ydrunpctl(void *argument)
   int nmiss;
   int nvars, nlevels;
   int *recVarID, *recLevelID;
-  double missval;
   field_t ***vars1 = NULL, **vars2[NDAY];
   datetime_t *datetime;
   int taxisID1, taxisID2, taxisID3, taxisID4;
@@ -114,6 +113,7 @@ void *Ydrunpctl(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
@@ -122,38 +122,20 @@ void *Ydrunpctl(void *argument)
   
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  gridsize = gridInqSize(gridID);
-	  nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-
-	  vars1[its][varID] = (field_t *) malloc(nlevels*sizeof(field_t));
-
-	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    {
-	      vars1[its][varID][levelID].grid    = gridID;
-	      vars1[its][varID][levelID].nmiss   = 0;
-	      vars1[its][varID][levelID].missval = missval;
-	      vars1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	    }
-	}
+      vars1[its] = field_malloc(vlistID1, FIELD_PTR);
     }
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID2, tsID)) )
     {
       if ( nrecs != streamInqTimestep(streamID3, tsID) )
-        cdoAbort("Number of records in time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Number of records at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
       
       vdate = taxisInqVdate(taxisID2);
       vtime = taxisInqVtime(taxisID2);
       
       if ( vdate != taxisInqVdate(taxisID3) || vtime != taxisInqVtime(taxisID3) )
-        cdoAbort("Verification dates for time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Verification dates at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
         
       if ( cdoVerbose ) cdoPrint("process timestep: %d %d %d", tsID+1, vdate, vtime);
 
@@ -172,26 +154,15 @@ void *Ydrunpctl(void *argument)
 
       if ( vars2[dayoy] == NULL )
 	{
-	  vars2[dayoy] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  vars2[dayoy] = field_malloc(vlistID2, FIELD_PTR);
           hsets[dayoy] = hsetCreate(nvars);
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridID   = vlistInqVarGrid(vlistID2, varID);
-	      gridsize = gridInqSize(gridID);
 	      nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
-	      missval  = vlistInqVarMissval(vlistID2, varID);
 
-	      vars2[dayoy][varID] = (field_t *)  malloc(nlevels*sizeof(field_t));
               hsetCreateVarLevels(hsets[dayoy], varID, nlevels, gridID);
-	      
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		{
-		  vars2[dayoy][varID][levelID].grid    = gridID;
-		  vars2[dayoy][varID][levelID].nmiss   = 0;
-		  vars2[dayoy][varID][levelID].missval = missval;
-		  vars2[dayoy][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
 	    }
 	}
       
@@ -260,7 +231,7 @@ void *Ydrunpctl(void *argument)
       vtimes1[dayoy] = vtime;
       
       if ( vars2[dayoy] == NULL )
-        cdoAbort("No data for day %d in %s and %s", dayoy, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("No data for day %d in %s and %s", dayoy, cdoStreamName(1)->args, cdoStreamName(2)->args);
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -304,9 +275,9 @@ void *Ydrunpctl(void *argument)
     if ( nsets[dayoy] )
       {
         if ( vdates1[dayoy] != vdates2[dayoy] )
-          cdoAbort("Verification dates for day %d of %s, %s and %s are different!", dayoy, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification dates for day %d of %s, %s and %s are different!", dayoy, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
         if ( vtimes1[dayoy] != vtimes2[dayoy] )
-          cdoAbort("Verification times for day %d of %s, %s and %s are different!", dayoy, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification times for day %d of %s, %s and %s are different!", dayoy, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
 
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
@@ -353,14 +324,7 @@ void *Ydrunpctl(void *argument)
     {
       if ( vars2[dayoy] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		free(vars2[dayoy][varID][levelID].ptr);
-	      free(vars2[dayoy][varID]);
-	    }
-	  free(vars2[dayoy]); 
+	  field_free(vars2[dayoy], vlistID2); 
 	  hsetDestroy(hsets[dayoy]);
 	}
     }

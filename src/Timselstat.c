@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@
       Timselstat    timselmean         Time range mean
       Timselstat    timselavg          Time range average
       Timselstat    timselvar          Time range variance
+      Timselstat    timselvar1         Time range variance [Divisor is (n-1)]
       Timselstat    timselstd          Time range standard deviation
+      Timselstat    timselstd1         Time range standard deviation [Divisor is (n-1)]
 */
 
 
@@ -44,7 +46,7 @@ void *Timselstat(void *argument)
   int vdate_lb = 0, vdate_ub = 0, date_lb = 0, date_ub = 0;
   int vtime_lb = 0, vtime_ub = 0, time_lb = 0, time_ub = 0;
   int nrecs = 0, nrecords;
-  int gridID, varID, levelID, recID;
+  int varID, levelID, recID;
   int tsID;
   int otsID;
   int nsets;
@@ -56,7 +58,8 @@ void *Timselstat(void *argument)
   int nvars, nlevel;
   int ndates = 0, noffset = 0, nskip = 0, nargc;
   int *recVarID, *recLevelID;
-  double missval;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
+  double divisor;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
   field_t field;
 
@@ -68,7 +71,9 @@ void *Timselstat(void *argument)
   cdoOperatorAdd("timselmean", func_mean, 0, NULL);
   cdoOperatorAdd("timselavg",  func_avg,  0, NULL);
   cdoOperatorAdd("timselvar",  func_var,  0, NULL);
+  cdoOperatorAdd("timselvar1", func_var1, 0, NULL);
   cdoOperatorAdd("timselstd",  func_std,  0, NULL);
+  cdoOperatorAdd("timselstd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
@@ -82,6 +87,11 @@ void *Timselstat(void *argument)
   if ( nargc > 2 ) nskip   = atoi(operatorArgv()[2]);
 
   if ( cdoVerbose ) cdoPrint("nsets = %d, noffset = %d, nskip = %d", ndates, noffset, nskip);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -105,44 +115,13 @@ void *Timselstat(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
-  samp1 = (field_t **) malloc(nvars*sizeof(field_t *));
-  if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (field_t **) malloc(nvars*sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
-
-      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-      samp1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-      if ( operfunc == func_std || operfunc == func_var )
-	vars2[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  vars1[varID][levelID].grid    = gridID;
-	  vars1[varID][levelID].nmiss   = 0;
-	  vars1[varID][levelID].missval = missval;
-	  vars1[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	  samp1[varID][levelID].grid    = gridID;
-	  samp1[varID][levelID].nmiss   = 0;
-	  samp1[varID][levelID].missval = missval;
-	  samp1[varID][levelID].ptr     = NULL;
-	  if ( operfunc == func_std || operfunc == func_var )
-	    {
-	      vars2[varID][levelID].grid    = gridID;
-	      vars2[varID][levelID].nmiss   = 0;
-	      vars2[varID][levelID].missval = missval;
-	      vars2[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	    }
-	}
-    }
+  vars1 = field_malloc(vlistID1, FIELD_PTR);
+  samp1 = field_malloc(vlistID1, FIELD_NONE);
+  if ( lvarstd )
+    vars2 = field_malloc(vlistID1, FIELD_PTR);
 
   for ( tsID = 0; tsID < noffset; tsID++ )
     {
@@ -241,7 +220,7 @@ void *Timselstat(void *argument)
 			  samp1[varID][levelID].ptr[i]++;
 		    }
 
-		  if ( operfunc == func_std || operfunc == func_var )
+		  if ( lvarstd )
 		    {
 		      farsumq(&vars2[varID][levelID], field);
 		      farsum(&vars1[varID][levelID], field);
@@ -253,7 +232,7 @@ void *Timselstat(void *argument)
 		}
 	    }
 
-	  if ( nsets == 0 && (operfunc == func_std || operfunc == func_var) )
+	  if ( nsets == 0 && lvarstd )
 	    for ( varID = 0; varID < nvars; varID++ )
 	      {
 		if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -269,7 +248,7 @@ void *Timselstat(void *argument)
 
       if ( nrecs == 0 && nsets == 0 ) break;
 
-      if ( operfunc == func_mean || operfunc == func_avg )
+      if ( lmean )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -282,7 +261,7 @@ void *Timselstat(void *argument)
 		  fardiv(&vars1[varID][levelID], samp1[varID][levelID]);
 	      }
 	  }
-      else if ( operfunc == func_std || operfunc == func_var )
+      else if ( lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -291,18 +270,17 @@ void *Timselstat(void *argument)
 	      {
 		if ( samp1[varID][levelID].ptr == NULL )
 		  {
-		    if ( operfunc == func_std )
-		      farcstd(&vars1[varID][levelID], vars2[varID][levelID], 1.0/nsets);
+		    if ( lstd )
+		      farcstdx(&vars1[varID][levelID], vars2[varID][levelID], nsets, divisor);
 		    else
-		      farcvar(&vars1[varID][levelID], vars2[varID][levelID], 1.0/nsets);
+		      farcvarx(&vars1[varID][levelID], vars2[varID][levelID], nsets, divisor);
 		  }
 		else
 		  {
-		    farinv(&samp1[varID][levelID]);
-		    if ( operfunc == func_std )
-		      farstd(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID]);
+		    if ( lstd )
+		      farstdx(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID], divisor);
 		    else
-		      farvar(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID]);
+		      farvarx(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID], divisor);
 		  }
 	      }
 	  }
@@ -342,24 +320,10 @@ void *Timselstat(void *argument)
 
  LABEL_END:
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  free(vars1[varID][levelID].ptr);
-	  if ( samp1[varID][levelID].ptr ) free(samp1[varID][levelID].ptr);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[varID][levelID].ptr);
-	}
 
-      free(vars1[varID]);
-      free(samp1[varID]);
-      if ( operfunc == func_std || operfunc == func_var ) free(vars2[varID]);
-    }
-
-  free(vars1);
-  free(samp1);
-  if ( operfunc == func_std || operfunc == func_var ) free(vars2);
+  field_free(vars1, vlistID1);
+  field_free(samp1, vlistID1);
+  if ( lvarstd ) field_free(vars2, vlistID1);
 
   if ( field.ptr ) free(field.ptr);
 

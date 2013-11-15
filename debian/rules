@@ -4,58 +4,89 @@ export DH_VERBOSE=1
 
 # The magic debhelper  rule
 %:
-	dh $@ 
+	dh $@ --with autoreconf
 
 DESTDIR:=`pwd`/debian/tmp/
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 LIBDIR:=/usr/lib/$(DEB_HOST_MULTIARCH)
+TOPDIR=:=`pwd`
 
-CFLAGS += -fPIC
-CPPFLAGS = -DgFortran
+# To enable all, uncomment following line
+DEB_BUILD_MAINT_OPTIONS:= hardening=+all
+DEB_CFLAGS_MAINT_APPEND:= -Wall -pedantic -fPIC
+export DEB_BUILD_MAINT_OPTIONS
+export DEB_CFLAGS_MAINT_APPEND
+
+CPPFLAGS += -DgFortran
 
 ARCH:=$(shell dpkg --print-architecture)
-WITH_GRIB:= --with-grib-api=/usr --enable-cgribex
+WITH_GRIB:= --with-grib-api=/usr --disable-cgribex
 WITH_JASPER:= --with-jasper=/usr
+AS_NEEDED= -Wl,--as-needed
+WITH_MAGICS:= --with-magics=/usr
+
+# export LIBTOOLIZE=true
+
+# On powerpc, amd64, arm*, don't do fPIE, only relro
+ifeq ($(ARCH), amd64)
+  export LDFLAGS= -Wl,-z,relro -Wl,-z,now
+endif
+ifeq ($(ARCH), armel)
+  export LDFLAGS= -Wl,-z,relro -Wl,-z,now
+  export AS_NEEDED=
+  export CFLAGS= -g -O2 -Wall
+endif
+ifeq ($(ARCH), armhf)
+  export LDFLAGS= -Wl,-z,relro -Wl,-z,now
+endif
+ifeq ($(ARCH),powerpc)
+  export LDFLAGS= -Wl,-z,relro -Wl,-z,now
+  export AS_NEEDED=
+  export CFLAGS= -g -O2 -Wall
+endif
 
 # grib-api not available on these arches; jasper is only needed for grib-api
 ifeq ($(ARCH), mips)
   WITH_GRIB:=
   WITH_JASPER:=
+  WITH_MAGICS:=
 endif
 ifeq ($(ARCH), hppa)
   WITH_GRIB:=
   WITH_JASPER:=
-endif
-ifeq ($(ARCH), sparc)
-  WITH_GRIB:=
-  WITH_JASPER:=
+  WITH_MAGICS:=
 endif
 
 override_dh_auto_clean:
 	dh_auto_clean	|| echo "distclean ok"
+	#rm -f cdo.settings src/config.h  libtool libcdi/config.log libcdi/config.status src/stamp-h1 confdefs.h
 	rm -f Makefile missing config.status config.log libcdi/tests/libcdi.a
 	rm -f config/compile config/mkinstalldirs config/config.guess config/config.sub
-	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/ltmain.sh config/missing configure INSTALL
+	rm -f src/config.h.in aclocal.m4 config/depcomp config/install-sh config/missing configure INSTALL
 	rm -f libcdi/INSTALL libcdi/aclocal.m4 m4/libtool.m4 m4/ltoptions.m4 m4/ltversion.m4
 	rm -f libcdi/m4/libtool.m4 libcdi/m4/ltoptions.m4 libcdi/m4/ltversion.m4 libcdi/configure
 	rm -f libcdi/config/config.guess libcdi/config/config.sub libcdi/config/depcomp libcdi/config/install-sh 
-	rm -f libcdi/config/ltmain.sh libcdi/config/missing libcdi/config/mkinstalldirs
+	rm -f libcdi/config/missing libcdi/config/mkinstalldirs
 	find . -name Makefile.in -delete
+	find . -name Makefile -delete
 	find . -type l -delete
 	rm -rf src/.deps
 
 
+override_dh_autoreconf:
+	dh_autoreconf --as-needed
+
 override_dh_auto_configure:
 	ln -sf /usr/include/cfortran.h libcdi/src/cfortran.h 
-	dh_autoreconf
-	LDFLAGS="-Wl,--as-needed"  
 	  ./configure --prefix=/usr --libdir=$(LIBDIR) \
 		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr \
 		--enable-iso-c-interface  \
-		 $(WITH_GRIB) $(WITH_JASPER)  FC=gfortran LIBS="-Wl,-Bstatic -lpng12 -ljasper -ljpeg -lz -Wl,-Bdynamic -lm -lcurl"
-	rm -f libtool libcdi/libtool
-	ln -sf /usr/bin/libtool libtool
-	ln -sf /usr/bin/libtool libcdi/libtool
+		 $(WITH_GRIB) $(WITH_JASPER) $(WITH_MAGICS)  FC=gfortran \
+		LIBS="-Wl,-Bstatic -lpng12 -ljasper -lm -ljpeg -lz -Wl,-Bdynamic -lcurl" \
+		LDFLAGS="$(LDFLAGS) $(AS_NEEDED)"
+	#rm -f libtool libcdi/libtool
+	#ln -sf /usr/bin/libtool libtool
+	#ln -sf /usr/bin/libtool libcdi/libtool
 
 override_dh_auto_install:
 	dh_auto_install
@@ -65,3 +96,8 @@ override_dh_auto_install:
 	cp contrib/cdoCompletion.bash $(DESTDIR)/etc/bash_completion.d/cdo
 	cp contrib/cdoCompletion.zsh $(DESTDIR)//usr/share/zsh/functions/Completion/Linux/_cdo
 
+override_dh_auto_test:
+	# Need to define path to 'cdo' for python tests
+	# export PATH=$(PATH):$(TOPDIR)/src make check
+	#test/Makefile.am:5: error: using '$(top_srcdir)' in TESTS is currently broken: '$(top_srcdir)/test/test_info.py'
+	@echo "Tests currently disabled"

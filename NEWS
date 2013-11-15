@@ -1,15 +1,94 @@
 CDO NEWS
 --------
+
+Version 1.6.2 (12 November 2013):
+
+   New features:
+     * select: added support for key >timestep_of_year<
+     * mastrfu: added missing value support
+     * splitmon: added optional parameter to set the format string for the month
+   Fixed bugs:
+     * selyear: wrong result for negative years [Bug #3836]
+     * eca_gsl: start date of growing season is wrong if the length of growing season is zero
+
+Version 1.6.1 (27 June 2013):
+
+   New features:
+     * support of blanks in filenames and parameter
+   Changed operators:
+     * gradsdes: added support for netCDF files
+     * Info: add chunking information of netcdf files (only with verbose output) [Feature #3489]
+     * select: added support for key >hour<
+   Fixed bugs:
+     * fldcor: check missing value of 2. input file
+     * enscrps: wrong result since CDO version 1.5.6 [Bug #3403]
+     * selmon: month not found for negative years [Bug #3439]
+     * shifttime: wrong result for negative hours and days [Bug #3440]
+     * inttime: removes last time step [Bug #3611]
+
+Version 1.6.0 (14 March 2013):
+
+   New operators:
+     * select: Select fields from an unlimited number of input files
+     * mergegrid: Merge horizontal grids
+     * yearmonmean: yearly mean from monthly data
+     * duplicate: Duplicates a dataset
+     * adisit: Potential temperature to in-situ temperature
+     * rhopot: Calculates potential density
+   Changed operators:
+     * setcalendar: changed CDO calendar names to CF calendar names (Feature #3123)
+                    (standard, proleptic_gregorian, 360_day, 365_day, 366_day)
+     * masklonlatbox: added support for curvilinear grids
+     * diff: print only records that differ
+   Fixed bugs:
+     * sellonlatbox: wrong result with overlapped lonlatbox on curvilinear grids
+     * ensrkhisttime: fixed memory fault
+     * expr: wrong result for operation var1/var2 where var2 = 0
+     * Runstat: added support for time bounds (Bug #3127)
+     * merge: uses size of the first input file for the output buffer
+
+Version 1.5.9 (17 December 2012):
+
+   New features:
+     * cdo option -z zip: added optional compression level -z zip[_1-9]
+     * cdo: added option -k <chunktype> to set the chunk type to auto, grid or lines
+     * Added workaround to combine CDO operators with the result of mergetime, merge, copy, cat, ens<STAT>
+       - use one input parameter with wildcards in single quotes, e.g.: 'ifile?_*' 
+   Changed operators:
+     * enlarge: added missing value support
+   Fixed bugs:
+     * gradsdes: failed
+     * sellevel: loosing level bounds
+     * wrong result for user defined lonlat grids with xfirst < 0
+       (This bug was introduced in CDO version 1.5.8)
+
+Version 1.5.8 (30 October 2012):
+
+   New features:
+     * Added support for netCDF4(HDF5) formatted SCRIP grid description files
+     * added CDO option -L to lock all I/O calls. This option is neccessary if external I/O libraries like 
+       netCDF4 (HDF5) were installed without thread-safe support.
+   New operators:
+     * setunit: Set variable unit
+     * chunit:  Change variable unit
+   Changed operators:
+     * Info:  changed output format
+     * Sinfo: changed output format
+     * Diff:  changed output format
+   Fixed bugs:
+     * remaplaf: fixed bug in binary_search_int()
+     * eca_rr1: result has wrong long name attribute
+
 Version 1.5.6.1 (26 July 2012):
 
    Fixed bugs:
-     Wrong results with the following statistical functions:
-       *mean, *avg, *sum, *var, *std
-     only if all of the following conditions are complied:
-       - x86_64 machine (tornado, squall, thunder, lizard)
-       - dataset has no missing values
-       - the horizontal grid size is > 1 and not multiple of 8
-     This bug was introduced in CDO version 1.5.5.
+     * Wrong results with the following statistical functions:
+         *mean, *avg, *sum, *var, *std
+       only if all of the following conditions are complied:
+         - x86_64 machine (tornado, squall, thunder, lizard)
+         - dataset has no missing values
+         - the horizontal grid size is > 1 and not multiple of 8
+       This bug was introduced in CDO version 1.5.6.
 
 Version 1.5.6 (23 July 2012):
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,40 +23,40 @@
 #include "merge_sort2.h"
 /* QR */
 
-double crps_det_integrate(double *a, const double d, const int n);
+double crps_det_integrate(double *a, const double d, const size_t n);
 
-double _FADD_(double x, double y, double missval1, double missval2)
+double _FADD_(const double x, const double y, const double missval1, const double missval2)
 {
   return FADD(x,y);
 }
 
-double _FSUB_(double x, double y, double missval1, double missval2)
+double _FSUB_(const double x, const double y, const double missval1, const double missval2)
 {
   return FSUB(x, y);
 }
 
-double _FMUL_(double x, double y, double missval1, double missval2)
+double _FMUL_(const double x, const double y, const double missval1, const double missval2)
 {
   return FMUL(x, y);
 }
 
-double _FDIV_(double x, double y, double missval1, double missval2)
+double _FDIV_(const double x, const double y, const double missval1, const double missval2)
 {
   return FDIV(x, y);
 }
 
-double _FPOW_(double x, double y, double missval1, double missval2)
+double _FPOW_(const double x, const double y, const double missval1, const double missval2)
 {
   return FPOW(x, y);
 }
 
-double _FSQRT_(double x, double missval1)
+double _FSQRT_(const double x, const double missval1)
 {
   return FSQRT(x);
 }
 
 
-double fldfun(field_t field, int function)
+double fldfun(field_t field, const int function)
 {
   double rval = 0;
 
@@ -67,17 +67,20 @@ double fldfun(field_t field, int function)
   else if ( function == func_mean )  rval = fldmean(field);
   else if ( function == func_avg  )  rval = fldavg(field);
   else if ( function == func_std  )  rval = fldstd(field);
+  else if ( function == func_std1 )  rval = fldstd1(field);
   else if ( function == func_var  )  rval = fldvar(field);
+  else if ( function == func_var1 )  rval = fldvar1(field);
   
   else if ( function == func_crps )  rval = fldcrps(field);
   else if ( function == func_brs )   rval = fldbrs(field);
 
   else if ( function == func_rank )  rval = fldrank(field);
   else if ( function == func_roc )   rval = fldroc(field);
-  else cdoAbort("function %d not implemented!", function);
+  else cdoAbort("%s: function %d not implemented!", __func__, function);
 
   return rval;
 }
+
 
 double fldrank(field_t field) 
 {
@@ -85,15 +88,14 @@ double fldrank(field_t field)
   // Using first value as reference (observation)
   double *array  =  &(field.ptr[1]);
   double val     = array[-1];
-  double missval = field.missval;
+  const double missval = field.missval;
   int nmiss      = field.nmiss;
-  long len       = field.size-1;
-  int j;
+  const size_t len       = field.size-1;
+  size_t j;
   
-  if ( nmiss ) 
-    return(missval);
+  if ( nmiss )  return(missval);
 
-  sort_iter_single(len,array,1);
+  sort_iter_single(len,array, 1);
 
   if ( val > array[len-1] ) 
     res=(double)len;
@@ -103,6 +105,7 @@ double fldrank(field_t field)
 	res=(double)j; 
 	break;
       }
+
   return res;
 }
 
@@ -114,8 +117,8 @@ double fldroc(field_t field)
 
 double fldcrps(field_t field)
 {
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
   double *array  = field.ptr;
 
   if ( nmiss > 0 ) 
@@ -128,20 +131,20 @@ double fldcrps(field_t field)
 
   // Use first value as reference
   sort_iter_single(len-1,&array[1],ompNumThreads);
-  return crps_det_integrate(&array[1],array[0],len-1);
 
+  return crps_det_integrate(&array[1],array[0],len-1);
 }
 
 
 double fldbrs(field_t field) 
 {
-  long      len   = field.size;
-  int     nmiss   = field.nmiss;
+  const size_t    len   = field.size;
+  const int     nmiss   = field.nmiss;
   double *array   = field.ptr;
-  double missval  = field.missval;
+  const double missval  = field.missval;
 
   double brs = 0;
-  int i,count=0;
+  size_t i, count=0;
 
   // Using first value as reference
   if ( nmiss == 0 ) 
@@ -168,10 +171,10 @@ double fldbrs(field_t field)
 
 double fldmin(field_t field)
 {
-  long   i;
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
-  double missval = field.missval;
+  size_t   i;
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
   double *array  = field.ptr;
   double rmin = 0;
 
@@ -198,10 +201,10 @@ double fldmin(field_t field)
 
 double fldmax(field_t field)
 {
-  long   i;
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
-  double missval = field.missval;
+  size_t   i;
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
   double *array  = field.ptr;
   double rmax = 0;
 
@@ -228,11 +231,11 @@ double fldmax(field_t field)
 
 double fldsum(field_t field)
 {
-  long   i;
-  long   nvals   = 0;
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
-  double missval = field.missval;
+  size_t   i;
+  size_t   nvals   = 0;
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
   double *array  = field.ptr;
   double rsum = 0;
 
@@ -259,11 +262,11 @@ double fldsum(field_t field)
 
 double fldmean(field_t field)
 {
-  long   i;
-  long   len      = field.size;
-  int    nmiss    = field.nmiss;
-  double missval1 = field.missval;
-  double missval2 = field.missval;
+  size_t   i;
+  const size_t len      = field.size;
+  const int    nmiss    = field.nmiss;
+  const double missval1 = field.missval;
+  const double missval2 = field.missval;
   double *array   = field.ptr;
   double *w       = field.weight;
   double rsum = 0, rsumw = 0, ravg = 0;
@@ -294,11 +297,11 @@ double fldmean(field_t field)
 
 double fldavg(field_t field)
 {
-  long   i;
-  long   len      = field.size;
-  int    nmiss    = field.nmiss;
-  double missval1 = field.missval;
-  double missval2 = field.missval;
+  size_t   i;
+  const size_t len      = field.size;
+  const int    nmiss    = field.nmiss;
+  const double missval1 = field.missval;
+  const double missval2 = field.missval;
   double *array   = field.ptr;
   double *w       = field.weight;
   double rsum = 0, rsumw = 0, ravg = 0;
@@ -326,39 +329,49 @@ double fldavg(field_t field)
   return (ravg);
 }
 
-
-double fldvar(field_t field)
-{
-  long   i;
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
-  double missval = field.missval;
-  double *array  = field.ptr;
-  double *w      = field.weight;
-  double rsum = 0, rsumw = 0, rvar = 0;
-  double rsumq = 0, rsumwq = 0;
+static
+void prevarsum(const double *restrict array, const double *restrict w, size_t len, const int nmiss, 
+	       double missval, double *rsum, double *rsumw, double *rsumq, double *rsumwq)
+{ 
+  size_t i;
+  *rsum = *rsumw = 0;
+  *rsumq = *rsumwq = 0;
 
   if ( nmiss > 0 )
     {
       for ( i = 0; i < len; i++ ) 
         if ( !DBL_IS_EQUAL(array[i], missval) && !DBL_IS_EQUAL(w[i], missval) )
           {
-            rsum   += w[i] * array[i];
-            rsumq  += w[i] * array[i] * array[i];
-            rsumw  += w[i];
-            rsumwq += w[i] * w[i];
+            *rsum   += w[i] * array[i];
+            *rsumq  += w[i] * array[i] * array[i];
+            *rsumw  += w[i];
+            *rsumwq += w[i] * w[i];
           }
     }
   else
     {
       for ( i = 0; i < len; i++ ) 
         {
-          rsum   += w[i] * array[i];
-          rsumq  += w[i] * array[i] * array[i];
-          rsumw  += w[i];
-          rsumwq += w[i] * w[i];
+          *rsum   += w[i] * array[i];
+          *rsumq  += w[i] * array[i] * array[i];
+          *rsumw  += w[i];
+          *rsumwq += w[i] * w[i];
         }
     }
+}
+
+
+double fldvar(field_t field)
+{
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
+  double *array  = field.ptr;
+  double *w      = field.weight;
+  double rsum, rsumw, rvar;
+  double rsumq, rsumwq;
+
+  prevarsum(array, w, len, nmiss, missval, &rsum, &rsumw, &rsumq, &rsumwq);
 
   rvar = IS_NOT_EQUAL(rsumw, 0) ? (rsumq*rsumw - rsum*rsum) / (rsumw*rsumw) : missval;
   if ( rvar < 0 && rvar > -1.e-5 ) rvar = 0;
@@ -367,9 +380,28 @@ double fldvar(field_t field)
 }
 
 
+double fldvar1(field_t field)
+{
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
+  double *array  = field.ptr;
+  double *w      = field.weight;
+  double rsum, rsumw, rvar;
+  double rsumq, rsumwq;
+
+  prevarsum(array, w, len, nmiss, missval, &rsum, &rsumw, &rsumq, &rsumwq);
+
+  rvar = (rsumw*rsumw > rsumwq) ? (rsumq*rsumw - rsum*rsum) / (rsumw*rsumw - rsumwq) : missval;
+  if ( rvar < 0 && rvar > -1.e-5 ) rvar = 0;
+
+  return (rvar);
+}
+
+
 double fldstd(field_t field)
 {
-  double missval = field.missval;
+  const double missval = field.missval;
   double rvar, rstd;
 
   rvar = fldvar(field);
@@ -387,9 +419,30 @@ double fldstd(field_t field)
 }
 
 
+double fldstd1(field_t field)
+{
+  const double missval = field.missval;
+  double rvar, rstd;
+
+  rvar = fldvar1(field);
+
+  if ( DBL_IS_EQUAL(rvar, missval) || rvar < 0 )
+    {
+      rstd = missval;
+    }
+  else
+    {
+      rstd = IS_NOT_EQUAL(rvar, 0) ? sqrt(rvar) : 0;
+    }
+
+  return (rstd);
+}
+
+
 void fldrms(field_t field, field_t field2, field_t *field3)
 {
-  long   i, len;
+  size_t   i;
+  size_t len;
   int    rnmiss = 0;
   int    grid1    = field.grid;
   //  int    nmiss1   = field.nmiss;
@@ -397,13 +450,13 @@ void fldrms(field_t field, field_t field2, field_t *field3)
   int    grid2    = field2.grid;
   //  int    nmiss2   = field2.nmiss;
   double *array2  = field2.ptr;
-  double missval1 = field.missval;
-  double missval2 = field2.missval;
+  const double missval1 = field.missval;
+  const double missval2 = field2.missval;
   double *w       = field.weight;
   double rsum = 0, rsumw = 0, ravg = 0;
 
   len    = gridInqSize(grid1);
-  if ( len != gridInqSize(grid2) )
+  if ( len != (size_t) gridInqSize(grid2) )
     cdoAbort("fields have different size!");
 
   /*
@@ -440,7 +493,7 @@ void fldrms(field_t field, field_t field2, field_t *field3)
 
 void varrms(field_t field, field_t field2, field_t *field3)
 {
-  long   i, k, nlev, len;
+  size_t   i, k, nlev, len;
   int    rnmiss = 0;
   int    zaxis    = field.zaxis;
   int    grid1    = field.grid;
@@ -449,14 +502,14 @@ void varrms(field_t field, field_t field2, field_t *field3)
   int    grid2    = field2.grid;
   //  int    nmiss2   = field2.nmiss;
   double *array2  = field2.ptr;
-  double missval1 = field.missval;
-  double missval2 = field2.missval;
+  const double missval1 = field.missval;
+  const double missval2 = field2.missval;
   double *w       = field.weight;
   double rsum = 0, rsumw = 0, ravg = 0;
 
   nlev   = zaxisInqSize(zaxis);
   len    = gridInqSize(grid1);
-  if ( len != gridInqSize(grid2) )
+  if ( len != (size_t) gridInqSize(grid2) )
     cdoAbort("fields have different size!");
 
   /*
@@ -492,15 +545,15 @@ void varrms(field_t field, field_t field2, field_t *field3)
 }
 
 /* RQ */
-double fldpctl(field_t field, int p)
+double fldpctl(field_t field, const int p)
 {
-  long   len     = field.size;
-  int    nmiss   = field.nmiss;
-  double missval = field.missval;
+  const size_t len     = field.size;
+  const int    nmiss   = field.nmiss;
+  const double missval = field.missval;
   double *array  = field.ptr;
   double *array2;
 
-  long i, j;
+  size_t i, j;
   double pctl = missval;
 
   if ( len - nmiss > 0 )
@@ -531,7 +584,7 @@ double fldpctl(field_t field, int p)
 /*  update the number non missing values */
 void fldunm(field_t *field)
 {
-  long i;
+  size_t i;
 
   field->nmiss = 0;
   for ( i = 0; i < field->size; i++ )
@@ -539,23 +592,23 @@ void fldunm(field_t *field)
 }
 
 /*  check for non missval values */
-int fldhvs(field_t *fieldPtr, int nlevels)
+int fldhvs(field_t *fieldPtr, const size_t nlevels)
 {
-  int level;
+  size_t level;
   field_t field;
 
   for ( level = 0; level < nlevels; level++)
     {
       field = fieldPtr[level];
-      if ( field.nmiss != field.size )
+      if ( (size_t)field.nmiss != field.size )
         return TRUE;
     }
+
   return FALSE;
 }
 
 
-
-double crps_det_integrate(double *a, const double d, const int n)
+double crps_det_integrate(double *a, const double d, const size_t n)
 {
   /* *************************************************************************** */
   /* This routine finds the area between the cdf described by the ordered array  */
@@ -571,8 +624,8 @@ double crps_det_integrate(double *a, const double d, const int n)
 
   double area = 0; 
   //  double tmp;
-  int i;
-#if defined (_OPENMP)
+  size_t i;
+#if defined(_OPENMP)
 #pragma omp parallel for if ( n>10000 ) shared(a) private(i) \
   reduction(+:area) schedule(static,10000) 
 #endif                                                     /* **************************** */

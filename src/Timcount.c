@@ -41,16 +41,16 @@ void *Timcount(void *argument)
   int vdate = 0, vtime = 0;
   int vdate0 = 0, vtime0 = 0;
   int nrecs, nrecords;
-  int gridID, varID, levelID, recID;
+  int varID, levelID, recID;
   int tsID;
   int otsID;
   long nsets;
   int i;
   int streamID1, streamID2;
   int vlistID1, vlistID2, taxisID1, taxisID2;
-  int nvars, nlevel;
+  int nvars;
+  int nwpv; // number of words per value; real:1  complex:2
   int *recVarID, *recLevelID;
-  double missval;
   field_t **vars1 = NULL;
   field_t field;
 
@@ -90,28 +90,12 @@ void *Timcount(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
-
-      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  vars1[varID][levelID].grid    = gridID;
-	  vars1[varID][levelID].nmiss   = 0;
-	  vars1[varID][levelID].missval = missval;
-	  vars1[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	}
-    }
+  vars1 = field_malloc(vlistID1, FIELD_PTR);
 
   tsID    = 0;
   otsID   = 0;
@@ -138,11 +122,12 @@ void *Timcount(void *argument)
 		  recLevelID[recID] = levelID;
 		}
 
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+	      nwpv     = vars1[varID][levelID].nwpv;
+	      gridsize = gridInqSize(vars1[varID][levelID].grid);
 
 	      if ( nsets == 0 )
 		{
-		  for ( i = 0; i < gridsize; i++ )
+		  for ( i = 0; i < nwpv*gridsize; i++ )
 		    vars1[varID][levelID].ptr[i] = vars1[varID][levelID].missval;
 		  vars1[varID][levelID].nmiss = gridsize;
 		}
@@ -181,18 +166,7 @@ void *Timcount(void *argument)
       otsID++;
     }
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  free(vars1[varID][levelID].ptr);
-	}
-
-      free(vars1[varID]);
-    }
-
-  free(vars1);
+  field_free(vars1, vlistID1);
 
   if ( field.ptr ) free(field.ptr);
 

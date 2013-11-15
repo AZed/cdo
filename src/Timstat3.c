@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -113,11 +113,17 @@ void *Timstat3(void *argument)
   for ( i = 0; i < NIN; ++i ) reached_eof[i] = 0;
 
   for ( i = 0; i < NIN; ++i )
-    in[i].ptr = (double *) malloc(gridsize*sizeof(double));
-  				 
+    {
+      field_init(&in[i]);
+      in[i].ptr = (double *) malloc(gridsize*sizeof(double));
+    }
+				 
   for ( i = 0; i < NOUT; ++i )
-    out[i].ptr = (double *) malloc(gridsize*sizeof(double));
-  				 
+    {
+      field_init(&out[i]);
+      out[i].ptr = (double *) malloc(gridsize*sizeof(double));
+    }
+				 
   for ( iw = 0; iw < NFWORK; ++iw )
     fwork[iw] = (field_t **) malloc(nvars*sizeof(field_t *));
   for ( iw = 0; iw < NIWORK; ++iw )
@@ -140,6 +146,7 @@ void *Timstat3(void *argument)
 	{
 	  for ( iw = 0; iw < NFWORK; ++iw )
 	    {
+	      field_init(&fwork[iw][varID][levelID]);
 	      fwork[iw][varID][levelID].grid    = gridID;
 	      fwork[iw][varID][levelID].nmiss   = 0;
 	      fwork[iw][varID][levelID].missval = missval;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -66,7 +66,7 @@ void *Writegrid(void *argument)
       for ( i = 0; i < gridsize; i++ ) mask[i] = 1;
     }
       
-  writeNCgrid(cdoStreamName(1), gridID, mask);
+  writeNCgrid(cdoStreamName(1)->args, gridID, mask);
 
   streamClose(streamID);
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,7 @@ void gen_index(int gridID1, int gridID2, int *index)
   int nlat1, nlon1;
   int nlat2, nlon2;
   int gridtype1, gridtype2;
-  int gridsize1, gridsize2;
+  int gridsize2;
   int i, j, k, i1, i2;
   int *xindex = NULL, *yindex = NULL;
   double *xvals1 = NULL, *yvals1 = NULL;
@@ -43,7 +43,6 @@ void gen_index(int gridID1, int gridID2, int *index)
   gridtype1 = gridInqType(gridID1);
   gridtype2 = gridInqType(gridID2);
 
-  gridsize1 = gridInqSize(gridID1);
   gridsize2 = gridInqSize(gridID2);
 
   if ( gridtype1 != gridtype2 )
@@ -85,9 +84,9 @@ void gen_index(int gridID1, int gridID2, int *index)
       {
 	char units[CDI_MAX_NAME];
 	gridInqXunits(gridID1, units);
-	gridToDegree(units, "grid1 center lon", nlon1, xvals1);
+	grid_to_degree(units, nlon1, xvals1, "grid1 center lon");
 	gridInqYunits(gridID1, units);
-	gridToDegree(units, "grid1 center lat", nlat1, yvals1);
+	grid_to_degree(units, nlat1, yvals1, "grid1 center lat");
       }
 
       gridInqXvals(gridID2, xvals2);
@@ -97,9 +96,9 @@ void gen_index(int gridID1, int gridID2, int *index)
       {
 	char units[CDI_MAX_NAME];
 	gridInqXunits(gridID2, units);
-	gridToDegree(units, "grid2 center lon", nlon2, xvals2);
+	grid_to_degree(units, nlon2, xvals2, "grid2 center lon");
 	gridInqYunits(gridID2, units);
-	gridToDegree(units, "grid2 center lat", nlat2, yvals2);
+	grid_to_degree(units, nlat2, yvals2, "grid2 center lat");
       }
 
       for ( i2 = 0; i2 < nlat2; i2++ )
@@ -187,6 +186,9 @@ void *Enlargegrid(void *argument)
   cdoInitialize(argument);
 
   operatorInputArg("grid description file or name");
+  if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
+  if ( operatorArgc() > 2 ) cdoAbort("Too many arguments!");
+
   gridID2 = cdoDefineGrid(operatorArgv()[0]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -200,7 +202,7 @@ void *Enlargegrid(void *argument)
     if ( vlistGrid(vlistID1, 0) != vlistGrid(vlistID1, index) )
       ndiffgrids++;
 
-  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(0));
+  if ( ndiffgrids > 0 ) cdoAbort("Too many different grids in %s!", cdoStreamName(0)->args);
 
   gridID1 = vlistGrid(vlistID1, 0);
 

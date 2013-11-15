@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
       Gridboxstat    gridboxvar          Gridbox variance
 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
@@ -188,9 +188,9 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
       {
 	char units[CDI_MAX_NAME];
 	gridInqXunits(gridID1, units);
-	gridToDegree(units, "grid center lon", nlon1*nlat1, xvals1);
+	grid_to_degree(units, nlon1*nlat1, xvals1, "grid center lon");
 	gridInqYunits(gridID1, units);
-	gridToDegree(units, "grid center lat", nlon1*nlat1, yvals1);
+	grid_to_degree(units, nlon1*nlat1, yvals1, "grid center lat");
       }
       
       if ( gridHasBounds )
@@ -206,9 +206,9 @@ int genBoxGrid(int gridID1, int xinc, int yinc)
 	  {
 	    char units[CDI_MAX_NAME];
 	    gridInqXunits(gridID1, units);
-	    gridToDegree(units, "grid corner lon", 4*nlon1*nlat1, grid1_corner_lon);
+	    grid_to_degree(units, 4*nlon1*nlat1, grid1_corner_lon, "grid corner lon");
 	    gridInqYunits(gridID1, units);
-	    gridToDegree(units, "grid corner lat", 4*nlon1*nlat1, grid1_corner_lat);
+	    grid_to_degree(units, 4*nlon1*nlat1, grid1_corner_lat, "grid corner lat");
 	  }
         }
       
@@ -537,7 +537,11 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
   field_t *field;
   int isize;
   int useWeight = FALSE;
+  /*
+  double findex = 0;
 
+  progressInit();
+  */
   if ( field1->weight ) useWeight = TRUE;
 
   gridsize      = xinc*yinc;
@@ -565,17 +569,27 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
   nlon2 = gridInqXsize(gridID2);
   nlat2 = gridInqYsize(gridID2);
 
-
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(ig, ilat, ilon, j, jj, i, ii, index, isize, ompthID)
 #endif
   for ( ig = 0; ig < nlat2*nlon2; ++ig )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       ompthID = omp_get_thread_num();
 #else
       ompthID = 0;
 #endif
+      /*
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( ompthID != 0 ) lprogress = 0;
+#endif
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/nlat2*nlon2);
+      */
       ilat = ig/nlon2;
       ilon = ig - ilat*nlon2;
 
@@ -681,6 +695,9 @@ void *Gridboxstat(void *argument)
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
+
+  field_init(&field1);
+  field_init(&field2);
 
   gridsize1 = gridInqSize(gridID1);
   field1.ptr    = (double *) malloc(gridsize1*sizeof(double));

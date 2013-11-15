@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -44,12 +44,12 @@ void *Seasstat(void *argument)
   int vdate0 = 0, vtime0 = 0;
   int vdate1 = 0, vtime1 = 0;
   int nrecs, nrecords;
-  int gridID, varID, levelID, recID;
+  int varID, levelID, recID;
   int tsID;
   int otsID;
   long nsets;
   int i;
-  int year, month, seas, seas0 = 0;
+  int year, month, day, seas, seas0 = 0;
   int streamID1, streamID2;
   int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
@@ -57,7 +57,6 @@ void *Seasstat(void *argument)
   int *recVarID, *recLevelID;
   int newseas, oldmon = 0, newmon;
   int nseason = 0;
-  double missval;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
   field_t field;
   int season_start;
@@ -100,44 +99,13 @@ void *Seasstat(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
-  samp1 = (field_t **) malloc(nvars*sizeof(field_t *));
+  vars1 = field_malloc(vlistID1, FIELD_PTR);
+  samp1 = field_malloc(vlistID1, FIELD_NONE);
   if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (field_t **) malloc(nvars*sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
-
-      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-      samp1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-      if ( operfunc == func_std || operfunc == func_var )
-	vars2[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  vars1[varID][levelID].grid    = gridID;
-	  vars1[varID][levelID].nmiss   = 0;
-	  vars1[varID][levelID].missval = missval;
-	  vars1[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	  samp1[varID][levelID].grid    = gridID;
-	  samp1[varID][levelID].nmiss   = 0;
-	  samp1[varID][levelID].missval = missval;
-	  samp1[varID][levelID].ptr     = NULL;
-	  if ( operfunc == func_std || operfunc == func_var )
-	    {
-	      vars2[varID][levelID].grid    = gridID;
-	      vars2[varID][levelID].nmiss   = 0;
-	      vars2[varID][levelID].missval = missval;
-	      vars2[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	    }
-	}
-    }
+    vars2 = field_malloc(vlistID1, FIELD_PTR);
 
   tsID    = 0;
   otsID   = 0;
@@ -149,8 +117,7 @@ void *Seasstat(void *argument)
 	{
 	  vdate = taxisInqVdate(taxisID1);
 	  vtime = taxisInqVtime(taxisID1);
-	  year  =  vdate / 10000;
-	  month = (vdate - year*10000) / 100;
+	  cdiDecodeDate(vdate, &year, &month, &day);
 	  if ( month < 1 || month > 12 )
 	    cdoAbort("Month %d out of range!", month);
 
@@ -348,24 +315,10 @@ void *Seasstat(void *argument)
       otsID++;
     }
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  free(vars1[varID][levelID].ptr);
-	  if ( samp1[varID][levelID].ptr ) free(samp1[varID][levelID].ptr);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[varID][levelID].ptr);
-	}
 
-      free(vars1[varID]);
-      free(samp1[varID]);
-      if ( operfunc == func_std || operfunc == func_var ) free(vars2[varID]);
-    }
-
-  free(vars1);
-  free(samp1);
-  if ( operfunc == func_std || operfunc == func_var ) free(vars2);
+  field_free(vars1, vlistID1);
+  field_free(samp1, vlistID1);
+  if ( operfunc == func_std || operfunc == func_var ) field_free(vars2, vlistID1);
 
   if ( field.ptr ) free(field.ptr);
 

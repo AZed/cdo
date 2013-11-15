@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -115,6 +115,7 @@ void *Arithdays(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr    = (double *) malloc(gridsize*sizeof(double));
   field.weight = NULL;
 
@@ -143,8 +144,7 @@ void *Arithdays(void *argument)
 	}
 
       if ( cdoVerbose )
-	cdoPrint("calendar %d  year %d  month %d  result %g",
-		 calendar, year, month, rconst);
+	cdoPrint("calendar %d  year %d  month %d  result %g", calendar, year, month, rconst);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{

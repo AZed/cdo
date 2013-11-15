@@ -25,7 +25,9 @@ int    fileSetBufferType(int fileID, int type);
 void   fileSetBufferSize(int fileID, long buffersize);
 
 int    fileOpen(const char *filename, const char *mode);
+int    fileOpen_serial(const char *filename, const char *mode);
 int    fileClose(int fileID);
+int    fileClose_serial(int fileID);
 
 char  *fileInqName(int fileID);
 int    fileInqMode(int fileID);

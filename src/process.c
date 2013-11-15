@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,16 +15,20 @@
   GNU General Public License for more details.
 */
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
-#if  defined  (HAVE_PTHREAD_H)
+#if defined(HAVE_PTHREAD_H)
 #  include <pthread.h>
 #endif
 
 #include <stdio.h>
 #include <string.h>
+
+#if defined(HAVE_GLOB_H)
+#include <glob.h>
+#endif
 
 #include "cdo.h"
 #include "cdo_int.h"
@@ -35,10 +39,11 @@
 #include "dmemory.h"
 
 
-#define  MAX_PROCESS   128
-#define  MAX_STREAM     64
-#define  MAX_OPERATOR  128
-#define  MAX_ARGC     4096
+#define  MAX_PROCESS    128
+#define  MAX_STREAM      64
+#define  MAX_OPERATOR   128
+#define  MAX_OARGC     4096
+#define  MAX_FILES    65536
 
 
 typedef struct {
@@ -50,31 +55,32 @@ typedef struct {
 operator_t;
 
 typedef struct {
-#if  defined  (HAVE_LIBPTHREAD)
-  pthread_t threadID;
+#if defined(HAVE_LIBPTHREAD)
+  pthread_t   threadID;
+  int         l_threadID;
 #endif
-  short      nchild;
-  short      nstream;
-  short      streams[MAX_STREAM];
-  double     s_utime;
-  double     s_stime;
-  double     a_utime;
-  double     a_stime;
-  double     cputime;
+  short       nchild;
+  short       nstream;
+  short       streams[MAX_STREAM];
+  double      s_utime;
+  double      s_stime;
+  double      a_utime;
+  double      a_stime;
+  double      cputime;
 
-  off_t      nvals;
-  short      nvars;
-  int        ntimesteps;
-  short      streamCnt;
-  char     **streamNames;
-  char      *xoperator;
-  char      *operatorName;
-  char      *operatorArg;
-  int        oargc;
-  char      *oargv[MAX_ARGC];
-  char       prompt[64];
-  short      noper;
-  operator_t operator[MAX_OPERATOR];
+  off_t       nvals;
+  short       nvars;
+  int         ntimesteps;
+  short       streamCnt;
+  argument_t *streamNames;
+  char       *xoperator;
+  char       *operatorName;
+  char       *operatorArg;
+  int         oargc;
+  char       *oargv[MAX_OARGC];
+  char        prompt[64];
+  short       noper;
+  operator_t  operator[MAX_OPERATOR];
 }
 process_t;
 
@@ -84,7 +90,7 @@ static process_t Process[MAX_PROCESS];
 static int NumProcess = 0;
 static int NumProcessActive = 0;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 pthread_mutex_t processMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -93,20 +99,23 @@ int processCreate(void)
 {
   int processID;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
 #endif
+
   processID = NumProcess++;
   NumProcessActive++;
-#if  defined  (HAVE_LIBPTHREAD)
+
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
 #endif
 
   if ( processID >= MAX_PROCESS )
     Error("Limit of %d processes reached!", MAX_PROCESS);
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   Process[processID].threadID     = pthread_self();
+  Process[processID].l_threadID   = 1;
 #endif
   Process[processID].nstream      = 0;
   Process[processID].nchild       = 0;
@@ -130,13 +139,14 @@ int processCreate(void)
 int processSelf(void)
 {
   int processID = 0;
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_t thID = pthread_self();
 
   pthread_mutex_lock(&processMutex);
 
   for ( processID = 0; processID < NumProcess; processID++ )
-    if ( pthread_equal(Process[processID].threadID, thID) ) break;
+    if ( Process[processID].l_threadID )
+      if ( pthread_equal(Process[processID].threadID, thID) ) break;
 
   if ( processID == NumProcess )
     {
@@ -158,13 +168,13 @@ int processNums(void)
 {
   int pnums = 0;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
 #endif
 
   pnums = NumProcess;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
 #endif
 
@@ -176,13 +186,13 @@ int processNumsActive(void)
 {
   int pnums = 0;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
 #endif
 
   pnums = NumProcessActive;
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
 #endif
 
@@ -214,13 +224,17 @@ void processAddStream(int streamID)
   int sindex;
 
   if ( pstreamIsPipe(streamID) ) Process[processID].nchild++;
-
   sindex = Process[processID].nstream++;
 
   if ( sindex >= MAX_STREAM )
-    Error("limit of %d streams per process reached!", MAX_STREAM);
+    Error("limit of %d streams per process reached (processID = %d)!", MAX_STREAM, processID);
 
   Process[processID].streams[sindex] = streamID;
+}
+
+
+void processDelStream(int streamID)
+{
 }
 
 
@@ -316,6 +330,36 @@ const char *processInqPrompt(void)
   return (Process[processID].prompt);
 }
 
+#if defined(HAVE_GLOB_H)
+/* Convert a wildcard pattern into a list of blank-separated filenames which match the wildcard. */
+argument_t *glob_pattern(const char *restrict wildcard)
+{
+  size_t cnt, length = 0;
+  glob_t glob_results;
+  char **p;
+  argument_t *argument = NULL;
+
+  glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
+
+  /* How much space do we need?  */
+  for ( p = glob_results.gl_pathv, cnt = glob_results.gl_pathc; cnt; p++, cnt-- )
+    length += strlen(*p) + 1;
+
+  /* Allocate the space and generate the list.  */
+  argument = argument_new(glob_results.gl_pathc, length);
+
+  for ( cnt = 0; cnt < glob_results.gl_pathc; cnt++ )
+    {
+      argument->argv[cnt] = strdupx(glob_results.gl_pathv[cnt]);
+      strcat(argument->args, glob_results.gl_pathv[cnt]);
+      if ( cnt < glob_results.gl_pathc-1 ) strcat(argument->args, " ");
+    }
+
+  globfree(&glob_results);
+
+  return argument;
+}
+#endif
 
 int cdoStreamCnt(void)
 {
@@ -328,14 +372,14 @@ int cdoStreamCnt(void)
 }
 
 
-const char *cdoStreamName(int cnt)
+const argument_t *cdoStreamName(int cnt)
 {
   int processID = processSelf();
 
   if ( cnt > Process[processID].streamCnt || cnt < 0 )
     Error("count %d out of range!", cnt);
 
-  return (Process[processID].streamNames[cnt]);
+  return (&(Process[processID].streamNames[cnt]));
 }
 
 
@@ -381,12 +425,7 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
   char *opername;
   char *comma_position;
   const char *caller = processInqPrompt();
-  /*
-  { int i;
-  for ( i = 0; i < argc; i++ )
-    printf("%d %d %s\n", globArgc, i, argv[i]);
-  }
-  */
+
   opername = &argv[globArgc][1];
   comma_position = strchr(opername, ',');
   if ( comma_position ) *comma_position = 0;
@@ -394,22 +433,7 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
   streamInCnt  = operatorStreamInCnt(opername);
   streamOutCnt = operatorStreamOutCnt(opername);
 
-  if ( streamInCnt == -1 )
-    {
-      /*
-      int i;
-
-      for ( i = globArgc+1; i < argc; i++ )
-	if ( argv[i][0] == '-' ) break;
-
-      printf("%d %d %d\n", i, argc, globArgc);
-      if ( i < argc )
-      */
-      streamInCnt = 1;
-      /*
-      Errorc("Unlimited input streams not allowed in CDO pipes (Operator %s)!", opername);
-      */
-    }
+  if ( streamInCnt == -1 ) streamInCnt = 1;
 
   if ( streamOutCnt > 1 )
     Errorc("More than one output stream not allowed in CDO pipes (Operator %s)!", opername);
@@ -473,53 +497,123 @@ static
 void setStreamNames(int argc, char *argv[])
 {
   int processID = processSelf();
-  int i;
+  int i, ac;
   int globArgc = 1;
   int globArgcStart;
   char *streamname;
-  size_t len;
+  int len;
 
   while ( globArgc < argc )
     {
-      //     printf("arg %d %d %s\n", argc, globArgc, argv[globArgc]);
       if ( argv[globArgc][0] == '-' )
 	{
 	  globArgcStart = globArgc;
 
 	  globArgc = getGlobArgc(argc, argv, globArgc);
-	  //	  printf("globArgc %d\n", globArgc);
 	  len = 0;
 	  for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
-	  streamname = (char *) malloc(len);
-	  memcpy(streamname, argv[globArgcStart], len);
-	  for ( i = 1; i < (int) len-1; i++ ) if ( streamname[i] == '\0' ) streamname[i] = ' ';
-	  Process[processID].streamNames[Process[processID].streamCnt++] = streamname;
-	  //	  printf("streamname1: %s\n", streamname);
+	  streamname = (char *) calloc(1, len);
+	  for ( i = globArgcStart; i < globArgc; i++ )
+	    {
+	      strcat(streamname, argv[i]);
+	      if ( i < globArgc-1 ) strcat(streamname, " ");
+	    }
+	  for ( i = 1; i < len-1; i++ ) if ( streamname[i] == '\0' ) streamname[i] = ' ';
+	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+	  ac = globArgc - globArgcStart;
+	  //printf("setStreamNames:  ac %d  streamname1: %s\n", ac, streamname);
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+	  for ( i = 0; i < ac; ++i )
+	    Process[processID].streamNames[Process[processID].streamCnt].argv[i] = argv[i+globArgcStart];
+	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
+	  Process[processID].streamCnt++;
+	  //printf("setStreamNames:  streamname1: %s\n", streamname);
 	}
       else
 	{
 	  len = strlen(argv[globArgc]) + 1;
 	  streamname = (char *) malloc(len);
 	  strcpy(streamname, argv[globArgc]);
-	  Process[processID].streamNames[Process[processID].streamCnt++] = streamname;
-	  //	  printf("streamname2: %s\n", streamname);
+	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+	  ac = 1;
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+	  Process[processID].streamNames[Process[processID].streamCnt].argv[0] = argv[globArgc];
+	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
+	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+	  Process[processID].streamCnt++;
+	  //printf("setStreamNames:  streamname2: %s\n", streamname);
 	  globArgc++;
 	}
     }
 }
 
 static
-void checkStreamCnt(void)
+int expand_wildcards(int processID, int streamCnt)
+{
+  int i;
+  const char *streamname0 = Process[processID].streamNames[0].args;
+  int len = strlen(streamname0);
+
+  for ( i = 0; i < len; ++i ) if ( streamname0[i] == '?' || streamname0[i] == '*' || streamname0[i] == '[' ) break;
+  if ( i < len )
+    {
+#if defined(HAVE_GLOB_H)
+      argument_t *glob_arg = glob_pattern(streamname0);
+
+      if ( strcmp(streamname0, glob_arg->args) != 0 )
+	{
+	  streamCnt = streamCnt - 1 + glob_arg->argc;
+
+	  free(Process[processID].streamNames[0].argv);
+	  free(Process[processID].streamNames[0].args);
+
+	  Process[processID].streamNames = (argument_t *) realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
+	      
+	  // move output streams to the end
+	  for ( i = 1; i < Process[processID].streamCnt; ++i )
+	    Process[processID].streamNames[i+glob_arg->argc-1] = Process[processID].streamNames[i];
+
+	  for ( i = 0; i < glob_arg->argc; ++i )
+	    {
+	      // printf("add %d %s\n", i, glob_arg->argv[i]);
+	      Process[processID].streamNames[i].argv    = (char **) malloc(sizeof(char *));
+	      Process[processID].streamNames[i].argc    = 1;
+	      Process[processID].streamNames[i].argv[0] = strdupx(glob_arg->argv[i]);
+	      Process[processID].streamNames[i].args    = strdupx(glob_arg->argv[i]);
+	    }
+	  
+	  Process[processID].streamCnt = streamCnt;
+	  /*
+	  for ( i = 0; i < Process[processID].streamCnt; ++i )
+	    printf("expand_wildcards: ostream %d <%s>\n", i+1, Process[processID].streamNames[i].args);
+	  */
+	}
+
+      free(glob_arg);
+#else
+      cdoAbort("Wildcards support not compiled in!");
+#endif
+    }
+
+  return 1;
+}
+
+static
+int checkStreamCnt(void)
 {
   int processID = processSelf();
   int streamInCnt, streamOutCnt;
+  int streamInCnt0;
   int streamCnt = 0;
   int i, j;
   int obase = FALSE;
+  int status = 0;
   const char *caller = processInqPrompt();
 
   streamInCnt  = operatorStreamInCnt(Process[processID].operatorName);
   streamOutCnt = operatorStreamOutCnt(Process[processID].operatorName);
+
+  streamInCnt0 = streamInCnt;
 
   if ( streamOutCnt == -1 )
     {
@@ -530,6 +624,7 @@ void checkStreamCnt(void)
   if ( streamInCnt == -1 && streamOutCnt == -1 )
     Errorc("I/O stream counts unlimited no allowed!");
     
+  // printf(" streamInCnt, streamOutCnt %d %d\n", streamInCnt, streamOutCnt);
   if ( streamInCnt == -1 )
     {
       streamInCnt = Process[processID].streamCnt - streamOutCnt;
@@ -541,8 +636,10 @@ void checkStreamCnt(void)
       streamOutCnt = Process[processID].streamCnt - streamInCnt;
       if ( streamInCnt < 1 ) Errorc("Output streams missing!");
     }
+  // printf(" streamInCnt, streamOutCnt %d %d\n", streamInCnt, streamOutCnt);
 
   streamCnt = streamInCnt + streamOutCnt;
+  // printf(" streamCnt %d %d\n", Process[processID].streamCnt, streamCnt);
 
   if ( Process[processID].streamCnt > streamCnt )
     Errorc("Too many streams!"
@@ -555,49 +652,33 @@ void checkStreamCnt(void)
 
   for ( i = streamInCnt; i < streamCnt; i++ )
     {
-      if ( Process[processID].streamNames[i][0] == '-' )
+      if ( Process[processID].streamNames[i].args[0] == '-' )
 	{
 	  Errorc("Output file name %s must not begin with \"-\"!\n",
-		 Process[processID].streamNames[i]);
+		 Process[processID].streamNames[i].args);
 	}
       else if ( !obase )
 	{
 	  for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
-	    if ( strcmp(Process[processID].streamNames[i], Process[processID].streamNames[j]) == 0 )
+	    if ( strcmp(Process[processID].streamNames[i].args, Process[processID].streamNames[j].args) == 0 )
 	      Errorc("Output file name %s is equal to input file name"
-		     " on position %d!\n", Process[processID].streamNames[i], j+1);
+		     " on position %d!\n", Process[processID].streamNames[i].args, j+1);
 	}
-    }  
+    }
+
+  if ( streamInCnt == 1 && streamInCnt0 == -1 )
+    status = expand_wildcards(processID, streamCnt);
+
+  return (status);
 }
 
-#define  MAX_ARGV  8192
-
 static
-void setStreams(const char *argument)
+void setStreams(int argc, char *argv[])
 {
   int processID = processSelf();
   int streamCnt;
+  int status;
   int i;
-  int argc = 0;
-  char *argv[MAX_ARGV];
-  char *string;
-  size_t arglen;
-
-  arglen = 1 + strlen(argument);
-  string = (char *) malloc(arglen);
-  strcpy(string, argument);
-
-  argv[argc++] = string;
-  for ( i = 1; i < (int) arglen-1; i++ )
-    {
-      if ( string[i] == ' ' )
-	{
-	  string[i] = '\0';
-	  argv[argc++] = &string[i+1];
-	  if ( argc >= MAX_ARGV )
-	    Error("Internal problem! More than %d arguments.", argc);
-	}
-    }
 
   streamCnt = getStreamCnt(argc, argv);
 
@@ -607,34 +688,38 @@ void setStreams(const char *argument)
 
   Process[processID].streamCnt  = 0; /* filled in setStreamNames */
   if ( streamCnt )
-    Process[processID].streamNames = (char **) malloc(streamCnt*sizeof(char *));
-  for ( i = 0; i < streamCnt; i++ ) Process[processID].streamNames[i] = NULL;
+    Process[processID].streamNames = (argument_t *) malloc(streamCnt*sizeof(argument_t));
+  for ( i = 0; i < streamCnt; i++ )
+    {
+      Process[processID].streamNames[i].argc = 0;
+      Process[processID].streamNames[i].argv = NULL;
+      Process[processID].streamNames[i].args = NULL;
+    }
 
   setStreamNames(argc, argv);
 
-  checkStreamCnt();
+  status = checkStreamCnt();
 
-  if ( Process[processID].streamCnt != streamCnt )
+  if ( status == 0 && Process[processID].streamCnt != streamCnt )
     Error("Internal problem with stream count %d %d", Process[processID].streamCnt, streamCnt);
   /*
   for ( i = 0; i < streamCnt; i++ )
-    fprintf(stderr, "stream %d %s\n", i+1, Process[processID].streamNames[i]);
+    fprintf(stderr, "setStreams: stream %d %s\n", i+1, Process[processID].streamNames[i].args);
   */
-
-  free(argv[0]);
 }
 
 
-void processDefArgument(const char *argument)
+void processDefArgument(void *vargument)
 {
   int processID = processSelf();
   char *operatorArg;
   char *commapos;
   int oargc = 0;
   char **oargv = Process[processID].oargv;
+  int argc = ((argument_t *) vargument)->argc;
+  char **argv = ((argument_t *) vargument)->argv;
 
-  /*printf("argument: %s\n", argument);*/
-  Process[processID].xoperator    = getOperator(argument);
+  Process[processID].xoperator    = argv[0];
   Process[processID].operatorName = getOperatorName(Process[processID].xoperator);
   Process[processID].operatorArg  = getOperatorArg(Process[processID].xoperator);
   operatorArg = Process[processID].operatorArg;
@@ -642,7 +727,7 @@ void processDefArgument(const char *argument)
   if ( operatorArg )
     {
       oargv[oargc++] = operatorArg;
-      /*printf("%d %s\n", oargc, operatorArg);*/
+      //fprintf(stderr, "processDefArgument: %d %s\n", oargc, operatorArg);
 
       commapos = operatorArg;
       while ( (commapos = strchr(commapos, ',')) != NULL )
@@ -650,8 +735,8 @@ void processDefArgument(const char *argument)
 	  *commapos++ = '\0';
 	  if ( strlen(commapos) )
 	    {
-	      if ( oargc >= MAX_ARGC )
-		cdoAbort("Too many parameter (limit=%d)!", MAX_ARGC);
+	      if ( oargc >= MAX_OARGC )
+		cdoAbort("Too many parameter (limit=%d)!", MAX_OARGC);
 
 	      oargv[oargc++] = commapos;
 	    }
@@ -661,8 +746,9 @@ void processDefArgument(const char *argument)
 
   processDefPrompt(Process[processID].operatorName);
 
-  setStreams(argument);
+  setStreams(argc, argv);
 }
+
 
 void processDefVarNum(int nvars, int streamID)
 {
@@ -709,11 +795,14 @@ void processDelete(void)
   int processID = processSelf();
 
   //fprintf(stderr, "delete processID %d\n", processID);
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
+
+  Process[processID].l_threadID = 0;
 #endif
   NumProcessActive--;
-#if  defined  (HAVE_LIBPTHREAD)
+
+#if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
 #endif
 }
@@ -749,20 +838,17 @@ void operatorCheckArgc(int numargs)
 
 void operatorInputArg(const char *enter)
 {
-  char line[1024];
-  char *pline = line;
   int processID = processSelf();
-  size_t pos, len, linelen;
   int oargc;
-  int lreadline;
 
   oargc = Process[processID].oargc;
 
-  if ( oargc ) return;
-
-  while ( oargc == 0 )
+  if ( oargc == 0 )
     {
-      lreadline = 1;
+      char line[1024];
+      char *pline = line;
+      size_t pos, len, linelen;
+      int lreadline = 1;
 
       if ( enter ) fprintf(stderr, "%-16s : Enter %s > ", processInqPrompt(), enter);
 
@@ -799,9 +885,9 @@ void operatorInputArg(const char *enter)
 		break;
 	    }
 	}
-    }
 
-  Process[processID].oargc = oargc;
+      Process[processID].oargc = oargc;
+    }
 }
 
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ void *Math(void *argument)
   int vlistID1, vlistID2;
   int nmiss, nmiss2;
   int i;
-  double missval1, missval2;
+  double missval1;
   double *array1, *array2;
   double rc = 0;
   int taxisID1, taxisID2;
@@ -118,7 +118,6 @@ void *Math(void *argument)
 	  streamReadRecord(streamID1, array1, &nmiss);
 
 	  missval1 = vlistInqVarMissval(vlistID1, varID);
-	  missval2 = missval1;
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 
 	  switch ( operfunc )
@@ -191,6 +190,7 @@ void *Math(void *argument)
 	      break;
 	    default:
 	      cdoAbort("operator not implemented!");
+	      break;
 	    }
 
 	  nmiss2 = 0;
@@ -205,6 +205,8 @@ void *Math(void *argument)
 
   streamClose(streamID2);
   streamClose(streamID1);
+
+  vlistDestroy(vlistID2);
 
   if ( array2 ) free(array2);
   if ( array1 ) free(array1);

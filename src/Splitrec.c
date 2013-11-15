@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -38,6 +38,7 @@ void *Splitrec(void *argument)
   int vlistID1, vlistID2;
   char filesuffix[32];
   char filename[8192];
+  const char *refname;
   int index;
   int lcopy = FALSE;
   int gridsize;
@@ -54,11 +55,12 @@ void *Splitrec(void *argument)
 
   nrecs  = vlistNrecs(vlistID1);
 
-  strcpy(filename, cdoStreamName(1));
+  strcpy(filename, cdoStreamName(1)->args);
   nchars = strlen(filename);
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   if ( ! lcopy )
     {
@@ -88,7 +90,9 @@ void *Splitrec(void *argument)
 
 	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
-	  streamID2 = streamOpenWrite(filename, cdoFiletype());
+	  argument_t *fileargument = file_argument_new(filename);
+	  streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+	  file_argument_free(fileargument);
 
 	  streamDefVlist(streamID2, vlistID2);
 

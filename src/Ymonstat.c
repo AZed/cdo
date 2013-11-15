@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@
       Ymonstat   ymonmean        Multi-year monthly mean
       Ymonstat   ymonavg         Multi-year monthly average
       Ymonstat   ymonvar         Multi-year monthly variance
+      Ymonstat   ymonvar1        Multi-year monthly variance [Divisor is (n-1)]
       Ymonstat   ymonstd         Multi-year monthly standard deviation
+      Ymonstat   ymonstd1        Multi-year monthly standard deviation [Divisor is (n-1)]
 */
 
 
@@ -59,7 +61,6 @@ void *Ymonstat(void *argument)
   int i;
   int varID;
   int recID;
-  int gridID;
   int vdate, vtime;
   int year, month, day;
   int nrecs, nrecords;
@@ -75,7 +76,8 @@ void *Ymonstat(void *argument)
   int vdates[NMONTH], vtimes[NMONTH];
   int mon[NMONTH];
   int nmon = 0;
-  double missval;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
+  double divisor;
   field_t **vars1[NMONTH], **vars2[NMONTH], **samp1[NMONTH];
   field_t field;
 
@@ -87,10 +89,17 @@ void *Ymonstat(void *argument)
   cdoOperatorAdd("ymonmean", func_mean, 0, NULL);
   cdoOperatorAdd("ymonavg",  func_avg,  0, NULL);
   cdoOperatorAdd("ymonvar",  func_var,  0, NULL);
+  cdoOperatorAdd("ymonvar1", func_var1, 0, NULL);
   cdoOperatorAdd("ymonstd",  func_std,  0, NULL);
+  cdoOperatorAdd("ymonstd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   for ( month = 0; month < NMONTH; month++ )
     {
@@ -121,6 +130,7 @@ void *Ymonstat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
@@ -143,42 +153,10 @@ void *Ymonstat(void *argument)
       if ( vars1[month] == NULL )
 	{
 	  mon[nmon++] = month;
-	  vars1[month] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  samp1[month] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[month] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
-	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
-
-	      vars1[month][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      samp1[month][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[month][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  vars1[month][varID][levelID].grid    = gridID;
-		  vars1[month][varID][levelID].nmiss   = 0;
-		  vars1[month][varID][levelID].missval = missval;
-		  vars1[month][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		  samp1[month][varID][levelID].grid    = gridID;
-		  samp1[month][varID][levelID].nmiss   = 0;
-		  samp1[month][varID][levelID].missval = missval;
-		  samp1[month][varID][levelID].ptr     = NULL;
-		  if ( operfunc == func_std || operfunc == func_var )
-		    {
-		      vars2[month][varID][levelID].grid    = gridID;
-		      vars2[month][varID][levelID].nmiss   = 0;
-		      vars2[month][varID][levelID].missval = missval;
-		      vars2[month][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		    }
-		}
-	    }
+	  vars1[month] = field_malloc(vlistID1, FIELD_PTR);
+	  samp1[month] = field_malloc(vlistID1, FIELD_NONE);
+	  if ( lvarstd )
+	    vars2[month] = field_malloc(vlistID1, FIELD_PTR);
 	}
 
       for ( recID = 0; recID < nrecs; recID++ )
@@ -231,7 +209,7 @@ void *Ymonstat(void *argument)
 		      samp1[month][varID][levelID].ptr[i]++;
 		}
 
-	      if ( operfunc == func_std || operfunc == func_var )
+	      if ( lvarstd )
 		{
 		  farsumq(&vars2[month][varID][levelID], field);
 		  farsum(&vars1[month][varID][levelID], field);
@@ -243,7 +221,7 @@ void *Ymonstat(void *argument)
 	    }
 	}
 
-      if ( nsets[month] == 0 && (operfunc == func_std || operfunc == func_var) )
+      if ( nsets[month] == 0 && lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -281,7 +259,7 @@ void *Ymonstat(void *argument)
       month = mon[i];
       if ( nsets[month] == 0 ) cdoAbort("Internal problem, nsets[%d] not defined!", month);
 
-      if ( operfunc == func_mean || operfunc == func_avg )
+      if ( lmean )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -294,7 +272,7 @@ void *Ymonstat(void *argument)
 		  fardiv(&vars1[month][varID][levelID], samp1[month][varID][levelID]);
 	      }
 	  }
-      else if ( operfunc == func_std || operfunc == func_var )
+      else if ( lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -303,18 +281,17 @@ void *Ymonstat(void *argument)
 	      {
 		if ( samp1[month][varID][levelID].ptr == NULL )
 		  {
-		    if ( operfunc == func_std )
-		      farcstd(&vars1[month][varID][levelID], vars2[month][varID][levelID], 1.0/nsets[month]);
+		    if ( lstd )
+		      farcstdx(&vars1[month][varID][levelID], vars2[month][varID][levelID], nsets[month], divisor);
 		    else
-		      farcvar(&vars1[month][varID][levelID], vars2[month][varID][levelID], 1.0/nsets[month]);
+		      farcvarx(&vars1[month][varID][levelID], vars2[month][varID][levelID], nsets[month], divisor);
 		  }
 		else
 		  {
-		    farinv(&samp1[month][varID][levelID]);
-		    if ( operfunc == func_std )
-		      farstd(&vars1[month][varID][levelID], vars2[month][varID][levelID], samp1[month][varID][levelID]);
+		    if ( lstd )
+		      farstdx(&vars1[month][varID][levelID], vars2[month][varID][levelID], samp1[month][varID][levelID], divisor);
 		    else
-		      farvar(&vars1[month][varID][levelID], vars2[month][varID][levelID], samp1[month][varID][levelID]);
+		      farvarx(&vars1[month][varID][levelID], vars2[month][varID][levelID], samp1[month][varID][levelID], divisor);
 		  }
 	      }
 	  }
@@ -342,24 +319,9 @@ void *Ymonstat(void *argument)
     {
       if ( vars1[month] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  free(vars1[month][varID][levelID].ptr);
-		  if ( samp1[month][varID][levelID].ptr ) free(samp1[month][varID][levelID].ptr);
-		  if ( operfunc == func_std || operfunc == func_var ) free(vars2[month][varID][levelID].ptr);
-		}
-	      
-	      free(vars1[month][varID]);
-	      free(samp1[month][varID]);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[month][varID]);
-	    }
-
-	  free(vars1[month]);
-	  free(samp1[month]);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[month]);
+	  field_free(vars1[month], vlistID1);
+	  field_free(samp1[month], vlistID1);
+	  if ( lvarstd ) field_free(vars2[month], vlistID1);
 	}
     }
 

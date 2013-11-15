@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -67,7 +67,6 @@ void *Yseasstat(void *argument)
   int i;
   int varID;
   int recID;
-  int gridID;
   int vdate, vtime;
   int year, month, day, seas;
   int nrecs, nrecords;
@@ -81,7 +80,6 @@ void *Yseasstat(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   date_time_t datetime[NSEAS];
-  double missval;
   field_t **vars1[NSEAS], **vars2[NSEAS], **samp1[NSEAS];
   field_t field;
   int season_start;
@@ -131,6 +129,7 @@ void *Yseasstat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
@@ -165,42 +164,10 @@ void *Yseasstat(void *argument)
 
       if ( vars1[seas] == NULL )
 	{
-	  vars1[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  samp1[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  vars1[seas] = field_malloc(vlistID1, FIELD_PTR);
+	  samp1[seas] = field_malloc(vlistID1, FIELD_NONE);
 	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
-	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
-
-	      vars1[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      samp1[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[seas][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  vars1[seas][varID][levelID].grid    = gridID;
-		  vars1[seas][varID][levelID].nmiss   = 0;
-		  vars1[seas][varID][levelID].missval = missval;
-		  vars1[seas][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		  samp1[seas][varID][levelID].grid    = gridID;
-		  samp1[seas][varID][levelID].nmiss   = 0;
-		  samp1[seas][varID][levelID].missval = missval;
-		  samp1[seas][varID][levelID].ptr     = NULL;
-		  if ( operfunc == func_std || operfunc == func_var )
-		    {
-		      vars2[seas][varID][levelID].grid    = gridID;
-		      vars2[seas][varID][levelID].nmiss   = 0;
-		      vars2[seas][varID][levelID].missval = missval;
-		      vars2[seas][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		    }
-		}
-	    }
+	    vars2[seas] = field_malloc(vlistID1, FIELD_PTR);
 	}
 
       for ( recID = 0; recID < nrecs; recID++ )
@@ -343,23 +310,8 @@ void *Yseasstat(void *argument)
     {
       if ( vars1[seas] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  free(vars1[seas][varID][levelID].ptr);
-		  if ( samp1[seas][varID][levelID].ptr ) free(samp1[seas][varID][levelID].ptr);
-		  if ( operfunc == func_std || operfunc == func_var ) free(vars2[seas][varID][levelID].ptr);
-		}
-	      
-	      free(vars1[seas][varID]);
-	      free(samp1[seas][varID]);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[seas][varID]);
-	    }
-
-	  free(vars1[seas]);
-	  free(samp1[seas]);
+	  field_free(vars1[seas], vlistID1);
+	  field_free(samp1[seas], vlistID1);
 	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[seas]);
 	}
     }

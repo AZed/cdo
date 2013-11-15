@@ -65,19 +65,19 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
 
   gaussaw(gmu, gwt, nlat);
 
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   pnm    = (double *) malloc(dimsp * sizeof(double));
   hnm    = (double *) malloc(dimsp * sizeof(double));
   ztemp1 = (double *) malloc((waves<<1) * sizeof(double));
   ztemp2 = (double *) malloc((waves<<1) * sizeof(double));
 #endif
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(jm, jn, jsp, gmusq, hnm, pnm, ztemp1, ztemp2)
 #endif
   for ( jgl = 0; jgl < nlat; jgl++ )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       pnm    = (double *) malloc(dimsp * sizeof(double));
       hnm    = (double *) malloc(dimsp * sizeof(double));
       ztemp1 = (double *) malloc((waves<<1) * sizeof(double));
@@ -101,7 +101,7 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
                                   (PlanetRadius    * gmusq);
 	    jsp += nlat;
 	  }
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       free(ztemp2);
       free(ztemp1);
       free(pnm);
@@ -109,7 +109,7 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
 #endif
     }
 
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   free(ztemp2);
   free(ztemp1);
   free(pnm);
@@ -150,7 +150,7 @@ void legini(int ntr, int nlat, double *poli, double *pold, double *rcoslat)
       isp = 0;
       for ( jm = 0; jm < waves; jm++ )
 	{
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 	  for ( jn = 0; jn < waves - jm; jn++ )
@@ -414,7 +414,7 @@ void uv2dv(double *fu, double *fv, double *sd, double *sv,
   nsp2 = (nt+1)*(nt+2);
   nfc  = (nt+1)*2;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(jmm, jfc, lat, po2, po3, ful, fvl, sdl, svl, ufr, ufi, vfr, vfi, dir, dii, vor, voi)
 #endif
   for ( lev = 0; lev < klev; lev++ )
@@ -616,10 +616,10 @@ void trans_uv2dv(SPTRANS *sptrans, int nlev,
   double *fpwork1, *fpwork2;
 
   if ( gridInqType(gridID1) != GRID_GAUSSIAN )
-    Warning("unexpected grid1 type: %s", gridNamePtr(gridInqType(gridID1)));
+    Error("unexpected grid1 type: %s instead of Gaussian", gridNamePtr(gridInqType(gridID1)));
 
   if ( gridInqType(gridID2) != GRID_SPECTRAL )
-    Warning("unexpected grid2 type: %s", gridNamePtr(gridInqType(gridID2)));
+    Error("unexpected grid2 type: %s instead of spectral", gridNamePtr(gridInqType(gridID2)));
     
   ntr  = gridInqTrunc(gridID2);
   nlon = gridInqXsize(gridID1);

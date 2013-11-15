@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,14 +24,13 @@
       Ensstat    ensmean         Ensemble mean
       Ensstat    ensavg          Ensemble average
       Ensstat    ensstd          Ensemble standard deviation
+      Ensstat    ensstd1         Ensemble standard deviation
       Ensstat    ensvar          Ensemble variance
+      Ensstat    ensvar1         Ensemble variance
       Ensstat    enspctl         Ensemble percentiles
-
-      Ensstat    enscrps         Ensemble cumulative ranked probability score
-      Ensstat    ensbrs          Ensemble brier score
 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
@@ -70,9 +69,7 @@ void *Ensstat(void *argument)
     double *array;
   } ens_file_t;
   ens_file_t *ef = NULL;
-  /* RQ */
   int pn = 0;
-  /* QR */
 
   cdoInitialize(argument);
 
@@ -81,21 +78,15 @@ void *Ensstat(void *argument)
   cdoOperatorAdd("enssum",  func_sum,  0, NULL);
   cdoOperatorAdd("ensmean", func_mean, 0, NULL);
   cdoOperatorAdd("ensavg",  func_avg,  0, NULL);
-  cdoOperatorAdd("ensvar",  func_var,  0, NULL);
   cdoOperatorAdd("ensstd",  func_std,  0, NULL);
-  /* RQ */
+  cdoOperatorAdd("ensstd1", func_std1, 0, NULL);
+  cdoOperatorAdd("ensvar",  func_var,  0, NULL);
+  cdoOperatorAdd("ensvar1", func_var1, 0, NULL);
   cdoOperatorAdd("enspctl", func_pctl, 0, NULL);
-  /* QR */
-
-  /* >>> Cedrick Ansorge 18.10.2010 */
-  cdoOperatorAdd("enscrps", func_crps, 0, NULL);
-  cdoOperatorAdd("ensbrs",  func_brs,  0, NULL);
-  /* <<< Cedrick Ansorge 18.10.2010 */
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
-  /* RQ */
   if ( operfunc == func_pctl )
     {
       operatorInputArg("percentile number");
@@ -104,25 +95,25 @@ void *Ensstat(void *argument)
       if ( pn < 1 || pn > 99 )
         cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
     }
-  /* QR */
     
   nfiles = cdoStreamCnt() - 1;
 
   if ( cdoVerbose )
     cdoPrint("Ensemble over %d files.", nfiles);
 
-  ofilename = cdoStreamName(nfiles);
+  ofilename = cdoStreamName(nfiles)->args;
 
   if ( !cdoSilentMode && !cdoOverwriteMode )
-    if ( fileExist(ofilename) )
+    if ( fileExists(ofilename) )
       if ( !userFileOverwrite(ofilename) )
-	cdoAbort("Outputfile %s already exist!", ofilename);
+	cdoAbort("Outputfile %s already exists!", ofilename);
 
   ef = (ens_file_t *) malloc(nfiles*sizeof(ens_file_t));
 
   field = (field_t *) malloc(ompNumThreads*sizeof(field_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
+      field_init(&field[i]);
       field[i].size   = nfiles;
       field[i].ptr    = (double *) malloc(nfiles*sizeof(double));
       field[i].weight = (double *) malloc(nfiles*sizeof(double));
@@ -150,7 +141,7 @@ void *Ensstat(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(ofilename, cdoFiletype());
+  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 	  
@@ -170,16 +161,24 @@ void *Ensstat(void *argument)
 	  streamID = ef[fileID].streamID;
 	  nrecs = streamInqTimestep(streamID, tsID);
 	  if ( nrecs != nrecs0 )
-	    cdoAbort("Number of records changed from %d to %d", nrecs0, nrecs);
+	    {
+	      if ( nrecs == 0 )
+		cdoAbort("Inconsistent ensemble file, too few time steps in %s!", cdoStreamName(fileID)->args);
+	      else
+		cdoAbort("Inconsistent ensemble file, number of records at time step %d of %s and %s differ!",
+			 tsID+1, cdoStreamName(0)->args, cdoStreamName(fileID)->args);
+	    }
 	}
 
-      taxisCopyTimestep(taxisID2, taxisID1);
+      if ( nrecs0 > 0 )
+	{
+	  taxisCopyTimestep(taxisID2, taxisID1);
+	  streamDefTimestep(streamID2, tsID);
+	}
 
-      if ( nrecs0 > 0 ) streamDefTimestep(streamID2, tsID);
-      
       for ( recID = 0; recID < nrecs0; recID++ )
 	{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(fileID, streamID, nmiss) \
                                      lastprivate(varID, levelID)
 #endif
@@ -195,12 +194,12 @@ void *Ensstat(void *argument)
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 
 	  nmiss = 0;
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, ompthID, fileID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	      ompthID = omp_get_thread_num();
 #else
 	      ompthID = 0;
@@ -214,16 +213,14 @@ void *Ensstat(void *argument)
 		    field[ompthID].nmiss++;
 		}
 
-	      /* RQ */
 	      if ( operfunc == func_pctl )
 	        array2[i] = fldpctl(field[ompthID], pn);
 	      else  
 	        array2[i] = fldfun(field[ompthID], operfunc);
-	      /* QR */
 
 	      if ( DBL_IS_EQUAL(array2[i], field[ompthID].missval) )
 		{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp atomic
 #endif
 		  nmiss++;

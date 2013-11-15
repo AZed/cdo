@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 #include "namelist.h"
 
-#if ! defined (strdup)
+#if ! defined(strdup)
 char *strdup(const char *s);
 #endif
 int readline(FILE *fp, char *line, int len);
@@ -170,7 +170,7 @@ void namelistPrint(namelist_t *nml)
       else if ( entry->type == NML_INT )
 	for ( j = 0; j < nout; j++ )
 	  fprintf(stdout, " %d", ((int *)entry->ptr)[j]);
-      else if ( entry->type == NML_DOUBLE )
+      else if ( entry->type == NML_FLT )
 	for ( j = 0; j < nout; j++ )
 	  fprintf(stdout, " %g", ((double *)entry->ptr)[j]);
       
@@ -339,7 +339,7 @@ static void rdnlsgl(namelist_t *nml, void *var, int ntyp, int nlen, int *nocc)
 	  ((int *)var)[*nocc] = atoi(&nml->line.lineac[nml->line.namitf]);
           *nocc += 1;
 	}
-      else if ( ntyp == NML_DOUBLE )
+      else if ( ntyp == NML_FLT )
 	{
 	  ((double *)var)[*nocc] = atof(&nml->line.lineac[nml->line.namitf]);
           *nocc += 1;
@@ -422,7 +422,7 @@ static void nml_print_entry(nml_entry_t *entry, int ife)
   else if ( entry->type == NML_INT )
     for ( j = 0; j < nout; j++ )
       printf(" %d", ((int *)entry->ptr)[j]);
-  else if ( entry->type == NML_DOUBLE )
+  else if ( entry->type == NML_FLT )
     for ( j = 0; j < nout; j++ )
       printf(" %g", ((double *)entry->ptr)[j]);
 

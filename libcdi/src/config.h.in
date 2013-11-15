@@ -1,10 +1,23 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Compiler */
+#undef COMPILER
+
+/* Compiler version */
+#undef COMP_VERSION
+
 /* Define if C / Fortran interface cfortran.h works */
 #undef HAVE_CF_INTERFACE
 
+/* Define to 1 if you have the declaration of `isnan', and to 0 if you don't.
+   */
+#undef HAVE_DECL_ISNAN
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `getline' function. */
+#undef HAVE_GETLINE
 
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
@@ -17,9 +30,6 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 if you have the `isnan' function. */
-#undef HAVE_ISNAN
 
 /* Define to 1 if you have the <jasper.h> header file. */
 #undef HAVE_JASPER_H
@@ -63,9 +73,6 @@
 /* Define to 1 for JPEG compression for GRIB2 */
 #undef HAVE_LIBOPENJPEG
 
-/* Define to 1 if you have the <libpng14/png.h> header file. */
-#undef HAVE_LIBPNG14_PNG_H
-
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
 
@@ -99,8 +106,20 @@
 /* Define to 1 if you have the <netcdf.h> header file. */
 #undef HAVE_NETCDF_H
 
+/* Define to 1 if you have the <netcdf_par.h> header file. */
+#undef HAVE_NETCDF_PAR_H
+
 /* Define to 1 if you have the <openjpeg.h> header file. */
 #undef HAVE_OPENJPEG_H
+
+/* netCDF library does support MPI parallel invocations */
+#undef HAVE_PARALLEL_NC4
+
+/* Define to 1 if you have the <png.h> header file. */
+#undef HAVE_PNG_H
+
+/* ScalES PPM C core library is available */
+#undef HAVE_PPM_CORE
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
@@ -137,6 +156,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* yaxt library is available */
+#undef HAVE_YAXT
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
@@ -181,6 +203,9 @@
 
 /* User name */
 #undef USER_NAME
+
+/* parallel I/O requested and available */
+#undef USE_MPI
 
 /* Version number of package */
 #undef VERSION

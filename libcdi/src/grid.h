@@ -73,6 +73,8 @@ grid_t;
 void grid_init(grid_t *gridptr);
 void grid_free(grid_t *gridptr);
 
+int gridSize(void);
+
 const double *gridInqXvalsPtr(int gridID);
 const double *gridInqYvalsPtr(int gridID);
 
@@ -82,6 +84,8 @@ const double *gridInqAreaPtr(int gridID);
 
 int gridCompare(int gridID, grid_t grid);
 int gridGenerate(grid_t grid);
+
+void gridGetIndexList( int, int * );
 
 #endif
 /*

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@
 
 void *Setgrid(void *argument)
 {
-  int SETGRID, SETGRIDTYPE, SETGRIDAREA, SETGRIDMASK, UNSETGRIDMASK, SETGRIDNUMBER;
+  int SETGRID, SETGRIDTYPE, SETGRIDAREA, SETGRIDMASK, UNSETGRIDMASK, SETGRIDNUMBER, SETGRIDURI;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs;
@@ -49,11 +49,13 @@ void *Setgrid(void *argument)
   long areasize = 0;
   long masksize = 0;
   int lregular = 0;
+  int ldereference = 0;
   int ligme = 0;
   int number = 0, position = 0;
   int grid2_nvgp;
   int *grid2_vgpm = NULL;
   char *gridname = NULL;
+  char *griduri = NULL;
   double *gridmask = NULL;
   double *areaweight = NULL;
   double *array = NULL;
@@ -66,6 +68,7 @@ void *Setgrid(void *argument)
   SETGRIDMASK   = cdoOperatorAdd("setgridmask",   0, 0, "filename with grid mask");
   UNSETGRIDMASK = cdoOperatorAdd("unsetgridmask", 0, 0, NULL);
   SETGRIDNUMBER = cdoOperatorAdd("setgridnumber", 0, 0, "grid number and optionally grid position");
+  SETGRIDURI    = cdoOperatorAdd("setgriduri",    0, 0, "reference URI of the horizontal grid");
 
   operatorID = cdoOperatorID();
 
@@ -85,7 +88,7 @@ void *Setgrid(void *argument)
       if      ( strcmp(gridname, "curvilinear") == 0 )   gridtype = GRID_CURVILINEAR;
       else if ( strcmp(gridname, "cell") == 0 )          gridtype = GRID_UNSTRUCTURED;
       else if ( strcmp(gridname, "unstructured") == 0 )  gridtype = GRID_UNSTRUCTURED;
-      else if ( strcmp(gridname, "dereference") == 0 )   gridtype = GRID_REFERENCE;
+      else if ( strcmp(gridname, "dereference") == 0 )   ldereference = 1;
       else if ( strcmp(gridname, "lonlat") == 0 )        gridtype = GRID_LONLAT;
       else if ( strcmp(gridname, "gaussian") == 0 )      gridtype = GRID_GAUSSIAN;
       else if ( strcmp(gridname, "regular") == 0 )      {gridtype = GRID_GAUSSIAN; lregular = 1;}
@@ -99,7 +102,9 @@ void *Setgrid(void *argument)
       operatorCheckArgc(1);
       areafile = operatorArgv()[0];
 
-      streamID = streamOpenRead(areafile);
+      argument_t *fileargument = file_argument_new(areafile);
+      streamID = streamOpenRead(fileargument);
+      file_argument_free(fileargument);
 
       vlistID = streamInqVlist(streamID);
 
@@ -140,7 +145,9 @@ void *Setgrid(void *argument)
 
       operatorCheckArgc(1);
       maskfile = operatorArgv()[0];
-      streamID = streamOpenRead(maskfile);
+      argument_t *fileargument = file_argument_new(maskfile);
+      streamID = streamOpenRead(fileargument);
+      file_argument_free(fileargument);
 
       vlistID = streamInqVlist(streamID);
 
@@ -171,6 +178,11 @@ void *Setgrid(void *argument)
 	  operatorCheckArgc(1);
 	}
     }
+  else if ( operatorID == SETGRIDURI )
+    {
+      operatorCheckArgc(1);
+      griduri = operatorArgv()[0];
+    }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -199,12 +211,21 @@ void *Setgrid(void *argument)
 	}
       if ( ! found ) cdoWarning("No grid with %d points found!", gridInqSize(gridID2));
     }
-  else if ( operatorID == SETGRIDNUMBER )
+  else if ( operatorID == SETGRIDNUMBER || operatorID == SETGRIDURI )
     {
       gridID1 = vlistGrid(vlistID1, 0);
-      gridID2 = gridCreate(GRID_REFERENCE, gridInqSize(gridID1));
-      gridDefNumber(gridID2, number);
-      gridDefPosition(gridID2, position);
+
+      if ( operatorID == SETGRIDNUMBER )
+	{
+	  gridID2 = gridCreate(GRID_UNSTRUCTURED, gridInqSize(gridID1));
+	  gridDefNumber(gridID2, number);
+	  gridDefPosition(gridID2, position);
+	}
+      else
+	{
+	  gridID2 = gridDuplicate(gridID1);
+	  gridDefReference(gridID2, griduri);
+	}
 
       found = 0;
       ngrids = vlistNgrids(vlistID1);
@@ -218,7 +239,7 @@ void *Setgrid(void *argument)
 	      found++;
 	    }
 	}
-      if ( ! found ) cdoWarning("No grid with %d points found!", gridInqSize(gridID2));
+      if ( ! found ) cdoWarning("No horizontal grid with %d cells found!", gridInqSize(gridID2));
     }
   else if ( operatorID == SETGRIDTYPE )
     {
@@ -234,6 +255,11 @@ void *Setgrid(void *argument)
 		{
 		  gridID2 = gridToRegular(gridID1);
 		}
+	    }
+	  else if ( ldereference    )
+	    {
+	      gridID2 = referenceToGrid(gridID1);
+	      if ( gridID2 == -1 ) cdoAbort("Reference to horizontal grid not found!");
 	    }
 	  else
 	    {
@@ -254,11 +280,6 @@ void *Setgrid(void *argument)
 		      gridCompress(gridID2);
 		    }
 		}
-	      else if ( gridtype == GRID_REFERENCE    )
-		{
-		  gridID2 = referenceToGrid(gridID1);
-		  if ( gridID2 == -1 ) cdoAbort("Grid reference not found!");
- 		}
 	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_CURVILINEAR )
 		{
 		  gridID2 = gridCurvilinearToRegular(gridID1);

@@ -6,10 +6,16 @@
 #include <math.h>
 
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 #include "dmemory.h"
 #include "varscan.h"
 #include "vlist.h"
+#include "grid.h"
+#include "zaxis.h"
+
+
+extern void zaxisGetIndexList ( int, int * );
+
 
 #undef  UNDEFID
 #define UNDEFID -1
@@ -32,29 +38,43 @@ leveltable_t;
 
 typedef struct
 {
-  int         param;
-  int         prec;
-  int         tsteptype;
-  int         timave;
-  int         timaccu;
-  int         gridID;
-  int         zaxistype;
-  int         ltype;     /* GRIB level type */
-  int         lbounds;
-  int         zaxisID;
-  int         nlevels;
-  int         levelTableSize;
+  int           param;
+  int           prec;
+  int           tsteptype;
+  int           timave;
+  int           timaccu;
+  int           gridID;
+  int           zaxistype;
+  int           ltype;     /* GRIB level type */
+  int           lbounds;
+  int           level_sf;
+  int           level_unit;
+  int           zaxisID;
+  int           nlevels;
+  int           levelTableSize;
   leveltable_t *levelTable;
-  int         instID;
-  int         modelID;
-  int         tableID;
-  int         comptype;       // compression type
-  int         complevel;      // compression level
-  int         lmissval;
-  double      missval;
-  char       *name;
-  char       *longname;
-  char       *units;
+  int           instID;
+  int           modelID;
+  int           tableID;
+  int           comptype;       // compression type
+  int           complevel;      // compression level
+  int           lmissval;
+  double        missval;
+  char         *name;
+  char         *longname;
+  char         *units;
+  ensinfo_t    *ensdata;
+  int           typeOfGeneratingProcess;
+#if  defined  (HAVE_LIBGRIB_API)
+  /* (Optional) list of keyword/double value pairs */
+  int           opt_grib_dbl_nentries;
+  char         *opt_grib_dbl_keyword[MAX_OPT_GRIB_ENTRIES];
+  double        opt_grib_dbl_val[MAX_OPT_GRIB_ENTRIES];
+  /* (Optional) list of keyword/integer value pairs */
+  int           opt_grib_int_nentries;
+  char         *opt_grib_int_keyword[MAX_OPT_GRIB_ENTRIES];
+  int           opt_grib_int_val[MAX_OPT_GRIB_ENTRIES];
+#endif
 }
 vartable_t;
 
@@ -76,12 +96,16 @@ void paramInitEntry(int varID, int param)
   vartable[varID].gridID         = UNDEFID;
   vartable[varID].zaxistype      = 0;
   vartable[varID].ltype          = 0;
+  vartable[varID].lbounds        = 0;
+  vartable[varID].level_sf       = 0;
+  vartable[varID].level_unit     = 0;
   vartable[varID].levelTable     = NULL;
   vartable[varID].levelTableSize = 0;
   vartable[varID].nlevels        = 0;
   vartable[varID].instID         = UNDEFID;
   vartable[varID].modelID        = UNDEFID;
   vartable[varID].tableID        = UNDEFID;
+  vartable[varID].typeOfGeneratingProcess  = UNDEFID;
   vartable[varID].comptype       = COMPRESS_NONE;
   vartable[varID].complevel      = 1;
   vartable[varID].lmissval       = 0;
@@ -89,11 +113,11 @@ void paramInitEntry(int varID, int param)
   vartable[varID].name           = NULL;
   vartable[varID].longname       = NULL;
   vartable[varID].units          = NULL;
+  vartable[varID].ensdata        = NULL;
 }
 
-
 static
-int varGetEntry(int param, int zaxistype, int ltype)
+int varGetEntry(int param, int zaxistype, int ltype, const char *name)
 {
   int varID;
 
@@ -102,13 +126,22 @@ int varGetEntry(int param, int zaxistype, int ltype)
       if ( vartable[varID].param     == param     &&
 	   vartable[varID].zaxistype == zaxistype &&
 	   vartable[varID].ltype     == ltype )
-	return (varID);
+        {
+          if ( name && name[0] && vartable[varID].name && vartable[varID].name[0] )
+            {
+              if ( strcmp(name, vartable[varID].name) == 0 ) return (varID);
+            }
+          else
+            {
+              return (varID);
+            }
+        }
     }
 
   return (UNDEFID);
 }
 
-
+static
 void varFree(void)
 {
   int varID;
@@ -121,6 +154,7 @@ void varFree(void)
       if ( vartable[varID].name )     free(vartable[varID].name);
       if ( vartable[varID].longname ) free(vartable[varID].longname);
       if ( vartable[varID].units )    free(vartable[varID].units);
+      if ( vartable[varID].ensdata )  free(vartable[varID].ensdata);
     }
 
   if ( vartable )
@@ -137,6 +171,7 @@ void varFree(void)
   Vctsize = 0;
 }
 
+static
 int levelNewEntry(int varID, int level1, int level2)
 {
   int levelID = 0;
@@ -193,9 +228,9 @@ int levelNewEntry(int varID, int level1, int level2)
 	levelTable[i].recID = UNDEFID;
     }
 
-  levelTable[levelID].level1 = level1;
-  levelTable[levelID].level2 = level2;
-  levelTable[levelID].lindex = levelID;
+  levelTable[levelID].level1   = level1;
+  levelTable[levelID].level2   = level2;
+  levelTable[levelID].lindex   = levelID;
 
   vartable[varID].nlevels = levelID+1;
   vartable[varID].levelTableSize = levelTableSize;
@@ -206,7 +241,8 @@ int levelNewEntry(int varID, int level1, int level2)
 
 #define  UNDEF_PARAM  -4711
 
-int paramNewEntry (int param)
+static
+int paramNewEntry(int param)
 {
   int varID = 0;
 
@@ -227,7 +263,13 @@ int paramNewEntry (int param)
 	}
 
       for( i = 0; i < varTablesize; i++ )
-	vartable[i].param = UNDEF_PARAM;
+	{
+	  vartable[i].param = UNDEF_PARAM;
+#if  defined  (HAVE_LIBGRIB_API)
+	  vartable[i].opt_grib_int_nentries = 0;
+	  vartable[i].opt_grib_dbl_nentries = 0;
+#endif
+	}
     }
   else
     {
@@ -254,7 +296,13 @@ int paramNewEntry (int param)
       varID = varTablesize/2;
 
       for( i = varID; i < varTablesize; i++ )
-	vartable[i].param = UNDEF_PARAM;
+	{
+	  vartable[i].param = UNDEF_PARAM;
+#if  defined  (HAVE_LIBGRIB_API)
+	  vartable[i].opt_grib_int_nentries = 0;
+	  vartable[i].opt_grib_dbl_nentries = 0;
+#endif
+	}
     }
 
   paramInitEntry(varID, param);
@@ -264,7 +312,7 @@ int paramNewEntry (int param)
 
 
 void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
-		  int level1, int level2, int prec,
+		  int level1, int level2, int level_sf, int level_unit, int prec,
 		  int *pvarID, int *plevelID, int tsteptype, int numavg, int ltype,
 		  const char *name, const char *longname, const char *units)
 {
@@ -272,7 +320,7 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
   int levelID = -1;
 
   if ( ! (cdiSplitLtype105 == 1 && zaxistype == ZAXIS_HEIGHT) )
-    varID = varGetEntry(param, zaxistype, ltype);
+    varID = varGetEntry(param, zaxistype, ltype, name);
 
   if ( varID == UNDEFID )
     {
@@ -282,6 +330,8 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
       vartable[varID].zaxistype = zaxistype;
       vartable[varID].ltype     = ltype;
       vartable[varID].lbounds   = lbounds;
+      vartable[varID].level_sf  = level_sf;
+      vartable[varID].level_unit = level_unit;
       if ( tsteptype != UNDEFID ) vartable[varID].tsteptype = tsteptype;
       if ( numavg ) vartable[varID].timave = 1;
 
@@ -291,17 +341,16 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
     }
   else
     {
+      char paramstr[32];
+      cdiParamToString(param, paramstr, sizeof(paramstr));
+
       if ( vartable[varID].gridID != gridID )
 	{
-	  char paramstr[32];
-	  cdiParamToString(param, paramstr, sizeof(paramstr));
 	  Message("param = %s gridID = %d", paramstr, gridID);
 	  Error("horizontal grid must not change for same param!");
 	}
       if ( vartable[varID].zaxistype != zaxistype )
 	{
-	  char paramstr[32];
-	  cdiParamToString(param, paramstr, sizeof(paramstr));
 	  Message("param = %s zaxistype = %d", paramstr, zaxistype);
 	  Error("zaxistype must not change for same param!");
 	}
@@ -318,8 +367,8 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
   *pvarID   = varID;
   *plevelID = levelID;
 }
-
-
+/*
+static
 int dblcmp(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -329,8 +378,8 @@ int dblcmp(const void *s1, const void *s2)
 
   return (cmp);
 }
-
-
+*/
+static
 int cmpLevelTable(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -383,7 +432,7 @@ int cmpltype(const void *s1, const void *s2)
 }
 
 
-void cdiGenVars(int streamID)
+void cdi_generate_vars(stream_t *streamptr)
 {
   int varID, gridID, zaxisID, levelID;
   int instID, modelID, tableID;
@@ -393,17 +442,15 @@ void cdiGenVars(int streamID)
   int timave, timaccu;
   int lbounds;
   int comptype;
-  char name[256], longname[256], units[256];
+  char name[CDI_MAX_NAME], longname[CDI_MAX_NAME], units[CDI_MAX_NAME];
   double *dlevels = NULL;
   double *dlevels1 = NULL;
   double *dlevels2 = NULL;
   int vlistID;
   int *varids, index, varid;
-  stream_t *streamptr;
+  double level_sf = 1;
 
-  streamptr = stream_to_pointer(streamID);
-
-  vlistID =  streamInqVlist(streamID);
+  vlistID =  streamptr->vlistID;
 
   varids = (int *) malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ ) varids[varID] = varID;
@@ -455,6 +502,9 @@ void cdiGenVars(int streamID)
       timaccu   = vartable[varid].timaccu;
       comptype  = vartable[varid].comptype;
 
+      level_sf  = 1;
+      if ( vartable[varid].level_sf != 0 ) level_sf = 1./vartable[varid].level_sf;
+
       zaxisID = UNDEFID;
 
       if ( ltype == 0 && zaxistype == ZAXIS_GENERIC && nlevels == 1 &&
@@ -465,11 +515,11 @@ void cdiGenVars(int streamID)
 
       if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
 	for ( levelID = 0; levelID < nlevels; levelID++ )
-	  dlevels[levelID] = (vartable[varid].levelTable[levelID].level1 +
-	                      vartable[varid].levelTable[levelID].level2)/2;
+	  dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
+	                      level_sf*vartable[varid].levelTable[levelID].level2)/2;
       else
 	for ( levelID = 0; levelID < nlevels; levelID++ )
-	  dlevels[levelID] = vartable[varid].levelTable[levelID].level1;
+	  dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
 
       if ( nlevels > 1 )
 	{
@@ -495,16 +545,15 @@ void cdiGenVars(int streamID)
 		  /*
 		  qsort(dlevels, nlevels, sizeof(double), dblcmp);
 		  */
-		  qsort(vartable[varid].levelTable, nlevels, 
-			sizeof(leveltable_t), cmpLevelTable);
+		  qsort(vartable[varid].levelTable, nlevels, sizeof(leveltable_t), cmpLevelTable);
 
 		  if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
 		    for ( levelID = 0; levelID < nlevels; levelID++ )
-		      dlevels[levelID] = (vartable[varid].levelTable[levelID].level1 +
-					  vartable[varid].levelTable[levelID].level2)/2.;
+		      dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
+					  level_sf*vartable[varid].levelTable[levelID].level2)/2.;
 		  else
 		    for ( levelID = 0; levelID < nlevels; levelID++ )
-		      dlevels[levelID] = vartable[varid].levelTable[levelID].level1;
+		      dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
 		}
 	    }
 	}
@@ -513,20 +562,28 @@ void cdiGenVars(int streamID)
 	{
 	  dlevels1 = (double *) malloc(nlevels*sizeof(double));
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    dlevels1[levelID] = vartable[varid].levelTable[levelID].level1;
+	    dlevels1[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
 	  dlevels2 = (double *) malloc(nlevels*sizeof(double));
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    dlevels2[levelID] = vartable[varid].levelTable[levelID].level2;
+	    dlevels2[levelID] = level_sf*vartable[varid].levelTable[levelID].level2;
 	}
 
+      char *unitptr = cdiUnitNamePtr(vartable[varid].level_unit);
       zaxisID = varDefZaxis(vlistID, zaxistype, nlevels, dlevels, lbounds, dlevels1, dlevels2,
-			    Vctsize, Vct, NULL, NULL, NULL, 0, 0, ltype);
+                            Vctsize, Vct, NULL, NULL, unitptr, 0, 0, ltype);
+
+      if ( zaxisInqType(zaxisID) == ZAXIS_REFERENCE )
+        {
+          if ( numberOfVerticalLevels > 0 ) zaxisDefNlevRef(zaxisID, numberOfVerticalLevels);
+          if ( numberOfVerticalGrid > 0 ) zaxisDefNumber(zaxisID, numberOfVerticalGrid);
+          if ( uuidVGrid[0] != 0 ) zaxisDefUUID(zaxisID, uuidVGrid);
+        }
 
       if ( lbounds ) free(dlevels1);
       if ( lbounds ) free(dlevels2);
       free(dlevels);
 
-      varID = streamNewVar(streamID, gridID, zaxisID);
+      varID = stream_new_var(streamptr, gridID, zaxisID);
       varID = vlistDefVar(vlistID, gridID, zaxisID, tsteptype);
 
       vlistDefVarParam(vlistID, varID, param);
@@ -535,11 +592,45 @@ void cdiGenVars(int streamID)
       vlistDefVarTimaccu(vlistID, varID, timaccu);
       vlistDefVarCompType(vlistID, varID, comptype);
 
+      if ( vartable[varid].typeOfGeneratingProcess != UNDEFID )
+        vlistDefVarTypeOfGeneratingProcess(vlistID, varID, vartable[varid].typeOfGeneratingProcess);
+
       if ( vartable[varid].lmissval ) vlistDefVarMissval(vlistID, varID, vartable[varid].missval);
 
       if ( vartable[varid].name )     vlistDefVarName(vlistID, varID, vartable[varid].name);
       if ( vartable[varid].longname ) vlistDefVarLongname(vlistID, varID, vartable[varid].longname);
       if ( vartable[varid].units )    vlistDefVarUnits(vlistID, varID, vartable[varid].units);
+
+      if ( vartable[varid].ensdata )  vlistDefVarEnsemble(vlistID, varID, vartable[varid].ensdata->ens_index,
+	                                                  vartable[varid].ensdata->ens_count,
+							  vartable[varid].ensdata->forecast_init_type);
+
+#if  defined  (HAVE_LIBGRIB_API)
+      /* ---------------------------------- */
+      /* Local change: 2013-04-23, FP (DWD) */
+      /* ---------------------------------- */
+
+      int    i;
+      vlist_t *vlistptr;
+      vlistptr = vlist_to_pointer(vlistID);
+      for (i=0; i<vartable[varid].opt_grib_int_nentries; i++)
+        {
+          int idx = vlistptr->vars[varID].opt_grib_int_nentries;
+          vlistptr->vars[varID].opt_grib_int_nentries++;
+          if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/integer value pairs!");
+          vlistptr->vars[varID].opt_grib_int_val[idx] = vartable[varid].opt_grib_int_val[idx];
+          vlistptr->vars[varID].opt_grib_int_keyword[idx] = strdupx(vartable[varid].opt_grib_int_keyword[idx]);
+        }
+      for (i=0; i<vartable[varid].opt_grib_dbl_nentries; i++)
+        {
+          int idx = vlistptr->vars[varID].opt_grib_dbl_nentries;
+          vlistptr->vars[varID].opt_grib_dbl_nentries++;
+          if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/double value pairs!");
+          vlistptr->vars[varID].opt_grib_dbl_val[idx] = vartable[varid].opt_grib_dbl_val[idx];
+          vlistptr->vars[varID].opt_grib_dbl_keyword[idx] = strdupx(vartable[varid].opt_grib_dbl_keyword[idx]);
+        }
+      /* note: if the key is not defined, we do not throw an error! */
+#endif
 
       if ( cdiDefaultTableID != UNDEFID )
 	{
@@ -584,7 +675,7 @@ void cdiGenVars(int streamID)
       for ( levelID = 0; levelID < nlevels; levelID++ )
 	{
 	  lindex = vartable[varid].levelTable[levelID].lindex;
-	  printf("%d %d %d %d %d\n", varID, levelID, 
+	  printf("%d %d %d %d %d\n", varID, levelID,
 		 vartable[varid].levelTable[levelID].lindex,
 		 vartable[varid].levelTable[levelID].recID,
 		 vartable[varid].levelTable[levelID].level1);
@@ -592,8 +683,7 @@ void cdiGenVars(int streamID)
       */
       for ( levelID = 0; levelID < nlevels; levelID++ )
 	{
-	  streamptr->vars[varID].level[levelID] =
-	    vartable[varid].levelTable[levelID].recID;
+	  streamptr->vars[varID].level[levelID] = vartable[varid].levelTable[levelID].recID;
 	  for ( lindex = 0; lindex < nlevels; lindex++ )
 	    if ( levelID == vartable[varid].levelTable[lindex].lindex ) break;
 
@@ -620,12 +710,14 @@ void varDefVCT(size_t vctsize, double *vctptr)
     }
 }
 
-void varDefZAxisReference(int nlev, int nvgrid, char *uuid)
+
+void varDefZAxisReference(int nhlev, int nvgrid, char *uuid)
 {
-  numberOfVerticalLevels = nlev;
+  numberOfVerticalLevels = nhlev;
   numberOfVerticalGrid = nvgrid;
-  strncpy(uuidVGrid, uuid, 16);
+  memcpy(uuidVGrid, uuid, 16);
 }
+
 
 int varDefGrid(int vlistID, grid_t grid, int mode)
 {
@@ -639,6 +731,7 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
   int gridID = UNDEFID;
   int index;
   vlist_t *vlistptr;
+  int * gridIndexList, i;
 
   vlistptr = vlist_to_pointer(vlistID);
 
@@ -662,14 +755,21 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
   if ( ! griddefined )
     {
       ngrids = gridSize();
-      for ( gridID = 0; gridID < ngrids; gridID++ )
-	{
-	  if ( gridCompare(gridID, grid) == 0 )
-	    {
-	      gridglobdefined = TRUE;
-	      break;
-	    }
-	}
+      if ( ngrids > 0 )
+        {
+          gridIndexList = malloc(ngrids*sizeof(int));
+          gridGetIndexList ( ngrids, gridIndexList );
+          for ( i = 0; i < ngrids; i++ )
+            {
+              gridID = gridIndexList[i];
+              if ( gridCompare(gridID, grid) == 0 )
+                {
+                  gridglobdefined = TRUE;
+                  break;
+                }
+            }
+          if ( gridIndexList ) free ( gridIndexList );
+        }
 
       ngrids = vlistptr->ngrids;
       if ( mode == 1 )
@@ -708,8 +808,8 @@ int zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, double *l
       if ( nlevels == zaxisInqSize(zaxisID) && zlbounds == lbounds )
 	{
 	  const double *dlevels;
-	  char zlongname[256];
-	  char zunits[256];
+	  char zlongname[CDI_MAX_NAME];
+	  char zunits[CDI_MAX_NAME];
 
 	  dlevels = zaxisInqLevelsPtr(zaxisID);
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -754,6 +854,7 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
   int index;
   int zaxisglobdefined = 0;
   vlist_t *vlistptr;
+  int i;
 
   vlistptr = vlist_to_pointer(vlistID);
 
@@ -775,12 +876,22 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
   if ( ! zaxisdefined )
     {
       nzaxis = zaxisSize();
-      for ( zaxisID = 0; zaxisID < nzaxis; zaxisID++ )
-	if ( zaxisCompare(zaxisID, zaxistype, nlevels, lbounds, levels, longname, units, ltype) == 0 )
-	  {
-	    zaxisglobdefined = 1;
-	    break;
-	  }
+      if ( nzaxis > 0 )
+        {
+          int *zaxisIndexList;
+          zaxisIndexList = (int *) malloc ( nzaxis * sizeof ( int ));
+          zaxisGetIndexList ( nzaxis, zaxisIndexList );
+          for ( i = 0; i < nzaxis; i++ )
+            {
+              zaxisID = zaxisIndexList[i];
+              if ( zaxisCompare(zaxisID, zaxistype, nlevels, lbounds, levels, longname, units, ltype) == 0 )
+                {
+                  zaxisglobdefined = 1;
+                  break;
+                }
+            }
+          if ( zaxisIndexList ) free ( zaxisIndexList );
+        }
 
       nzaxis = vlistptr->nzaxis;
       if ( mode == 1 )
@@ -884,6 +995,58 @@ void varDefTable(int varID, int tableID)
 {
   vartable[varID].tableID = tableID;
 }
+
+
+void varDefEnsembleInfo(int varID, int ens_idx, int ens_count, int forecast_type)
+{
+  if ( vartable[varID].ensdata == NULL )
+      vartable[varID].ensdata = (ensinfo_t *) malloc( sizeof( ensinfo_t ) );
+
+  vartable[varID].ensdata->ens_index = ens_idx;
+  vartable[varID].ensdata->ens_count = ens_count;
+  vartable[varID].ensdata->forecast_init_type = forecast_type;
+}
+
+
+void varDefTypeOfGeneratingProcess(int varID, int typeOfGeneratingProcess)
+{
+  vartable[varID].typeOfGeneratingProcess = typeOfGeneratingProcess;
+}
+
+
+void varDefOptGribInt(int varID, long lval, const char *keyword)
+{
+#if  defined  (HAVE_LIBGRIB_API)
+  int idx = vartable[varID].opt_grib_int_nentries;
+  vartable[varID].opt_grib_int_nentries++;
+  if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/integer value pairs!");
+  vartable[varID].opt_grib_int_val[idx] = (int) lval;
+  vartable[varID].opt_grib_int_keyword[idx] = strdupx(keyword);
+#endif
+}
+
+
+void varDefOptGribDbl(int varID, double dval, const char *keyword)
+{
+#if  defined  (HAVE_LIBGRIB_API)
+  int idx = vartable[varID].opt_grib_dbl_nentries;
+  vartable[varID].opt_grib_dbl_nentries++;
+  if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/double value pairs!");
+  vartable[varID].opt_grib_dbl_val[idx] = dval;
+  vartable[varID].opt_grib_dbl_keyword[idx] = strdupx(keyword);
+#endif
+}
+
+
+int varOptGribNentries(int varID)
+{
+  int nentries = 0;
+#if  defined  (HAVE_LIBGRIB_API)
+  nentries = vartable[varID].opt_grib_int_nentries + vartable[varID].opt_grib_dbl_nentries;
+#endif
+  return (nentries);
+}
+
 /*
  * Local Variables:
  * c-file-style: "Java"

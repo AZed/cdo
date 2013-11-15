@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@ void printMap(int nlon, int nlat, double *array, double missval, double min, dou
   int ilon, ilat, i;
   double x, a, b;
   double step;
-  double level[9];
+  double level[10];
   int min_n, max_n;
   char c;
 
@@ -264,8 +264,8 @@ void *Info(void *argument)
       if ( vlistNvars(vlistID) == 0 ) continue;
 
       gridsize = vlistGridsizeMax(vlistID);
-
       if ( vlistNumber(vlistID) != CDI_REAL ) gridsize *= 2;
+
       array = (double *) malloc(gridsize*sizeof(double));
 
       indg = 0;
@@ -283,15 +283,15 @@ void *Info(void *argument)
 	    {
 	      if ( (tsID == 0 && recID == 0) || operatorID == MAP )
 		{
-		  if ( operatorID == INFON )
-		    fprintf(stdout, "%6d :       Date  Time    Name         Level    Size    Miss :"
-			    "     Minimum        Mean     Maximum\n",  -(indf+1));
-		  else if ( operatorID == INFOC )
-		    fprintf(stdout, "%6d :       Date  Time    Code  Level    Size    Miss :"
-			    "     Minimum        Mean     Maximum\n",  -(indf+1));
-		  else
-		    fprintf(stdout, "%6d :       Date  Time    Param        Level    Size    Miss :"
-			    "     Minimum        Mean     Maximum\n",  -(indf+1));
+		  fprintf(stdout, "%6d :       Date     Time   Level Gridsize    Miss :"
+			  "     Minimum        Mean     Maximum : ",  -(indf+1));
+
+		  if      ( operatorID == INFON ) fprintf(stdout, "Parameter name");
+		  else if ( operatorID == INFOC ) fprintf(stdout, "Code number");
+		  else                            fprintf(stdout, "Parameter ID");
+
+		  if ( cdoVerbose ) fprintf(stdout, " : Extra" );              
+		  fprintf(stdout, "\n" );              
 		}
 
 	      streamInqRecord(streamID, &varID, &levelID);
@@ -310,22 +310,17 @@ void *Info(void *argument)
 
 	      if ( operatorID == INFON ) vlistInqVarName(vlistID, varID, varname);
 
-	      if ( operatorID == INFON )
-		fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, varname);
-	      else if ( operatorID == INFOC )
-		fprintf(stdout, "%6d :%s %s %3d ", indg, vdatestr, vtimestr, code);
-	      else
-		fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, paramstr);
+	      fprintf(stdout, "%6d :%s %s ", indg, vdatestr, vtimestr);
 
 	      level = zaxisInqLevel(zaxisID, levelID);
 	      fprintf(stdout, "%7g ", level);
 
-	      fprintf(stdout, "%7d %7d :", gridsize, nmiss);
+	      fprintf(stdout, "%8d %7d :", gridsize, nmiss);
 
 	      if ( /* gridInqType(gridID) == GRID_SPECTRAL || */
 		   (gridsize == 1 && nmiss == 0 && number == CDI_REAL) )
 		{
-		  fprintf(stdout, "            %#12.5g\n", array[0]);
+		  fprintf(stdout, "            %#12.5g            ", array[0]);
 		}
 	      else
 		{
@@ -378,11 +373,11 @@ void *Info(void *argument)
 			{
 			  arrmean = arrmean/nvals;
 			  arrvar  = arrvar/nvals - arrmean*arrmean;
-			  fprintf(stdout, "%#12.5g%#12.5g%#12.5g\n", arrmin, arrmean, arrmax);
+			  fprintf(stdout, "%#12.5g%#12.5g%#12.5g", arrmin, arrmean, arrmax);
 			}
 		      else
 			{
-			  fprintf(stdout, "                     nan\n");
+			  fprintf(stdout, "                     nan            ");
 			}
 		    }
 		  else
@@ -408,27 +403,43 @@ void *Info(void *argument)
 
 		      if ( nvals_r > 0 ) arrmean_r = arrsum_r / nvals_r;
 		      if ( nvals_i > 0 ) arrmean_i = arrsum_i / nvals_i;
-		      fprintf(stdout, "  -  (%#12.5g,%#12.5g)  -\n", arrmean_r, arrmean_i);
+		      fprintf(stdout, "   -  (%#12.5g,%#12.5g)  -", arrmean_r, arrmean_i);
 		    }
+		}
 
-		  if ( imiss != nmiss && nmiss > 0 )
-		    fprintf(stdout, "Found %d of %d missing values!\n", imiss, nmiss);
+	      if ( operatorID == INFON )
+		fprintf(stdout, " : %-14s", varname);
+	      else if ( operatorID == INFOC )
+		fprintf(stdout, " : %4d   ", code);
+	      else
+		fprintf(stdout, " : %-14s", paramstr);
 
-		  if ( operatorID == MAP )
+	      if ( cdoVerbose )
+		{
+		  char varextra[CDI_MAX_NAME];
+		  vlistInqVarExtra(vlistID, varID, varextra);
+		  fprintf(stdout, " : %s", varextra );              
+		}
+
+	      fprintf(stdout, "\n");
+
+	      if ( imiss != nmiss && nmiss > 0 )
+		fprintf(stdout, "Found %d of %d missing values!\n", imiss, nmiss);
+
+	      if ( operatorID == MAP )
+		{
+		  int nlon, nlat;
+		  
+		  nlon = gridInqXsize(gridID);
+		  nlat = gridInqYsize(gridID);
+
+		  if ( gridInqType(gridID) == GRID_GAUSSIAN    ||
+		       gridInqType(gridID) == GRID_LONLAT      ||
+		       gridInqType(gridID) == GRID_CURVILINEAR ||
+		       (gridInqType(gridID) == GRID_GENERIC && 
+			nlon*nlat == gridInqSize(gridID) && nlon < 1024) )
 		    {
-		      int nlon, nlat;
-
-		      nlon = gridInqXsize(gridID);
-		      nlat = gridInqYsize(gridID);
-
-		      if ( gridInqType(gridID) == GRID_GAUSSIAN    ||
-			   gridInqType(gridID) == GRID_LONLAT      ||
-			   gridInqType(gridID) == GRID_CURVILINEAR ||
-			   (gridInqType(gridID) == GRID_GENERIC && 
-			    nlon*nlat == gridInqSize(gridID) && nlon < 1024) )
-			{
-			  printMap(nlon, nlat, array, missval, arrmin, arrmax);
-			}
+		      printMap(nlon, nlat, array, missval, arrmin, arrmax);
 		    }
 		}
 	    }

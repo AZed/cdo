@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,21 +29,28 @@
 
 typedef struct
 {
-  int      recID;
-  int      varID;
-  int      levelID;
-  int      code;
-  double   level;
-  char     name[CDI_MAX_NAME];
+  int        nmiss;
+  int        levelID;
+  double     level;
 }
-recinfo_t;
+levinfo_t;
+
+typedef struct
+{
+  int        varID;
+  int        nlevs;
+  int        code;
+  char       name[CDI_MAX_NAME];
+  levinfo_t *levInfo;
+}
+varinfo_t;
 
 static
-int cmpreccode(const void *s1, const void *s2)
+int cmpvarcode(const void *s1, const void *s2)
 {
   int cmp = 0;
-  recinfo_t *x = (recinfo_t *) s1;
-  recinfo_t *y = (recinfo_t *) s2;
+  varinfo_t *x = (varinfo_t *) s1;
+  varinfo_t *y = (varinfo_t *) s2;
   /*
   printf("%d %d  %d %d\n", x->code, y->code, x, y);
   */
@@ -54,14 +61,21 @@ int cmpreccode(const void *s1, const void *s2)
 }
 
 static
-int cmpreclevel(const void *s1, const void *s2)
+int cmpvarname(const void *s1, const void *s2)
+{
+  varinfo_t *x = (varinfo_t *) s1;
+  varinfo_t *y = (varinfo_t *) s2;
+
+  return (strcmp(x->name, y->name));
+}
+
+static
+int cmpvarlevel(const void *s1, const void *s2)
 {
   int cmp = 0;
-  recinfo_t *x = (recinfo_t *) s1;
-  recinfo_t *y = (recinfo_t *) s2;
-  /*
-  printf("%g %g  %d %d\n", x->level, y->level, x, y);
-  */
+  levinfo_t *x = (levinfo_t *) s1;
+  levinfo_t *y = (levinfo_t *) s2;
+
   if      ( x->level < y->level ) cmp = -1;
   else if ( x->level > y->level ) cmp =  1;
 
@@ -69,27 +83,36 @@ int cmpreclevel(const void *s1, const void *s2)
 }
 
 static
-int cmprecname(const void *s1, const void *s2)
+int cmpvarlevelrev(const void *s1, const void *s2)
 {
-  recinfo_t *x = (recinfo_t *) s1;
-  recinfo_t *y = (recinfo_t *) s2;
+  int cmp = 0;
+  levinfo_t *x = (levinfo_t *) s1;
+  levinfo_t *y = (levinfo_t *) s2;
 
-  return (strcmp(x->name, y->name));
+  if      ( x->level > y->level ) cmp = -1;
+  else if ( x->level < y->level ) cmp =  1;
+
+  return (cmp);
 }
 
 static
-int findrec(recinfo_t *recInfo[], int nrecords, int varID, int levelID)
+void setNmiss(int varID, int levelID, int nvars, varinfo_t *varInfo, int nmiss)
 {
-  int index;
+  int vindex, lindex;
+  int nlevs;
 
-  for ( index = 0; index < nrecords; index++ )
-    if ( recInfo[index]->varID == varID && recInfo[index]->levelID == levelID )
-      break;
+  for ( vindex = 0; vindex < nvars; vindex++ )
+    if ( varInfo[vindex].varID == varID ) break;
 
-  if ( index == nrecords )
-    cdoAbort("Internal problem! Record not found.");
+  if ( vindex == nvars ) cdoAbort("Internal problem; varID not found!");
 
-  return (index);
+  nlevs = varInfo[vindex].nlevs; 
+  for ( lindex = 0; lindex < nlevs; lindex++ )
+    if ( varInfo[vindex].levInfo[lindex].levelID == levelID ) break;
+
+  if ( lindex == nlevs ) cdoAbort("Internal problem; levelID not found!");
+
+  varInfo[vindex].levInfo[lindex].nmiss = nmiss;
 }
 
 
@@ -100,14 +123,14 @@ void *Sort(void *argument)
   int streamID1, streamID2;
   int nrecs;
   int tsID, recID, varID, levelID, zaxisID;
-  int nvars, nrecords, nlevel, offset, index;
+  int vindex, lindex;
+  int nvars, nlevs, offset;
   int vlistID1, vlistID2;
   int gridsize;
   int nmiss;
-  int *recNmiss;
   double *single;
   double **vardata = NULL;
-  recinfo_t **recInfo;
+  varinfo_t *varInfo;
   int taxisID1, taxisID2;
 
   cdoInitialize(argument);
@@ -139,24 +162,23 @@ void *Sort(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  nvars   = vlistNvars(vlistID1);
 
-  recNmiss   = (int *) malloc(nrecords*sizeof(int));
-
-  recInfo    = (recinfo_t **) malloc(nrecords*sizeof(recinfo_t *));
-  recInfo[0] = (recinfo_t *) malloc(nrecords*sizeof(recinfo_t));
-
-  for ( index = 1; index < nrecords; index++ )
-    recInfo[index] = recInfo[0] + index;
+  varInfo = (varinfo_t *) malloc(nvars*sizeof(varinfo_t));
+  for ( varID = 0; varID < nvars; ++varID )
+    {
+      nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+      varInfo[varID].nlevs = nlevs;
+      varInfo[varID].levInfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
+    }
 
   vardata = (double **) malloc(nvars*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
+      nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+      vardata[varID] = (double *) malloc(gridsize*nlevs*sizeof(double));
     }
 
   tsID = 0;
@@ -172,13 +194,12 @@ void *Sort(void *argument)
 
 	  if ( tsID == 0 )
 	    {
-	      recInfo[recID]->recID   = recID;
-	      recInfo[recID]->varID   = varID;
-	      recInfo[recID]->levelID = levelID;
-	      recInfo[recID]->code    = vlistInqVarCode(vlistID1, varID);
+	      varInfo[varID].varID = varID;
+	      varInfo[varID].code  = vlistInqVarCode(vlistID1, varID);
+	      vlistInqVarName(vlistID1, varID, varInfo[varID].name);
 	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
-	      recInfo[recID]->level   = zaxisInqLevel(zaxisID, levelID);
-	      vlistInqVarName(vlistID1, varID, recInfo[recID]->name);
+	      varInfo[varID].levInfo[levelID].levelID = levelID;
+	      varInfo[varID].levInfo[levelID].level   = zaxisInqLevel(zaxisID, levelID);
 	    }
 
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
@@ -187,37 +208,62 @@ void *Sort(void *argument)
 
 	  streamReadRecord(streamID1, single, &nmiss);
 
-	  index = findrec(recInfo, nrecords, varID, levelID);
-	  recNmiss[index] = nmiss;
+	  setNmiss(varID, levelID, nvars, varInfo, nmiss);
+	  // varInfo[varID].levInfo[levelID].nmiss = nmiss;
 	}
 
       if ( tsID == 0 )
 	{
+	  if ( cdoVerbose )
+	    for ( vindex = 0; vindex < nvars; vindex++ )
+	      {
+		nlevs = varInfo[vindex].nlevs;
+		for ( lindex = 0; lindex < nlevs; ++lindex )
+		  printf("sort in: %d %s %d %d %g\n",
+			 vindex, varInfo[vindex].name, varInfo[vindex].code, varInfo[vindex].nlevs, varInfo[vindex].levInfo[lindex].level);
+	      }
+
 	  if      ( operatorID == SORTCODE )
-	    qsort(recInfo[0], nrecords, sizeof(recinfo_t), cmpreccode);
+	    qsort(varInfo, nvars, sizeof(varinfo_t), cmpvarcode);
 	  else if ( operatorID == SORTNAME )
-	    qsort(recInfo[0], nrecords, sizeof(recinfo_t), cmprecname);
+	    qsort(varInfo, nvars, sizeof(varinfo_t), cmpvarname);
 	  else if ( operatorID == SORTLEVEL )
-	    qsort(recInfo[0], nrecords, sizeof(recinfo_t), cmpreclevel);
+	    {
+	      for ( vindex = 0; vindex < nvars; vindex++ )
+		{
+		  nlevs = varInfo[vindex].nlevs;
+		  qsort(varInfo[vindex].levInfo, nlevs, sizeof(levinfo_t), cmpvarlevel);
+		}
+	    }
+
+	  if ( cdoVerbose )
+	    for ( vindex = 0; vindex < nvars; vindex++ )
+	      {
+		nlevs = varInfo[vindex].nlevs;
+		for ( lindex = 0; lindex < nlevs; ++lindex )
+		  printf("sort out: %d %s %d %d %g\n",
+			 vindex, varInfo[vindex].name, varInfo[vindex].code, varInfo[vindex].nlevs, varInfo[vindex].levInfo[lindex].level);
+	      }
 	}
 
-      for ( recID = 0; recID < nrecords; recID++ )
+      for ( vindex = 0; vindex < nvars; vindex++ )
 	{
-	  /*
-	  printf("recID, recID %d %d\n", recID, recInfo[recID]->recID);
-	  */
-	  varID   = recInfo[recID]->varID;
-	  levelID = recInfo[recID]->levelID;
-	  nmiss   = recNmiss[recID];
-
-	  if ( tsID == 0 || vlistInqVarTsteptype(vlistID1, varID) != TSTEP_CONSTANT )
+	  varID = varInfo[vindex].varID;
+	  nlevs = varInfo[vindex].nlevs;
+	  for ( lindex = 0; lindex < nlevs; ++lindex )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
-	      offset   = gridsize*levelID;
-	      single   = vardata[varID] + offset;
+	      levelID = varInfo[vindex].levInfo[lindex].levelID;
+	      nmiss   = varInfo[vindex].levInfo[lindex].nmiss;
 
-	      streamDefRecord(streamID2, varID, levelID);
-	      streamWriteRecord(streamID2, single, nmiss);
+	      if ( tsID == 0 || vlistInqVarTsteptype(vlistID1, varID) != TSTEP_CONSTANT )
+		{
+		  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+		  offset   = gridsize*levelID;
+		  single   = vardata[varID] + offset;
+
+		  streamDefRecord(streamID2, varID, levelID);
+		  streamWriteRecord(streamID2, single, nmiss);
+		}
 	    }
 	}
 
@@ -227,15 +273,11 @@ void *Sort(void *argument)
   streamClose(streamID1);
   streamClose(streamID2);
 
-  for ( varID = 0; varID < nvars; varID++ )
-    free(vardata[varID]);
-
+  for ( varID = 0; varID < nvars; varID++ ) free(vardata[varID]);
   free(vardata);
 
-  free(recInfo[0]);
-  free(recInfo);
-
-  if ( recNmiss ) free(recNmiss);
+  for ( vindex = 0; vindex < nvars; vindex++ ) free(varInfo[vindex].levInfo);
+  free(varInfo);
 
   cdoFinish();
 

@@ -1,8 +1,8 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
-#if  defined  (HAVE_LIBNETCDF)
+#if defined(HAVE_LIBNETCDF)
 #  include "netcdf.h"
 #endif
 
@@ -15,7 +15,7 @@
 #include "error.h"
 
 
-#if  defined  (HAVE_LIBNETCDF)
+#if defined(HAVE_LIBNETCDF)
 static void nce(int istat)
 {
   /*
@@ -30,7 +30,7 @@ static void nce(int istat)
 int cdf_openread(const char *filename)
 {
   int fileID = -1;
-#if  defined  (HAVE_LIBNETCDF)
+#if defined(HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
 
   openLock();
@@ -48,7 +48,7 @@ int cdf_openread(const char *filename)
 int gridFromNCfile(const char *gridfile)
 {
   int gridID = -1;
-#if  defined  (HAVE_LIBNETCDF)
+#if defined(HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
   int nc_gridsize_id;  /* netCDF grid size dim id       */
   int nc_gridcorn_id;  /* netCDF grid corner dim id     */
@@ -64,7 +64,7 @@ int gridFromNCfile(const char *gridfile)
   size_t attlen;
   size_t grid_rank, grid_size, grid_nvertex;
   int grid_dims[2];
-  grid_t grid;
+  griddes_t grid;
 
 
   gridInit(&grid);
@@ -159,7 +159,7 @@ int gridFromNCfile(const char *gridfile)
 
 void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
 {
-#if  defined  (HAVE_LIBNETCDF)
+#if defined(HAVE_LIBNETCDF)
   int nc_file_id;      /* netCDF grid file id           */
   int nc_gridsize_id;  /* netCDF grid size dim id       */
   int nc_gridcorn_id;  /* netCDF grid corner dim id     */

@@ -3,6 +3,7 @@
 
 #if  defined  (HAVE_LIBNETCDF)
 
+#include <stdlib.h>
 #include "netcdf.h"
 
 void cdf_create (const char *path, int cmode, int *idp);
@@ -22,6 +23,8 @@ void cdf_inq_dimname (int ncid, int dimid, char *name);
 void cdf_inq_dimlen (int ncid, int dimid, size_t * lengthp);
 void cdf_def_var (int ncid, const char *name, nc_type xtype, int ndims,
 		 const int dimids[], int *varidp);
+void cdf_def_var_serial(int ncid, const char *name, nc_type xtype, int ndims,
+                        const int dimids[], int *varidp);
 void cdf_inq_varid (int ncid, const char *name, int *varidp);
 void cdf_inq_nvars (int ncid, int *nvarsp);
 void cdf_inq_var (int ncid, int varid, char *name, nc_type *xtypep,
@@ -86,6 +89,14 @@ void cdf_inq_atttype (int ncid, int varid, const char *name, nc_type *xtypep);
 void cdf_inq_attlen (int ncid, int varid, const char *name, size_t *lenp);
 void cdf_inq_attname (int ncid, int varid, int attnum, char *name);
 void cdf_inq_attid (int ncid, int varid, const char *name, int *attnump);
+
+typedef int (*cdi_nc__create_funcp)(const char *path, int cmode,
+                                    size_t initialsz, size_t *chunksizehintp,
+                                    int *ncidp);
+
+typedef void (*cdi_cdf_def_var_funcp)(int ncid, const char *name,
+                                      nc_type xtype, int ndims,
+                                      const int dimids[], int *varidp);
 
 #endif
 

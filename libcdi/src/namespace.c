@@ -3,15 +3,76 @@
 #include <stdio.h>
 #include "cdi.h"
 #include "namespace.h"
+#include "resource_handle.h"
 #include "pio_util.h"
-
+#include "serialize.h"
+#include "error.h"
+#include "cdf_int.h"
+#include "file.h"
+#include "cdi_int.h"
+#include "stream_cdf.h"
 
 static int nNamespaces = 1;
 static int activeNamespace = 0;
-static int serialHLF = 1;
-static int * hasLocalFiles = &serialHLF;
-static int serialRS = STAGE_DEFINITION;
-static statusCode * resStatus = (statusCode *) &serialRS;
+
+#ifdef HAVE_LIBNETCDF
+#define CDI_NETCDF_SWITCHES                     \
+  { .func = (void (*)()) nc__create },          \
+  { .func = (void (*)()) cdf_def_var_serial },  \
+  { .func = (void (*)()) cdfDefTimestep },      \
+  { .func = (void (*)()) cdfDefVars }
+
+#else
+#define CDI_NETCDF_SWITCHES
+#endif
+
+#define defaultSwitches {                                   \
+    { .func = (void (*)()) cdiAbortC_serial },              \
+    { .func = (void (*)()) serializeGetSizeInCore },        \
+    { .func = (void (*)()) serializePackInCore },           \
+    { .func = (void (*)()) serializeUnpackInCore },         \
+    { .func = (void (*)()) fileOpen_serial },               \
+    { .func = (void (*)()) fileWrite },                     \
+    { .func = (void (*)()) fileClose_serial },              \
+    { .func = (void (*)()) cdiStreamOpenDefaultDelegate },  \
+    { .func = (void (*)()) cdiStreamDefVlist_ },            \
+    { .func = (void (*)()) cdiStreamWriteVar_ },            \
+    { .func = (void (*)()) cdiStreamwriteVarChunk_ },       \
+    { .data = NULL },                                       \
+    { .func = (void (*)()) cdiStreamCloseDefaultDelegate }, \
+    { .func = (void (*)()) cdiStreamDefTimestep_ }, \
+    { .func = (void (*)()) cdiStreamSync_ },                \
+    CDI_NETCDF_SWITCHES                        \
+    }
+
+struct namespace
+{
+  statusCode resStage;
+  union namespaceSwitchValue switches[NUM_NAMESPACE_SWITCH];
+} initialNamespace = {
+  .resStage = STAGE_DEFINITION,
+  .switches = defaultSwitches
+};
+
+struct namespace *namespaces = &initialNamespace;
+
+static int namespacesSize = 1;
+
+#if  defined  (HAVE_LIBPTHREAD)
+#  include <pthread.h>
+
+static pthread_mutex_t namespaceMutex = PTHREAD_MUTEX_INITIALIZER;
+
+#  define NAMESPACE_LOCK()         pthread_mutex_lock(&namespaceMutex)
+#  define NAMESPACE_UNLOCK()       pthread_mutex_unlock(&namespaceMutex)
+
+#else
+
+#  define NAMESPACE_LOCK()
+#  define NAMESPACE_UNLOCK()
+
+#endif
+
 
 enum {
   intbits = sizeof(int) * CHAR_BIT,
@@ -27,6 +88,7 @@ enum {
 };
 
 
+#if 0
 void namespaceShowbits ( int n, char *name )
 {
   int i;
@@ -42,6 +104,7 @@ void namespaceShowbits ( int n, char *name )
   bitvalues[intbits] = '\0';
   fprintf (stdout, "%s: %s\n", name, bitvalues );
 }
+#endif
 
 
 int namespaceIdxEncode ( namespaceTuple_t tin )
@@ -67,33 +130,74 @@ namespaceTuple_t namespaceResHDecode ( int resH )
   return tin;
 }
 
-
-void namespaceInit ( int nspn, int * argHasLocalFile )
+int
+namespaceNew()
 {
-#ifdef USE_MPI
-  int nspID;
-
-  xassert(nspn <= NUM_NAMESPACES && nspn >= 1 );
-
-  nNamespaces = nspn;
-  if ( nspn >= 1 )
+  int newNamespaceID = -1;
+  NAMESPACE_LOCK();
+  if (namespacesSize > nNamespaces)
     {
-      hasLocalFiles = xmalloc ( nspn * sizeof ( hasLocalFiles[0] ));
-      for ( nspID = 0; nspID < nspn; nspID++ )
-	hasLocalFiles[nspID] = argHasLocalFile[nspID];
-      resStatus = xmalloc ( nspn * sizeof ( resStatus[0] ));
+      /* namespace is already available and only needs reinitialization */
+      for (int i = 0; i < namespacesSize; ++i)
+        if (namespaces[i].resStage == STAGE_UNUSED)
+          {
+            newNamespaceID = i;
+            break;
+          }
     }
-#endif
+  else if (namespacesSize == 1)
+    {
+      /* make room for additional namespace */
+      struct namespace *newNameSpaces
+        = xmalloc((namespacesSize + 1) * sizeof (namespaces[0]));
+      memcpy(newNameSpaces, namespaces, sizeof (namespaces[0]));
+      namespaces = newNameSpaces;
+      ++namespacesSize;
+      newNamespaceID = 1;
+    }
+  else if (namespacesSize < NUM_NAMESPACES)
+    {
+      /* make room for additional namespace */
+      newNamespaceID = namespacesSize;
+      namespaces
+        = xrealloc(namespaces, (namespacesSize + 1) * sizeof (namespaces[0]));
+      ++namespacesSize;
+    }
+  else /* implicit: namespacesSize >= NUM_NAMESPACES */
+    {
+      NAMESPACE_UNLOCK();
+      return -1;
+    }
+  xassert(newNamespaceID >= 0 && newNamespaceID < NUM_NAMESPACES);
+  ++nNamespaces;
+  namespaces[newNamespaceID].resStage = STAGE_DEFINITION;
+  memcpy(namespaces[newNamespaceID].switches,
+         (union namespaceSwitchValue[NUM_NAMESPACE_SWITCH])defaultSwitches,
+         sizeof (namespaces[newNamespaceID].switches));
+  reshListCreate(newNamespaceID);
+  NAMESPACE_UNLOCK();
+  return newNamespaceID;
 }
 
+void
+namespaceDelete(int namespaceID)
+{
+  NAMESPACE_LOCK();
+  xassert(namespaceID < namespacesSize && nNamespaces);
+  reshListDestruct(namespaceID);
+  namespaces[namespaceID].resStage = STAGE_UNUSED;
+  --nNamespaces;
+  NAMESPACE_UNLOCK();
+}
 
 void namespaceCleanup ( void )
 {
   if ( nNamespaces > 1 )
     {
-      free ( hasLocalFiles );
-      hasLocalFiles = NULL;
-      free ( resStatus );
+      initialNamespace = namespaces[0];
+      free(namespaces);
+      namespaces = &initialNamespace;
+      nNamespaces = 1;
     }
 }
 
@@ -106,12 +210,9 @@ int namespaceGetNumber ()
 
 void pioNamespaceSetActive ( int nId )
 {
-#ifdef USE_MPI
-  if ( nId >= nNamespaces || nId < 0 )
-    abort ();
-
+  xassert(nId < namespacesSize && nId >= 0
+          && namespaces[nId].resStage != STAGE_UNUSED);
   activeNamespace = nId;
-#endif
 }
 
 
@@ -119,16 +220,6 @@ int namespaceGetActive ()
 {
   return activeNamespace;
 }
-
-
-int namespaceHasLocalFile ( int nId )
-{
-  if ( nId >= nNamespaces || nId < 0 )
-    abort ();
-
-  return hasLocalFiles ? hasLocalFiles[nId] : 0;
-}
-
 
 int namespaceAdaptKey ( int key, int nspTarget )
 {
@@ -167,14 +258,40 @@ int namespaceAdaptKey2 ( int key )
 void namespaceDefResStatus ( statusCode argResStatus )
 {
   int nsp = namespaceGetActive ();
-  resStatus[nsp] = argResStatus;
+  namespaces[nsp].resStage = argResStatus;
 }
 
 
 statusCode namespaceInqResStatus ( void )
 {
   int nsp = namespaceGetActive ();
-  return resStatus[nsp];
+  return namespaces[nsp].resStage;
+}
+
+void namespaceSwitchSet(enum namespaceSwitch sw, union namespaceSwitchValue value)
+{
+  xassert(sw > NSSWITCH_NO_SUCH_SWITCH && sw < NUM_NAMESPACE_SWITCH);
+  int nsp = namespaceGetActive();
+  namespaces[nsp].switches[sw] = value;
+}
+
+union namespaceSwitchValue namespaceSwitchGet(enum namespaceSwitch sw)
+{
+  xassert(sw > NSSWITCH_NO_SUCH_SWITCH && sw < NUM_NAMESPACE_SWITCH);
+  int nsp = namespaceGetActive();
+  return namespaces[nsp].switches[sw];
+}
+
+void cdiReset(void)
+{
+  NAMESPACE_LOCK();
+  for (int namespaceID = 0; namespaceID < namespacesSize; ++namespaceID)
+    namespaceDelete(namespaceID);
+  namespaces = &initialNamespace;
+  namespacesSize = 1;
+  nNamespaces = 1;
+  activeNamespace = 0;
+  NAMESPACE_UNLOCK();
 }
 
 /*

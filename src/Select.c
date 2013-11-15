@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,8 +27,7 @@
 #include "pstream.h"
 #include "error.h"
 #include "util.h"
-#include "list.h"
-#include "namelist.h"
+//#include "list.h"
 
 
 #define  PML_INT         1
@@ -139,6 +138,19 @@ pml_t *pmlNew(const char *name)
 }
 
 
+void pmlDestroy(pml_t *pml)
+{
+  if ( pml == NULL ) return;
+
+  for ( int i = 0; i < pml->size; ++i )
+    {
+      if ( pml->entry[i] ) free(pml->entry[i]);
+    }
+
+  free(pml);
+}
+
+
 void pmlPrint(pml_t *pml)
 {
   pml_entry_t *entry;
@@ -224,6 +236,7 @@ int pmlNum(pml_t *pml, const char *name)
   return (nocc);
 }
 
+void split_intstring(const char *intstr, int *first, int *last, int *inc);
 
 int pml_add_entry(pml_entry_t *entry, char *arg)
 {
@@ -231,8 +244,22 @@ int pml_add_entry(pml_entry_t *entry, char *arg)
 
   if ( entry->type == PML_INT )
     {
-      if ( entry->occ < (int) entry->size )
-	((int *) entry->ptr)[entry->occ++] = atoi(arg);
+      int ival, first, last, inc;
+
+      split_intstring(arg, &first, &last, &inc);
+
+      if ( inc >= 0 )
+	{
+	  for ( ival = first; ival <= last; ival += inc )
+	    if ( entry->occ < (int) entry->size )
+	      ((int *) entry->ptr)[entry->occ++] = ival;
+	}
+      else
+	{
+	  for ( ival = first; ival >= last; ival += inc )
+	    if ( entry->occ < (int) entry->size )
+	      ((int *) entry->ptr)[entry->occ++] = ival;
+	}
     }
   else if ( entry->type == PML_FLT )
     {
@@ -284,7 +311,6 @@ int pmlRead(pml_t *pml, int argc, char **argv)
   pml_entry_t *pentry[MAX_PML_ENTRY];
   int params[MAX_PML_ENTRY];
   int num_par[MAX_PML_ENTRY];
-  int len_par[MAX_PML_ENTRY];
   int nparams = 0;
   int i, istart;
   char *epos;
@@ -299,7 +325,6 @@ int pmlRead(pml_t *pml, int argc, char **argv)
   for ( i = 0; i < argc; ++i )
     {
       len = strlen(argv[i]);
-      len_par[i] = (int)len;
       bufsize += len+1;
     }
 
@@ -309,7 +334,6 @@ int pmlRead(pml_t *pml, int argc, char **argv)
   istart = 0;
   while ( istart < argc )
     {
-
       epos = strchr(argv[istart], '=');
       if ( epos == NULL )
 	{
@@ -341,6 +365,7 @@ int pmlRead(pml_t *pml, int argc, char **argv)
       istart++;
       for ( i = istart; i < argc; ++i )
 	{
+	  if ( *argv[i] == 0 ) { i++; break;}
 	  epos = strchr(argv[i], '=');
 	  if ( epos != NULL ) break;
 
@@ -408,7 +433,7 @@ void par_check_int_flag(int npar, int *parlist, int *flaglist, const char *txt)
 
   for ( i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
-      cdoWarning("%s %d not found!", txt, parlist[i]);
+      cdoWarning("%s >%d< not found!", txt, parlist[i]);
 }
 
 
@@ -418,7 +443,7 @@ void par_check_flt_flag(int npar, double *parlist, int *flaglist, const char *tx
 
   for ( i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
-      cdoWarning("%s %g not found!", txt, parlist[i]);
+      cdoWarning("%s >%g< not found!", txt, parlist[i]);
 }
 
 
@@ -428,7 +453,7 @@ void par_check_word_flag(int npar, char **parlist, int *flaglist, const char *tx
 
   for ( i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
-      cdoWarning("%s %s not found!", txt, parlist[i]);
+      cdoWarning("%s >%s< not found!", txt, parlist[i]);
 }
 
 
@@ -444,6 +469,9 @@ void *Select(void *argument)
   int recID, varID, levelID;
   int iparam;
   int nsel;
+  int vdate, vtime;
+  int last_year = -999999999;
+  int copytimestep;
   char paramstr[32];
   char varname[CDI_MAX_NAME];
   char stdname[CDI_MAX_NAME];
@@ -458,17 +486,35 @@ void *Select(void *argument)
   double *array = NULL;
   int taxisID1, taxisID2 = CDI_UNDEFID;
   int ntsteps;
+  int ltimsel = FALSE;
+  int second;
   int npar;
   int *vars = NULL;
   pml_t *pml;
-  PML_DEF_INT(code,    1024, "Code number");
-  PML_DEF_INT(ltype,   1024, "Level type");
-  PML_DEF_FLT(level,   1024, "Level");
-  PML_DEF_WORD(name,   1024, "Variable name");
-  PML_DEF_WORD(param,  1024, "Parameter");
+  PML_DEF_INT(timestep_of_year, 4096, "Timestep of year");
+  PML_DEF_INT(timestep,         4096, "Timestep");
+  PML_DEF_INT(year,             1024, "Year");
+  PML_DEF_INT(month,              32, "Month");
+  PML_DEF_INT(day,                32, "Day");
+  PML_DEF_INT(hour,               24, "Hour");
+  PML_DEF_INT(minute,             60, "Minute");
+  PML_DEF_INT(code,             1024, "Code number");
+  PML_DEF_INT(ltype,            1024, "Level type");
+  PML_DEF_INT(levidx,           1024, "Level index");
+  PML_DEF_FLT(level,            1024, "Level");
+  PML_DEF_WORD(name,            1024, "Variable name");
+  PML_DEF_WORD(param,           1024, "Parameter");
 
+  PML_INIT_INT(timestep_of_year);
+  PML_INIT_INT(timestep);
+  PML_INIT_INT(year);
+  PML_INIT_INT(month);
+  PML_INIT_INT(day);
+  PML_INIT_INT(hour);
+  PML_INIT_INT(minute);
   PML_INIT_INT(code);
   PML_INIT_INT(ltype);
+  PML_INIT_INT(levidx);
   PML_INIT_FLT(level);
   PML_INIT_WORD(name);
   PML_INIT_WORD(param);
@@ -486,15 +532,23 @@ void *Select(void *argument)
 
   nsel     = operatorArgc();
   argnames = operatorArgv();
-  /*
+
   if ( cdoVerbose )
     for ( i = 0; i < nsel; i++ )
       printf("name %d = %s\n", i+1, argnames[i]);
-  */
+
   pml = pmlNew("SELECT");
 
+  PML_ADD_INT(pml, timestep_of_year);
+  PML_ADD_INT(pml, timestep);
+  PML_ADD_INT(pml, year);
+  PML_ADD_INT(pml, month);
+  PML_ADD_INT(pml, day);
+  PML_ADD_INT(pml, hour);
+  PML_ADD_INT(pml, minute);
   PML_ADD_INT(pml, code);
   PML_ADD_INT(pml, ltype);
+  PML_ADD_INT(pml, levidx);
   PML_ADD_FLT(pml, level);
   PML_ADD_WORD(pml, name);
   PML_ADD_WORD(pml, param);
@@ -503,8 +557,16 @@ void *Select(void *argument)
 
   if ( cdoVerbose ) pmlPrint(pml);
 
+  PML_NUM(pml, timestep_of_year);
+  PML_NUM(pml, timestep);
+  PML_NUM(pml, year);
+  PML_NUM(pml, month);
+  PML_NUM(pml, day);
+  PML_NUM(pml, hour);
+  PML_NUM(pml, minute);
   PML_NUM(pml, code);
   PML_NUM(pml, ltype);
+  PML_NUM(pml, levidx);
   PML_NUM(pml, level);
   PML_NUM(pml, name);
   PML_NUM(pml, param);
@@ -518,7 +580,7 @@ void *Select(void *argument)
   tsID2 = 0;
   for ( indf = 0; indf < nfiles; indf++ )
     {
-      if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
+      if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf)->args);
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
 
@@ -560,21 +622,47 @@ void *Select(void *argument)
 	      param = paramstr;
 
 	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      nlevs   = zaxisInqSize(zaxisID);
 	      ltype   = zaxis2ltype(zaxisID);
+
 
 	      vars[varID] = FALSE;
 	      
 	      if ( npar_ltype )
 		{
-		  if ( npar_code  && PAR_CHECK_INT(ltype) && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
-		  if ( npar_name  && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
-		  if ( npar_param && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_code  && PAR_CHECK_INT(ltype) && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_name  && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_param && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		  if ( !vars[varID] && !npar_code && !npar_name && !npar_param )
+		    {
+		      if ( PAR_CHECK_INT(ltype) ) vars[varID] = TRUE;
+		      else
+			{
+			  for ( levID = 0; levID < nlevs; levID++ )
+			    {
+			      levidx = levID + 1;
+			      level = zaxisInqLevel(zaxisID, levID);
+			      if ( !vars[varID] && npar_levidx && PAR_CHECK_INT(ltype) && PAR_CHECK_INT(levidx) )  vars[varID] = TRUE;
+			      if ( !vars[varID] && npar_level  && PAR_CHECK_INT(ltype) && PAR_CHECK_FLT(level)  )  vars[varID] = TRUE;
+			    }
+			}
+		    }
 		}
 	      else
 		{
-		  if ( npar_code  && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
-		  if ( npar_name  && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
-		  if ( npar_param && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_code  && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_name  && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
+		  if ( !vars[varID] && npar_param && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		  if ( !vars[varID] && !npar_code && !npar_name && !npar_param )
+		    {
+		      for ( levID = 0; levID < nlevs; levID++ )
+			{
+			  levidx = levID + 1;
+			  level = zaxisInqLevel(zaxisID, levID);
+			  if ( !vars[varID] && npar_levidx && PAR_CHECK_INT(levidx) )  vars[varID] = TRUE;
+			  if ( !vars[varID] && npar_level  && PAR_CHECK_FLT(level)  )  vars[varID] = TRUE;
+			}
+		    }
 		}
 	    }
 
@@ -587,6 +675,7 @@ void *Select(void *argument)
 
 		  for ( levID = 0; levID < nlevs; levID++ )
 		    {
+		      levidx = levID + 1;
 		      level = zaxisInqLevel(zaxisID, levID);
 		      
 		      if ( nlevs == 1 && IS_EQUAL(level, 0) )
@@ -595,7 +684,12 @@ void *Select(void *argument)
 			}
 		      else
 			{
-			  if ( npar_level )
+			  if ( npar_levidx )
+			    {
+			      if ( PAR_CHECK_INT(levidx) )
+				vlistDefFlag(vlistID1, varID, levID, result);
+			    }
+			  else if ( npar_level )
 			    {
 			      if ( PAR_CHECK_FLT(level) )
 				vlistDefFlag(vlistID1, varID, levID, result);
@@ -611,9 +705,12 @@ void *Select(void *argument)
 
 	  PAR_CHECK_INT_FLAG(code);
 	  PAR_CHECK_INT_FLAG(ltype);
+	  PAR_CHECK_INT_FLAG(levidx);
 	  PAR_CHECK_FLT_FLAG(level);
 	  PAR_CHECK_WORD_FLAG(name);
 	  PAR_CHECK_WORD_FLAG(param);
+
+	  if ( npar_timestep_of_year || npar_timestep || npar_year || npar_month || npar_day || npar_hour || npar_minute ) ltimsel = TRUE;
 
 	  npar = 0;
 	  for ( varID = 0; varID < nvars; varID++ )
@@ -628,8 +725,24 @@ void *Select(void *argument)
 	    }
 
 	  if ( npar == 0 )
-	    cdoAbort("No variable selected!");
+	    {
+	      if ( ltimsel == TRUE )
+		{
+		  for ( varID = 0; varID < nvars; varID++ )
+		    {
+		      vars[varID] = TRUE;
+		      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+		      nlevs   = zaxisInqSize(zaxisID);
 
+		      for ( levID = 0; levID < nlevs; levID++ )
+			vlistDefFlag(vlistID1, varID, levID, TRUE);
+		    }
+		}
+	      else
+		{
+		  cdoAbort("No variable selected!");
+		}
+	    }
 
 	  // if ( cdoVerbose ) vlistPrint(vlistID1);
 
@@ -672,10 +785,6 @@ void *Select(void *argument)
 		vlistDefVarTsteptype(vlistID2, varID, TSTEP_INSTANT);
 	    }
 
-	  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-
-	  streamDefVlist(streamID2, vlistID2);
-
 	  if ( ! lcopy )
 	    {
 	      gridsize = vlistGridsizeMax(vlistID1);
@@ -688,45 +797,107 @@ void *Select(void *argument)
 	  vlistCompare(vlistID0, vlistID1, CMP_ALL);
 	}
 
+
       tsID1 = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
 	{
-	  taxisCopyTimestep(taxisID2, taxisID1);
-
-	  streamDefTimestep(streamID2, tsID2);
-     
-	  for ( recID = 0; recID < nrecs; recID++ )
+	  if ( ltimsel == TRUE )
 	    {
-	      streamInqRecord(streamID1, &varID, &levelID);
-	      if ( vlistInqFlag(vlistID0, varID, levelID) == TRUE )
-		{
-		  varID2   = vlistFindVar(vlistID2, varID);
-		  levelID2 = vlistFindLevel(vlistID2, varID, levelID);
+	      copytimestep = FALSE;
+	      timestep = tsID1 + 1;
 
-		  streamDefRecord(streamID2, varID2, levelID2);
-		  if ( lcopy )
+	      vdate = taxisInqVdate(taxisID1);
+	      vtime = taxisInqVtime(taxisID1);
+	      cdiDecodeDate(vdate, &year, &month, &day);
+	      cdiDecodeTime(vtime, &hour, &minute, &second);
+
+	      if ( year != last_year )
+		{
+		  timestep_of_year = 0;
+		  last_year = year;
+		}
+
+	      timestep_of_year++;
+
+	      if ( npar_timestep && PAR_CHECK_INT(timestep) ) copytimestep = TRUE;
+	      if ( npar_timestep_of_year && PAR_CHECK_INT(timestep_of_year) ) copytimestep = TRUE;
+
+	      if ( !copytimestep && npar_timestep == 0 && npar_timestep_of_year == 0 )
+		{
+		  int lyear = 0, lmonth = 0, lday = 0, lhour = 0, lminute = 0;
+
+		  if ( npar_year   == 0 || (npar_year   && PAR_CHECK_INT(year))   ) lyear   = TRUE;
+		  if ( npar_month  == 0 || (npar_month  && PAR_CHECK_INT(month))  ) lmonth  = TRUE;
+		  if ( npar_day    == 0 || (npar_day    && PAR_CHECK_INT(day))    ) lday    = TRUE;
+		  if ( npar_hour   == 0 || (npar_hour   && PAR_CHECK_INT(hour))   ) lhour   = TRUE;
+		  if ( npar_minute == 0 || (npar_minute && PAR_CHECK_INT(minute)) ) lminute = TRUE;
+
+		  if ( lyear && lmonth && lday && lhour && lminute ) copytimestep = TRUE;
+		}
+
+	      if ( operatorID == DELETE ) copytimestep = !copytimestep;
+	    }
+	  else
+	    {
+	      copytimestep = TRUE;
+	    }
+
+	  if ( copytimestep == TRUE )
+	    {
+	      if ( streamID2 == CDI_UNDEFID )
+		{
+		  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
+
+		  streamDefVlist(streamID2, vlistID2);
+		}
+
+	      taxisCopyTimestep(taxisID2, taxisID1);
+
+	      streamDefTimestep(streamID2, tsID2);
+     
+	      for ( recID = 0; recID < nrecs; recID++ )
+		{
+		  streamInqRecord(streamID1, &varID, &levelID);
+		  if ( vlistInqFlag(vlistID0, varID, levelID) == TRUE )
 		    {
-		      streamCopyRecord(streamID2, streamID1);
-		    }
-		  else
-		    {
-		      streamReadRecord(streamID1, array, &nmiss);
-		      streamWriteRecord(streamID2, array, nmiss);
+		      varID2   = vlistFindVar(vlistID2, varID);
+		      levelID2 = vlistFindLevel(vlistID2, varID, levelID);
+		      
+		      streamDefRecord(streamID2, varID2, levelID2);
+		      if ( lcopy )
+			{
+			  streamCopyRecord(streamID2, streamID1);
+			}
+		      else
+			{
+			  streamReadRecord(streamID1, array, &nmiss);
+			  streamWriteRecord(streamID2, array, nmiss);
+			}
 		    }
 		}
-     	    }
+	      tsID2++;
+	    }
 
 	  tsID1++;
-	  tsID2++;
 	}
       
       streamClose(streamID1);
     }
 
-  streamClose(streamID2);
- 
+  PAR_CHECK_INT_FLAG(timestep_of_year);
+  PAR_CHECK_INT_FLAG(timestep);
+  PAR_CHECK_INT_FLAG(year);
+  PAR_CHECK_INT_FLAG(month);
+  PAR_CHECK_INT_FLAG(day);
+  PAR_CHECK_INT_FLAG(hour);
+  PAR_CHECK_INT_FLAG(minute);
+
+  if ( streamID2 != CDI_UNDEFID ) streamClose(streamID2);
+
   vlistDestroy(vlistID0);
   vlistDestroy(vlistID2);
+
+  pmlDestroy(pml);
 
   if ( array ) free(array);
   if ( vars ) free(vars);

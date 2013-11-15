@@ -54,10 +54,10 @@ subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/cdi.settings.in \
 	$(top_srcdir)/configure $(top_srcdir)/src/pkgconfig/cdi.pc.in \
-	AUTHORS COPYING ChangeLog INSTALL NEWS config/compile \
-	config/config.guess config/config.sub config/depcomp \
-	config/install-sh config/ltmain.sh config/missing \
-	config/mkinstalldirs
+	$(top_srcdir)/util/serialrun.in AUTHORS COPYING ChangeLog \
+	INSTALL NEWS config/compile config/config.guess \
+	config/config.sub config/depcomp config/install-sh \
+	config/ltmain.sh config/missing config/mkinstalldirs
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
@@ -77,7 +77,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = cdi.settings src/pkgconfig/cdi.pc
+CONFIG_CLEAN_FILES = util/serialrun cdi.settings src/pkgconfig/cdi.pc
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -149,6 +149,13 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CC = @BUILD_CC@
+BUILD_CFLAGS = @BUILD_CFLAGS@
+BUILD_CXX = @BUILD_CXX@
+BUILD_F77 = @BUILD_F77@
+BUILD_FC = @BUILD_FC@
+BUILD_FCFLAGS = @BUILD_FCFLAGS@
+BUILD_LDFLAGS = @BUILD_LDFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDI_F90_INTERFACE_FCFLAGS = @CDI_F90_INTERFACE_FCFLAGS@
@@ -174,6 +181,9 @@ ENABLE_CGRIBEX = @ENABLE_CGRIBEX@
 ENABLE_EXTRA = @ENABLE_EXTRA@
 ENABLE_GRIB = @ENABLE_GRIB@
 ENABLE_IEG = @ENABLE_IEG@
+ENABLE_NC2 = @ENABLE_NC2@
+ENABLE_NC4 = @ENABLE_NC4@
+ENABLE_NETCDF = @ENABLE_NETCDF@
 ENABLE_PYTHON = @ENABLE_PYTHON@
 ENABLE_RUBY = @ENABLE_RUBY@
 ENABLE_SERVICE = @ENABLE_SERVICE@
@@ -194,6 +204,7 @@ FPP_INCOPT = @FPP_INCOPT@
 GREP = @GREP@
 GRIB_API_INCLUDE = @GRIB_API_INCLUDE@
 GRIB_API_LIBS = @GRIB_API_LIBS@
+HAVE_PARALLEL_NC4 = @HAVE_PARALLEL_NC4@
 HDF5_INCLUDE = @HDF5_INCLUDE@
 HDF5_LIBS = @HDF5_LIBS@
 HDF5_ROOT = @HDF5_ROOT@
@@ -217,6 +228,7 @@ MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MPI_LAUNCH = @MPI_LAUNCH@
 NC_CONFIG = @NC_CONFIG@
 NETCDF_INCLUDE = @NETCDF_INCLUDE@
 NETCDF_LIBS = @NETCDF_LIBS@
@@ -236,6 +248,11 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PPM_CORE_CFLAGS = @PPM_CORE_CFLAGS@
+PPM_CORE_LIBS = @PPM_CORE_LIBS@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_LIBS = @PTHREAD_LIBS@
@@ -253,7 +270,10 @@ SZLIB_LIBS = @SZLIB_LIBS@
 THREADS_INCLUDE = @THREADS_INCLUDE@
 THREADS_LIBS = @THREADS_LIBS@
 USER_NAME = @USER_NAME@
+USE_MPI = @USE_MPI@
 VERSION = @VERSION@
+YAXT_CFLAGS = @YAXT_CFLAGS@
+YAXT_LIBS = @YAXT_LIBS@
 ZLIB_INCLUDE = @ZLIB_INCLUDE@
 ZLIB_LIBS = @ZLIB_LIBS@
 abs_builddir = @abs_builddir@
@@ -315,9 +335,17 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #
-SUBDIRS = src interfaces app examples tests
+SUBDIRS = src interfaces app examples examples/pio tests
 #
-EXTRA_DIST = config/default doc/cdi_cman.pdf doc/cdi_fman.pdf src/cfortran.doc
+EXTRA_DIST = config/default \
+	doc/cdi_cman.pdf \
+	doc/cdi_fman.pdf \
+	src/cfortran.doc \
+	util/sunf95preproc-wrapper \
+	util/sxpreproc-wrapper \
+	util/xlfpreproc-wrapper \
+	config/interface.rb
+
 #
 ACLOCAL_AMFLAGS = -I m4
 #
@@ -359,6 +387,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+util/serialrun: $(top_builddir)/config.status $(top_srcdir)/util/serialrun.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 cdi.settings: $(top_builddir)/config.status $(srcdir)/cdi.settings.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 src/pkgconfig/cdi.pc: $(top_builddir)/config.status $(top_srcdir)/src/pkgconfig/cdi.pc.in

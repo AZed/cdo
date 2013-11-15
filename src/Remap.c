@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -90,6 +90,7 @@ void get_map_type(int operfunc, int *map_type, int *submap_type, int *remap_orde
       break;
     default:
       cdoAbort("Unknown mapping method");
+      break;
     }
 }
 
@@ -220,7 +221,7 @@ void get_remap_env(void)
 	}
     }
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   if ( ompNumThreads == 1 )
     sort_mode = HEAP_SORT;
   else
@@ -326,8 +327,6 @@ void get_remap_env(void)
   envstr = getenv("REMAP_EXTRAPOLATE");
   if ( envstr )
     {
-      int ival;
-      ival = atoi(envstr);
       if ( *envstr )
 	{
 	  if ( memcmp(envstr, "ON", 2) == 0 || memcmp(envstr, "on", 2) == 0 )
@@ -351,6 +350,30 @@ void get_remap_env(void)
 		cdoPrint("Extrapolation disabled!");
 	    }
 	}
+    }
+}
+
+static
+void scale_gridbox_area(long gridsize, const double *restrict array1, long gridsize2, double *restrict array2, const double *restrict grid2_area)
+{
+  static int lgridboxinfo = TRUE;
+  long i;
+  double array1sum = 0;
+  double array2sum = 0;
+
+  for ( i = 0; i < gridsize; i++ )
+    array1sum += array1[i];
+
+  for ( i = 0; i < gridsize2; i++ )
+    array2sum += grid2_area[i];
+
+  for ( i = 0; i < gridsize2; i++ )
+    array2[i] = grid2_area[i]/array2sum*array1sum;
+
+  if ( lgridboxinfo )
+    {
+      cdoPrint("gridbox_area replaced and scaled to %g", array1sum);
+      lgridboxinfo = FALSE;
     }
 }
 
@@ -382,7 +405,6 @@ void *Remap(void *argument)
   int submap_type = SUBMAP_TYPE_NONE;
   int need_gradiants = FALSE;
   int non_global;
-  int lgridboxinfo = TRUE;
   int grid1sizemax;
   short *remapgrids = NULL;
   char varname[CDI_MAX_NAME];
@@ -481,7 +503,6 @@ void *Remap(void *argument)
 	   gridtype != GRID_LAEA        &&
 	   gridtype != GRID_SINUSOIDAL  &&
 	   gridtype != GRID_GME         &&
-	   gridtype != GRID_REFERENCE   &&
 	   gridtype != GRID_CURVILINEAR &&
 	   gridtype != GRID_UNSTRUCTURED )
 	{
@@ -499,9 +520,7 @@ void *Remap(void *argument)
     }
 
   for ( index = 0; index < ngrids; index++ )
-    {
-      if ( remapgrids[index] == TRUE ) break;
-    }
+    if ( remapgrids[index] == TRUE ) break;
 
   if ( index == ngrids )
     cdoAbort("No remappable grid found!");
@@ -962,7 +981,7 @@ void *Remap(void *argument)
 	    double array2sum = 0;
    
 	    for ( i = 0; i < gridsize; i++ )
-	      printf("1 %d %g %g %g %g\n", i, array1[i], remaps[r].grid.grid1_frac[i],remaps[r].grid.grid1_area[i],remaps[r].grid.grid1_frac[i]);
+	      printf("1 %d %g %g %g %g\n", i, array1[i], remaps[r].grid.grid1_frac[i], remaps[r].grid.grid1_area[i],remaps[r].grid.grid1_frac[i]);
 	    for ( i = 0; i < gridsize; i++ )
 	      array1sum += remaps[r].grid.grid1_area[i];
 
@@ -978,23 +997,7 @@ void *Remap(void *argument)
 	  if ( operfunc == REMAPCON || operfunc == REMAPCON2 )
 	    if ( strcmp(varname, "gridbox_area") == 0 )
 	      {
-		double array1sum = 0;
-		double array2sum = 0;
-
-		for ( i = 0; i < gridsize; i++ )
-		  array1sum += array1[i];
-
-		for ( i = 0; i < gridsize2; i++ )
-		  array2sum += remaps[r].grid.grid2_area[i];
-
-		for ( i = 0; i < gridsize2; i++ )
-		  array2[i] = remaps[r].grid.grid2_area[i]/array2sum*array1sum;
-
-		if ( lgridboxinfo )
-		  {
-		    cdoPrint("%s replaced and scaled to %g", varname, array1sum);
-		    lgridboxinfo = FALSE;
-		  }
+		scale_gridbox_area(gridsize, array1, gridsize2, array2, remaps[r].grid.grid2_area);
 	      }
 
 	  /* calculate some statistics */
@@ -1004,7 +1007,7 @@ void *Remap(void *argument)
 	  if ( gridInqType(gridID2) == GRID_GME )
 	    {
 	      int ni, nd;
-	      ni = gridInqGMEni(gridID2);
+ 	      ni = gridInqGMEni(gridID2);
 	      nd = gridInqGMEnd(gridID2);
 	      j = remaps[r].grid.grid2_size;
 
@@ -1031,7 +1034,7 @@ void *Remap(void *argument)
   WRITE_REMAP:
  
   if ( lwrite_remap ) 
-    write_remap_scrip(cdoStreamName(1), map_type, submap_type, remap_order, remaps[r].grid, remaps[r].vars);
+    write_remap_scrip(cdoStreamName(1)->args, map_type, submap_type, remap_order, remaps[r].grid, remaps[r].vars);
 
   streamClose(streamID1);
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -152,9 +152,10 @@ void *Expr(void *argument)
 
   if ( cdoVerbose ) vlistPrint(vlistID2);
 
-  for ( varID = 0; varID < nvars; varID++ )
-    if ( parse_arg.var_needed[varID] && cdoVerbose )
-      printf("var_needed: %d %s\n", varID, parse_arg.var[varID]);
+  if ( cdoVerbose )
+    for ( varID = 0; varID < nvars; varID++ )
+      if ( parse_arg.var_needed[varID] )
+	printf("Needed var: %d %s\n", varID, parse_arg.var[varID]);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);

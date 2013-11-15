@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -140,7 +140,7 @@ void *Settime(void *argument)
   SETTUNITS   = cdoOperatorAdd("settunits",   0,  1, "time units (seconds, minutes, hours, days, months, years)");
   SETTAXIS    = cdoOperatorAdd("settaxis",    0, -2, "date,time<,increment> (format YYYY-MM-DD,hh:mm:ss)");
   SETREFTIME  = cdoOperatorAdd("setreftime",  0, -2, "date,time<,units> (format YYYY-MM-DD,hh:mm:ss)");
-  SETCALENDAR = cdoOperatorAdd("setcalendar", 0,  1, "calendar (standard, proleptic, 360days, 365days, 366days)");
+  SETCALENDAR = cdoOperatorAdd("setcalendar", 0,  1, "calendar (standard, proleptic_gregorian, 360_day, 365_day, 366_day)");
   SHIFTTIME   = cdoOperatorAdd("shifttime",   0,  1, "shift value");
 
   operatorID = cdoOperatorID();
@@ -242,14 +242,18 @@ void *Settime(void *argument)
     }
   else if ( operatorID == SETCALENDAR )
     {
-      size_t len;
       char *cname = operatorArgv()[0];
-      len = strlen(cname);      
-      if      ( memcmp(cname, "standard" , len) == 0 ) { newcalendar = CALENDAR_STANDARD;}
-      else if ( memcmp(cname, "proleptic", len) == 0 ) { newcalendar = CALENDAR_PROLEPTIC;}
-      else if ( memcmp(cname, "360days",   len) == 0 ) { newcalendar = CALENDAR_360DAYS;}
-      else if ( memcmp(cname, "365days",   len) == 0 ) { newcalendar = CALENDAR_365DAYS;}
-      else if ( memcmp(cname, "366days",   len) == 0 ) { newcalendar = CALENDAR_366DAYS;}
+      strtolower(cname);
+      if      ( strcmp(cname, "standard")  == 0 ) newcalendar = CALENDAR_STANDARD;
+      else if ( strcmp(cname, "gregorian") == 0 ) newcalendar = CALENDAR_STANDARD;
+      else if ( strcmp(cname, "proleptic") == 0 ) newcalendar = CALENDAR_PROLEPTIC;
+      else if ( strcmp(cname, "proleptic_gregorian") == 0 ) newcalendar = CALENDAR_PROLEPTIC;
+      else if ( strcmp(cname, "360days")   == 0 ) newcalendar = CALENDAR_360DAYS;
+      else if ( strcmp(cname, "360_day")   == 0 ) newcalendar = CALENDAR_360DAYS;
+      else if ( strcmp(cname, "365days")   == 0 ) newcalendar = CALENDAR_365DAYS;
+      else if ( strcmp(cname, "365_day")   == 0 ) newcalendar = CALENDAR_365DAYS;
+      else if ( strcmp(cname, "366days")   == 0 ) newcalendar = CALENDAR_366DAYS;
+      else if ( strcmp(cname, "366_day")   == 0 ) newcalendar = CALENDAR_366DAYS;
       else cdoAbort("Calendar >%s< unsupported!", cname);
     }
   else

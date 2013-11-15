@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,19 +27,22 @@ void farcfun(field_t *field, double rconst, int function)
   else if ( function == func_mul ) farcmul(field, rconst);
   else if ( function == func_div ) farcdiv(field, rconst);
   else if ( function == func_mod ) farmod(field, rconst);
-  else    cdoAbort("function %d not implemented!", function);
+  else    cdoAbort("%s: function %d not implemented!", __func__, function);
 }
 
 void farcmul(field_t *field, double rconst)
 {
   int i, len;
+  int    nwpv     = field->nwpv;
   int    grid     = field->grid;
   int    nmiss    = field->nmiss;
   double missval1 = field->missval;
   double missval2 = field->missval;
   double *array   = field->ptr;
 
-  len    = gridInqSize(grid);
+  if ( nwpv != 2 ) nwpv = 1;
+
+  len    = nwpv*gridInqSize(grid);
 
   if ( nmiss > 0 )
     {
@@ -49,7 +52,7 @@ void farcmul(field_t *field, double rconst)
   else
     {
       /*
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i)
 #endif
       */

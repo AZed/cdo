@@ -5,20 +5,16 @@
 #define DBG_MSG 0 
 
 
-#if  defined  (HAVE_LIBXML)
 extern xmlNode *root_node, *magics_node, *results_node;
 extern xmlDoc *param_doc;
 
 extern int magics_template_parser();
 extern int results_template_parser();
-#endif
 
 
 int template_parser(  char *Filename, const char *varname )
 
 {
-
-#if  defined  (HAVE_LIBXML)
         xmlDoc         *doc = NULL;
         xmlNode        *root_element = NULL;
 
@@ -63,19 +59,12 @@ int template_parser(  char *Filename, const char *varname )
         xmlCleanupParser();
 
         return (0);
-#else
-	fprintf(stderr, "XML support not compiled in!");
-	return (1);
-#endif
-
 }
 
 
 int init_XMLtemplate_parser( char *Filename )
 
 {
-
-#if  defined  (HAVE_LIBXML)
         param_doc = xmlReadFile( Filename, NULL, 0 );
         if ( param_doc == NULL )
         {
@@ -88,20 +77,12 @@ int init_XMLtemplate_parser( char *Filename )
                   root_node = xmlDocGetRootElement( param_doc );
         }
         return 0;
-#else
-	fprintf(stderr, "XML support not compiled in!");
-	return (1);
-#endif
-
 }
 
 
 int updatemagics_and_results_nodes(  )
 
 {
-
-#if  defined  (HAVE_LIBXML)
-    int param_set_flag;
     xmlNode *cur_node = NULL;
 	
     if( root_node == NULL )
@@ -136,19 +117,12 @@ int updatemagics_and_results_nodes(  )
 	}
     }
     return 0;
-#else
-    fprintf(stderr, "XML support not compiled in!");
-    return (1);
-#endif
-
 }
 
 
 int quit_XMLtemplate_parser( )
 
 {
-
-#if  defined  (HAVE_LIBXML)
         xmlFreeDoc( param_doc );
         xmlCleanupParser( );
 	if( param_doc == NULL )
@@ -157,9 +131,4 @@ int quit_XMLtemplate_parser( )
         fprintf( stdout, "Cleaned XML parser\n" );
 #endif
 	return 0;
-#else
-	fprintf(stderr, "XML support not compiled in!");
-	return (1);
-#endif
-
 }

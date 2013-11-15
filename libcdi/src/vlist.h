@@ -1,6 +1,10 @@
 #ifndef _VLIST_H
 #define _VLIST_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stddef.h>  /* size_t */
 
 #ifndef _CDI_LIMITS_H
@@ -52,6 +56,13 @@ typedef struct
 }
 ensinfo_t;
 
+/* ---------------------------------- */
+/* Local change: 2013-01-28, FP (DWD) */
+/* ---------------------------------- */
+
+/* Length of optional keyword/value pair list */
+#define MAX_OPT_GRIB_ENTRIES 50
+
 
 typedef struct
 {
@@ -70,6 +81,8 @@ typedef struct
   int         tableID;
   int         timave;
   int         timaccu;
+  int         typeOfGeneratingProcess;
+  int         chunktype;
   int         xyz;
   int         missvalused; /* TRUE if missval is defined */
   int         lvalidrange;
@@ -77,6 +90,7 @@ typedef struct
   char       *longname;
   char       *stdname;
   char       *units;
+  char       *extra;
   double      missval;
   double      scalefactor;
   double      addoffset;
@@ -86,6 +100,21 @@ typedef struct
   int         complevel;    // compression level
   ensinfo_t  *ensdata;      /* Ensemble information */
   cdi_atts_t  atts;
+  int         iorank;
+#if  defined  (HAVE_LIBGRIB_API)
+  /* ---------------------------------- */
+  /* Local change: 2013-01-28, FP (DWD) */
+  /* ---------------------------------- */
+
+  /* (Optional) list of keyword/double value pairs */
+  int    opt_grib_dbl_nentries;
+  char*  opt_grib_dbl_keyword[MAX_OPT_GRIB_ENTRIES];
+  double opt_grib_dbl_val[MAX_OPT_GRIB_ENTRIES];
+  /* (Optional) list of keyword/integer value pairs */
+  int    opt_grib_int_nentries;
+  char*  opt_grib_int_keyword[MAX_OPT_GRIB_ENTRIES];
+  int    opt_grib_int_val[MAX_OPT_GRIB_ENTRIES];
+#endif
 }
 var_t;
 
@@ -125,11 +154,18 @@ int      vlistHasTime(int vlistID);
 int      vlistDelAtts(int vlistID, int varID);
 int      vlistCopyVarAtts(int vlistID1, int varID_1, int vlistID2, int varID_2);
 
+void     vlistUnpack(char * buffer, int bufferSize, int * pos, int, void *context);
+
 /*      vlistDefVarValidrange: Define the valid range of a Variable */
 void    vlistDefVarValidrange(int vlistID, int varID, const double *validrange);
 
 /*      vlistInqVarValidrange: Get the valid range of a Variable */
 int     vlistInqVarValidrange(int vlistID, int varID, double *validrange);
+
+#if  defined  (HAVE_LIBGRIB_API)
+extern int   cdiNAdditionalGRIBKeys;
+extern char* cdiAdditionalGRIBKeys[];
+#endif
 
 #endif  /* _VLIST_H */
 /*

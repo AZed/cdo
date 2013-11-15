@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -93,6 +93,7 @@ void *Vertstat(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   vars1 = (field_t *) malloc(nvars*sizeof(field_t));
@@ -106,6 +107,8 @@ void *Vertstat(void *argument)
       gridsize = gridInqSize(gridID);
       missval  = vlistInqVarMissval(vlistID1, varID);
 
+      field_init(&vars1[varID]);
+      field_init(&samp1[varID]);
       vars1[varID].grid    = gridID;
       vars1[varID].nsamp   = 0;
       vars1[varID].nmiss   = 0;
@@ -117,6 +120,7 @@ void *Vertstat(void *argument)
       samp1[varID].ptr     = NULL;
       if ( operfunc == func_std || operfunc == func_var )
 	{
+	  field_init(&vars2[varID]);
 	  vars2[varID].grid    = gridID;
 	  vars2[varID].nmiss   = 0;
 	  vars2[varID].missval = missval;

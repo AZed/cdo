@@ -7,8 +7,6 @@
 
 /* extern int GetMagicsParameterInfo( const char *user_name, char **magics_name, char **magics_type ); */
 
-#if  defined  (HAVE_LIBXML)
-
 extern int GetMagicsParameterInfo(  char *user_name, xmlChar *param_value );
 
 extern xmlNode *results_node;
@@ -22,7 +20,7 @@ int results_template_parser( xmlNode * a_node, const char *varname )
     xmlNode *cur_node = NULL;
     xmlAttrPtr attr = NULL;
     xmlChar    *param_name,*param_value,*value;
-    char       *magics_param_name,*param_type;
+    char       *param_type;
 
 	
     if( a_node == NULL )
@@ -121,4 +119,3 @@ int results_template_parser( xmlNode * a_node, const char *varname )
     }
     return 0;
 }
-#endif

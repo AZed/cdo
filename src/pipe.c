@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 */
 
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -30,7 +30,7 @@
 #include "error.h"
 #include "dmemory.h"
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 
 static int PipeDebug = 0;
 
@@ -43,7 +43,7 @@ void pipe_init(pipe_t *pipe)
   pthread_mutexattr_init(&m_attr);
   pthread_condattr_init(&c_attr);
   /*
-#if defined (_POSIX_THREAD_PROCESS_SHARED)
+#if defined(_POSIX_THREAD_PROCESS_SHARED)
   if ( PipeDebug )
     {
       Message("setpshared mutexattr to PTHREAD_PROCESS_SHARED");
@@ -163,7 +163,8 @@ void pipeDefVlist(pstream_t *pstreamptr, int vlistID)
 }
 
 #define TIMEOUT  1 // wait 1 seconds
-#define MAX_WAIT_CYCLES 1000
+#define MIN_WAIT_CYCLES   10
+#define MAX_WAIT_CYCLES 3600
 int processNumsActive(void);
 
 int pipeInqVlist(pstream_t *pstreamptr)
@@ -190,8 +191,11 @@ int pipeInqVlist(pstream_t *pstreamptr)
       if ( PipeDebug ) Message("%s wait of vlistDef", pname);
       // pthread_cond_wait(pipe->vlistDef, pipe->mutex);
       retcode = pthread_cond_timedwait(pipe->vlistDef, pipe->mutex, &time_to_wait);
-      // fprintf(stderr, "retcode %d %d\n", retcode, processNumsActive());
-      if ( retcode != 0 && processNumsActive() > 1 && nwaitcycles++ < MAX_WAIT_CYCLES ) retcode = 0;
+      // fprintf(stderr, "self %d retcode %d %d %d\n", pstreamptr->self, retcode, processNumsActive(), pstreamptr->vlistID);
+      if ( retcode != 0 && nwaitcycles++ < MAX_WAIT_CYCLES )
+	{
+	  if ( processNumsActive() > 1 || (processNumsActive() == 1 && nwaitcycles < MIN_WAIT_CYCLES) ) retcode = 0;
+	}
     }
 
   if ( retcode == 0 )

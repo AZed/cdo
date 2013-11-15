@@ -6,7 +6,7 @@
 
 #include "dmemory.h"
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 
 #undef  UNDEFID
 #define UNDEFID -1
@@ -148,6 +148,7 @@ int decodeForm1(char *pline, char *name, char *longname, char *units)
   char *pstart, *pend;
   long len;
 
+  /* FIXME: parse success isn't verified */
   level = strtol(pline, &pline, 10);
   while ( isspace((int) *pline) ) pline++;
 
@@ -165,7 +166,9 @@ int decodeForm1(char *pline, char *name, char *longname, char *units)
   len = strlen(pline);
   if ( len == 0 ) return (0);
 
+  /* FIXME: successful parse isn't verified */
   add  = strtod(pline, &pline);
+  /* FIXME: successful parse isn't verified */
   mult = strtod(pline, &pline);
 
   while ( isspace((int) *pline) ) pline++;

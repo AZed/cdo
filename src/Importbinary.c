@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
   GNU General Public License for more details.
 */
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -229,7 +229,7 @@ void *Importbinary(void *argument)
 
   dsets_init(&pfi);
 
-  status = read_gradsdes((char *)cdoStreamName(0), &pfi);
+  status = read_gradsdes(cdoStreamName(0)->args, &pfi);
   if ( cdoVerbose ) fprintf(stderr, "status %d\n", status);
   //if ( status ) cdoAbort("Open failed on %s!", pfi.name);
   if ( status ) cdoAbort("Open failed!");

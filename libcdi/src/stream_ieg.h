@@ -5,20 +5,20 @@
 #  include "ieg.h"
 #endif
 
-int    iegInqContents(int streamID);
-int    iegInqTimestep(int streamID, int tsID);
+int    iegInqContents(stream_t *streamptr);
+int    iegInqTimestep(stream_t *streamptr, int tsID);
 
-int    iegInqRecord(int streamID, int *varID, int *levelID);
-int    iegDefRecord(int streamID);
-int    iegCopyRecord(int streamIDdest, int streamIDsrc);
-int    iegReadRecord(int streamID, double *data, int *nmiss);
-int    iegWriteRecord(int streamID, const double *data);
+int    iegInqRecord(stream_t *streamptr, int *varID, int *levelID);
+int    iegDefRecord(stream_t *streamptr);
+int    iegCopyRecord(stream_t *streamptr2, stream_t *streamptr1);
+int    iegReadRecord(stream_t *streamptr, double *data, int *nmiss);
+int    iegWriteRecord(stream_t *streamptr, const double *data);
 
-void   iegReadVarDP (int streamID, int varID,       double *data, int *nmiss);
-void   iegWriteVarDP(int streamID, int varID, const double *data);
+void   iegReadVarDP (stream_t *streamptr, int varID,       double *data, int *nmiss);
+void   iegWriteVarDP(stream_t *streamptr, int varID, const double *data);
 
-void   iegReadVarSliceDP (int streamID, int varID, int levelID,       double *data, int *nmiss);
-void   iegWriteVarSliceDP(int streamID, int varID, int levelID, const double *data);
+void   iegReadVarSliceDP (stream_t *streamptr, int varID, int levelID,       double *data, int *nmiss);
+void   iegWriteVarSliceDP(stream_t *streamptr, int varID, int levelID, const double *data);
 
 #endif  /* _STREAM_IEG_H */
 /*

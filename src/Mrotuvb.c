@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -266,13 +266,14 @@ void *Mrotuvb(void *argument)
   int varID1, varID2;
   int nvars;
   int gridID1, gridID2, gridID3;
-  int gridsize, gridsizex;
+  int gridsize;
   int nlon, nlat;
   int vlistID1, vlistID2, vlistID3;
   int i, j;
   int taxisID1, taxisID3;
   int nmiss1, nmiss2;
   int code1, code2;
+  int gpint = TRUE;
   double missval1, missval2;
   double *ufield = NULL, *vfield = NULL;
   double *urfield = NULL, *vrfield = NULL;
@@ -282,6 +283,10 @@ void *Mrotuvb(void *argument)
 
   cdoInitialize(argument);
 
+  if ( operatorArgc() == 1 )
+    if ( strcmp(operatorArgv()[0], "noint") == 0 )
+      gpint = FALSE;
+
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
 
@@ -289,14 +294,15 @@ void *Mrotuvb(void *argument)
   vlistID2 = streamInqVlist(streamID2);
 
   nvars = vlistNvars(vlistID1);
-  if ( nvars > 1 ) cdoAbort("More than one variable found in %s",  cdoStreamName(0));
+  if ( nvars > 1 ) cdoAbort("More than one variable found in %s",  cdoStreamName(0)->args);
   nvars = vlistNvars(vlistID2);
-  if ( nvars > 1 ) cdoAbort("More than one variable found in %s",  cdoStreamName(1));
+  if ( nvars > 1 ) cdoAbort("More than one variable found in %s",  cdoStreamName(1)->args);
 
   gridID1 = vlistGrid(vlistID1, 0);
   gridID2 = vlistGrid(vlistID2, 0);
   gridsize = gridInqSize(gridID1);
-  if ( gridID1 == gridID2 ) cdoAbort("Input grids are the same!");
+  if ( gpint == TRUE  && gridID1 == gridID2 ) cdoAbort("Input grids are the same!");
+  if ( gpint == FALSE && gridID1 != gridID2 ) cdoAbort("Input grids are not the same!");
   if ( gridsize != gridInqSize(gridID2) ) cdoAbort("Grids have different size!");
 
   if ( gridInqType(gridID1) != GRID_LONLAT      &&
@@ -331,9 +337,9 @@ void *Mrotuvb(void *argument)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridID1, units);
-    gridToDegree(units, "grid1 center lon", gridsize, grid1x);
+    grid_to_degree(units, gridsize, grid1x, "grid1 center lon");
     gridInqYunits(gridID1, units);
-    gridToDegree(units, "grid1 center lat", gridsize, grid1y);
+    grid_to_degree(units, gridsize, grid1y, "grid1 center lat");
   }
 
   gridInqXvals(gridID2, grid2x);
@@ -343,12 +349,20 @@ void *Mrotuvb(void *argument)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridID2, units);
-    gridToDegree(units, "grid2 center lon", gridsize, grid2x);
+    grid_to_degree(units, gridsize, grid2x, "grid2 center lon");
     gridInqYunits(gridID2, units);
-    gridToDegree(units, "grid2 center lat", gridsize, grid2y);
+    grid_to_degree(units, gridsize, grid2y, "grid2 center lat");
   }
 
-  uv_to_p_grid(nlon, nlat, grid1x, grid1y, grid2x, grid2y, grid3x, grid3y);
+  if ( gpint )
+    {
+      uv_to_p_grid(nlon, nlat, grid1x, grid1y, grid2x, grid2y, grid3x, grid3y);
+    }
+  else
+    {
+      memcpy(grid3x, grid1x, gridsize*sizeof(double));
+      memcpy(grid3y, grid1y, gridsize*sizeof(double));
+    }
 
   if ( grid1x ) free(grid1x);
   if ( grid1y ) free(grid1y);
@@ -398,10 +412,12 @@ void *Mrotuvb(void *argument)
   urfield = (double *) malloc(gridsize*sizeof(double));
   vrfield = (double *) malloc(gridsize*sizeof(double));
 
-  gridsizex = (nlon+2)*nlat;
-
-  uhelp   = (double *) malloc(gridsizex*sizeof(double));
-  vhelp   = (double *) malloc(gridsizex*sizeof(double));
+  if ( gpint )
+    {
+      int gridsizex = (nlon+2)*nlat;
+      uhelp   = (double *) malloc(gridsizex*sizeof(double));
+      vhelp   = (double *) malloc(gridsizex*sizeof(double));
+    }
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
@@ -432,30 +448,33 @@ void *Mrotuvb(void *argument)
 		}
 	    }
 
-	  /* load to a help field */
-	  for ( j = 0; j < nlat; j++ )
-	    for ( i = 0; i < nlon; i++ )
-	      {
-		uhelp[IX2D(j,i+1,nlon+2)] = ufield[IX2D(j,i,nlon)];
-		vhelp[IX2D(j,i+1,nlon+2)] = vfield[IX2D(j,i,nlon)];
-	      }
-
-	  /* make help field cyclic */
-	  for ( j = 0; j < nlat; j++ )
+	  if ( gpint )
 	    {
-	      uhelp[IX2D(j,0,nlon+2)]      = uhelp[IX2D(j,nlon,nlon+2)];
-	      uhelp[IX2D(j,nlon+1,nlon+2)] = uhelp[IX2D(j,1,nlon+2)];
-	      vhelp[IX2D(j,0,nlon+2)]      = vhelp[IX2D(j,nlon,nlon+2)];
-	      vhelp[IX2D(j,nlon+1,nlon+2)] = vhelp[IX2D(j,1,nlon+2)];
-	    }
+	      /* load to a help field */
+	      for ( j = 0; j < nlat; j++ )
+		for ( i = 0; i < nlon; i++ )
+		  {
+		    uhelp[IX2D(j,i+1,nlon+2)] = ufield[IX2D(j,i,nlon)];
+		    vhelp[IX2D(j,i+1,nlon+2)] = vfield[IX2D(j,i,nlon)];
+		  }
 
-	  /* interpolate on pressure points */
-	  for ( j = 1; j < nlat; j++ )
-	    for ( i = 0; i < nlon; i++ )
-	      {
-		ufield[IX2D(j,i,nlon)] = (uhelp[IX2D(j,i,nlon+2)]+uhelp[IX2D(j,i+1,nlon+2)])*0.5;
-		vfield[IX2D(j,i,nlon)] = (vhelp[IX2D(j-1,i+1,nlon+2)]+vhelp[IX2D(j,i+1,nlon+2)])*0.5;
-	      }
+	      /* make help field cyclic */
+	      for ( j = 0; j < nlat; j++ )
+		{
+		  uhelp[IX2D(j,0,nlon+2)]      = uhelp[IX2D(j,nlon,nlon+2)];
+		  uhelp[IX2D(j,nlon+1,nlon+2)] = uhelp[IX2D(j,1,nlon+2)];
+		  vhelp[IX2D(j,0,nlon+2)]      = vhelp[IX2D(j,nlon,nlon+2)];
+		  vhelp[IX2D(j,nlon+1,nlon+2)] = vhelp[IX2D(j,1,nlon+2)];
+		}
+
+	      /* interpolate on pressure points */
+	      for ( j = 1; j < nlat; j++ )
+		for ( i = 0; i < nlon; i++ )
+		  {
+		    ufield[IX2D(j,i,nlon)] = (uhelp[IX2D(j,i,nlon+2)]+uhelp[IX2D(j,i+1,nlon+2)])*0.5;
+		    vfield[IX2D(j,i,nlon)] = (vhelp[IX2D(j-1,i+1,nlon+2)]+vhelp[IX2D(j,i+1,nlon+2)])*0.5;
+		  }
+	    }
 
 	  for ( i = 0; i < nlon; i++ )
 	    {
@@ -507,8 +526,11 @@ void *Mrotuvb(void *argument)
   if ( vfield  ) free(vfield);
   if ( urfield ) free(urfield);
   if ( vrfield ) free(vrfield);
-  if ( uhelp   ) free(uhelp);
-  if ( vhelp   ) free(vhelp);
+  if ( gpint )
+    {
+      if ( uhelp   ) free(uhelp);
+      if ( vhelp   ) free(vhelp);
+    }
   if ( grid3x  ) free(grid3x);
   if ( grid3y  ) free(grid3y);
 

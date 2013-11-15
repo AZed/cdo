@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -60,6 +60,7 @@ void *Vertint(void *argument)
   int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, gheightID = -1;
   int code, param;
   int pnum, pcat, pdis;
+  int sortlevels = TRUE;
   int **varnmiss = NULL, *pnmiss = NULL;
   int *varinterp = NULL;
   char paramstr[32];
@@ -297,6 +298,24 @@ void *Vertint(void *argument)
   if ( Extrapolate == 0 )
     pnmiss   = (int *) malloc(nplev*sizeof(int));
 
+  // check levels
+  if ( zaxisIDh != -1 )
+    {
+      int nlev = zaxisInqSize(zaxisIDh);
+      if ( nlev != nhlev ) cdoAbort("Internal error, wrong numner of hybrid level!");
+      double levels[nlev];
+      zaxisInqLevels(zaxisIDh, levels);
+
+      for ( int ilev = 0; ilev < nlev; ++ilev )
+	{
+	  if ( (ilev+1) != (int)levels[ilev] )
+	    {
+	      sortlevels = FALSE;
+	      break;
+	    }
+	}
+    }
+
   if ( zaxisIDh != -1 && ngp > 0 )
     {
       vert_index = (int *) malloc(ngp*nplev*sizeof(int));
@@ -311,6 +330,11 @@ void *Vertint(void *argument)
     {
       phlev = (double *) malloc(nplev*sizeof(double));
       h2p(phlev, plev, nplev);
+
+      if ( cdoVerbose )
+	for ( i = 0; i < nplev; ++i )
+	  cdoPrint("level = %d   height = %g   pressure = %g", i+1, plev[i], phlev[i]);
+
       memcpy(plev, phlev, nplev*sizeof(double));
       free(phlev);
     }
@@ -379,7 +403,7 @@ void *Vertint(void *argument)
       if ( cdoVerbose )
 	cdoPrint("Mode = %d  Center = %d  Code = %d  Param = %s", mode, instNum, code, paramstr);
 
-      if ( code <= 0 )
+      if ( code <= 0 || code == 255 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
 	  strtolower(varname);
@@ -387,7 +411,11 @@ void *Vertint(void *argument)
 	  vlistInqVarStdname(vlistID1, varID, stdname);
 	  strtolower(stdname);
 
-	  if ( strcmp(stdname, "surface_air_pressure") == 0 ) code = 134;
+	  if      ( strcmp(stdname, "surface_air_pressure") == 0 ) code = 134;
+	  else if ( strcmp(stdname, "air_temperature")      == 0 ) code = 130;
+	  else if ( strcmp(stdname, "surface_geopotential") == 0 ) code = 129;
+	  else if ( strcmp(stdname, "geopotential")         == 0 ) code = 129;
+	  else if ( strcmp(stdname, "geopotential_height")  == 0 ) code = 156;
 	  else
 	    {
 	      /*                        ECHAM                            ECMWF       */
@@ -445,6 +473,15 @@ void *Vertint(void *argument)
 	}
     }
 
+  if ( cdoVerbose )
+    {
+      cdoPrint("Found:");
+      if ( tempID != -1 ) cdoPrint("  air temperature");
+      if ( psID   != -1 ) cdoPrint("  surface pressure");
+      if ( geopID != -1 ) cdoPrint("  surface geopotential");
+      if ( gheightID != -1 ) cdoPrint("  geopotential height");
+    }
+
   if ( tempID != -1 || gheightID != -1 ) geop_needed = TRUE;
 
   if ( zaxisIDh != -1 && geop_needed )
@@ -490,10 +527,18 @@ void *Vertint(void *argument)
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
-	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	  zaxisID  = vlistInqVarZaxis(vlistID1, varID);
+	  nlevel   = zaxisInqSize(zaxisID);
+	  /*
+	  if ( sortlevels && zaxisIDh != -1 && zaxisID == zaxisIDh && nlevel == nhlev )
+	    {
+	      levelID = (int) (zaxisInqLevel(zaxisIDh, levelID)-1);
+	      printf("levelID %d\n", levelID);
+	    }
+	  */
 	  offset   = gridsize*levelID;
 	  single1  = vardata1[varID] + offset;
-	  
+
 	  streamReadRecord(streamID1, single1, &varnmiss[varID][levelID]);
 	  vars[varID] = TRUE;
 	}
@@ -508,7 +553,7 @@ void *Vertint(void *argument)
 	      minmaxval(ngp, geop, NULL, &minval, &maxval);
 	      if ( minval < MIN_FIS || maxval > MAX_FIS )
 		cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
-	      if ( minval >= 0 && maxval <= 1000 )
+	      if ( minval >= 0 && maxval <= 9000 )
 		cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
 	    }
 

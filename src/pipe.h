@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,13 +18,13 @@
 #ifndef _PIPE_H
 #define _PIPE_H
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
 #include <sys/types.h>
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 
 #include <pthread.h>
 #include "pthread_debug.h"
@@ -57,7 +57,8 @@ typedef struct {
   char          *name;
   char         **mfnames;
   varlist_t     *varlist;
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
+  void          *argument;
   struct pipe_s *pipe;
   pthread_t     rthreadID; /* read  thread ID */
   pthread_t     wthreadID; /* write thread ID */
@@ -65,7 +66,7 @@ typedef struct {
 } pstream_t;
 
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 
 struct pipe_s {
   int     nrecs, EOP;

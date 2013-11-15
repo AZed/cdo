@@ -1,4 +1,4 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -27,7 +27,7 @@ int isSorted(int *restrict array1, int *restrict array2, const long size)
 
   return 1;
 }
-
+/*
 static
 void swap(int *restrict v1, int *restrict v2)
 {
@@ -69,12 +69,13 @@ void heapify(const long pos, const long size, int *restrict arr1, int *restrict 
 	}
     }
 }
-
+*/
 /* remap_heapsort is 30% faster than remap_heapsort_recursiv ! */
+/*
 static
 void remap_heapsort_recursiv(const long num_links, int *restrict arr1, int *restrict arr2, int *restrict arr3)
 {
-  long lvl;     /* level indexes for heap sort levels */
+  long lvl;     // level indexes for heap sort levels
 
   for ( lvl = num_links/2-1; lvl >= 0; --lvl )
     {
@@ -89,6 +90,7 @@ void remap_heapsort_recursiv(const long num_links, int *restrict arr1, int *rest
       heapify(0, lvl, arr1, arr2, arr3);
     }
 }
+*/
 
 static
 void remap_heapsort(const long num_links, int *restrict add1, int *restrict add2, int *restrict idx)
@@ -602,7 +604,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
   int nl[nsplit];                            /* number of links in each sub-array              */
   int who_am_i,depth;                        /* current depth, depth of children and index
 						to be parent in next call to sort_par          */
-  int add_srt[nsplit], add_end[nsplit];      /* arrays for start and end index of sub array    */
+  int add_srt[nsplit]/*, add_end[nsplit]*/;  /* arrays for start and end index of sub array    */
   int *add1s[nsplit], *add2s[nsplit];        /* pointers to sub arrays for sort and merge step */
   int *tmp;                                  /* pointer to buffer for merging of address lists */
   double *tmp2 = NULL;                       /* pointer to buffer for merging weight lists     */
@@ -635,11 +637,11 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
   add1s[0]   = &add1[add_srt[0]];  add1s[1]   = &add1[add_srt[1]];
   add2s[0]   = &add2[add_srt[0]];  add2s[1]   = &add2[add_srt[1]];
   nl[0]      = num_links/nsplit;   nl[1]      = num_links-nl[0];
-  add_end[0] = nl[0];              add_end[1] = num_links;
+  //add_end[0] = nl[0];              add_end[1] = num_links;
 
   depth = (int) (log(parent)/log(2));
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   /* Allow for nested parallelism */
   if ( omp_in_parallel() && depth<par_depth ) 
     {
@@ -656,7 +658,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
   //      printf("\n\nSplitting thread into %i!! (I AM %i) depth %i parallel_depth %i add_srt[0]%i add_srt[1] %i\n",
   //	     nsplit,parent,depth,par_depth,add_srt[0],add_srt[1]);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) \
         private(i, n, m, wgttmp, who_am_i)   \
         shared(weights) num_threads(2)
@@ -667,7 +669,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
       who_am_i = nsplit*parent+i;
       //    my_depth = (int) (log(parent)/log(2))+1;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       //      if ( 1 )
       //	printf("I am %i (parent %i), my_depth is: %i thread_num %i (%i) \n",
       //	       who_am_i,parent,my_depth,omp_get_thread_num()+1,omp_get_num_threads());
@@ -698,13 +700,13 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
                                                               /* ********************** */
   tmp = (int *) malloc(num_links*sizeof(int));
   
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i) num_threads(2)
 #endif
   for ( i = 0; i < num_links; i++ )
     tmp[i] = add1[idx[i]];
   
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i) num_threads(2)
 #endif
   for ( i = 0; i < num_links; i++ )
@@ -713,7 +715,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
       tmp[i] = add2[idx[i]];
     }
   
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i) num_threads(2)
 #endif
   for ( i = 0; i < num_links; i++ )
@@ -724,14 +726,14 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
   
   tmp2 = (double *) malloc(num_links*num_wts*sizeof(double) );
   
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i,n) num_threads(2)
 #endif
   for ( i = 0; i < num_links; i++ )
     for ( n = 0; n < num_wts; n++ )
       tmp2[num_wts*i + n] = weights[num_wts*idx[i]+n];
   
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i,n) num_threads(2)
 #endif
   for ( i = 0; i < num_links; i++ )

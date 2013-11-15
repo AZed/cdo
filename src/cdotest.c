@@ -65,7 +65,7 @@ void readNcFile(const char path[], double **vars, int nvars, int nts)
   
   vlistID = streamInqVlist(streamID);
   
-  assert(streamNtsteps(streamID) == nts);
+  assert(vlistNtsteps(vlistID) == nts);
   
   assert(vlistGridsizeMax(vlistID) == 1);
   assert(vlistNvars(vlistID) == nvars);

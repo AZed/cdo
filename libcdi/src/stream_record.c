@@ -9,7 +9,7 @@
 
 #include "cdi.h"
 #include "cdf_int.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 #include "stream_grb.h"
 #include "stream_cdf.h"
 #include "stream_srv.h"
@@ -26,17 +26,15 @@ void recordInitEntry(record_t *record)
   (*record).used     = FALSE;
   (*record).varID    = CDI_UNDEFID;
   (*record).levelID  = CDI_UNDEFID;
+  memset((*record).varname, 0, sizeof((*record).varname));
 }
 
 
-int recordNewEntry(int streamID, int tsID)
+int recordNewEntry(stream_t *streamptr, int tsID)
 {
   int recordID = 0;
   int recordSize;
   record_t *records;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
 
   recordSize = streamptr->tsteps[tsID].recordSize;
   records    = streamptr->tsteps[tsID].records;
@@ -97,13 +95,9 @@ int recordNewEntry(int streamID, int tsID)
   return (recordID);
 }
 
-
-void cdiInitRecord(int streamID)
+static
+void cdiInitRecord(stream_t *streamptr)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
-
   streamptr->record = (Record *) malloc(sizeof(Record));
 
   streamptr->record->used       = 0;
@@ -126,7 +120,7 @@ void cdiInitRecord(int streamID)
 
 void streamInqRecord(int streamID, int *varID, int *levelID)
 {
-  int rec = 0;
+  /* int rec = 0; */
   int recID, tsID, rindex;
   int lindex;
   stream_t *streamptr;
@@ -140,7 +134,7 @@ void streamInqRecord(int streamID, int *varID, int *levelID)
 
   cdiDefAccesstype(streamID, TYPE_REC);
 
-  if ( ! streamptr->record ) cdiInitRecord(streamID);
+  if ( ! streamptr->record ) cdiInitRecord(streamptr);
 
   tsID   = streamptr->curTsID;
   rindex = streamptr->tsteps[tsID].curRecID + 1;
@@ -165,8 +159,8 @@ void streamInqRecord(int streamID, int *varID, int *levelID)
   streamptr->curTsID = tsID;
   streamptr->tsteps[tsID].curRecID = rindex;
 
-  rec = recID + 1;
   /*
+  rec = recID + 1;
   filetype = streamptr->filetype;
 
   switch ( filetype )
@@ -178,7 +172,7 @@ void streamInqRecord(int streamID, int *varID, int *levelID)
       }
     case FILETYPE_SRV:
       {
-        rec = srvInqRecord(streamID, varID, levelID);
+        rec = srvInqRecord(streamptr, varID, levelID);
 	break;
       }
 #if  defined  (HAVE_LIBNETCDF)
@@ -222,9 +216,9 @@ void streamDefRecord(int streamID, int varID, int levelID)
       streamDefTimestep(streamID, tsID);
     }
 
-  if ( ! streamptr->record ) cdiInitRecord(streamID);
+  if ( ! streamptr->record ) cdiInitRecord(streamptr);
 
-  vlistID = streamInqVlist(streamID);
+  vlistID = streamptr->vlistID;
   gridID  = vlistInqVarGrid(vlistID, varID);
   zaxisID = vlistInqVarZaxis(vlistID, varID);
   param   = vlistInqVarParam(vlistID, varID);
@@ -248,28 +242,32 @@ void streamDefRecord(int streamID, int varID, int levelID)
     case FILETYPE_GRB:
     case FILETYPE_GRB2:
       {
-        status = grbDefRecord(streamID);
+        /* FIXME: return value not inspected */
+        status = grbDefRecord(streamptr);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBSERVICE)
     case FILETYPE_SRV:
       {
-        status = srvDefRecord(streamID);
+        /* FIXME: return value not inspected */
+        status = srvDefRecord(streamptr);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBEXTRA)
     case FILETYPE_EXT:
       {
-        status = extDefRecord(streamID);
+        /* FIXME: return value not inspected */
+        status = extDefRecord(streamptr);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBIEG)
     case FILETYPE_IEG:
       {
-        status = iegDefRecord(streamID);
+        /* FIXME: return value not inspected */
+        status = iegDefRecord(streamptr);
 	break;
       }
 #endif
@@ -279,8 +277,8 @@ void streamDefRecord(int streamID, int varID, int levelID)
     case FILETYPE_NC4:
     case FILETYPE_NC4C:
       {
-	if ( streamptr->accessmode == 0 ) cdfEndDef(streamID);
-	status = cdfDefRecord(streamID);
+	if ( streamptr->accessmode == 0 ) cdfEndDef(streamptr);
+	status = cdfDefRecord(streamptr);
 	break;
       }
 #endif
@@ -316,28 +314,32 @@ void streamReadRecord(int streamID, double *data, int *nmiss)
     case FILETYPE_GRB:
     case FILETYPE_GRB2:
       {
-        status = grbReadRecord(streamID, data, nmiss);
+        /* FIXME: return value not inspected */
+        status = grbReadRecord(streamptr, data, nmiss);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBSERVICE)
     case FILETYPE_SRV:
       {
-        status = srvReadRecord(streamID, data, nmiss);
+        /* FIXME: return value not inspected */
+        status = srvReadRecord(streamptr, data, nmiss);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBEXTRA)
     case FILETYPE_EXT:
       {
-        status = extReadRecord(streamID, data, nmiss);
+        /* FIXME: return value not inspected */
+        status = extReadRecord(streamptr, data, nmiss);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBIEG)
     case FILETYPE_IEG:
       {
-        status = iegReadRecord(streamID, data, nmiss);
+        /* FIXME: return value not inspected */
+        status = iegReadRecord(streamptr, data, nmiss);
 	break;
       }
 #endif
@@ -347,7 +349,8 @@ void streamReadRecord(int streamID, double *data, int *nmiss)
     case FILETYPE_NC4:
     case FILETYPE_NC4C:
       {
-	status = cdfReadRecord(streamID, data, nmiss);
+        /* FIXME: return value not inspected */
+	status = cdfReadRecord(streamptr, data, nmiss);
 	break;
       }
 #endif
@@ -380,8 +383,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_GRB:
     case FILETYPE_GRB2:
       {
-        if ( memtype == MEMTYPE_FLOAT ) Error("grbWriteRecord not implemented for memtype float!");
-        status = grbWriteRecord(streamID, data, nmiss);
+        status = grb_write_record(streamptr, memtype, data, nmiss);
 	break;
       }
 #endif
@@ -389,7 +391,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_SRV:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("srvWriteRecord not implemented for memtype float!");
-        status = srvWriteRecord(streamID, data);
+        status = srvWriteRecord(streamptr, data);
 	break;
       }
 #endif
@@ -397,7 +399,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_EXT:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("extWriteRecord not implemented for memtype float!");
-        status = extWriteRecord(streamID, data);
+        status = extWriteRecord(streamptr, data);
 	break;
       }
 #endif
@@ -405,7 +407,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_IEG:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("iegWriteRecord not implemented for memtype float!");
-        status = iegWriteRecord(streamID, data);
+        status = iegWriteRecord(streamptr, data);
 	break;
       }
 #endif
@@ -415,7 +417,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_NC4:
     case FILETYPE_NC4C:
       {
-	cdf_write_record(streamID, memtype, data, nmiss);
+	cdf_write_record(streamptr, memtype, data, nmiss);
 	break;
       }
 #endif
@@ -443,7 +445,6 @@ void streamCopyRecord(int streamID2, int streamID1)
 {
   int status = 0;
   int filetype = CDI_UNDEFID, filetype1, filetype2;
-  int byteorder1, byteorder2;
   stream_t *streamptr1;
   stream_t *streamptr2;
 
@@ -455,10 +456,32 @@ void streamCopyRecord(int streamID2, int streamID1)
 
   filetype1 = streamptr1->filetype;
   filetype2 = streamptr2->filetype;
-  byteorder1 = streamptr1->byteorder;
-  byteorder2 = streamptr2->byteorder;
 
-  if ( filetype1  == filetype2 ) filetype = filetype2;
+  if ( filetype1 == filetype2 ) filetype = filetype2;
+  else
+    {
+      switch (filetype1)
+        {
+        case FILETYPE_NC:
+        case FILETYPE_NC2:
+        case FILETYPE_NC4:
+        case FILETYPE_NC4C:
+          switch (filetype2)
+            {
+            case FILETYPE_NC:
+            case FILETYPE_NC2:
+            case FILETYPE_NC4:
+            case FILETYPE_NC4C:
+              Warning("Streams have different file types (%s -> %s)!", strfiletype(filetype1), strfiletype(filetype2));
+              filetype = filetype2;
+              break;
+            }
+          break;
+        }
+    }
+
+  if ( filetype == CDI_UNDEFID )
+    Error("Streams have different file types (%s -> %s)!", strfiletype(filetype1), strfiletype(filetype2));
 
   switch (filetype)
     {
@@ -466,55 +489,65 @@ void streamCopyRecord(int streamID2, int streamID1)
     case FILETYPE_GRB:
     case FILETYPE_GRB2:
       {
-	status = grbCopyRecord(streamID2, streamID1);
+        /* FIXME: return value not inspected */
+	status = grbCopyRecord(streamptr2, streamptr1);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBSERVICE)
     case FILETYPE_SRV:
       {
-	status = srvCopyRecord(streamID2, streamID1);
+        /* FIXME: return value not inspected */
+	status = srvCopyRecord(streamptr2, streamptr1);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBEXTRA)
     case FILETYPE_EXT:
       {
-	status = extCopyRecord(streamID2, streamID1);
+        /* FIXME: return value not inspected */
+	status = extCopyRecord(streamptr2, streamptr1);
 	break;
       }
 #endif
 #if  defined  (HAVE_LIBIEG)
     case FILETYPE_IEG:
       {
-	status = iegCopyRecord(streamID2, streamID1);
+        /* FIXME: return value not inspected */
+	status = iegCopyRecord(streamptr2, streamptr1);
+	break;
+      }
+#endif
+#if  defined  (HAVE_LIBNETCDF)
+    case FILETYPE_NC:
+    case FILETYPE_NC2:
+    case FILETYPE_NC4:
+    case FILETYPE_NC4C:
+      {
+        /* FIXME: return value not inspected */
+	status = cdfCopyRecord(streamptr2, streamptr1);
 	break;
       }
 #endif
     default:
       {
-	status = cdfCopyRecord(streamID2, streamID1);
+	Error("%s support not compiled in!", strfiletype(filetype));
 	break;
       }
     }
 }
 
 
-void cdiCreateRecords(int streamID, int tsID)
+void cdi_create_records(stream_t *streamptr, int tsID)
 {
   int nrecords, maxrecords;
   int nvars, varID, recID;
   record_t *records;
   int vlistID;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
-
-  stream_check_ptr(__func__, streamptr);
 
   if ( streamptr->tsteps[tsID].records ) return;
 
-  vlistID  = streamInqVlist(streamID);
+  vlistID  = streamptr->vlistID;
 
   if ( tsID == 0 )
     {

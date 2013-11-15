@@ -4,22 +4,27 @@
 #include "grid.h"
 #include "util.h"  /* progressStatus */
 
+#if defined(_OPENMP)
+#include <omp.h>  // omp_get_thread_num()
+#endif
+
+#define  ZERO     0.0
+#define  ONE      1.0
+#define  TWO      2.0
+#define  THREE    3.0
 
 /**
-* Find the interval i-1 .. i in which an element x fits
-* and return i, the bigger one of the interval borders
-* or x itself if it is an interval border.
-* If the index of x is 0, return 1, thus the bigger border. (strange?)
+* Find the interval i-1 .. i in which an element x fits and return i, the 
+* bigger one of the interval borders or x itself if it is an interval border.
 *
 * If no interval can be found return the length of the array.
-* TODO: Check whether the as strange marked behavior is intended.
 
-* @param *array ascending sorted list        TODO: check whether descending also needed
+* @param *array ascending or descending sorted list
 * @param nelem  length of the sorted list
 * @param x      the element to find a position for 
 */
 static
-long find_element(double x, long nelem, const double *array)
+long find_element(double x, long nelem, const double *restrict array)
 {
   long ii;
   long mid = 0;
@@ -33,13 +38,17 @@ long find_element(double x, long nelem, const double *array)
 
       /* search for the interval in which x fits */
       // implementation: binary search algorithm
-      for ( ii = 1; ii < nelem; ii++ )
+      for ( ii = 1; ii < nelem; ++ii )
 	{
 	  // binary search: divide search room in the middle
-	  mid = first + ((last - first) / 2);
+	  // mid = first + ((last - first) >> 1);
+	  // faster!
+	  mid = (first + last) >> 1;
       
 	  /* return the bigger interval border of the interval in which x fits */
-	  if ( x >= array[mid-1] && x <= array[mid] ) break;
+	  // if ( x >= array[mid-1] && x <= array[mid] ) break;
+	  // faster!
+	  if ( !(x < array[mid-1] || x > array[mid]) ) break;
 
 	  // binary search: ignore half of the search room
 	  if ( x > array[mid] )
@@ -55,13 +64,17 @@ long find_element(double x, long nelem, const double *array)
 
       /* search for the interval in which x fits */
       // implementation: binary search algorithm
-      for ( ii = 1; ii < nelem; ii++ )
+      for ( ii = 1; ii < nelem; ++ii )
 	{
 	  // binary search: divide search room in the middle
-	  mid = first + ((last - first) / 2);
+	  // mid = first + ((last - first) >> 1);
+	  // faster!
+	  mid = (first + last) >> 1;
       
 	  /* return the bigger interval border of the interval in which x fits */
-	  if ( x >= array[mid] && x <= array[mid-1] ) break;
+	  // if ( x >= array[mid] && x <= array[mid-1] ) break;
+	  // faster!
+	  if ( !(x < array[mid] || x > array[mid-1]) ) break;
 
 	  // binary search: ignore half of the search room
 	  if ( x < array[mid] )
@@ -73,7 +86,7 @@ long find_element(double x, long nelem, const double *array)
 
   return (mid);
 }
-
+/*
 static
 long find_element_old(double x, long nelem, const double *array)
 {
@@ -91,6 +104,74 @@ long find_element_old(double x, long nelem, const double *array)
     }
 
   return (ii);
+}
+*/
+
+static
+int rect_grid_search(long *ii, long *jj, double x, double y, long nxm, long nym, const double *restrict xm, const double *restrict ym)
+{
+  int lfound = 0;
+
+  *jj = find_element(y, nym, ym);
+	  
+  if ( *jj < nym )
+    {
+      *ii = find_element(x, nxm, xm);
+	  
+      if ( *ii < nxm ) lfound = 1;
+    }
+
+  return (lfound);
+}
+
+static
+int rect_grid_search2(long *imin, long *imax, double xmin, double xmax, long nxm, const double *restrict xm)
+{
+  int lfound = 0;
+  int lascend = 0;
+  long i;
+  *imin = nxm;
+  *imax = -1;
+  
+  if ( xm[0] < xm[nxm-1] ) lascend = 1;
+
+  i = find_element(xmin, nxm, xm);
+
+  if ( i > 0 && i < nxm )
+    {
+      lfound = 1;
+
+      if ( lascend )
+	{
+	  if ( i > 1 && xmin <= xm[i-1] ) i--;
+	  *imin = i-1;
+	  *imax = i-1;
+	}
+      else
+	{
+	  if ( i > 1 && i < nxm-2 && xmin <= xm[i+1] ) i++;   
+	  *imin = i-1;
+	  *imax = i-1;
+	}
+
+      i = find_element(xmax, nxm, xm);
+
+      if ( i > 0 && i < nxm )
+	{
+	  if ( lascend )
+	    {
+	      if ( i > 1 && i < nxm-2 && xmax >= xm[i+1] ) i++;   
+	      *imax = i-1;
+	    }
+	  else
+	    {
+	      if ( i > 1 && xmax >= xm[i-1] ) i--;
+	      *imin = i-1;
+	    }
+	}
+    }
+  
+  return (lfound);
 }
 
 
@@ -122,51 +203,456 @@ double intlinarr2p(long nxm, long nym, double **fieldm, const double *xm, const 
 }
 
 static
-void intlinarr2(double missval,
-		long nxm, long nym,  double **fieldm, const double *xm, const double *ym,
-		long gridsize2, double *field, const double *x, const double *y)
+void rect_find_ij_weights(double plon, double plat, long ii, long jj, const double *restrict xm, const double *restrict ym, double *ig, double *jg)
+{
+  /*
+    wgts[0] = (plon-xm[ii])   * (plat-ym[jj])   / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]));
+    wgts[1] = (plon-xm[ii-1]) * (plat-ym[jj])   / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]));
+    wgts[2] = (plon-xm[ii-1]) * (plat-ym[jj-1]) / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
+    wgts[3] = (plon-xm[ii])   * (plat-ym[jj-1]) / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]));
+  */
+  double iw, jw;
+  double wgts0 = (plon-xm[ii])   * (plat-ym[jj])   / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]));
+  double wgts1 = (plon-xm[ii-1]) * (plat-ym[jj])   / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]));
+
+  iw = 1./(wgts0/wgts1 + 1.);
+  jw = 1. - wgts1/iw;
+
+  *ig = iw;
+  *jg = jw;
+}
+
+static
+void intlinarr2(double missval, int lon_is_circular,
+		long nxm, long nym,  const double *restrict fieldm, const double *restrict xm, const double *restrict ym,
+		long gridsize2, double *field, const double *restrict x, const double *restrict y)
 {
   long i, ii, jj;
+  long gridsize1;
+  long nlon1 = nxm;
   double findex = 0;
+  int *grid1_mask = NULL;
+
+  if ( lon_is_circular ) nlon1--;
+  gridsize1 = nlon1*nym;
+
+  grid1_mask = (int *) calloc(1, gridsize1*sizeof(int));
+  for ( jj = 0; jj < nym; ++jj )
+    for ( ii = 0; ii < nlon1; ++ii )
+      {
+	if ( !DBL_IS_EQUAL(fieldm[jj*nlon1+ii], missval) ) grid1_mask[jj*nlon1+ii] = 1;
+      }
 
   progressInit();
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ompNumThreads, field, fieldm, x, y, xm, ym, nxm, nym, findex, gridsize2, missval) \
+  shared(ompNumThreads, field, fieldm, x, y, xm, ym, nxm, nym, gridsize2, missval, findex, nlon1, lon_is_circular, grid1_mask) \
   private(i, jj, ii)
 #endif
   for ( i = 0; i < gridsize2; ++i )
     {
+      int src_add[4];                /*  address for the four source points    */
+      long n;
+      long iix;
+      int lfound;
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+#endif
+
       field[i] = missval;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp atomic
 #endif
       findex++;
-      if ( ompNumThreads == 1 ) progressStatus(0, 1, findex/gridsize2);
+      if ( lprogress ) progressStatus(0, 1, findex/gridsize2);
 
-      jj = find_element(y[i], nym, ym);
-	  
-      if ( jj < nym )
+      lfound = rect_grid_search(&ii, &jj, x[i], y[i], nxm, nym, xm, ym); 
+
+      if ( lfound )
 	{
-	  ii = find_element(x[i], nxm, xm);
+	  iix = ii;
+	  if ( lon_is_circular && iix == (nxm-1) ) iix = 0;
+	  src_add[0] = (jj-1)*nlon1+(ii-1);
+	  src_add[1] = (jj-1)*nlon1+(iix);
+	  src_add[2] = (jj)*nlon1+(ii-1);
+	  src_add[3] = (jj)*nlon1+(iix);
+
+	  /* Check to see if points are missing values */
+	  for ( n = 0; n < 4; ++n )
+	    if ( ! grid1_mask[src_add[n]] ) lfound = 0;
+	}
+
+      if ( lfound )
+	{
+	  double wgts[4];
+
+	  wgts[0] = (x[i]-xm[ii])   * (y[i]-ym[jj])   / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]));
+	  wgts[1] = (x[i]-xm[ii-1]) * (y[i]-ym[jj])   / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]));
+	  wgts[3] = (x[i]-xm[ii-1]) * (y[i]-ym[jj-1]) / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
+	  wgts[2] = (x[i]-xm[ii])   * (y[i]-ym[jj-1]) / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]));
+	  /*
+	  double wgts0, wgts1, wgts2, wgts3, iw, jw;
+	  rect_find_ij_weights(x[i], y[i], ii, jj, xm, ym, &iw, &jw);
+
+	  wgts0 = (ONE-iw) * (ONE-jw);
+	  wgts1 =      iw  * (ONE-jw);
+	  wgts2 =      iw  *      jw;
+	  wgts3 = (ONE-iw) *      jw;
+
+	  if ( fabs(wgts[0] - wgts0) > 1.e-12 ) printf("wd0: %g\n", wgts[0] - wgts0);
+	  if ( fabs(wgts[1] - wgts1) > 1.e-12 ) printf("wd1: %g\n", wgts[1] - wgts1);
+	  if ( fabs(wgts[2] - wgts2) > 1.e-12 ) printf("wd2: %g\n", wgts[2] - wgts2);
+	  if ( fabs(wgts[3] - wgts3) > 1.e-12 ) printf("wd3: %g\n", wgts[3] - wgts3);
+	  */
+	  //printf("%2ld %6.4f %6.4f %6.4f %6.4f %6.4f %6.4f %6.4f %6.4f\n", dst_add, plon, plat, wgts[0], wgts[1], wgts[2], wgts[3], iw, jw);
+
 	  
-	  if ( ii < nxm )
-	    {
-	      field[i] = fieldm[jj-1][ii-1] * (x[i]-xm[ii]) * (y[i]-ym[jj])
-		                   / ((xm[ii-1]-xm[ii]) * (ym[jj-1]-ym[jj]))
-		       + fieldm[jj-1][ii] * (x[i]-xm[ii-1]) * (y[i]-ym[jj])
-		                   / ((xm[ii]-xm[ii-1]) * (ym[jj-1]-ym[jj]))
-		       + fieldm[jj][ii-1] * (x[i]-xm[ii]) * (y[i]-ym[jj-1])
-		                  / ((xm[ii-1]-xm[ii]) * (ym[jj]-ym[jj-1]))
-		       + fieldm[jj][ii] * (x[i]-xm[ii-1]) * (y[i]-ym[jj-1])
-		                   / ((xm[ii]-xm[ii-1]) * (ym[jj]-ym[jj-1]));
-	    }
+	  field[i] = 0;
+	  for ( n = 0; n < 4; ++n )
+	    field[i] += fieldm[src_add[n]] * wgts[n];
 	}
     }
  
   if ( findex < gridsize2 ) progressStatus(0, 1, 1);
+
+  if ( grid1_mask ) free(grid1_mask);
+}
+
+static
+void restrict_boundbox(const double *restrict grid_bound_box, double *restrict bound_box)
+{
+  if ( bound_box[0] < grid_bound_box[0] && bound_box[1] > grid_bound_box[0] ) bound_box[0] = grid_bound_box[0];
+  if ( bound_box[1] > grid_bound_box[1] && bound_box[0] < grid_bound_box[1] ) bound_box[1] = grid_bound_box[1];
+  //  if ( bound_box[2] < grid_bound_box[2] && bound_box[3] > grid_bound_box[2] ) bound_box[2] = grid_bound_box[2];
+  //  if ( bound_box[3] > grid_bound_box[3] && bound_box[2] < grid_bound_box[3] ) bound_box[3] = grid_bound_box[3];
+}
+
+static
+void boundbox_from_corners(long ic, long nc, const double *restrict corner_lon,
+			   const double *restrict corner_lat, double *restrict bound_box)
+{
+  long inc, j;
+  double clon, clat;
+
+    {
+      inc = ic*nc;
+      clat = corner_lat[inc];
+      clon = corner_lon[inc];
+      bound_box[0] = clat;
+      bound_box[1] = clat;
+      bound_box[2] = clon;
+      bound_box[3] = clon;
+      for ( j = 1; j < nc; ++j )
+	{
+	  clat = corner_lat[inc+j];
+	  clon = corner_lon[inc+j];
+	  if ( clat < bound_box[0] ) bound_box[0] = clat;
+	  if ( clat > bound_box[1] ) bound_box[1] = clat;
+	  if ( clon < bound_box[2] ) bound_box[2] = clon;
+	  if ( clon > bound_box[3] ) bound_box[3] = clon;
+	}
+    }
+}
+
+#if defined(HAVE_LIBYAC)
+#include "points.h"
+#include "grid_reg2d.h"
+#include "grid_search.h"
+#include "bucket_search.h"
+#include "search.h"
+#include "clipping.h"
+#include "area.h"
+#endif
+
+static
+void intconarr2(double missval, int lon_is_circular,
+		long nxm, long nym,  const double *restrict fieldm, const double *restrict xm, const double *restrict ym,
+		long nc2, long gridsize2, double *field, const double *restrict x, const double *restrict y)
+{
+  long ndeps;
+  int *deps;
+  long i, ii = -1, jj = -1;
+  long gridsize1;
+  long nlon1 = nxm;
+  double findex = 0;
+  int *grid1_mask = NULL;
+
+  printf(" nxm, nym %ld %ld\n", nxm, nym);
+  //if ( lon_is_circular ) nlon1--;
+  gridsize1 = (nxm-1)*(nym-1);
+
+  deps = (int *) malloc(gridsize1*sizeof(int));
+
+  grid1_mask = (int *) calloc(1, gridsize1*sizeof(int));
+  for ( jj = 0; jj < nym-1; ++jj )
+    for ( ii = 0; ii < nxm-1; ++ii )
+      {
+	if ( !DBL_IS_EQUAL(fieldm[jj*(nxm-1)+ii], missval) ) grid1_mask[jj*(nxm-1)+ii] = 1;
+      }
+
+  double grid1_bound_box[4];
+  grid1_bound_box[0] = ym[0];
+  grid1_bound_box[1] = ym[nym-1];
+  if ( ym[0] > ym[nym-1] )
+    {
+      grid1_bound_box[0] = ym[nym-1];
+      grid1_bound_box[1] = ym[0];
+    }
+  grid1_bound_box[2] = xm[0];
+  grid1_bound_box[3] = xm[nxm-1];
+ 
+  progressInit();
+
+#if defined(HAVE_LIBYAC)
+  enum edge_type quad_type[] = {GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE}; // not used !
+  // enum edge_type quad_type[] = {LON_CIRCLE, LON_CIRCLE, LON_CIRCLE, LON_CIRCLE};
+
+  int n;
+  double weight_sum;
+
+  double *weight;
+  weight = (double *) malloc(gridsize1*sizeof(double));
+
+  double tgt_area;
+  double *area;
+  area = (double *) malloc(gridsize1*sizeof(double));
+
+  struct grid_cell *SourceCell;
+  SourceCell = malloc (gridsize1  * sizeof(*SourceCell) );
+
+  for ( int n = 0; n <  gridsize1; n++ ) {
+    SourceCell[n].num_corners   = 4;
+    SourceCell[n].edge_type     = quad_type;
+    SourceCell[n].coordinates_x = malloc (4 * sizeof(SourceCell[n].coordinates_x[0]) );
+    SourceCell[n].coordinates_y = malloc (4 * sizeof(SourceCell[n].coordinates_y[0]) );
+  }
+
+  struct grid_cell  TargetCell;
+
+  TargetCell.num_corners   = nc2;
+  TargetCell.edge_type     = quad_type;
+  TargetCell.coordinates_x = malloc (nc2 * sizeof(*TargetCell.coordinates_x) );
+  TargetCell.coordinates_y = malloc (nc2 * sizeof(*TargetCell.coordinates_y) );
+
+  unsigned const * curr_deps;
+  //struct polygons polygons;
+
+  //polygon_create ( &polygons );
+#endif
+
+  /*
+#if defined(_OPENMP)
+#pragma omp parallel for default(none) \
+  shared(ompNumThreads, field, fieldm, x, y, xm, ym, nxm, nym, gridsize2, missval, findex, nlon1, lon_is_circular, grid1_mask, nc2) \
+  private(i, jj, ii)
+#endif
+  */
+  for ( i = 0; i < gridsize2; ++i )
+    {
+      int src_add[4];                /*  address for the four source points    */
+      long n;
+      long iix;
+      int lfound;
+      int lprogress = 1;
+      ndeps = 0;
+      /*
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+#endif
+      */
+      field[i] = missval;
+      
+      // printf("%ld lonb: %g %g %g %g latb: %g %g %g %g\n", i+1, x[i*nc2]*RAD2DEG, x[i*nc2+1]*RAD2DEG, x[i*nc2+2]*RAD2DEG, x[i*nc2+3]*RAD2DEG, y[i*nc2]*RAD2DEG, y[i*nc2+1]*RAD2DEG, y[i*nc2+2]*RAD2DEG, y[i*nc2+3]*RAD2DEG);
+
+
+      double bound_lon1, bound_lon2;
+      double bound_box[4];
+      boundbox_from_corners(i, nc2, x, y, bound_box);
+      restrict_boundbox(grid1_bound_box, bound_box);
+      bound_lon1 = bound_box[2];
+      bound_lon2 = bound_box[3];
+      //  printf("bound_box %ld  lon: %g %g lat: %g %g\n", i+1, bound_box[2]*RAD2DEG, bound_box[3]*RAD2DEG, bound_box[0]*RAD2DEG, bound_box[1]*RAD2DEG);
+      /*
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      */
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/gridsize2);
+
+      //      lfound = rect_grid_search(&ii, &jj, x[i], y[i], nxm, nym, xm, ym);
+      //     for ( int k = 0; k < nxm; ++k ) printf("x: %d %g\n", k+1, xm[k]);
+      //    for ( int k = 0; k < nym; ++k ) printf("y: %d %g\n", k+1, ym[k]*RAD2DEG);
+      long imin = nxm, imax = -1, jmin = nym, jmax = -1;
+
+      lfound = rect_grid_search2(&jmin, &jmax, bound_box[0], bound_box[1], nym, ym);
+      bound_lon1 = bound_box[2];
+      bound_lon2 = bound_box[3];
+      if ( bound_lon1 <= grid1_bound_box[3] && bound_lon2 >= grid1_bound_box[2] )
+	{
+	  //printf("b1 %g %g\n", bound_lon1*RAD2DEG, bound_lon2*RAD2DEG);
+	  if ( bound_lon1 < grid1_bound_box[2] && bound_lon2 > grid1_bound_box[2] ) bound_lon1 = grid1_bound_box[2];
+	  if ( bound_lon2 > grid1_bound_box[3] && bound_lon1 < grid1_bound_box[3] ) bound_lon2 = grid1_bound_box[3];
+	  lfound = rect_grid_search2(&imin, &imax, bound_lon1, bound_lon2, nxm, xm);
+	  //printf("imin %ld  imax %ld  jmin %ld jmax %ld\n", imin, imax, jmin, jmax);
+	  for ( long jm = jmin; jm <= jmax; ++jm )
+	    for ( long im = imin; im <= imax; ++im )
+	      deps[ndeps++] = jm*(nxm-1) + im;
+	}
+
+
+      bound_lon1 = bound_box[2];
+      bound_lon2 = bound_box[3];
+      if ( bound_lon1 <= grid1_bound_box[2] && bound_lon2 > grid1_bound_box[2] )
+	{
+	  bound_lon1 += 2*M_PI;
+	  bound_lon2 += 2*M_PI;
+	  //printf("b2 %g %g\n", bound_lon1*RAD2DEG, bound_lon2*RAD2DEG);
+	  if ( bound_lon1 < grid1_bound_box[2] && bound_lon2 > grid1_bound_box[2] ) bound_lon1 = grid1_bound_box[2];
+	  if ( bound_lon2 > grid1_bound_box[3] && bound_lon1 < grid1_bound_box[3] ) bound_lon2 = grid1_bound_box[3];
+	  lfound = rect_grid_search2(&imin, &imax, bound_lon1, bound_lon2, nxm, xm);
+	  //printf("imin %ld  imax %ld  jmin %ld jmax %ld\n", imin, imax, jmin, jmax);
+	  for ( long jm = jmin; jm <= jmax; ++jm )
+	    for ( long im = imin; im <= imax; ++im )
+	      deps[ndeps++] = jm*(nxm-1) + im;
+	}
+
+      bound_lon1 = bound_box[2];
+      bound_lon2 = bound_box[3];
+      if ( bound_lon1 < grid1_bound_box[3] && bound_lon2 >= grid1_bound_box[3] )
+	{
+	  bound_lon1 -= 2*M_PI;
+	  bound_lon2 -= 2*M_PI;
+	  //printf("b3 %g %g\n", bound_lon1*RAD2DEG, bound_lon2*RAD2DEG);
+	  if ( bound_lon1 < grid1_bound_box[2] && bound_lon2 > grid1_bound_box[2] ) bound_lon1 = grid1_bound_box[2];
+	  if ( bound_lon2 > grid1_bound_box[3] && bound_lon1 < grid1_bound_box[3] ) bound_lon2 = grid1_bound_box[3];
+	  lfound = rect_grid_search2(&imin, &imax, bound_lon1, bound_lon2, nxm, xm);
+	  //printf("imin %ld  imax %ld  jmin %ld jmax %ld\n", imin, imax, jmin, jmax);
+	  for ( long jm = jmin; jm <= jmax; ++jm )
+	    for ( long im = imin; im <= imax; ++im )
+	      deps[ndeps++] = jm*(nxm-1) + im;
+	}
+
+      //for ( long id = 0; id < ndeps; ++id )
+	//	printf("dep %ld %d\n", id+1, deps[id]);
+      /*
+      if ( bound_lon1 < grid1_bound_box[2] && bound_box[3] >= grid1_bound_box[2] )
+	lfound = rect_grid_search2(&imin, &imax, bound_box[2], bound_box[3], nxm, xm);
+      */
+
+#if defined(HAVE_LIBYAC)
+      int index2 = i;
+      /*
+      int ilat2 = index2/nlonOut;
+      int ilon2 = index2 - ilat2*nlonOut;
+      */
+      for ( int ic = 0; ic < nc2; ++ic )
+	{
+	  TargetCell.coordinates_x[ic] =  x[index2*nc2+ic];
+	  TargetCell.coordinates_y[ic] =  y[index2*nc2+ic];
+	}
+
+      if ( cdoVerbose )
+	{
+	  printf("target:\n");
+	  for ( int n = 0; n < nc2; ++n )
+	    printf(" %g %g", TargetCell.coordinates_x[n]/DEG2RAD, TargetCell.coordinates_y[n]/DEG2RAD);
+	  printf("\n");
+	}
+      /*
+      if ( cdoVerbose )
+	printf("num_deps_per_element %d %d\n", i, ndeps);
+      */
+      int num_deps = ndeps;
+      int nSourceCells = num_deps;
+
+      for ( int k = 0; k < num_deps; ++k )
+	{
+	  int index1 = deps[k];
+	  int ilat1 = index1/(nxm-1);
+	  int ilon1 = index1 - ilat1*(nxm-1);
+	  /*
+	  if ( cdoVerbose )
+	    printf("  dep: %d %d %d %d %d %d\n", k, nlonOut, nlatOut, index1, ilon1, ilat1);
+	  */
+	  if ( ym[ilat1] < ym[ilat1+1] )
+	    {
+	      SourceCell[k].coordinates_x[0] =  xm[ilon1];
+	      SourceCell[k].coordinates_y[0] =  ym[ilat1];
+	      SourceCell[k].coordinates_x[1] =  xm[ilon1+1];
+	      SourceCell[k].coordinates_y[1] =  ym[ilat1];
+	      SourceCell[k].coordinates_x[2] =  xm[ilon1+1];
+	      SourceCell[k].coordinates_y[2] =  ym[ilat1+1];
+	      SourceCell[k].coordinates_x[3] =  xm[ilon1];
+	      SourceCell[k].coordinates_y[3] =  ym[ilat1+1];
+	    }
+	  else
+	    {
+	      SourceCell[k].coordinates_x[0] =  xm[ilon1];
+	      SourceCell[k].coordinates_y[0] =  ym[ilat1+1];
+	      SourceCell[k].coordinates_x[1] =  xm[ilon1+1];
+	      SourceCell[k].coordinates_y[1] =  ym[ilat1+1];
+	      SourceCell[k].coordinates_x[2] =  xm[ilon1+1];
+	      SourceCell[k].coordinates_y[2] =  ym[ilat1];
+	      SourceCell[k].coordinates_x[3] =  xm[ilon1];
+	      SourceCell[k].coordinates_y[3] =  ym[ilat1];
+	    }
+	  if ( cdoVerbose )
+	    {
+	      printf("source: %d\n", k);
+	      for ( int n = 0; n < 4; ++n )
+		printf(" %g %g", SourceCell[k].coordinates_x[n]/DEG2RAD, SourceCell[k].coordinates_y[n]/DEG2RAD);
+	      printf("\n");
+	    }
+	}
+      
+      //polygon_partial_weights(num_deps, SourceCell, TargetCell, weight, &polygons);
+      compute_overlap_areas ( nSourceCells, SourceCell, TargetCell, area);
+
+      tgt_area = huiliers_area(TargetCell);
+      // tgt_area = cell_area(TargetCell);
+      for (n = 0; n < nSourceCells; ++n)
+	weight[n] = area[n] / tgt_area;
+
+      correct_weights ( nSourceCells, weight );
+
+      field[i] = missval;
+      if ( num_deps ) field[i] = 0;
+      for ( int k = 0; k < num_deps; ++k )
+	{
+	  int index1 = deps[k];
+	  /*
+	  int ilat1 = index1/(nxm-1);
+	  int ilon1 = index1 - ilat1*(nxm-1);
+	  long add1, add2;
+
+	  add1 = index1;
+	  add2 = index2;
+
+	  yar_store_link_cnsrv(&remap.vars, add1, add2, weight[k]);
+	  */
+	  field[i] += fieldm[index1] * weight[k];
+	  /*
+	  if ( cdoVerbose )
+	    printf("  result dep: %ld %d %d  %g\n", i, k, index1, weight[k]);
+	  */
+	}
+#endif
+    }
+ 
+#if defined(HAVE_LIBYAC)
+  free(weight);
+  free(area);
+  //polygon_destroy ( &polygons );
+#endif
+
+  if ( findex < gridsize2 ) progressStatus(0, 1, 1);
+
+  if ( deps ) free(deps);
+  if ( grid1_mask ) free(grid1_mask);
 }
 
 
@@ -201,19 +687,21 @@ void intlinarr(long nxm, double *ym, double *xm, int nx, double *y, double *x)
 }
 
 
-void intgrid(field_t *field1, field_t *field2)
+void intgridbil(field_t *field1, field_t *field2)
 {
   int nlon1, nlat1;
   int nlon2, nlat2;
   int ilat;
   int gridID1, gridID2;
   int i, nmiss;
+  int lon_is_circular;
   double *lon1, *lat1;
   double **array1_2D = NULL;
   double **field;
   double *array = NULL;
   double *array1, *array2;
   double missval;
+  char units[CDI_MAX_NAME];
   /* static int index = 0; */
 
   gridID1 = field1->grid;
@@ -225,19 +713,31 @@ void intgrid(field_t *field1, field_t *field2)
   if ( ! (gridInqXvals(gridID1, NULL) && gridInqYvals(gridID1, NULL)) )
     cdoAbort("Source grid has no values");
 
+  lon_is_circular = gridIsCircular(gridID1);
+
   nlon1 = gridInqXsize(gridID1);
   nlat1 = gridInqYsize(gridID1);
-  lon1 = (double *) malloc(nlon1*sizeof(double));
-  lat1 = (double *) malloc(nlat1*sizeof(double));
-  gridInqXvals(gridID1, lon1);
-  gridInqYvals(gridID1, lat1);
-
-  nlon2 = gridInqXsize(gridID2);
-  nlat2 = gridInqYsize(gridID2);
 
   array1_2D = (double **) malloc(nlat1*sizeof(double *));
   for ( ilat = 0; ilat < nlat1; ilat++ )
     array1_2D[ilat] = array1 + ilat*nlon1;
+
+  if ( lon_is_circular ) nlon1 += 1;
+  lon1 = (double *) malloc(nlon1*sizeof(double));
+  lat1 = (double *) malloc(nlat1*sizeof(double));
+  gridInqXvals(gridID1, lon1);
+  gridInqYvals(gridID1, lat1);
+  if ( lon_is_circular ) lon1[nlon1-1] = 0;
+
+  gridInqXunits(gridID1, units);
+
+  grid_to_radian(units, nlon1, lon1, "grid1 center lon"); 
+  grid_to_radian(units, nlat1, lat1, "grid1 center lat"); 
+
+  if ( lon_is_circular ) lon1[nlon1-1] = lon1[0] + 2*M_PI;
+
+  nlon2 = gridInqXsize(gridID2);
+  nlat2 = gridInqYsize(gridID2);
 
   if ( nlon2 == 1 && nlat2 == 1 )
     {
@@ -246,7 +746,12 @@ void intgrid(field_t *field1, field_t *field2)
       gridInqXvals(gridID2, &lon2);
       gridInqYvals(gridID2, &lat2);
 
-      if ( lon2 < lon1[0] ) lon2 += 360;
+      gridInqXunits(gridID2, units);
+
+      grid_to_radian(units, nlon2, &lon2, "grid2 center lon"); 
+      grid_to_radian(units, nlat2, &lat2, "grid2 center lat"); 
+
+      if ( lon2 < lon1[0] ) lon2 += 2*M_PI;
 
       if ( lon2 > lon1[nlon1-1] )
 	{
@@ -260,7 +765,7 @@ void intgrid(field_t *field1, field_t *field2)
 	      array1_2D[ilat] = array + ilat*(nlon1+1);  
 	      memcpy(array1_2D[ilat], field[ilat], nlon1*sizeof(double));
 	      array1_2D[ilat][nlon1] = array1_2D[ilat][0];
-	      lon1[nlon1] = lon1[0] + 360;
+	      lon1[nlon1] = lon1[0] + 2*M_PI;
 	    }
 	  nlon1++;
 	  free(field);
@@ -298,8 +803,19 @@ void intgrid(field_t *field1, field_t *field2)
       gridInqXvals(gridID2, lon2);
       gridInqYvals(gridID2, lat2);
 
-      intlinarr2(missval,
-		 nlon1, nlat1, array1_2D, lon1, lat1,
+      gridInqXunits(gridID2, units);
+
+      grid_to_radian(units, gridsize2, lon2, "grid2 center lon"); 
+      grid_to_radian(units, gridsize2, lat2, "grid2 center lat"); 
+
+      for ( int i = 0; i < gridsize2; ++i )
+	{
+	  if ( lon2[i] < lon1[0]       ) lon2[i] += 2*M_PI;
+	  if ( lon2[i] > lon1[nlon1-1] ) lon2[i] -= 2*M_PI;
+	}
+
+      intlinarr2(missval, lon_is_circular, 
+		 nlon1, nlat1, array1, lon1, lat1,
 		 gridsize2, array2, lon2, lat2);
 
       nmiss = 0;
@@ -319,13 +835,153 @@ void intgrid(field_t *field1, field_t *field2)
 }
 
 
+void gridGenBounds1(int ny, double *yvals, double *ybounds)
+{
+  int i;
+
+  for ( i = 0; i < ny-1; i++ )
+    {
+      ybounds[i+1] = 0.5*(yvals[i] + yvals[i+1]);
+    }
+
+  ybounds[0]  = 2*yvals[0] - ybounds[1];
+  ybounds[ny] = 2*yvals[ny-1] - ybounds[ny-1];
+}
+
+
+void intgridcon(field_t *field1, field_t *field2)
+{
+  int nlon1, nlat1;
+  int nlon1b, nlat1b;
+  int nlon2, nlat2;
+  int ilat;
+  int gridID1, gridID2;
+  int i, nmiss;
+  int lon_is_circular;
+  double *lon1, *lat1;
+  double *lon1bounds, *lat1bounds;
+  double **field;
+  double *array = NULL;
+  double *array1, *array2;
+  double missval;
+  char units[CDI_MAX_NAME];
+  /* static int index = 0; */
+
+  gridID1 = field1->grid;
+  gridID2 = field2->grid;
+  array1  = field1->ptr;
+  array2  = field2->ptr;
+  missval = field1->missval;
+
+  if ( ! (gridInqXvals(gridID1, NULL) && gridInqYvals(gridID1, NULL)) )
+    cdoAbort("Source grid has no values");
+
+  lon_is_circular = gridIsCircular(gridID1);
+
+  nlon1 = gridInqXsize(gridID1);
+  nlat1 = gridInqYsize(gridID1);
+
+  lon1 = (double *) malloc(nlon1*sizeof(double));
+  lat1 = (double *) malloc(nlat1*sizeof(double));
+  gridInqXvals(gridID1, lon1);
+  gridInqYvals(gridID1, lat1);
+
+  gridInqXunits(gridID1, units);
+
+  grid_to_radian(units, nlon1, lon1, "grid1 center lon"); 
+  grid_to_radian(units, nlat1, lat1, "grid1 center lat"); 
+
+  nlon1b = nlon1 + 1;
+  nlat1b = nlat1 + 1;
+  lon1bounds = (double *) malloc(nlon1b*sizeof(double));
+  lat1bounds = (double *) malloc(nlat1b*sizeof(double));
+
+  gridGenBounds1(nlon1, lon1, lon1bounds);
+  gridGenBounds1(nlat1, lat1, lat1bounds);
+
+  for ( int i = 0; i < nlat1; ++i )
+    printf("lat1 %d %g\n", i+1, lat1[i]*RAD2DEG);
+  printf("lat1bounds: %g %g %g ... %g %g %g\n", lat1bounds[0]*RAD2DEG, lat1bounds[1]*RAD2DEG, lat1bounds[2]*RAD2DEG, lat1bounds[nlat1b-3]*RAD2DEG, lat1bounds[nlat1b-2]*RAD2DEG, lat1bounds[nlat1b-1]*RAD2DEG);
+  printf("lon1bounds: %g %g %g ... %g %g %g\n", lon1bounds[0]*RAD2DEG, lon1bounds[1]*RAD2DEG, lon1bounds[2]*RAD2DEG, lon1bounds[nlon1b-3]*RAD2DEG, lon1bounds[nlon1b-2]*RAD2DEG, lon1bounds[nlon1b-1]*RAD2DEG);
+
+  nlon2 = gridInqXsize(gridID2);
+  nlat2 = gridInqYsize(gridID2);
+
+  int gridsize2;
+
+  if ( gridInqType(gridID2) == GRID_GME ) gridID2 = gridToUnstructured(gridID2, 0);
+
+  if ( gridInqType(gridID2) != GRID_UNSTRUCTURED && gridInqType(gridID2) != GRID_CURVILINEAR )
+    gridID2 = gridToCurvilinear(gridID2, 0);
+
+  if ( ! (gridInqXvals(gridID2, NULL) && gridInqYvals(gridID2, NULL)) )
+    cdoAbort("Target grid has no values");
+
+  gridsize2 = gridInqSize(gridID2);
+
+  int nc2;
+
+  if ( gridInqType(gridID2) == GRID_UNSTRUCTURED )
+    nc2 = gridInqNvertex(gridID2);
+  else
+    nc2 = 4;
+
+  printf("nc2: %d\n", nc2);
+
+  double *grid2_corner_lon = NULL, *grid2_corner_lat = NULL;
+
+  if ( gridInqYbounds(gridID2, NULL) && gridInqXbounds(gridID2, NULL) )
+    {
+      grid2_corner_lon = (double *) malloc(nc2*gridsize2*sizeof(double));
+      grid2_corner_lat = (double *) malloc(nc2*gridsize2*sizeof(double));
+      gridInqXbounds(gridID2, grid2_corner_lon);
+      gridInqYbounds(gridID2, grid2_corner_lat);
+    }
+  else
+    {
+      cdoAbort("grid2 corner missing!");
+    }
+ 
+  gridInqXunits(gridID2, units);
+
+  grid_to_radian(units, nc2*gridsize2, grid2_corner_lon, "grid2 corner lon"); 
+  grid_to_radian(units, nc2*gridsize2, grid2_corner_lat, "grid2 corner lat"); 
+  /*
+  for ( int i = 0; i < gridsize2; ++i )
+    {
+      if ( lon2[i] < lon1[0]       ) lon2[i] += 2*M_PI;
+      if ( lon2[i] > lon1[nlon1-1] ) lon2[i] -= 2*M_PI;
+    }
+  */
+  for ( i = 0; i < gridsize2; ++i ) array2[i] = missval;
+
+  intconarr2(missval, lon_is_circular, 
+	     nlon1b, nlat1b, array1, lon1bounds, lat1bounds,
+	     nc2, gridsize2, array2, grid2_corner_lon, grid2_corner_lat);
+
+  nmiss = 0;
+  for ( i = 0; i < gridsize2; ++i )
+    if ( DBL_IS_EQUAL(array2[i], missval) ) nmiss++;
+
+  field2->nmiss = nmiss;
+
+  if (grid2_corner_lon) free(grid2_corner_lon);
+  if (grid2_corner_lat) free(grid2_corner_lat);
+
+  if (array) free(array);
+  free(lon1);
+  free(lat1);
+}
+
+
 /* source code from pingo */
 void interpolate(field_t *field1, field_t *field2)
 {
   int i;
   double *lono_array, *lato_array, *lono, *lato;
   double *lon_array, *lat_array, *lon, *lat;
-  int gridsize_i, gridsize_o;
+  //int gridsize_i
+  int gridsize_o;
   int gridIDi;
   double *arrayIn;
   int gridIDo;
@@ -358,7 +1014,7 @@ void interpolate(field_t *field1, field_t *field2)
   arrayOut = field2->ptr;
   missval  = field1->missval;
 
-  gridsize_i = gridInqSize(gridIDi);
+  //gridsize_i = gridInqSize(gridIDi);
   gridsize_o = gridInqSize(gridIDo);
 
   nlon  = gridInqXsize(gridIDi);
@@ -384,9 +1040,9 @@ void interpolate(field_t *field1, field_t *field2)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridIDi, units);
-    gridToDegree(units, "grid1 center lon", nlon, lon);
+    grid_to_degree(units, nlon, lon, "grid1 center lon");
     gridInqYunits(gridIDi, units);
-    gridToDegree(units, "grid1 center lat", nlat, lat);
+    grid_to_degree(units, nlat, lat, "grid1 center lat");
   }
 
   if ( nlon > 1 )
@@ -430,9 +1086,9 @@ void interpolate(field_t *field1, field_t *field2)
   {
     char units[CDI_MAX_NAME];
     gridInqXunits(gridIDo, units);
-    gridToDegree(units, "grid2 center lon", out_nlon, lono);
+    grid_to_degree(units, out_nlon, lono, "grid2 center lon");
     gridInqYunits(gridIDo, units);
-    gridToDegree(units, "grid2 center lat", out_nlat, lato);
+    grid_to_degree(units, out_nlat, lato, "grid2 center lat");
   }
 
   for ( i = 0; i < out_nlon - 1; i++ )
@@ -597,14 +1253,14 @@ void interpolate(field_t *field1, field_t *field2)
 			      || lon[nlon] >= lon[ 0] + 360 - 0.001);
 
   for (ilat = 0; ilat < nlat; ilat++)
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
     for (ilon = 0; ilon < nlon; ilon++)
       xin[2 * ilat + 1][2 * ilon + 1] = in0[ilat][ilon];
 
   for (ilat = 0; ilat < nxlat; ilat += 2)
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
     for (ilon = 1; ilon < nxlon; ilon += 2)
@@ -625,7 +1281,7 @@ void interpolate(field_t *field1, field_t *field2)
       }
 
   for ( ilat = 1; ilat < nxlat; ilat += 2 )
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
     for ( ilon = 0; ilon < nxlon; ilon += 2 )
@@ -656,7 +1312,7 @@ void interpolate(field_t *field1, field_t *field2)
       }
 
   for ( ilat = 0; ilat < nxlat; ilat += 2 )
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
     for ( ilon = 0; ilon < nxlon; ilon += 2 )

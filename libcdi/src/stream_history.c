@@ -4,7 +4,7 @@
 
 #include "dmemory.h"
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 #include "stream_cdf.h"
 
 
@@ -27,7 +27,7 @@ void streamDefHistory(int streamID, int length, const char *history)
 	  if ( len )
 	    {
 	      histstring = strdupx(history);
-	      cdfDefHistory(streamID, length, histstring);
+	      cdfDefHistory(streamptr, length, histstring);
 	      free(histstring);
 	    }
 	}
@@ -47,7 +47,7 @@ int streamInqHistorySize(int streamID)
        streamptr->filetype == FILETYPE_NC4 ||
        streamptr->filetype == FILETYPE_NC4C )
     {
-      size = cdfInqHistorySize(streamID);
+      size = cdfInqHistorySize(streamptr);
     }
 
   return (size);
@@ -65,7 +65,7 @@ void streamInqHistoryString(int streamID, char *history)
        streamptr->filetype == FILETYPE_NC4 ||
        streamptr->filetype == FILETYPE_NC4C )
     {
-      cdfInqHistoryString(streamID, history);
+      cdfInqHistoryString(streamptr, history);
     }
 }
 /*
