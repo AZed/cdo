@@ -1,3 +1,52 @@
+cdo (1.6.4+dfsg.1-4ubuntu1) utopic; urgency=medium
+
+  * Don't statically link libraries.
+  * Fix build failure on ppc64el.
+
+ -- Matthias Klose <doko@ubuntu.com>  Thu, 11 Sep 2014 14:18:33 +0200
+
+cdo (1.6.4+dfsg.1-4) unstable; urgency=medium
+
+  * Force rebuild against  hdf5 libs in unstable 
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 14 Aug 2014 09:48:07 +0100
+
+cdo (1.6.4+dfsg.1-3) unstable; urgency=low
+
+  [ Gilles Fillipini ]
+  * Support hdf5 1.8.13 new packaging layout. Closes: #756660.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 01 Aug 2014 06:49:11 +0100
+
+cdo (1.6.4+dfsg.1-2) unstable; urgency=medium
+
+  * Add limits.h; UCHAR_MAX not defined elsewhere on some archs
+   (fixes FTBFS on mips, powerpc, ...)
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 08 Jul 2014 19:30:45 +0100
+
+cdo (1.6.4+dfsg.1-1) unstable; urgency=medium
+
+  *  New upstream release.
+  *  Use xz compression.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Sat, 05 Jul 2014 14:28:48 +0100
+
+cdo (1.6.3+dfsg.1-2) unstable; urgency=medium
+
+  * Include Build-Dep. on netcdf-bin. Without nc-config, cdo does not link in
+    netcdf4 properly. Closes: #720444.
+  * Enable build on libpng12 | libpng16. Closes: #743389.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Thu, 03 Apr 2014 23:25:02 +0100
+
+cdo (1.6.3+dfsg.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Move to Standards-Version: 3.9.5.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Mon, 24 Feb 2014 19:08:11 +0000
+
 cdo (1.6.2+dfsg.1-1) unstable; urgency=low
 
   * New upstream release. 

@@ -57,6 +57,12 @@ ifeq ($(ARCH), hppa)
   WITH_MAGICS:=
 endif
 
+ifneq ($(wildcard /usr/lib/$(DEB_HOST_MULTIARCH)/hdf5/serial/libhdf5.so),)
+  WITH_HDF5:=--with-hdf5=/usr/lib/$(DEB_HOST_MULTIARCH)/hdf5/serial
+else
+  WITH_HDF5:=--with-hdf5=/usr
+endif
+
 override_dh_auto_clean:
 	dh_auto_clean	|| echo "distclean ok"
 	#rm -f cdo.settings src/config.h  libtool libcdi/config.log libcdi/config.status src/stamp-h1 confdefs.h
@@ -79,11 +85,11 @@ override_dh_autoreconf:
 override_dh_auto_configure:
 	ln -sf /usr/include/cfortran.h libcdi/src/cfortran.h 
 	  ./configure --prefix=/usr --libdir=$(LIBDIR) \
-		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr --with-hdf5=/usr \
+		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr $(WITH_HDF5) \
 		--enable-iso-c-interface  \
 		 $(WITH_GRIB) $(WITH_JASPER) $(WITH_MAGICS)  FC=gfortran \
-		LIBS="-Wl,-Bstatic -lpng12 -ljasper -lm -ljpeg -lz -Wl,-Bdynamic -lcurl" \
 		LDFLAGS="$(LDFLAGS) $(AS_NEEDED)"
+#		LIBS="-lpng -ljasper -lm -ljpeg -lz -lcurl" \
 	#rm -f libtool libcdi/libtool
 	#ln -sf /usr/bin/libtool libtool
 	#ln -sf /usr/bin/libtool libcdi/libtool

@@ -2,10 +2,15 @@ Source: cdo
 Section: utils
 Priority: optional
 Maintainer: Alastair McKinstry <mckinstry@debian.org>
-Build-Depends: debhelper (>= 9), dh-buildinfo, libproj-dev, autoconf, automake, libnetcdf-dev, gfortran, dh-autoreconf,
- libgrib-api-dev [!mips !hppa], libtool, libjasper-dev, cfortran,  libhdf5-serial-dev, libmagics++-dev [!mips !hppa],
- libcurl4-gnutls-dev | libcurl4-openssl-dev  | libcurl4-nss-dev, libpng12-dev | libpng-dev
-Standards-Version: 3.9.4
+Build-Depends: debhelper (>= 9), dh-buildinfo, libproj-dev, autoconf, automake,
+ libnetcdf-dev, netcdf-bin,
+ libhdf5-serial-dev, 
+ gfortran, dh-autoreconf,
+ libgrib-api-dev [!mips !hppa], libtool, libjasper-dev, cfortran,
+ libmagics++-dev [!mips !hppa],
+ libcurl4-gnutls-dev | libcurl4-openssl-dev  | libcurl4-nss-dev,
+ libpng12-dev | libpng-dev
+Standards-Version: 3.9.5
 Homepage: https://code.zmaw.de/projects/cdo
 
 Package: cdo

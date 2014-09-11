@@ -1,4 +1,6 @@
 fix_typos.patch
 ignore.patch
 build-fixes.patch
-disable-tests.patch
+# disable-tests.patch
+uchar_fix.patch
+fix-ppc64el.diff

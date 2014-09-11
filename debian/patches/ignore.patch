@@ -25,13 +25,13 @@ Forwarded: <no|not-needed|url proving that it has been forwarded>
 Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: <YYYY-MM-DD>
 
-Index: cdo-1.5.6.1/libcdi/src/config.h.in
+Index: cdo-1.6.3+dfsg.1/libcdi/src/config.h.in
 ===================================================================
---- cdo-1.5.6.1.orig/libcdi/src/config.h.in	2012-07-19 08:55:06.000000000 +0100
-+++ cdo-1.5.6.1/libcdi/src/config.h.in	2012-09-10 21:21:38.000000000 +0100
-@@ -185,6 +185,11 @@
- /* Version number of package */
- #undef VERSION
+--- cdo-1.6.3+dfsg.1.orig/libcdi/src/config.h.in	2014-02-24 19:15:03.239912792 +0000
++++ cdo-1.6.3+dfsg.1/libcdi/src/config.h.in	2014-02-24 19:15:03.239912792 +0000
+@@ -232,6 +232,11 @@
+ # endif
+ #endif
  
 +/* Enable large inode numbers on Mac OS X 10.5.  */
 +#ifndef _DARWIN_USE_64_BIT_INODE
