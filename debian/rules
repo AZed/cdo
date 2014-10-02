@@ -9,7 +9,6 @@ export DH_VERBOSE=1
 DESTDIR:=`pwd`/debian/tmp/
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 LIBDIR:=/usr/lib/$(DEB_HOST_MULTIARCH)
-TOPDIR=:=`pwd`
 
 # To enable all, uncomment following line
 DEB_BUILD_MAINT_OPTIONS:= hardening=+all
@@ -24,8 +23,6 @@ WITH_GRIB:= --with-grib-api=/usr --disable-cgribex
 WITH_JASPER:= --with-jasper=/usr
 AS_NEEDED= -Wl,--as-needed
 WITH_MAGICS:= --with-magics=/usr
-
-# export LIBTOOLIZE=true
 
 # On powerpc, amd64, arm*, don't do fPIE, only relro
 ifeq ($(ARCH), amd64)
@@ -88,11 +85,9 @@ override_dh_auto_configure:
 		--enable-cdi-lib --with-zlib=/usr --with-netcdf=/usr  --with-proj=/usr $(WITH_HDF5) \
 		--enable-iso-c-interface  \
 		 $(WITH_GRIB) $(WITH_JASPER) $(WITH_MAGICS)  FC=gfortran \
+		LIBS=" -lpng -ljasper -lm -ljpeg -lz -lcurl" \
 		LDFLAGS="$(LDFLAGS) $(AS_NEEDED)"
-#		LIBS="-lpng -ljasper -lm -ljpeg -lz -lcurl" \
-	#rm -f libtool libcdi/libtool
-	#ln -sf /usr/bin/libtool libtool
-	#ln -sf /usr/bin/libtool libcdi/libtool
+		# LIBS="-Wl,-Bstatic -lpng -ljasper -lm -ljpeg -lz -Wl,-Bdynamic -lcurl" 
 
 override_dh_auto_install:
 	dh_auto_install
@@ -104,6 +99,6 @@ override_dh_auto_install:
 
 override_dh_auto_test:
 	# Need to define path to 'cdo' for python tests
-	# export PATH=$(PATH):$(TOPDIR)/src make check
+	# export PATH=$(PATH):$(CURDIR)/src make check
 	#test/Makefile.am:5: error: using '$(top_srcdir)' in TESTS is currently broken: '$(top_srcdir)/test/test_info.py'
 	@echo "Tests currently disabled"

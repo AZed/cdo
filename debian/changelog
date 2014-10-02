@@ -1,9 +1,21 @@
-cdo (1.6.4+dfsg.1-4ubuntu1) utopic; urgency=medium
+cdo (1.6.4+dfsg.1-5.1) unstable; urgency=medium
 
-  * Don't statically link libraries.
-  * Fix build failure on ppc64el.
 
- -- Matthias Klose <doko@ubuntu.com>  Thu, 11 Sep 2014 14:18:33 +0200
+  * Non.matainer upload with maintainers permission.
+  * Fix FTBFS on ppc64el by including ppu_intrinsics.h and removing
+    register in libcdi/src/cgribexlib.c. Closes: #763691
+
+ -- Andreas Barth <aba@ayous.org>  Thu, 02 Oct 2014 16:47:19 +0000
+
+cdo (1.6.4+dfsg.1-5) unstable; urgency=medium
+
+  * Drop building with static libs (not needed anymore?)
+    Closes: #761187.
+  * Ack. bug fixed in 1.6.4 release. Closes: #744274.
+  * Fix for expr_run() definition conflict spotted by gotocc project.
+    Closes: #747001.
+
+ -- Alastair McKinstry <mckinstry@debian.org>  Fri, 12 Sep 2014 10:24:13 +0100
 
 cdo (1.6.4+dfsg.1-4) unstable; urgency=medium
 
