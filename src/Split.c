@@ -71,6 +71,8 @@ void *Split(void *argument)
 
   cdoInitialize(argument);
 
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
+
   SPLITCODE   = cdoOperatorAdd("splitcode",   0, 0, NULL);
   SPLITPARAM  = cdoOperatorAdd("splitparam",  0, 0, NULL);
   SPLITNAME   = cdoOperatorAdd("splitname",   0, 0, NULL);

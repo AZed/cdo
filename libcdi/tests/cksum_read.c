@@ -1,5 +1,5 @@
-#ifndef HAVE_CONFIG_H
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+# include "config.h"
 #endif
 
 #include <assert.h>
@@ -17,16 +17,16 @@ read_table(const char *table_fname, size_t *table_len)
   struct cksum_table *table = NULL;
   FILE *tablefp;
   size_t table_size = 0, table_used = 0;
-  unsigned long cksum_temp;
+  uint32_t cksum_temp;
   int code;
 
   if (!(tablefp = fopen(table_fname, "r")))
     {
       perror("failed to open table file");
-      *table_len = -1;
+      *table_len = (size_t)-1;
       return NULL;
     }
-  while (fscanf(tablefp, "%08lx %d\n", &cksum_temp, &code) == 2)
+  while (fscanf(tablefp, "%08"PRIx32" %d\n", &cksum_temp, &code) == 2)
     {
       ENSURE_ARRAY_SIZE(table, table_size, table_used + 1);
       table[table_used].code = code;

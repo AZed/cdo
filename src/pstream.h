@@ -43,7 +43,9 @@
 
 #define  streamCopyRecord         pstreamCopyRecord
 
-#define  streamInqGinfo           pstreamInqGinfo
+#define  streamInqGRIBinfo        pstreamInqGRIBinfo
+
+#define  vlistCopyFlag            cdoVlistCopyFlag
 
 
 int     pstreamOpenWrite(const argument_t *argument, int filetype);
@@ -68,7 +70,10 @@ void    pstreamWriteRecordF(int pstreamID, float *data, int nmiss);
 void    pstreamReadRecord(int pstreamID, double *data, int *nmiss);
 void    pstreamCopyRecord(int pstreamIDdest, int pstreamIDsrc);
 
-void    pstreamInqGinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum);
+void    pstreamInqGRIBinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum);
+
+void    cdoVlistCopyFlag(int vlistID2, int vlistID1);
+
 
 
 #endif  /* _PSTREAM_H */

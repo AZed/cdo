@@ -86,7 +86,7 @@ host_triplet = @host@
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_5 = pkgconfig/cdipio.pc
 @CREATE_ISOC_TRUE@am__append_6 = mo_cdi.$(OBJEXT)
 #CLEANFILES += cdilib.c
-@CREATE_ISOC_TRUE@am__append_7 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.$(OBJEXT)
+@CREATE_ISOC_TRUE@am__append_7 = mo_cdi.$(FCMODEXT) mo_cdi.$(OBJEXT) mo_cdi.f90
 @ENABLE_CDI_LIB_TRUE@am__append_8 = pkgconfig/cdi.pc
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_9 = pkgconfig/cdipio.pc
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_10 = pkgconfig/cdipio.pc
@@ -97,6 +97,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
+	$(top_srcdir)/m4/acx_check_strptr_convert.m4 \
 	$(top_srcdir)/m4/acx_lang_other_suffix_conftest.m4 \
 	$(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/acx_sl_fc_mod_path_flag.m4 \
@@ -150,10 +151,11 @@ am_libcdi_la_OBJECTS = basetime.lo binary.lo calendar.lo cdf.lo \
 	institution.lo model.lo namespace.lo serialize.lo \
 	resource_handle.lo servicelib.lo stream_cdf.lo \
 	stream_cgribex.lo stream_ext.lo stream_grb.lo \
-	stream_gribapi.lo stream_history.lo stream_ieg.lo cdi_int.lo \
-	stream_record.lo stream_srv.lo stream_var.lo table.lo taxis.lo \
-	timebase.lo tsteps.lo util.lo varscan.lo version.lo vlist.lo \
-	vlist_att.lo vlist_var.lo zaxis.lo stream.lo swap.lo
+	stream_gribapi.lo stream_history.lo stream_ieg.lo \
+	stream_fcommon.lo cdi_int.lo stream_record.lo stream_srv.lo \
+	stream_var.lo table.lo taxis.lo timebase.lo tsteps.lo util.lo \
+	varscan.lo version.lo vlist.lo vlist_att.lo vlist_var.lo \
+	zaxis.lo stream.lo swap.lo
 libcdi_la_OBJECTS = $(am_libcdi_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -497,6 +499,8 @@ libcdi_la_SOURCES = \
 	stream_history.c \
 	stream_ieg.c     \
 	stream_ieg.h	 \
+	stream_fcommon.c \
+	stream_fcommon.h \
 	cdi_int.c        \
 	cdi_int.h	 \
 	stream_record.c  \
@@ -730,6 +734,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_cdf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_cgribex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_ext.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_fcommon.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_grb.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_gribapi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_history.Plo@am__quote@

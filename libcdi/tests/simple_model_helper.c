@@ -40,7 +40,7 @@ var_scale(int datatype, double *mscale, double *mrscale)
               datatype);
       exit(EXIT_FAILURE);
     }
-  *mscale = INT64_C(1) << mant_bits;
+  *mscale = (double)(INT64_C(1) << mant_bits);
   *mrscale = 1.0 / *mscale;
 }
 

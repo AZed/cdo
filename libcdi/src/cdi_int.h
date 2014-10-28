@@ -13,6 +13,9 @@
 #include <math.h>
 #include <sys/types.h>
 
+/* dummy use of unused parameters to silence compiler warnings */
+#define  UNUSED(x) (void)x
+
 #ifndef strdupx
 #ifndef strdup
 char *strdup(const char *s);
@@ -140,6 +143,7 @@ typedef struct
   int       ilevel;
   int       ilevel2;
   int       ltype;
+  int       tsteptype;
   short     used;
   short     varID;
   short     levelID;
@@ -216,9 +220,9 @@ typedef struct {
   basetime_t  basetime;
   int         ncmode;
   int         vlistID;
-  int         xdimID[MAX_GRIDS_PS];
-  int         ydimID[MAX_GRIDS_PS];
-  int         zaxisID[MAX_ZAXES_PS];
+  int         xdimID[MAX_GRIDS_PS];	//Warning: synchronous array to vlist_to_pointer(vlistID)->gridIDs
+  int         ydimID[MAX_GRIDS_PS];	//Warning: synchronous array to vlist_to_pointer(vlistID)->gridIDs
+  int         zaxisID[MAX_ZAXES_PS];	//Warning: synchronous array to vlist_to_pointer(vlistID)->zaxisIDs
   int         ncxvarID[MAX_GRIDS_PS];
   int         ncyvarID[MAX_GRIDS_PS];
   int         ncavarID[MAX_GRIDS_PS];
@@ -262,14 +266,28 @@ extern int cdiDefaultLeveltype;
 extern int cdiNcChunksizehint;
 extern int cdiChunkType;
 extern int cdiSplitLtype105;
+extern int cdiDataUnreduced;
+extern int cdiSortName;
+extern int cdiHaveMissval;
+extern int STREAM_Debug;
+
 
 extern char *cdiPartabPath;
 extern int   cdiPartabIntern;
+extern const resOps streamOps;
 
-stream_t *stream_to_pointer(int idx);
-stream_t *stream_new_entry(void);
-void stream_delete_entry(stream_t *streamptr);
-void stream_check_ptr(const char *caller, stream_t *streamptr);
+static inline stream_t *
+stream_to_pointer(int idx)
+{
+  return reshGetVal(idx, &streamOps);
+}
+
+static inline void
+stream_check_ptr(const char *caller, stream_t *streamptr)
+{
+  if ( streamptr == NULL )
+    Errorc("stream undefined!");
+}
 
 int     streamInqFileID(int streamID);
 
@@ -322,8 +340,6 @@ void    streamGetIndexList ( int, int * );
 
 void  cdiInitialize(void);
 
-void stream_write_record(int streamID, int memtype, const void *data, int nmiss);
-
 void uuid2str(const char *uuid, char *uuidstr);
 void str2uuid(const char *uuidstr, char *uuid);
 
@@ -365,8 +381,6 @@ int cdiStreamDefTimestep_(stream_t *streamptr, int tsID);
 void cdiStreamSync_(stream_t *streamptr);
 
 char *cdiUnitNamePtr(int cdi_unit);
-
-extern const resOps streamOps;
 
 #endif  /* _CDI_INT_H */
 /*

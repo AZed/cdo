@@ -82,6 +82,9 @@ extern int cdoDiag;
 extern int cdoNumVarnames;
 extern char **cdoVarnames;
 
+int cdo_omp_get_thread_num(void);
+
+
 void    cdiError(int cdiErrno, const char *fmt, ...);
 void    cdoAbort(const char *fmt, ...);
 void    cdoWarning(const char *fmt, ...);
@@ -92,6 +95,7 @@ void timer_report(void);
 void timer_start(int it);
 void timer_stop(int it);
 double timer_val(int it);
+
 
 void    operatorInputArg(const char *enter);
 int     operatorArgc(void);

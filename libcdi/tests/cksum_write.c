@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -57,6 +61,16 @@ fname_create(const char *prefix, const char *suffix)
   fname[prefix_len] = '.';
   strcpy(fname + prefix_len + 1, suffix);
   return fname;
+}
+
+static inline void
+check_positive(int v, const char *msg)
+{
+  if (v < 1)
+    {
+      fprintf(stderr, "error: number of %s must be positive!\n", msg);
+      exit(EXIT_FAILURE);
+    }
 }
 
 #ifdef TEST_CHUNK_WRITE
@@ -155,6 +169,7 @@ main(int argc, char *argv[])
 #endif
       case 'm':
         nlon = parse_intarg("error parsing number of longitudes");
+        check_positive(nlon, "longitudes");
 #ifdef TEST_CHUNK_WRITE
         if (nlon < 2)
           {
@@ -165,13 +180,16 @@ main(int argc, char *argv[])
 #endif
         break;
       case 'n':
-        nlat = parse_intarg("error parsing number of latitudes");
+        check_positive(nlat = parse_intarg("error parsing number of latitudes"),
+                       "latitudes");
         break;
       case 'o':
-        nlev = parse_intarg("error parsing number of levels");
+        check_positive(nlev = parse_intarg("error parsing number of levels"),
+                       "levels");
         break;
       case 't':
-        nts = parse_intarg("error parsing number of timesteps");
+        check_positive(nts = parse_intarg("error parsing number of timesteps"),
+                       "timesteps");
         break;
       default: /* '?' */
         fprintf(stderr, "Usage: %s [-m nlon] [-n nlat] [-o nlev] [-t nts]\n", argv[0]);
@@ -179,18 +197,18 @@ main(int argc, char *argv[])
       }
   }
 
-  lons = malloc(nlon * sizeof (lons[0]));
+  lons = malloc((size_t)nlon * sizeof (lons[0]));
   for (i = 0; i < nlon; ++i)
     lons[i] = ((double)(i * 360))/nlon;
-  lats = malloc(nlat * sizeof (lats[0]));
+  lats = malloc((size_t)nlat * sizeof (lats[0]));
   for (i = 0; i < nlat; ++i)
     lats[i] = ((double)(i * 180))/nlat - 90.0;
-  levs = malloc(nlev * sizeof (levs[0]));
+  levs = malloc((size_t)nlev * sizeof (levs[0]));
   for (i = 0; i < nlev; ++i)
     levs[i] = 101300 - floor(3940.3 * (exp(2.3579 * (double)(i)/(nlev - 1)) - 1.0));
 
-  varSize[0] = nlon * nlat;
-  varSize[1] = nlon * nlat * nlev;
+  varSize[0] = (size_t)nlon * (size_t)nlat;
+  varSize[1] = (size_t)nlon * (size_t)nlat * (size_t)nlev;
 
   // Create a regular lon/lat grid
   gridID = gridCreate(grid, nlon*nlat);
@@ -253,7 +271,7 @@ main(int argc, char *argv[])
                 datatype);
         exit(EXIT_FAILURE);
       }
-    mscale = INT64_C(1) << mant_bits;
+    mscale = (double)(INT64_C(1) << mant_bits);
     mrscale = 1.0/mscale;
   }
 
@@ -314,7 +332,8 @@ main(int argc, char *argv[])
         // Write var1 and var2
 #ifdef TEST_CHUNK_WRITE
         {
-          size_t maxChunkSize = (nlon + 1)/2 * nlat * nlev;
+          size_t maxChunkSize
+            = ((size_t)nlon + 1)/2 * (size_t)nlat * (size_t)nlev;
           double *chunkBuf = malloc(maxChunkSize * sizeof (double));
           int varShape[2][3] = { { nlon, nlat, 1 }, { nlon, nlat, nlev } },
             chunk[3][2] = { { 0, nlon/2 - 1 }, { 0, nlat - 1 }, { 0, 0 } };
@@ -361,7 +380,9 @@ main(int argc, char *argv[])
         {
           uint32_t cksum;
           int code;
-          cksum = memcrc_finish(&checksum_state[i], (off_t)varSize[i] * sizeof (var[i][0]) * nts);
+          cksum = memcrc_finish(&checksum_state[i],
+                                (off_t)(varSize[i] * sizeof (var[i][0])
+                                        * (size_t)nts));
           code = vlistInqVarCode(vlistID, varID[i]);
           if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum, code) < 0)
             {

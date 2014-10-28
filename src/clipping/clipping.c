@@ -88,6 +88,8 @@ static unsigned get_cell_points_ordering(struct point_list * cell);
 static void generate_overlap_cell(struct point_list * list,
                                   struct grid_cell * cell);
 
+static enum cell_type get_cell_type(struct grid_cell target_cell);
+
 /* ------------------------- */
 
 void compute_overlap_areas(unsigned N,
@@ -127,6 +129,124 @@ void compute_overlap_areas(unsigned N,
 #ifdef VERBOSE
   for (unsigned n = 0; n < N; n++)
     printf("overlap area : %lf\n", partial_areas[n]);
+#endif
+}
+
+/* ------------------------- */
+
+void compute_concave_overlap_areas (unsigned N,
+                                    struct grid_cell * source_cell,
+                                    struct grid_cell target_cell,
+                                    double * target_node_x,
+                                    double * target_node_y,
+                                    double * partial_areas) {
+  enum cell_type target_cell_type;
+
+  if ( target_cell.num_corners > 3 )
+    target_cell_type = get_cell_type (target_cell);
+
+  if ( target_cell.num_corners < 4 || target_cell_type == LON_LAT_CELL ) {
+    compute_overlap_areas (N, source_cell, target_cell, partial_areas);
+    return;
+  }
+
+  if ( target_node_x == NULL || target_node_y == NULL )
+    abort_message("ERROR: missing target point coordinates "
+		  "(x_coordinates == NULL || y_coordinates == NULL)",
+		  __FILE__, __LINE__);
+
+  struct grid_cell target_partial_cell =
+    {.coordinates_x   = (double[3]){-1},
+     .coordinates_y   = (double[3]){-1},
+     .coordinates_xyz = (double[3*3]){-1},
+     .edge_type       = (enum edge_type[3]) {GREAT_CIRCLE},
+     .num_corners     = 3};
+
+  static struct grid_cell * overlap_buffer = NULL;
+  static unsigned overlap_buffer_size = 0;
+
+  // ensure that there are enough buffer cells
+
+  if (overlap_buffer_size < N) {
+
+    unsigned old_overlap_buffer_size = overlap_buffer_size;
+
+    ENSURE_ARRAY_SIZE(overlap_buffer, overlap_buffer_size, N);
+
+    for (; old_overlap_buffer_size < overlap_buffer_size;
+         ++old_overlap_buffer_size)
+      init_grid_cell(overlap_buffer + old_overlap_buffer_size);
+  }
+
+  /* Do the clipping and get the cell for the overlapping area */
+
+  for ( unsigned n = 0; n < N; n++) partial_areas[n] = 0.0;
+
+  // common node point to all partial target cells
+  target_partial_cell.coordinates_x[0] = *target_node_x;
+  target_partial_cell.coordinates_y[0] = *target_node_y;
+
+  LLtoXYZ ( *target_node_x, *target_node_y, target_partial_cell.coordinates_xyz );
+
+  for ( unsigned num_corners = 0; num_corners < target_cell.num_corners; ++num_corners ) {
+
+    unsigned corner_a = num_corners;
+    unsigned corner_b = (num_corners+1)%target_cell.num_corners;
+
+    // skip clipping and area calculation for degenerated triangles
+    //
+    // If this is not sufficient, instead we can try something like:
+    //
+    //     struct point_list target_list
+    //     init_point_list(&target_list);
+    //     generate_point_list(&target_list, target_cell);
+    //     struct grid_cell temp_target_cell;
+    //     generate_overlap_cell(target_list, temp_target_cell);
+    //     free_point_list(&target_list);
+    //
+    // and use temp_target_cell for triangulation.
+    //
+    // Compared to the if statement below the alternative seems
+    // to be quite costly.
+
+    if ( ( ( fabs(target_cell.coordinates_xyz[0+3*corner_a]-target_cell.coordinates_xyz[0+3*corner_b]) < tol ) &&
+           ( fabs(target_cell.coordinates_xyz[1+3*corner_a]-target_cell.coordinates_xyz[1+3*corner_b]) < tol ) &&
+           ( fabs(target_cell.coordinates_xyz[2+3*corner_a]-target_cell.coordinates_xyz[2+3*corner_b]) < tol ) ) ||
+    	 ( ( fabs(target_cell.coordinates_xyz[0+3*corner_a]-target_partial_cell.coordinates_xyz[0]) < tol    ) &&
+           ( fabs(target_cell.coordinates_xyz[1+3*corner_a]-target_partial_cell.coordinates_xyz[1]) < tol    ) &&
+           ( fabs(target_cell.coordinates_xyz[2+3*corner_a]-target_partial_cell.coordinates_xyz[2]) < tol    ) ) ||
+         ( ( fabs(target_cell.coordinates_xyz[0+3*corner_b]-target_partial_cell.coordinates_xyz[0]) < tol    ) &&
+           ( fabs(target_cell.coordinates_xyz[1+3*corner_b]-target_partial_cell.coordinates_xyz[1]) < tol    ) &&
+           ( fabs(target_cell.coordinates_xyz[2+3*corner_b]-target_partial_cell.coordinates_xyz[2]) < tol    ) ) )
+       continue;
+
+    target_partial_cell.coordinates_x[1] = target_cell.coordinates_x[corner_a];
+    target_partial_cell.coordinates_y[1] = target_cell.coordinates_y[corner_a];
+    target_partial_cell.coordinates_x[2] = target_cell.coordinates_x[corner_b];
+    target_partial_cell.coordinates_y[2] = target_cell.coordinates_y[corner_b];
+
+    target_partial_cell.coordinates_xyz[0+3*1] = target_cell.coordinates_xyz[0+3*corner_a];
+    target_partial_cell.coordinates_xyz[1+3*1] = target_cell.coordinates_xyz[1+3*corner_a];
+    target_partial_cell.coordinates_xyz[2+3*1] = target_cell.coordinates_xyz[2+3*corner_a];
+    target_partial_cell.coordinates_xyz[0+3*2] = target_cell.coordinates_xyz[0+3*corner_b];
+    target_partial_cell.coordinates_xyz[1+3*2] = target_cell.coordinates_xyz[1+3*corner_b];
+    target_partial_cell.coordinates_xyz[2+3*2] = target_cell.coordinates_xyz[2+3*corner_b];
+
+    cell_clipping ( N, source_cell, target_partial_cell, overlap_buffer);
+
+    /* Get the partial areas for the overlapping regions as sum over the partial target cells. */
+
+    for (unsigned n = 0; n < N; n++) {
+      partial_areas[n] += huiliers_area (overlap_buffer[n]);
+      // we cannot use pole_area because it is rather inaccurate for great circle
+      // edges that are nearly circles of longitude
+      //partial_areas[n] = pole_area (overlap_buffer[n]);
+    }
+  }
+
+#ifdef VERBOSE
+  for (unsigned n = 0; n < N; n++)
+	    printf("overlap area %i: %lf \n", n, partial_areas[n]);
 #endif
 }
 
@@ -323,6 +443,9 @@ static void get_edge_middle_point(double a[3], double b[3],
 
     default:
       abort_message("ERROR: invalid edge type\n", __FILE__, __LINE__);
+      middle[0] = -1; // program should never reach this point
+      middle[1] = -1;
+      middle[2] = -1;
   };
 }
 
@@ -336,8 +459,37 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
                          struct point_list target_list, int target_ordering,
                          unsigned nct, double * tgt_edge_norm_vec) {
 
-  struct point_list_element * prev_tgt_point = target_list.first;
-  struct point_list_element * curr_tgt_point = target_list.first->next;
+  struct {
+    double * edge_norm_vec;
+    struct point_list_element * point;
+  } tgt_points[nct];
+
+  // to avoid some problems that can occur close the the pole, we process the
+  // target lat-circle edges at the end
+  {
+
+    int count = 0;
+
+    struct point_list_element * curr_tgt_point = target_list.first;
+
+    for (int i = 0; i < nct; ++i, curr_tgt_point = curr_tgt_point->next) {
+
+      if (curr_tgt_point->edge_type == LAT_CIRCLE) continue;
+
+      tgt_points[count].edge_norm_vec = tgt_edge_norm_vec + i * 3;
+      tgt_points[count++].point = curr_tgt_point;
+    }
+
+    if (count != nct) {
+      for (int i = 0; i < nct; ++i, curr_tgt_point = curr_tgt_point->next) {
+
+        if (curr_tgt_point->edge_type != LAT_CIRCLE) continue;
+
+        tgt_points[count].edge_norm_vec = tgt_edge_norm_vec + i * 3;
+        tgt_points[count++].point = curr_tgt_point;
+      }
+    }
+  }
 
   for (int i = 0; i < nct; ++i) {
 
@@ -347,31 +499,32 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
     unsigned prev_is_inside, curr_is_inside;
 
     prev_is_inside = is_inside(prev_src_point->vec_coords,
-                               tgt_edge_norm_vec + 3 * i,
-                               prev_tgt_point->edge_type, target_ordering);
+                               tgt_points[i].edge_norm_vec,
+                               tgt_points[i].point->edge_type, target_ordering);
 
     // for all edges of the target cell
     do {
 
       curr_is_inside = is_inside(curr_src_point->vec_coords,
-                                 tgt_edge_norm_vec + 3 * i,
-                                 prev_tgt_point->edge_type, target_ordering);
+                                 tgt_points[i].edge_norm_vec,
+                                 tgt_points[i].point->edge_type,
+                                 target_ordering);
 
       double p[3], q[3];
-      int intersect;
+      int intersect = -1;
 
       if ((curr_is_inside + prev_is_inside == 1) ||
           (((prev_src_point->edge_type == LAT_CIRCLE) ^
-            (prev_tgt_point->edge_type == LAT_CIRCLE)) && 
+            (tgt_points[i].point->edge_type == LAT_CIRCLE)) &&
            (prev_is_inside + curr_is_inside < 4))) {
 
         // get intersection points
         intersect = intersect_vec(prev_src_point->edge_type,
                                   prev_src_point->vec_coords,
                                   curr_src_point->vec_coords,
-                                  prev_tgt_point->edge_type,
-                                  prev_tgt_point->vec_coords,
-                                  curr_tgt_point->vec_coords,
+                                  tgt_points[i].point->edge_type,
+                                  tgt_points[i].point->vec_coords,
+                                  tgt_points[i].point->next->vec_coords,
                                   p, q);
 
         // if both edges are on an identical great circle
@@ -397,27 +550,28 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
 
           struct point_list_element * temp_src_point;
 
-          switch (prev_tgt_point->edge_type) {
+          switch (tgt_points[i].point->edge_type) {
 
             case (LON_CIRCLE) :
             case (GREAT_CIRCLE) :
               temp_src_point =
                 (fabs(dotproduct(prev_src_point->vec_coords,
-                                 tgt_edge_norm_vec + 3 * i)) <
+                                 tgt_points[i].edge_norm_vec)) <
                  fabs(dotproduct(curr_src_point->vec_coords,
-                                 tgt_edge_norm_vec + 3 * i)))?
+                                 tgt_points[i].edge_norm_vec)))?
                 prev_src_point:curr_src_point;
               break;
             case (LAT_CIRCLE) :
               temp_src_point =
                 (fabs(1.0 - fabs(prev_src_point->vec_coords[2] +
-                                 tgt_edge_norm_vec[3 * i + 2])) < 
+                                 tgt_points[i].edge_norm_vec[2])) <
                  fabs(1.0 - fabs(curr_src_point->vec_coords[2] +
-                                 tgt_edge_norm_vec[3 * i + 2])))?
+                                 tgt_points[i].edge_norm_vec[2])))?
                 prev_src_point:curr_src_point;
               break;
             default:
               abort_message("invalid edge type\n", __FILE__, __LINE__);
+              return;
           };
 
           p[0] = temp_src_point->vec_coords[0];
@@ -429,7 +583,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
         if ((intersect & ((1 << 0) | (1 << 1))) == ((1 << 0) | (1 << 1))) {
 
           if (!((prev_src_point->edge_type == LAT_CIRCLE) ^
-                (prev_tgt_point->edge_type == LAT_CIRCLE))) {
+                (tgt_points[i].point->edge_type == LAT_CIRCLE))) {
 
             abort_message("ERROR: ...this should not have happened...\n",
                           __FILE__, __LINE__);
@@ -450,25 +604,26 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
 
             int prev_is_closer;
 
-            switch (prev_tgt_point->edge_type) {
+            switch (tgt_points[i].point->edge_type) {
 
               case (LON_CIRCLE) :
               case (GREAT_CIRCLE) :
                 prev_is_closer =
                   fabs(dotproduct(prev_src_point->vec_coords,
-                                  tgt_edge_norm_vec + 3 * i)) <
+                                  tgt_points[i].edge_norm_vec)) <
                   fabs(dotproduct(curr_src_point->vec_coords,
-                                  tgt_edge_norm_vec + 3 * i));
+                                  tgt_points[i].edge_norm_vec));
                 break;
               case (LAT_CIRCLE) :
                 prev_is_closer =
                   fabs(1.0 - fabs(prev_src_point->vec_coords[2] +
-                                  tgt_edge_norm_vec[3 * i + 2])) < 
+                                  tgt_points[i].edge_norm_vec[2])) <
                   fabs(1.0 - fabs(curr_src_point->vec_coords[2] +
-                                  tgt_edge_norm_vec[3 * i + 2]));
+                                  tgt_points[i].edge_norm_vec[2]));
                 break;
               default:
                 abort_message("invalid edge type\n", __FILE__, __LINE__);
+                return;
             };
 
             if (prev_is_closer)
@@ -497,7 +652,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
             intersect_point = prev_src_point;
 
           if (prev_is_inside)
-            intersect_point->edge_type = prev_tgt_point->edge_type;
+            intersect_point->edge_type = tgt_points[i].point->edge_type;
           else
             intersect_point->edge_type = prev_src_point->edge_type;
 
@@ -524,7 +679,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
       // if the one edge is a circle of latitude while the other is not
       // and both corners are not directly on the edge
       if (((prev_src_point->edge_type == LAT_CIRCLE) ^
-           (prev_tgt_point->edge_type == LAT_CIRCLE)) && 
+           (tgt_points[i].point->edge_type == LAT_CIRCLE)) &&
           ((prev_is_inside + curr_is_inside == 0) ||
            (prev_is_inside + curr_is_inside == 2) ||
            (prev_is_inside + curr_is_inside == 3))) {
@@ -578,7 +733,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
               prev_src_point->edge_type;
             intersect_points[(prev_is_inside == 0) ||
                              (curr_is_inside == 0)]->edge_type =
-              prev_tgt_point->edge_type;
+              tgt_points[i].point->edge_type;
 
             if (prev_is_inside == 2 || curr_is_inside == 2) {
 
@@ -587,7 +742,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
               {
                 double edge_middle[3];
 
-                get_edge_middle_point(p, q, prev_tgt_point->edge_type,
+                get_edge_middle_point(p, q, tgt_points[i].point->edge_type,
                                       edge_middle);
 
                 double norm_vec[3];
@@ -647,7 +802,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
       // if the one edge is a circle of latitude while the other is not
       // and both corners are directly on the edge
       } else if (((prev_src_point->edge_type == LAT_CIRCLE) ^
-                  (prev_tgt_point->edge_type == LAT_CIRCLE)) && 
+                  (tgt_points[i].point->edge_type == LAT_CIRCLE)) &&
                  (prev_is_inside == 2) && (curr_is_inside == 2)) {
 
         double cross_src_z, cross_tgt_z;
@@ -656,10 +811,10 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
                       (long double)curr_src_point->vec_coords[1] -
                       (long double)prev_src_point->vec_coords[1] *
                       (long double)curr_src_point->vec_coords[0];
-        cross_tgt_z = (long double)prev_tgt_point->vec_coords[0] *
-                      (long double)curr_tgt_point->vec_coords[1] -
-                      (long double)prev_tgt_point->vec_coords[1] *
-                      (long double)curr_tgt_point->vec_coords[0];
+        cross_tgt_z = (long double)tgt_points[i].point->vec_coords[0] *
+                      (long double)tgt_points[i].point->next->vec_coords[1] -
+                      (long double)tgt_points[i].point->vec_coords[1] *
+                      (long double)tgt_points[i].point->next->vec_coords[0];
 
         int same_ordering = source_ordering == target_ordering;
         int same_direction = (cross_src_z > 0) == (cross_tgt_z > 0);
@@ -684,7 +839,7 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
       // if the previous points was on the target edge and the current
       // one is outside
       if (prev_is_inside == 2 && curr_is_inside == 0)
-        prev_src_point->edge_type = prev_tgt_point->edge_type;
+        prev_src_point->edge_type = tgt_points[i].point->edge_type;
 
       if (!prev_is_inside)
         prev_src_point->to_be_removed = 1;
@@ -701,9 +856,6 @@ void point_list_clipping(struct point_list * source_list, int source_ordering,
 
     // if there are no more corners in the source cell
     if (source_list->first == NULL) break;
-
-    prev_tgt_point = curr_tgt_point;
-    curr_tgt_point = curr_tgt_point->next;
   }
 }
 
@@ -715,22 +867,22 @@ static void copy_point_list(struct point_list in, struct point_list * out) {
 
   if (curr == NULL) return;
 
-  struct point_list_element * newelem = get_free_point_list_element(out);
-  out->first = newelem;
-  *newelem = *curr;
+  struct point_list_element * new = get_free_point_list_element(out);
+  out->first = new;
+  *new = *curr;
   curr = curr->next;
 
   do {
 
-    newelem->next = get_free_point_list_element(out);
-    newelem = newelem->next;    
-    *newelem = *curr;
+    new->next = get_free_point_list_element(out);
+    new = new->next;
+    *new = *curr;
     curr = curr->next;
-    
+
   } while (curr != in.first);
 
-  newelem->next = out->first;
-  out->last = newelem;
+  new->next = out->first;
+  out->last = new;
 }
 
 void cell_clipping(unsigned N,
@@ -747,8 +899,6 @@ void cell_clipping(unsigned N,
   unsigned source_ordering; /* ordering of source cell corners */
 
   double * norm_vec; /* norm vector for temporary target edge plane */
-
-  nct = target_cell.num_corners;
 
   enum cell_type tgt_cell_type = get_cell_type(target_cell);
 
@@ -774,6 +924,12 @@ void cell_clipping(unsigned N,
 
   struct point_list_element * prev_tgt_point = target_list.first;
   struct point_list_element * curr_tgt_point = target_list.first->next;
+
+  nct = 0;
+  do {
+    nct++;
+    prev_tgt_point = prev_tgt_point->next;
+  } while (prev_tgt_point != target_list.first);
 
   norm_vec = malloc(3 * nct * sizeof(*norm_vec));
 
@@ -816,23 +972,33 @@ void cell_clipping(unsigned N,
                     "of great circles and circles of latitude)\n", __FILE__,
                     __LINE__);
 
-    ncs = source_cell[n].num_corners;
-
-    if (ncs < 2)
+    if (source_cell[n].num_corners < 2)
       continue;
 
     // generate point list for current source list
     generate_point_list(&source_list, source_cell[n]);
+
+    {
+      struct point_list_element * src_point = source_list.first;
+
+      ncs = 0;
+      do {
+        ncs++;
+        src_point = src_point->next;
+      } while (src_point != source_list.first);
+    }
 
     // compute source direction
     source_ordering = get_cell_points_ordering(&source_list);
 
     struct point_list * overlap;
 
-    // in this case there can be some problems if the great circle cell includes
-    // a pole, but this only occurs if the lon-lat cell is the target cell
-    if ((((tgt_cell_type == LON_LAT_CELL) || (tgt_cell_type == LAT_CELL)) &&
-         src_cell_type == GREAT_CIRCLE_CELL) ||
+    // in this case the source an target cell are both LAT_CELL's than the
+    // bigger one has to be the target cell
+    // a similar problem occurs when the target cell is a LAT_CELL and the
+    // source is a GREAT_CIRCLE_CELL which overlaps with the pole that is also
+    // include in the target cell
+    if (((tgt_cell_type == LAT_CELL) && (src_cell_type == GREAT_CIRCLE_CELL)) ||
         ((tgt_cell_type == LAT_CELL) && (src_cell_type == LAT_CELL) &&
          (fabs(target_cell.coordinates_y[0]) >
           fabs(source_cell[n].coordinates_y[0])))) {
@@ -912,10 +1078,10 @@ void correct_weights ( unsigned nSourceCells, double * weight ) {
       weight_diff -= weight[n];
 
 #ifdef VERBOSE
-    printf ("weight sum is %.15f \n", weight_sum); 
-    printf ("weights are  "); 
+    printf ("weight sum is %.15f \n", weight_sum);
+    printf ("weights are  ");
     for (unsigned i = 0; i < nSourceCells; ++i)
-      printf (" %.15f", weight[i]); 
+      printf (" %.15f", weight[i]);
     printf("\n");
 #endif
 
@@ -1172,7 +1338,7 @@ static int is_empty_gc_cell(struct point_list * list, unsigned num_edges) {
     return 1;
 
   struct point_list_element * curr = list->first;
-    
+
   for (unsigned i = 0; i < num_edges; ++i) {
 
     if (curr->edge_type == LAT_CIRCLE) return 0;

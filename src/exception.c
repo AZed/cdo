@@ -30,7 +30,7 @@ void cdiError(int cdiErrno, const char *fmt, ...)
   if ( _ExitOnError ) exit(EXIT_FAILURE);
 }
 
-
+void pstreamCloseAll(void);
 void cdoAbort(const char *fmt, ...)
 {
   va_list args;
@@ -48,6 +48,7 @@ void cdoAbort(const char *fmt, ...)
 
   va_end(args);
 
+  if ( _ExitOnError ) pstreamCloseAll();
   if ( _ExitOnError ) exit(EXIT_FAILURE);
 }
 

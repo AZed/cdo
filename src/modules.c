@@ -54,6 +54,7 @@ void *CDIwrite(void *argument);
 void *Change(void *argument);
 void *Change_e5slm(void *argument);
 void *Cloudlayer(void *argument);
+void *Collgrid(void *argument);
 void *Command(void *argument);
 void *Comp(void *argument);
 void *Compc(void *argument);
@@ -67,6 +68,7 @@ void *Deltime(void *argument);
 void *Derivepar(void *argument);
 void *Detrend(void *argument);
 void *Diff(void *argument);
+void *Distgrid(void *argument);
 void *Duplicate(void *argument);
 void *Echam5ini(void *argument);
 void *Enlarge(void *argument);
@@ -87,11 +89,11 @@ void *Fldrms(void *argument);
 void *Fldstat(void *argument);
 void *Fldstat2(void *argument);
 void *Fourier(void *argument);
-void *Gather(void *argument);
 void *Gengrid(void *argument);
 void *Gradsdes(void *argument);
 void *Gridboxstat(void *argument);
 void *Gridcell(void *argument);
+void *Gridsearch(void *argument);
 void *Harmonic(void *argument);
 void *Histogram(void *argument);
 void *Importamsr(void *argument);
@@ -157,7 +159,6 @@ void *Setpartab(void *argument);
 void *Setrcaname(void *argument);
 void *Settime(void *argument);
 void *Setzaxis(void *argument);
-void *Scatter(void *argument);
 void *Showinfo(void *argument);
 void *Sinfo(void *argument);
 void *Smooth9(void *argument);
@@ -283,6 +284,7 @@ void *Maggraph(void *argument);
 #define  ChangeOperators        {"chcode", "chtabnum", "chparam", "chname", "chunit", "chlevel", "chlevelc", "chlevelv", "chltype"}
 #define  Change_e5slmOperators  {"change_e5slm", "change_e5lsm", "change_e5mask"}
 #define  CloudlayerOperators    {"cloudlayer"}
+#define  CollgridOperators      {"collgrid"}
 #define  CommandOperators       {"command", "com", "cmd"}
 #define  CompOperators          {"eq",  "ne",  "le",  "lt",  "ge",  "gt"}
 #define  CompcOperators         {"eqc", "nec", "lec", "ltc", "gec", "gtc"}
@@ -296,6 +298,7 @@ void *Maggraph(void *argument);
 #define  DeriveparOperators     {"gheight", "sealevelpressure"}
 #define  DetrendOperators       {"detrend"}
 #define  DiffOperators          {"diff", "diffp", "diffn", "diffc"}
+#define  DistgridOperators      {"distgrid"}
 #define  DuplicateOperators     {"duplicate"}
 #define  Echam5iniOperators     {"import_e5ml", "import_e5res", \
                                  "export_e5ml", "export_e5res"}
@@ -319,11 +322,11 @@ void *Maggraph(void *argument);
 #define  FldcorOperators        {"fldcor"}
 #define  FldcovarOperators      {"fldcovar"}
 #define  FourierOperators       {"fourier"}
-#define  GatherOperators        {"gather"}
 #define  GengridOperators       {"gengrid"}
 #define  GradsdesOperators      {"gradsdes", "dumpmap"}
 #define  GridboxstatOperators   {"gridboxmin", "gridboxmax", "gridboxsum", "gridboxmean", "gridboxavg", "gridboxvar", "gridboxstd"}
 #define  GridcellOperators      {"gridarea", "gridweights", "gridmask", "griddx", "griddy"}
+#define  GridsearchOperators    {"testpointsearch", "testcellsearch"}
 #define  HarmonicOperators      {"harmonic"}
 #define  HistogramOperators     {"histcount", "histsum", "histmean", "histfreq"}
 #define  ImportamsrOperators    {"import_amsr"}
@@ -339,13 +342,11 @@ void *Maggraph(void *argument);
 #define  InttimeOperators       {"inttime"}
 #define  IntntimeOperators      {"intntime"}
 #define  IntyearOperators       {"intyear"}
-#define  InvertOperators        {"invertlat", "invertlon", "invertlatdes", "invertlondes", \
-                                 "invertlatdata", "invertlondata"}
+#define  InvertOperators        {"invertlat", "invertlon", "invertlatdes", "invertlondes", "invertlatdata", "invertlondata"}
 #define  InvertlevOperators     {"invertlev"}
 #define  IsosurfaceOperators    {"isosurface"}
 #define  KvlOperators           {"read_cmor_table", "conv_cmor_table"}
-#define  LogOperators           {"dumplogs", "daylogs", "monlogs", "dumplogo", \
-                                 "snamelogo", "scalllogo", "smemlogo", "stimelogo", "sperclogo"}
+#define  LogOperators           {"dumplogs", "daylogs", "monlogs", "dumplogo", "snamelogo", "scalllogo", "smemlogo", "stimelogo", "sperclogo"}
 #define  MaskboxOperators       {"masklonlatbox", "maskindexbox"}
 #define  MaskregionOperators    {"maskregion"}
 #define  MastrfuOperators       {"mastrfu"}
@@ -389,18 +390,18 @@ void *Maggraph(void *argument);
 #define  SelrecOperators        {"selrec"}
 #define  SeltimeOperators       {"seltimestep", "selyear", "selseas", "selmon", "selday", "selhour", "seldate", \
                                  "seltime", "selsmon"}
-#define  SetOperators           {"setpartab", "setcode", "setparam", "setname", "setunit", "setlevel", "setltype", "settabnum"}
+#define  SetOperators           {"setcode", "setparam", "setname", "setunit", "setlevel", "setltype", "settabnum"}
 #define  SetboxOperators        {"setclonlatbox", "setcindexbox"}
 #define  SetgattOperators       {"setgatt", "setgatts"}
 #define  SetgridOperators       {"setgrid", "setgridtype", "setgridarea", "setgridmask", "unsetgridmask", "setgridnumber", "setgriduri"}
 #define  SethaloOperators       {"sethalo", "tpnhalo"}
 #define  SetmissOperators       {"setmissval", "setctomiss", "setmisstoc", "setrtomiss", "setvrange"}
+#define  Setpartab0Operators    {"setpartab"}
 #define  SetpartabOperators     {"setpartabc", "setpartabp", "setpartabn"}
 #define  SetrcanameOperators    {"setrcaname"}
 #define  SettimeOperators       {"setyear", "setmon", "setday", "setdate", "settime", "settunits", \
                                  "settaxis", "setreftime", "setcalendar", "shifttime"}
 #define  SetzaxisOperators      {"setzaxis"}
-#define  ScatterOperators       {"scatter"}
 #define  ShowinfoOperators      {"showyear", "showmon", "showdate", "showtime", "showtimestamp", "showcode", "showunit", \
                                  "showparam", "showname", "showstdname", "showlevel", "showltype", "showformat"}
 #define  SinfoOperators         {"sinfo", "sinfop", "sinfon", "sinfoc", "seinfo", "seinfop", "seinfon", "seinfoc"}
@@ -454,8 +455,7 @@ void *Maggraph(void *argument);
 #define  VardupOperators        {"pardup", "parmul"}
 #define  VargenOperators        {"random", "const", "sincos", "coshill", "for", "topo", "temp", "mask", "stdatm"}
 #define  VarrmsOperators        {"varrms"}
-#define  VertintOperators       {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", \
-                                 "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
+#define  VertintOperators       {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
 #define  VertstatOperators      {"vertmin", "vertmax", "vertsum", "vertmean", "vertavg", "vertvar", "vertstd"}
 #define  VertwindOperators      {"vertwind"}
 #define  WindOperators          {"uv2dv", "uv2dvl", "dv2uv", "dv2uvl", "dv2ps"}
@@ -552,6 +552,7 @@ static modules_t Modules[] =
   { Change,         ChangeHelp,        ChangeOperators,        CDI_REAL,  1,  1 },
   { Change_e5slm,   NULL,              Change_e5slmOperators,  CDI_REAL,  1,  1 },
   { Cloudlayer,     NULL,              CloudlayerOperators,    CDI_REAL,  1,  1 },
+  { Collgrid,       CollgridHelp,      CollgridOperators,      CDI_REAL, -1,  1 },
   { Command,        NULL,              CommandOperators,       CDI_REAL,  1,  0 },
   { Comp,           CompHelp,          CompOperators,          CDI_REAL,  2,  1 },
   { Compc,          CompcHelp,         CompcOperators,         CDI_REAL,  1,  1 },
@@ -565,6 +566,7 @@ static modules_t Modules[] =
   { Derivepar,      DeriveparHelp,     DeriveparOperators,     CDI_REAL,  1,  1 },
   { Detrend,        DetrendHelp,       DetrendOperators,       CDI_REAL,  1,  1 },
   { Diff,           DiffHelp,          DiffOperators,          CDI_REAL,  2,  0 },
+  { Distgrid,       DistgridHelp,      DistgridOperators,       CDI_REAL,  1,  1 },
   { Duplicate,      DuplicateHelp,     DuplicateOperators,     CDI_REAL,  1,  1 },
   { Echam5ini,      NULL,              Echam5iniOperators,     CDI_REAL,  1,  1 },
   { Enlarge,        EnlargeHelp,       EnlargeOperators,       CDI_REAL,  1,  1 },
@@ -586,11 +588,11 @@ static modules_t Modules[] =
   { Fldstat2,       FldcorHelp,        FldcorOperators,        CDI_REAL,  2,  1 },
   { Fldstat2,       FldcovarHelp,      FldcovarOperators,      CDI_REAL,  2,  1 },
   { Fourier,        NULL,              FourierOperators,       CDI_COMP,  1,  1 },
-  { Gather,         NULL,              GatherOperators,        CDI_REAL, -1,  1 },
   { Gengrid,        NULL,              GengridOperators,       CDI_REAL,  2,  1 },
   { Gradsdes,       GradsdesHelp,      GradsdesOperators,      CDI_REAL,  1,  0 },
   { Gridboxstat,    GridboxstatHelp,   GridboxstatOperators,   CDI_REAL,  1,  1 },
   { Gridcell,       GridcellHelp,      GridcellOperators,      CDI_REAL,  1,  1 },
+  { Gridsearch,     NULL,              GridsearchOperators,    CDI_REAL,  0,  0 },
   { Harmonic,       NULL,              HarmonicOperators,      CDI_REAL,  1,  1 },
   { Histogram,      HistogramHelp,     HistogramOperators,     CDI_REAL,  1,  1 },
   { Importamsr,     ImportamsrHelp,    ImportamsrOperators,    CDI_REAL,  1,  1 },
@@ -655,11 +657,11 @@ static modules_t Modules[] =
   { Setgrid,        SetgridHelp,       SetgridOperators,       CDI_BOTH,  1,  1 },
   { Sethalo,        SethaloHelp,       SethaloOperators,       CDI_REAL,  1,  1 },
   { Setmiss,        SetmissHelp,       SetmissOperators,       CDI_REAL,  1,  1 },
+  { Setpartab,      SetHelp,           Setpartab0Operators,    CDI_REAL,  1,  1 },
   { Setpartab,      SetpartabHelp,     SetpartabOperators,     CDI_REAL,  1,  1 },
   { Setrcaname,     NULL,              SetrcanameOperators,    CDI_REAL,  1,  1 },
   { Settime,        SettimeHelp,       SettimeOperators,       CDI_BOTH,  1,  1 },
   { Setzaxis,       SetzaxisHelp,      SetzaxisOperators,      CDI_BOTH,  1,  1 },
-  { Scatter,        NULL,              ScatterOperators,       CDI_REAL,  1,  1 },
   { Showinfo,       ShowinfoHelp,      ShowinfoOperators,      CDI_BOTH,  1,  0 },
   { Sinfo,          SinfoHelp,         SinfoOperators,         CDI_BOTH, -1,  0 },
   { Smooth9,        Smooth9Help,       Smooth9Operators,       CDI_REAL,  1,  1 },
@@ -790,6 +792,7 @@ static char *opalias[][2] =
   {"diffv",               "diffn"      },
   {"covar0",              "timcovar"   },
   {"covar0r",             "fldcovar"   },
+  {"gather",              "collgrid"   },
   {"geopotheight",        "gheight"    },
   {"ggstat",              "info"       },
   {"ggstats",             "sinfo"      },
@@ -814,6 +817,7 @@ static char *opalias[][2] =
   {"read_e5ml",           "import_e5ml"},
   {"remapcon1",           "remaplaf"   },
   {"remapdis1",           "remapnn"    },
+  {"scatter",             "distgrid"   },
   {"showvar",             "showname"   },
   {"selgridname",         "selgrid"    },
   {"selzaxisname",        "selzaxis"   },

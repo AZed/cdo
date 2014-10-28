@@ -7,6 +7,7 @@
 #ifndef  CDI_H_
 #define  CDI_H_
 
+#include <stdio.h>
 #include <sys/types.h>
 /*
 #if defined(__cplusplus)
@@ -40,6 +41,7 @@ extern "C" {
 
 /* File types */
 
+#define  FILETYPE_UNDEF          -1   /* Unknown/not yet defined file type */
 #define  FILETYPE_GRB             1   /* File type GRIB                       */
 #define  FILETYPE_GRB2            2   /* File type GRIB version 2             */
 #define  FILETYPE_NC              3   /* File type netCDF                     */
@@ -197,14 +199,15 @@ extern "C" {
 
 #define  TUNIT_SECOND             1
 #define  TUNIT_MINUTE             2
-#define  TUNIT_HOUR               3
-#define  TUNIT_DAY                4
-#define  TUNIT_MONTH              5
-#define  TUNIT_YEAR               6
-#define  TUNIT_QUARTER            7
-#define  TUNIT_3HOURS             8
-#define  TUNIT_6HOURS             9
-#define  TUNIT_12HOURS           10
+#define  TUNIT_QUARTER            3
+#define  TUNIT_30MINUTES          4
+#define  TUNIT_HOUR               5
+#define  TUNIT_3HOURS             6
+#define  TUNIT_6HOURS             7
+#define  TUNIT_12HOURS            8
+#define  TUNIT_DAY                9
+#define  TUNIT_MONTH             10
+#define  TUNIT_YEAR              11
 
 /* CALENDAR types */
 
@@ -224,7 +227,7 @@ char   *cdiStringError(int cdiErrno);
 
 void    cdiDebug(int debug);
 
-char   *cdiLibraryVersion(void);
+const char *cdiLibraryVersion(void);
 void    cdiPrintVersion(void);
 
 int     cdiHaveFiletype(int filetype);
@@ -326,6 +329,7 @@ void    streamWriteVarF(int streamID, int varID, const float *data_vec, int nmis
 
 /*      streamReadVar: Read a variable */
 void    streamReadVar(int streamID, int varID, double *data_vec, int *nmiss);
+void    streamReadVarF(int streamID, int varID, float *data_vec, int *nmiss);
 
 /*      streamWriteVarSlice: Write a horizontal slice of a variable */
 void    streamWriteVarSlice(int streamID, int varID, int levelID, const double *data_vec, int nmiss);
@@ -333,6 +337,7 @@ void    streamWriteVarSliceF(int streamID, int varID, int levelID, const float *
 
 /*      streamReadVarSlice: Read a horizontal slice of a variable */
 void    streamReadVarSlice(int streamID, int varID, int levelID, double *data_vec, int *nmiss);
+void    streamReadVarSliceF(int streamID, int varID, int levelID, float *data_vec, int *nmiss);
 
 void    streamWriteVarChunk(int streamID, int varID, const int rect[][2],
                             const double *data_vec, int nmiss);
@@ -347,7 +352,7 @@ void    streamWriteRecordF(int streamID, const float *data_vec, int nmiss);
 void    streamReadRecord(int streamID, double *data_vec, int *nmiss);
 void    streamCopyRecord(int streamIDdest, int streamIDsrc);
 
-void    streamInqGinfo(int streamID, int *intnum, float *fltnum, off_t *bignum);
+void    streamInqGRIBinfo(int streamID, int *intnum, float *fltnum, off_t *bignum);
 
 /* VLIST routines */
 
@@ -519,6 +524,9 @@ int     vlistInqVarTimaccu(int vlistID, int varID);
 
 void    vlistDefVarTypeOfGeneratingProcess(int vlistID, int varID, int typeOfGeneratingProcess);
 int     vlistInqVarTypeOfGeneratingProcess(int vlistID, int varID);
+
+void    vlistDefVarProductDefinitionTemplate(int vlistID, int varID, int productDefinitionTemplate);
+int     vlistInqVarProductDefinitionTemplate(int vlistID, int varID);
 
 int     vlistInqVarSize(int vlistID, int varID);
 
@@ -987,6 +995,7 @@ char   *modelInqNamePtr(int modelID);
 /* Table routines */
 
 void    tableWriteC(const char *filename, int tableID);
+void    tableFWriteC(FILE *ptfp, int tableID);
 void    tableWrite(const char *filename, int tableID);
 int     tableRead(const char *tablefile);
 int     tableDef(int modelID, int tablenum, const char *tablename);
@@ -1007,15 +1016,18 @@ int     tableInqParName(int tableID, int code, char *name);
 int     tableInqParLongname(int tableID, int code, char *longname);
 int     tableInqParUnits(int tableID, int code, char *units);
 
-char   *tableInqParNamePtr(int tableID, int parID);
-char   *tableInqParLongnamePtr(int tableID, int parID);
-char   *tableInqParUnitsPtr(int tableID, int parID);
+const char *tableInqParNamePtr(int tableID, int parID);
+const char *tableInqParLongnamePtr(int tableID, int parID);
+const char *tableInqParUnitsPtr(int tableID, int parID);
 
 /* History routines */
 
 void    streamDefHistory(int streamID, int size, const char *history);
 int     streamInqHistorySize(int streamID);
 void    streamInqHistoryString(int streamID, char *history);
+
+
+void gribapiLibraryVersion(int *major_version, int *minor_version, int *revision_version);
 
 /*
 #if defined (__cplusplus)

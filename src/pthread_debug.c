@@ -132,11 +132,11 @@ int Pthread_create(const char *caller, pthread_t *th,
 {
   int status;
 
-  if ( PTHREAD_Debug ) Message("+%s", __func__);
+  if ( PTHREAD_Debug ) Message("%s", caller);
 
   if ( PTHREAD_Debug )
     {
-      Message("+%s attributes:", __func__);
+      Message("%s attributes:", caller);
       if ( attr )
 	print_pthread_attr(__func__, attr);
       else
@@ -145,7 +145,7 @@ int Pthread_create(const char *caller, pthread_t *th,
 
   status = pthread_create(th, attr, start_routine, arg);
 
-  //if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", __func__, (long) *th, status);
+  //if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", caller, (long) *th, status);
 
   return (status);
 }
@@ -155,11 +155,11 @@ int Pthread_join(const char *caller, pthread_t th, void **thread_return)
 {
   int status;
 
-  //  if ( PTHREAD_Debug ) Message("+%s (thID = %ld)", __func__, (void *) th);
+  //  if ( PTHREAD_Debug ) Message("+%s (thID = %ld)", caller, (void *) th);
 
   status = pthread_join(th, thread_return);
 
-  // if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", __func__, (void *) th, status);
+  // if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", caller, (void *) th, status);
 
   return (status);
 }
@@ -169,7 +169,7 @@ void Pthread_mutex_lock(const char *caller, pthread_mutex_t *mutex)
 {
   int status;
 
-  if ( PTHREAD_Debug ) Message("+%s (mutex = %p)", __func__, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("%s (mutex = %p)", caller, (void *) mutex);
 
   status = pthread_mutex_lock(mutex);
   if ( status != 0 )
@@ -187,8 +187,6 @@ void Pthread_mutex_lock(const char *caller, pthread_mutex_t *mutex)
 	  break;
 	}
     }
-
-  if ( PTHREAD_Debug ) Message("-%s (mutex = %p)", __func__, (void *) mutex);
 }
 
 
@@ -196,7 +194,7 @@ void Pthread_mutex_unlock(const char *caller, pthread_mutex_t *mutex)
 {
   int status;
 
-  if ( PTHREAD_Debug ) Message("+%s (mutex = %p)", __func__, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("%s (mutex = %p)", caller, (void *) mutex);
 
   status = pthread_mutex_unlock(mutex);
   if ( status != 0 )
@@ -214,30 +212,28 @@ void Pthread_mutex_unlock(const char *caller, pthread_mutex_t *mutex)
 	  break;
 	}
     }
-
-  if ( PTHREAD_Debug ) Message("-%s (mutex = %p)", __func__, (void *) mutex);
 }
 
 
 void Pthread_cond_signal(const char *caller, pthread_cond_t *cond)
 {
-  if ( PTHREAD_Debug ) Message("+%s (cond = %p)", __func__, (void *) cond);
+  if ( PTHREAD_Debug ) Message("+%s (cond = %p)", caller, (void *) cond);
 
   pthread_cond_signal(cond);
 
-  if ( PTHREAD_Debug ) Message("-%s (cond = %p)", __func__, (void *) cond);
+  if ( PTHREAD_Debug ) Message("-%s (cond = %p)", caller, (void *) cond);
 }
 
 
 void Pthread_cond_wait(const char *caller, pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
   if ( PTHREAD_Debug ) Message("+%s (cond = %p, mutex =  %p)",
-			       __func__, (void *) cond, (void *) mutex);
+			       caller, (void *) cond, (void *) mutex);
 
   pthread_cond_wait(cond, mutex);
 
   if ( PTHREAD_Debug ) Message("-%s (cond = %p, mutex = %p)",
-			       __func__, (void *) cond, (void *) mutex);
+			       caller, (void *) cond, (void *) mutex);
 }
 
 #endif

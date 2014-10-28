@@ -196,6 +196,8 @@ float ibm2flt(unsigned char *ibm) {
 	return (float)value;
 }
 
+#if defined(HAVE_LOCK)
+#if defined(LOGPATH)
 /*
  * convert a float to an IBM single precision number v1.0
  *
@@ -268,7 +270,8 @@ int flt2ibm(float x, unsigned char *ibm) {
 
 	return 0;
 }
-
+#endif
+#endif
 
 #define  GET_UINT4(xb)        ((int) (((int)xb[0]<<24) + \
                                       ((int)xb[1]<<16) + \

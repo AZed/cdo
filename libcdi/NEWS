@@ -1,12 +1,31 @@
 CDI NEWS
 --------
 
+Version 1.6.5 (23 October 2014):
+
+   New features:
+     * NetCDF: single precision input
+     * netCDF4: added support for xtype NC_STRING
+     * added CDI function gribapiLibraryVersion(major_version, minor_version, revision_version) [Feature #5043]
+     * gribapiEncode: update additional keys defined with vlistDefVarXXXKey() [Feature #4720]
+     * added vlistDefVarProductDefinitionTemplate() to define GRIB2 Product Definition Template Number [Feature #4694]
+     * streamWriteVarF, streamWriteVarSliceF: added support for GRIB1 (cgribex)
+     * grib2: activate jpeg support in combination with masks (missing values)
+   Fixed bugs:
+     * listDestroy(): set resHListSize=0 [Bug #5058]
+     * NetCDF: Reading uuidOfVGrid [Bug #5046]
+
+
 Version 1.6.4 (26 June 2014):
 
    New features:
      * Added support for SPECS forecast time axis
+     * Added support for GRIB_API key cfName
    Fixed bugs:
      * netCDF4 classic: existing files are converted to netCDF4 - classic flag is lost
+     * netCDF: added support for opendap files by https:
+     * gribapiDefDateTimeRel: set vdate to rdate for time invariant fields [Bug #4641]
+     * Loss of coordinates attribute when merging files [Bug #4880]
 
 Version 1.6.3 (14 February 2014):
 

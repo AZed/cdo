@@ -41,10 +41,6 @@
 
 #include <stdlib.h>
 
-#ifdef __WITHOUT_ISO_C_BINDING
-#include "cfortran.h"
-#endif
-
 /**
  * gives a unique index for a given pointer
  * @param[in] pointer
@@ -75,10 +71,6 @@ void free_pointer_unique_lookup();
  */
 void abort_message ( char * text, char * file, int line );
 
-#ifdef __WITHOUT_ISO_C_BINDING
-     FCALLSCSUB3 ( yac_abort_message, YAC_ABORT_MESSAGE, yac_abort_message, STRING, STRING, PINT )
-#endif
-
 /** \example test_quicksort.c
  * This contains an example of how to use quicksort_index.
  */
@@ -107,6 +99,62 @@ void yac_mergesort(void* base, size_t num, size_t size,
  */
 
 unsigned int hash(const char *str);
+
+/**
+ * remove duplicated entries from a list of integers
+ * @param[in,out] array array containing a sorted (ascending) list of integers
+ * @param[in,out] n     number of entries in array
+ */
+static inline void yac_remove_duplicates_int(int * array, unsigned * n) {
+
+   unsigned const N = *n;
+   unsigned pos = 0;
+
+   if (N == 0) return;
+
+   int prev = array[0];
+
+   for (unsigned i = 1; i < N; ++i) {
+
+      if (array[i] == prev) continue;
+
+      prev = array[i];
+      ++pos;
+
+      if (pos != i)
+         array[pos] = array[i];
+   }
+
+   *n = pos + 1;
+}
+
+/**
+ * remove duplicated entries from a list of integers
+ * @param[in,out] array array containing a sorted (ascending) list of integers
+ * @param[in,out] n     number of entries in array
+ */
+static inline void yac_remove_duplicates_uint(unsigned * array, unsigned * n) {
+
+   unsigned const N = *n;
+   unsigned pos = 0;
+
+   if (N == 0) return;
+
+   unsigned prev = array[0];
+
+   for (unsigned i = 1; i < N; ++i) {
+
+      if (array[i] == prev) continue;
+
+      prev = array[i];
+      ++pos;
+
+      if (pos != i)
+         array[pos] = array[i];
+   }
+
+   *n = pos + 1;
+}
 
 /* =======================================================================
    Macros

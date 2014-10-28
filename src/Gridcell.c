@@ -51,7 +51,6 @@ void *Gridcell(void *argument)
   int need_radius;
   int tsID, varID, levelID, taxisID;
   long i, gridsize;
-  char *envstr;
   double *array = NULL;
   double  EarthRadius = 6371000; /* default radius of the earth in m */
   double PlanetRadius = EarthRadius;
@@ -70,19 +69,15 @@ void *Gridcell(void *argument)
 
   if ( need_radius )
     {
-      envstr = getenv("PLANET_RADIUS");
+      char *envstr = getenv("PLANET_RADIUS");
       if ( envstr )
 	{
-	  double fval;
-	  fval = atof(envstr);
-	  if ( fval > 0 )
-	    {
-	      PlanetRadius = fval;
-	      if ( cdoVerbose )
-		cdoPrint("Set PlanetRadius to %g", PlanetRadius);
-	    }
+	  double fval = atof(envstr);
+	  if ( fval > 0 ) PlanetRadius = fval;
 	}
     }
+
+  if ( cdoVerbose ) cdoPrint("PlanetRadius: %g", PlanetRadius);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 

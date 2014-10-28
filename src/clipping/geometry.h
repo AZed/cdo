@@ -381,8 +381,10 @@ int gcxlatc (struct edge edge_a, struct edge edge_b,
  * compute the intersection points of a great circles
  * and a circle of latitude \n
  * based on http://geospatialmethods.org/spheres/GCIntersect.html
- * @param[in] edge_a edge defining a great circle
- * @param[in] edge_b edge defining a circle of latitude
+ * @param[in] a first point of edge on a great circle
+ * @param[in] b second point of edge on a great circle
+ * @param[in] c first point of edge on a circle of latitude
+ * @param[in] d second point of edge on a circle of latitude
  * @param[out] p intersection point
  * @param[out] q intersection point
  * @return  0 if the intersection points are neither on edge a or b \n
@@ -639,19 +641,70 @@ static inline void crossproduct_d (double a[], double b[], double cross[]) {
  * @return great circle distance in rad between both points
  */
 static inline double get_vector_angle(double a[3], double b[3]) {
+
+   double dot_product = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+
+   // the acos most accurate in the range [-0.5;0.5]
+   if (fabs(dot_product) <= 0.5) // the range in which the acos is most accurate
+
+      return acos(dot_product);
+
+   else {
+
+      double cross_ab[3];
+
+      crossproduct_ld(a, b, cross_ab);
+
+      double asin_tmp = asin(sqrt(cross_ab[0]*cross_ab[0]+
+                                  cross_ab[1]*cross_ab[1]+
+                                  cross_ab[2]*cross_ab[2]));
+
+      if (dot_product < 0.0) // if the angle is bigger than (PI / 2)
+         return MIN(M_PI - asin_tmp, M_PI);
+      else
+         return MAX(asin_tmp,0.0);
+   }
+
+   /*
+   // this solution is simpler, but has a much worse performance
    double cross[3], dot, cross_abs;
 
    crossproduct_ld(a, b, cross);
    dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
    cross_abs = sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
 
-   //   return fabs(atan2(cross_abs, dot));
-   double asin_tmp = asin(cross_abs);
+   return fabs(atan2(cross_abs, dot));
+   */
+}
 
-   if (dot < 0.0) // if the angle is bigger than (PI / 2)
-     return M_PI - asin_tmp;
-   else
-     return asin_tmp;
+/**
+ * determines whether two given points are (nearly) identically
+ * @param[in] a point coordinates of point a
+ * @param[in] b point coordinates of point b
+ * @return true if both points are (nearly) identically
+ */
+static inline int points_are_identically(double * a, double * b) {
+
+   double dot_product = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+
+   // if the angle is bigger than ~0.81 degree
+   // (in this range the acos is still rather accurate)
+   if (dot_product < 0.9999) // (acos(0.9999) = ~0.81 degree)
+
+      return 0;
+
+   else { // both points are close to each other -> use cross product for higher
+          // accuracy
+
+      double cross_ab[3];
+
+      crossproduct_ld(a, b, cross_ab);
+
+      // for very small angles: asin(alpha) = ~alpha   (alpha in rad)
+      return sqrt(cross_ab[0]*cross_ab[0] +
+                  cross_ab[1]*cross_ab[1] +
+                  cross_ab[2]*cross_ab[2]) < angle_tol;
+   }
 }
 
 /**

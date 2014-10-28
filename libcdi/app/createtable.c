@@ -4,8 +4,10 @@
 #include <string.h>
 
 #include "cdi.h"
+#include "error.h"
 
-char *Progname;
+static char *Progname;
+extern int CDI_Debug;
 
 void version(void)
 {
@@ -24,7 +26,7 @@ void usage(void)
 
 int main(int argc, char *argv[])
 {
-  int c, len;
+  int c;
   char  *cstring;
   char *ifile = NULL, *ofile = NULL;
   int debug = 0;
@@ -37,7 +39,7 @@ int main(int argc, char *argv[])
     {
       c = *++argv[0];
       cstring = argv[0];
-      len = strlen(cstring);
+      size_t len = strlen(cstring);
       switch (c)
 	{
         case 'd':
@@ -48,22 +50,22 @@ int main(int argc, char *argv[])
 	  break;
         case 'h':
 	  if ( !strncmp(cstring, "help", len) )
-	    { 
+	    {
 	      usage( );
-	      return( 0 );
+	      return EXIT_SUCCESS;
             }
 	  break;
         case 'v':
 	  if ( !strncmp(cstring, "version", len) )
 	    {
 	      version();
-	      return (0);
+	      return EXIT_SUCCESS;
             }
 	  break;
         default:
 	  usage();
 	  fprintf(stderr, "illegal option %s\n", cstring);
-	  return (-1);
+	  return EXIT_FAILURE;
 	  break;
         }
     }
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
     {
       usage();
       fprintf(stderr, "missing filenames\n");
-      return (-1);
+      return EXIT_FAILURE;
     }
 
   if ( debug )
@@ -98,10 +100,13 @@ int main(int argc, char *argv[])
   if ( debug ) cdiDebug(debug);
   */
   tableID = tableRead(ifile);
+  if ( CDI_Debug )
+    Message("write parameter table %d to %s", tableID, ofile);
+  FILE *ptfp = (ofile[0] == '-' && ofile[1] == '\0')?stdout:fopen(ofile, "w");
   if ( tableID != CDI_UNDEFID )
-    tableWriteC(ofile, tableID);
+    tableFWriteC(ptfp, tableID);
 
-  return (0);
+  return EXIT_SUCCESS;
 }
 /*
  * Local Variables:

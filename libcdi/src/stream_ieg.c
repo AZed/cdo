@@ -3,6 +3,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <float.h>
 #include <math.h>
@@ -16,6 +17,8 @@
 #include "varscan.h"
 #include "datetime.h"
 #include "ieg.h"
+#include "stream_fcommon.h"
+#include "stream_ieg.h"
 #include "vlist.h"
 
 
@@ -98,7 +101,7 @@ int iegInqRecord(stream_t *streamptr, int *varID, int *levelID)
 }
 */
 
-int iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
+void iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
 {
   int vlistID, fileID;
   int status;
@@ -120,7 +123,8 @@ int iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
   fileSetPos(fileID, recpos, SEEK_SET);
 
   status = iegRead(fileID, iegp);
-  if ( status != 0 ) return (0);
+  if ( status != 0 )
+    Error("Could not read IEG record!");
 
   iegInqDataDP(iegp, data);
 
@@ -137,8 +141,6 @@ int iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
 	data[i] = missval;
 	(*nmiss)++;
       }
-
-  return (1);
 }
 
 static
@@ -418,8 +420,8 @@ void iegDefLevel(int *pdb, int *gdb, double *vct, int zaxisID, int levelID)
 	else
 	  {
 	    IEG_G_Size(gdb) += (vctsize*4);
-	    memcpy(vct, zaxisInqVctPtr(zaxisID), vctsize/2*sizeof(double));
-	    memcpy(vct+50, zaxisInqVctPtr(zaxisID)+vctsize/2, vctsize/2*sizeof(double));
+	    memcpy(vct, zaxisInqVctPtr(zaxisID), (size_t)vctsize/2*sizeof(double));
+	    memcpy(vct+50, zaxisInqVctPtr(zaxisID)+vctsize/2, (size_t)vctsize/2*sizeof(double));
 	  }
 	break;
       }
@@ -524,41 +526,14 @@ void iegDefLevel(int *pdb, int *gdb, double *vct, int zaxisID, int levelID)
 }
 
 
-int iegCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
+void iegCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
 {
-  int fileID1, fileID2;
-  int tsID, recID, vrecID;
-  long recsize;
-  off_t recpos;
-  int status = 0;
-  char *buffer;
-
-  fileID1 = streamptr1->fileID;
-  fileID2 = streamptr2->fileID;
-
-  tsID    = streamptr1->curTsID;
-  vrecID  = streamptr1->tsteps[tsID].curRecID;
-  recID   = streamptr1->tsteps[tsID].recIDs[vrecID];
-  recpos  = streamptr1->tsteps[tsID].records[recID].position;
-  recsize = streamptr1->tsteps[tsID].records[recID].size;
-
-  fileSetPos(fileID1, recpos, SEEK_SET);
-
-  buffer = (char *) malloc(recsize);
-
-  fileRead(fileID1, buffer, recsize);
-
-  fileWrite(fileID2, buffer, recsize);
-
-  free(buffer);
-
-  return (status);
+  streamFCopyRecord(streamptr2, streamptr1, "IEG");
 }
 
 
-int iegDefRecord(stream_t *streamptr)
+void iegDefRecord(stream_t *streamptr)
 {
-  int status = 0;
   int vlistID;
   int gridID;
   int date, time;
@@ -598,15 +573,12 @@ int iegDefRecord(stream_t *streamptr)
   datatype = streamptr->record->prec;
 
   iegp->dprec = iegDefDatatype(datatype);
-
-  return (status);
 }
 
 
-int iegWriteRecord(stream_t *streamptr, const double *data)
+void iegWriteRecord(stream_t *streamptr, const double *data)
 {
   int fileID;
-  int status = 0;
   int i, gridsize, gridID;
   double refval;
   iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
@@ -625,13 +597,11 @@ int iegWriteRecord(stream_t *streamptr, const double *data)
   iegDefDataDP(iegp, data);
 
   iegWrite(fileID, iegp);
-
-  return (status);
 }
 
 static
 void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vct,
-		  long recsize, off_t position, int prec)
+		  size_t recsize, off_t position, int prec)
 {
   int leveltype;
   int gridID = UNDEFID;
@@ -662,12 +632,12 @@ void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vc
       if ( IEG_P_LevelType(pdb) == 100 ) level1 *= 100;
     }
 
-  (*record).size     = recsize;
-  (*record).position = position;
-  (*record).param    = param;
-  (*record).ilevel   = level1;
-  (*record).ilevel2  = level2;
-  (*record).ltype    = IEG_P_LevelType(pdb);
+  record->size     = recsize;
+  record->position = position;
+  record->param    = param;
+  record->ilevel   = level1;
+  record->ilevel2  = level2;
+  record->ltype    = IEG_P_LevelType(pdb);
 
   if ( IEG_G_GridType(gdb) == 0 || IEG_G_GridType(gdb) == 10 )
     gridtype = GRID_LONLAT;
@@ -697,7 +667,7 @@ void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vc
 	if ( IEG_G_FirstLon(gdb) == 0 && IEG_G_LastLon(gdb) > 354000 )
 	  {
 	    double xinc = 360. / grid.xsize;
-	    
+            /* FIXME: why not use grid.xinc != xinc as condition? */
 	    if ( fabs(grid.xinc-xinc) > 0.0 )
 	      {
 		grid.xinc = xinc;
@@ -751,12 +721,11 @@ void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vc
 
   if ( leveltype == ZAXIS_HYBRID )
     {
-      int i;
       double tmpvct[100];
-      int vctsize = IEG_G_NumVCP(gdb);
+      size_t vctsize = (size_t)IEG_G_NumVCP(gdb);
 
-      for ( i = 0; i < vctsize/2; i++ ) tmpvct[i] = vct[i];
-      for ( i = 0; i < vctsize/2; i++ ) tmpvct[i+vctsize/2] = vct[i+50];
+      for (size_t i = 0; i < vctsize/2; i++ ) tmpvct[i] = vct[i];
+      for (size_t i = 0; i < vctsize/2; i++ ) tmpvct[i+vctsize/2] = vct[i+50];
 
       varDefVCT(vctsize, tmpvct);
     }
@@ -766,10 +735,10 @@ void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vc
   datatype = iegInqDatatype(prec);
 
   varAddRecord(recID, param, gridID, leveltype, lbounds, level1, level2, 0, 0,
-	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, TSTEP_INSTANT, 0, 0, -1, NULL, NULL, NULL, NULL);
 
-  (*record).varID   = varID;
-  (*record).levelID = levelID;
+  record->varID   = (short)varID;
+  record->levelID = (short)levelID;
 
   streamptr->tsteps[tsID].nallrecs++;
   streamptr->nrecs++;
@@ -838,7 +807,7 @@ void iegScanTimestep1(stream_t *streamptr)
   DateTime datetime, datetime0;
   int tsID;
   int varID;
-  long recsize;
+  size_t recsize;
   off_t recpos;
   int nrecords, nrecs, recID;
   int taxisID = -1;
@@ -867,7 +836,7 @@ void iegScanTimestep1(stream_t *streamptr)
 	  streamptr->ntsteps = 1;
 	  break;
 	}
-      recsize = fileGetPos(fileID) - recpos;
+      recsize = (size_t)(fileGetPos(fileID) - recpos);
 
       prec   = iegp->dprec;
       rcode  = IEG_P_Parameter(iegp->ipdb);
@@ -920,8 +889,8 @@ void iegScanTimestep1(stream_t *streamptr)
 
   taxisID = taxisCreate(TAXIS_ABSOLUTE);
   taxis->type  = TAXIS_ABSOLUTE;
-  taxis->vdate = datetime0.date;
-  taxis->vtime = datetime0.time;
+  taxis->vdate = (int)datetime0.date;
+  taxis->vtime = (int)datetime0.time;
 
   vlistID = streamptr->vlistID;
   vlistDefTaxis(vlistID, taxisID);
@@ -933,10 +902,11 @@ void iegScanTimestep1(stream_t *streamptr)
     {
       streamptr->tsteps[0].recordSize = nrecords;
       streamptr->tsteps[0].records =
-	(record_t *) realloc(streamptr->tsteps[0].records, nrecords*sizeof(record_t));
+	(record_t *)xrealloc(streamptr->tsteps[0].records,
+                             (size_t)nrecords * sizeof (record_t));
     }
 
-  streamptr->tsteps[0].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[0].recIDs = (int *)xmalloc((size_t)nrecords * sizeof (int));
   streamptr->tsteps[0].nrecs = nrecords;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[0].recIDs[recID] = recID;
@@ -974,7 +944,7 @@ int iegScanTimestep2(stream_t *streamptr)
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
   int tsID;
   int varID;
-  long recsize;
+  size_t recsize;
   off_t recpos = 0;
   int nrecords, nrecs, recID, rindex;
   int nextstep;
@@ -999,7 +969,7 @@ int iegScanTimestep2(stream_t *streamptr)
   cdi_create_records(streamptr, tsID);
 
   nrecords = streamptr->tsteps[0].nallrecs;
-  streamptr->tsteps[1].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[1].recIDs = (int *)xmalloc((size_t)nrecords * sizeof(int));
   streamptr->tsteps[1].nrecs = 0;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[1].recIDs[recID] = -1;
@@ -1022,7 +992,7 @@ int iegScanTimestep2(stream_t *streamptr)
 	  streamptr->ntsteps = 2;
 	  break;
 	}
-      recsize = fileGetPos(fileID) - recpos;
+      recsize = (size_t)(fileGetPos(fileID) - recpos);
 
       rcode  = IEG_P_Parameter(iegp->ipdb);
       tabnum = IEG_P_CodeTable(iegp->ipdb);
@@ -1146,7 +1116,7 @@ int iegInqContents(stream_t *streamptr)
 }
 
 static
-int iegScanTimestep(stream_t *streamptr)
+long iegScanTimestep(stream_t *streamptr)
 {
   int status;
   int fileID;
@@ -1154,7 +1124,7 @@ int iegScanTimestep(stream_t *streamptr)
   int tabnum;
   int param = 0;
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
-  long recsize = 0;
+  size_t recsize = 0;
   off_t recpos = 0;
   int recID;
   taxis_t *taxis;
@@ -1183,7 +1153,8 @@ int iegScanTimestep(stream_t *streamptr)
       nrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->tsteps[tsID].nrecs = nrecs;
-      streamptr->tsteps[tsID].recIDs = (int *) malloc(nrecs*sizeof(int));
+      streamptr->tsteps[tsID].recIDs
+        = (int *)xmalloc((size_t)nrecs * sizeof (int));
       for ( recID = 0; recID < nrecs; recID++ )
 	streamptr->tsteps[tsID].recIDs[recID] = streamptr->tsteps[1].recIDs[recID];
 
@@ -1200,7 +1171,7 @@ int iegScanTimestep(stream_t *streamptr)
 	      streamptr->ntsteps = streamptr->rtsteps + 1;
 	      break;
 	    }
-	  recsize = fileGetPos(fileID) - recpos;
+	  recsize = (size_t)(fileGetPos(fileID) - recpos);
 
 	  rcode  = IEG_P_Parameter(iegp->ipdb);
 	  tabnum = IEG_P_CodeTable(iegp->ipdb);
@@ -1275,7 +1246,7 @@ int iegScanTimestep(stream_t *streamptr)
 
 int iegInqTimestep(stream_t *streamptr, int tsID)
 {
-  int ntsteps, nrecs;
+  int nrecs;
 
   if ( tsID == 0 && streamptr->rtsteps == 0 )
     Error("Call to cdiInqContents missing!");
@@ -1283,7 +1254,7 @@ int iegInqTimestep(stream_t *streamptr, int tsID)
   if ( CDI_Debug )
     Message("tsID = %d rtsteps = %d", tsID, streamptr->rtsteps);
 
-  ntsteps = UNDEFID;
+  long ntsteps = UNDEFID;
   while ( ( tsID + 1 ) > streamptr->rtsteps && ntsteps == UNDEFID )
     ntsteps = iegScanTimestep(streamptr);
 

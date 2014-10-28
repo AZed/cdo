@@ -61,6 +61,7 @@ static int _pstream_init = FALSE;
 #include <pthread.h>
 #include "pthread_debug.h"
 
+// TODO: make threadsafe
 static int pthreadScope = 0;
 
 static pthread_mutex_t streamOpenReadMutex  = PTHREAD_MUTEX_INITIALIZER;
@@ -112,10 +113,8 @@ void pstream_list_delete(void)
 
 static
 void pstream_init_pointer(void)
-{
-  int  i;
-  
-  for ( i = 0; i < _pstream_max; i++ )
+{  
+  for ( int i = 0; i < _pstream_max; i++ )
     {
       _pstreamList[i].next = _pstreamList + i + 1;
       _pstreamList[i].idx  = i;
@@ -718,11 +717,12 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
 	  streamDefCompType(fileID, cdoCompType);
 	  streamDefCompLevel(fileID, cdoCompLevel);
 
-	  if ( cdoCompType == COMPRESS_SZIP && (filetype != FILETYPE_GRB && filetype != FILETYPE_NC4 && filetype != FILETYPE_NC4C) )
-	    cdoWarning("SZIP compression not available for non GRIB1/netCDF4 data!");
+	  if ( cdoCompType == COMPRESS_SZIP &&
+	       (filetype != FILETYPE_GRB && filetype != FILETYPE_GRB2 && filetype != FILETYPE_NC4 && filetype != FILETYPE_NC4C) )
+	    cdoWarning("SZIP compression not available for non GRIB/netCDF4 data!");
 
 	  if ( cdoCompType == COMPRESS_JPEG && filetype != FILETYPE_GRB2 )
-	    cdoWarning("SZIP compression not available for non GRIB2 data!");
+	    cdoWarning("JPEG compression not available for non GRIB2 data!");
 
 	  if ( cdoCompType == COMPRESS_ZIP && (filetype != FILETYPE_NC4 && filetype != FILETYPE_NC4C) )
 	    cdoWarning("Deflate compression not available for non netCDF4 data!");
@@ -855,7 +855,7 @@ void pstreamClose(int pstreamID)
 
 	  pstream_delete_entry(pstreamptr);
 	}
-      else
+      else if ( lwrite )
 	{
 	  pipe = pstreamptr->pipe;
 	  pthread_mutex_lock(pipe->mutex);
@@ -1533,11 +1533,45 @@ void cdoInitialize(void *argument)
 }
 
 
+void pstreamCloseAll(void)
+{
+  if ( _pstreamList == NULL ) return;
+
+  for ( int i = 0; i < _pstream_max; i++ )
+    {
+      pstream_t *pstreamptr = _pstreamList[i].ptr;
+      if ( pstreamptr && pstreamptr->isopen )
+	{
+	  if ( !pstreamptr->ispipe )
+	    {
+	      if ( PSTREAM_Debug )
+		Message("Close file %s id %d", pstreamptr->name, pstreamptr->fileID);
+	      streamClose(pstreamptr->fileID);
+	    }
+	}
+    }
+}
+
+static
+void processClosePipes(void)
+{
+  int nstream = processInqStreamNum();
+  for ( int sindex = 0; sindex < nstream; sindex++ )
+    {
+      int pstreamID = processInqStreamID(sindex);
+      pstream_t *pstreamptr = pstream_to_pointer(pstreamID);
+
+      if ( PSTREAM_Debug )
+	Message("process %d  stream %d  close streamID %d", processSelf(), sindex, pstreamID);
+
+      if ( pstreamptr ) pstreamClose(pstreamID);
+    }
+}
+
+
 void cdoFinish(void)
 {
   int processID = processSelf();
-  int sindex, pstreamID;
-  int nstream;
   INT64 nvals;
   int nvars, ntimesteps;
   char memstring[32] = {""};
@@ -1545,7 +1579,6 @@ void cdoFinish(void)
   double e_utime, e_stime;
   double c_cputime = 0, c_usertime = 0, c_systime = 0;
   double p_cputime = 0, p_usertime = 0, p_systime = 0;
-  pstream_t *pstreamptr;
 
 #if defined(HAVE_LIBPTHREAD)
   if ( PSTREAM_Debug )
@@ -1653,16 +1686,7 @@ void cdoFinish(void)
   fprintf(stderr, "\n");
 #endif
 
-  nstream = processInqStreamNum();
-  for ( sindex = 0; sindex < nstream; sindex++ )
-    {
-      pstreamID = processInqStreamID(sindex);
-      pstreamptr = pstream_to_pointer(pstreamID);
-      if ( PSTREAM_Debug )
-	Message("process %d  stream %d  close streamID %d", processID, sindex, pstreamID);
-
-      if ( pstreamptr ) pstreamClose(pstreamID);
-    }
+  processClosePipes();
 
   processDelete();
 }
@@ -1703,13 +1727,28 @@ int pstreamInqByteorder(int pstreamID)
   return (byteorder);
 }
 
-void pstreamInqGinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum)
+void pstreamInqGRIBinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum)
 {
   pstream_t *pstreamptr;
 
   pstreamptr = pstream_to_pointer(pstreamID);
 
-  streamInqGinfo(pstreamptr->fileID, intnum, fltnum, bignum);
+  streamInqGRIBinfo(pstreamptr->fileID, intnum, fltnum, bignum);
+}
+
+
+void cdoVlistCopyFlag(int vlistID2, int vlistID1)
+{
+#if defined(HAVE_LIBPTHREAD)
+  pthread_mutex_lock(&streamMutex);
+#endif
+
+  vlistCopyFlag(vlistID2, vlistID1);
+
+#if defined(HAVE_LIBPTHREAD)
+  pthread_mutex_unlock(&streamMutex);
+#endif
+
 }
 
 

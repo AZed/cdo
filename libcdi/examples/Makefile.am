@@ -27,9 +27,12 @@ cdi_copy_LDADD           = $(top_builddir)/src/libcdi.la
 #
 cdi_read_f2003_SOURCES   = cdi_read_f2003.f90
 cdi_read_f2003_LDADD     = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
+cdi_read_f2003.$(OBJEXT): $(top_builddir)/src/mo_cdi.$(FCMODEXT)
 #
 cdi_write_f2003_SOURCES  = cdi_write_f2003.f90
-cdi_write_f2003_LDADD    = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
+cdi_write_f2003_LDADD    = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.$(OBJEXT)
+cdi_write_f2003.$(OBJEXT): $(top_builddir)/src/mo_cdi.$(FCMODEXT)
+
 #
 if ENABLE_ALL_STATIC
 cdi_write_LDFLAGS        = -all-static

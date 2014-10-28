@@ -382,7 +382,7 @@ void *Selvar(void *argument)
 	    }
 	}
     }
-  
+
   if ( npar == 0 ) cdoAbort("No variables selected!");
 
   vlistID2 = vlistCreate();

@@ -56,6 +56,7 @@ chunit \
 chvar \
 cloudlayer \
 cmd \
+collgrid \
 com \
 command \
 complextorect \
@@ -95,6 +96,7 @@ diffc \
 diffn \
 diffp \
 diffv \
+distgrid \
 div \
 divc \
 divcoslat \
@@ -609,7 +611,9 @@ template1 \
 template2 \
 test \
 test2 \
+testcellsearch \
 testdata \
+testpointsearch \
 thinout \
 timavg \
 timcor \

@@ -1,11 +1,10 @@
-cdo (1.6.4+dfsg.1-5.1) unstable; urgency=medium
+cdo (1.6.5+dfsg.1-1) unstable; urgency=medium
 
+  * New upstream release.
+  * Standards-Version: 3.9.6. No changes required.
+  * Updated patches. u_char_fix.patch no longer needed.
 
-  * Non.matainer upload with maintainers permission.
-  * Fix FTBFS on ppc64el by including ppu_intrinsics.h and removing
-    register in libcdi/src/cgribexlib.c. Closes: #763691
-
- -- Andreas Barth <aba@ayous.org>  Thu, 02 Oct 2014 16:47:19 +0000
+ -- Alastair McKinstry <mckinstry@debian.org>  Tue, 28 Oct 2014 07:42:54 +0000
 
 cdo (1.6.4+dfsg.1-5) unstable; urgency=medium
 

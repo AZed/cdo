@@ -58,6 +58,8 @@ void *Splitsel(void *argument)
 
   cdoInitialize(argument);
 
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
+
   cdoOperatorAdd("splitsel",  0,  0, NULL);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;

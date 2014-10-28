@@ -10,7 +10,7 @@
 
 static char pout[512];
 FILE *descr;             /* File descriptor pointer */
-int cal365 = 0;
+int cal365 = -1;
 int fullyear = -999;
 
 void dsets_init(dsets_t *pfi)
@@ -31,7 +31,7 @@ void dsets_init(dsets_t *pfi)
   pfi->pa2mb      = 0;
   pfi->calendar   = 0;
   pfi->type       = 1;      /* Assume grid unless told otherwise */
-  pfi->idxflg = 0;       /* Assume binary */
+  pfi->idxflg     = 0;      /* Assume binary */
   pfi->ncflg      = 0;      /* Assume not netcdf */
 
   pfi->undef = -9.99E33; 
@@ -2059,7 +2059,6 @@ int read_gradsdes(char *filename, dsets_t *pfi)
 
 /* set the global calendar and check if we are trying to change with a new file...
    we do this here to set the calandar for templating */
-
   if (/*mfcmn.*/cal365<0) {
     /*mfcmn.*/cal365=pfi->calendar;
   } else {

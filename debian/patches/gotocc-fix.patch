@@ -1,13 +1,13 @@
 Author: Alastair McKinstry <mckinstry@debian.org>
 Description: Fix expr() definition conflict spotted by gotocc project
 Origin-Bug:  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=747001
-Last-Updated: 2014-09-12
+Last-Updated: 2014-10-28
 Forwarded: no
 
-Index: cdo-1.6.4+dfsg.1/src/expr_yacc.c
+Index: cdo-1.6.5+dfsg.1/src/expr_yacc.c
 ===================================================================
---- cdo-1.6.4+dfsg.1.orig/src/expr_yacc.c
-+++ cdo-1.6.4+dfsg.1/src/expr_yacc.c
+--- cdo-1.6.5+dfsg.1.orig/src/expr_yacc.c
++++ cdo-1.6.5+dfsg.1/src/expr_yacc.c
 @@ -86,7 +86,7 @@ nodeType *expr_con(double value);
  nodeType *expr_fun(char *fname, nodeType *p);
  

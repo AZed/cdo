@@ -16,11 +16,12 @@ void basetimeInit(basetime_t *basetime)
   if ( basetime == NULL )
     Error("Internal problem! Basetime not allocated.");
 
-  (*basetime).ncvarid       = UNDEFID;
-  (*basetime).ncdimid       = UNDEFID;
-  (*basetime).ncvarboundsid = UNDEFID;
-  (*basetime).leadtimeid    = UNDEFID;
-  (*basetime).lwrf          = 0;
+  basetime->ncvarid       = UNDEFID;
+  basetime->ncdimid       = UNDEFID;
+  basetime->ncvarboundsid = UNDEFID;
+  basetime->leadtimeid    = UNDEFID;
+  basetime->lwrf          = 0;
+  basetime->timevar_cache = NULL;
 }
 /*
  * Local Variables:

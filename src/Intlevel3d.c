@@ -228,18 +228,16 @@ void *Intlevel3d(void *argument)
 
   operatorID = cdoOperatorID();
 
-  if ( cdoVerbose ) 
-    cdoPrint("Called '%s'\n",__func__);
-
-  if ( operatorID == INTLEVELX3D ) expol = TRUE;
+  if      ( operatorID == INTLEVEL3D )  expol = FALSE;
+  else if ( operatorID == INTLEVELX3D ) expol = TRUE;
 
   operatorInputArg("icoordinate");
 
   /*  Read filename from Parameter */
-  operatorInputArg("grid description file or name, remap file (SCRIP netCDF)");
+  operatorInputArg("filename for vertical source coordinates variable");
   operatorCheckArgc(1);
   argument_t *fileargument = file_argument_new(operatorArgv()[0]);
-  streamID0 = streamOpenRead(fileargument);                /*  3d vertical input coordinate */
+  streamID0 = streamOpenRead(fileargument);                     /*  3d vertical input coordinate */
   file_argument_free(fileargument);
   streamID1 = streamOpenRead(cdoStreamName(0));                 /*  input data */
   streamID2 = streamOpenRead(cdoStreamName(1));                 /*  3d target vertical coordinate */
@@ -257,8 +255,8 @@ void *Intlevel3d(void *argument)
    */
   {
     nvars = vlistNvars(vlistID0);
-    if (nvars != 1) 
-      cdoAbort("Only one single variable is allowed!");
+    if (nvars != 1) cdoAbort("Only one single variable is allowed!");
+
     gridID     = vlistInqVarGrid(vlistID0, 0);
     zaxisID    = vlistInqVarZaxis(vlistID0, 0);
     gridsize   = gridInqSize(gridID);
@@ -275,10 +273,9 @@ void *Intlevel3d(void *argument)
     nlevi      = nlevel;   /* number of input levels for later use */
     gridsizei  = gridsize; /* horizontal gridsize of input z coordinate */
     nrecs      = streamInqTimestep(streamID0, 0);
-    if (cdoVerbose)
-      cdoPrint("%d records input 3d vertical height\n",nrecs);
-    {
-      for ( recID = 0; recID < nrecs; recID++ )
+    if (cdoVerbose) cdoPrint("%d records input 3d vertical height\n",nrecs);
+
+    for ( recID = 0; recID < nrecs; recID++ )
       {
         streamInqRecord(streamID0, &varID, &levelID);
         gridsize = gridInqSize(vlistInqVarGrid(vlistID0, varID));
@@ -286,7 +283,6 @@ void *Intlevel3d(void *argument)
         single1  = zlevels_in + offset;
         streamReadRecord(streamID0, single1, &zlevels_in_miss);
       }
-    }
   }
 
   /*
@@ -311,17 +307,16 @@ void *Intlevel3d(void *argument)
     nlevo       = nlevel;  /* number of output levels for later use */
     gridsizeo   = gridsize;/* horizontal gridsize of output z coordinate */
     nrecs       = streamInqTimestep(streamID2, 0);
-    if (cdoVerbose)
-      cdoPrint("%d records target 3d vertical height and gridsize %d\n",nrecs,gridsize);
+    if (cdoVerbose) cdoPrint("%d records target 3d vertical height and gridsize %d\n",nrecs,gridsize);
 
     for ( recID = 0; recID < nrecs; recID++ )
-    {
-      streamInqRecord(streamID2, &varID, &levelID);
-      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
-      offset   = gridsize*levelID;
-      single1  = zlevels_out + offset;
-      streamReadRecord(streamID2, single1, &zlevels_out_miss);
-    }
+      {
+	streamInqRecord(streamID2, &varID, &levelID);
+	gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+	offset   = gridsize*levelID;
+	single1  = zlevels_out + offset;
+	streamReadRecord(streamID2, single1, &zlevels_out_miss);
+      }
   }
 
   /* Missing values are not allowed for coordinate variables */
@@ -331,6 +326,7 @@ void *Intlevel3d(void *argument)
     {
       if ( cdoVerbose ) cdoPrint("Input vertical coordinate has no missing values.");
     }
+
   if ( 0 != zlevels_out_miss )
     cdoAbort("Output vertical coordinate variables are not allowd to contian missing values.");
   else
@@ -345,10 +341,10 @@ void *Intlevel3d(void *argument)
    */
   if ( gridsizei != gridsizeo )
     cdoAbort("Input and output vertical coordinate must have the same gridsize");
-   gridSize = gridsizeo;
 
-   /* input and output vertical coordinates must have exactly the same
-    * horizontal grid */
+  gridSize = gridsizeo;
+
+   /* input and output vertical coordinates must have exactly the same horizontal grid */
    if ( nlonIn != nlonOut || 
         nlatIn != nlatOut ||
         memcmp(lonIn,lonOut,nlonIn*sizeof(double)) ||

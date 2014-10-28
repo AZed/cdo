@@ -1,12 +1,12 @@
 Author: Alastair McKinstry <mckinstry@debian.org>
 Description: Add explicit declaration.
-Last-Updated: 2014-07-07
+Last-Updated: 2014-10-28
 Forwarded: no
 
-Index: cdo-1.6.4+dfsg.1/src/griddes.c
+Index: cdo-1.6.5+dfsg.1/src/griddes.c
 ===================================================================
---- cdo-1.6.4+dfsg.1.orig/src/griddes.c
-+++ cdo-1.6.4+dfsg.1/src/griddes.c
+--- cdo-1.6.5+dfsg.1.orig/src/griddes.c
++++ cdo-1.6.5+dfsg.1/src/griddes.c
 @@ -55,6 +55,7 @@ void extClose(int fileID);
  
  #define MAX_LINE_LEN 65536
@@ -15,21 +15,3 @@ Index: cdo-1.6.4+dfsg.1/src/griddes.c
  
  void gridInit(griddes_t *grid)
  {
-Index: cdo-1.6.4+dfsg.1/src/remap_distwgt_scrip.c
-===================================================================
---- cdo-1.6.4+dfsg.1.orig/src/remap_distwgt_scrip.c
-+++ cdo-1.6.4+dfsg.1/src/remap_distwgt_scrip.c
-@@ -296,11 +296,12 @@ void grid_search_nbr(int num_neighbors,
-   double distance;     /* Angular distance */
-   double *dist = (double*) malloc(ndist*sizeof(double));
-   int    *adds = (int*) malloc(ndist*sizeof(int));
-+  j = 0;
- 
- #if defined(_OPENMP) && _OPENMP >= OPENMP4
- #pragma omp simd
- #endif
--  for ( j = 0, i = 0; i < ndist; ++i )
-+  for ( i = 0; i < ndist; ++i )
-     {
-       nadd = min_add+i;
-       /* Find distance to this point */

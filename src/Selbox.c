@@ -871,6 +871,9 @@ void *Selbox(void *argument)
 	{
 	  if ( operatorID == SELLONLATBOX )
 	    {
+	      int gridsize = gridInqSize(gridID1);
+	      if ( gridsize == 1 ) continue;
+
 	      if ( gridtype == GRID_UNSTRUCTURED )
 		gridID2 = gencellgrid(gridID1, &sbox[index].nvals, &sbox[index].cellidx);
 	      else
@@ -912,6 +915,11 @@ void *Selbox(void *argument)
 		   sbox[0].lon11+1, sbox[0].lon12+1, sbox[0].lat1+1, sbox[0].lat2+1);
 	}
     }
+
+  for ( varID = 0; varID < nvars; varID++ )
+    if ( vars[varID] == TRUE ) break;
+
+  if ( varID >= nvars ) cdoWarning("No variables selected!");
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 

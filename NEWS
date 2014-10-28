@@ -1,6 +1,21 @@
 CDO NEWS
 --------
 
+Version 1.6.5 (23 October 2014):
+
+   New features:
+   New operators:
+     * distgrid: distribute horizonal grid
+     * collgrid: collect horizontal grid
+   Changed operators:
+     * cat: added support for option -O (overwrite existing output file)
+     * remaplaf: changed calculation of weights from SCRIP to YAC
+   Fixed bugs:
+     * gridarea: added support for concave grid cells
+     * gradsdes: added support for option 365_day_calendar
+     * import_binary: option 365_day_calendar does not work
+     * select: wrong result when select only one timestep
+
 Version 1.6.4 (26 June 2014):
 
    New features:
@@ -11,14 +26,14 @@ Version 1.6.4 (26 June 2014):
      * setpartabp: set parameter table by parameter ID
      * sealevelpressure: sea level pressure
    Changed operators:
+     * Sinfo: changed format of grid and zaxis section
      * Filter: disable zero-padding
      * diff: print number of different values
      * Ymonstat: sorts output by month of year
    Fixed bugs:
-     * Filter:
      * eof3d: set sum of weights to 1
-     * eofcoeff: remove scaling with grib cell area weights
-     * eofcoeff3d: remove scaling with grib cell area weights
+     * eofcoeff: remove scaling with grid cell area weights
+     * eofcoeff3d: remove scaling with grid cell area weights
 
 Version 1.6.3 (18 February 2014):
 

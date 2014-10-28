@@ -49,8 +49,8 @@ static
 int cmpvarcode(const void *s1, const void *s2)
 {
   int cmp = 0;
-  const varinfo_t *x = s1;
-  const varinfo_t *y = s2;
+  const varinfo_t *x = (const varinfo_t *) s1;
+  const varinfo_t *y = (const varinfo_t *) s2;
   /*
   printf("%d %d  %d %d\n", x->code, y->code, x, y);
   */
@@ -63,8 +63,8 @@ int cmpvarcode(const void *s1, const void *s2)
 static
 int cmpvarname(const void *s1, const void *s2)
 {
-  const varinfo_t *x = s1;
-  const varinfo_t *y = s2;
+  const varinfo_t *x = (const varinfo_t *) s1;
+  const varinfo_t *y = (const varinfo_t *) s2;
 
   return (strcmp(x->name, y->name));
 }
@@ -73,8 +73,8 @@ static
 int cmpvarlevel(const void *s1, const void *s2)
 {
   int cmp = 0;
-  const levinfo_t *x = s1;
-  const levinfo_t *y = s2;
+  const levinfo_t *x = (const levinfo_t *) s1;
+  const levinfo_t *y = (const levinfo_t *) s2;
 
   if      ( x->level < y->level ) cmp = -1;
   else if ( x->level > y->level ) cmp =  1;
@@ -86,8 +86,8 @@ static
 int cmpvarlevelrev(const void *s1, const void *s2)
 {
   int cmp = 0;
-  const levinfo_t *x = s1;
-  const levinfo_t *y = s2;
+  const levinfo_t *x = (const levinfo_t *) s1;
+  const levinfo_t *y = (const levinfo_t *) s2;
 
   if      ( x->level > y->level ) cmp = -1;
   else if ( x->level < y->level ) cmp =  1;
@@ -132,6 +132,7 @@ void *Sort(void *argument)
   double **vardata = NULL;
   varinfo_t *varInfo;
   int taxisID1, taxisID2;
+  int (*cmpvarlev)(const void *, const void *) = cmpvarlevel;
 
   cdoInitialize(argument);
 
@@ -140,6 +141,14 @@ void *Sort(void *argument)
   SORTLEVEL = cdoOperatorAdd("sortlevel", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
+
+  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+
+  if ( operatorID == SORTLEVEL && operatorArgc() == 1 )
+    {
+      int iarg = atoi(operatorArgv()[0]);
+      if ( iarg < 0 ) cmpvarlev = cmpvarlevelrev;
+    }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -232,7 +241,7 @@ void *Sort(void *argument)
 	      for ( vindex = 0; vindex < nvars; vindex++ )
 		{
 		  nlevs = varInfo[vindex].nlevs;
-		  qsort(varInfo[vindex].levInfo, nlevs, sizeof(levinfo_t), cmpvarlevel);
+		  qsort(varInfo[vindex].levInfo, nlevs, sizeof(levinfo_t), cmpvarlev);
 		}
 	    }
 

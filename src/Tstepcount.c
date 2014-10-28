@@ -21,10 +21,6 @@
       Tstepcount  tstepcount  Count number of timesteps
 */
 
-#if defined(_OPENMP)
-#  include <omp.h>
-#endif
-
 #include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
@@ -57,7 +53,6 @@ double tstepcount(long nts, double missval1, double *array1, double refval)
 
 void *Tstepcount(void *argument)
 {
-  int ompthID;
   int gridsize;
   int nrecs;
   int gridID, varID, levelID, recID;
@@ -149,16 +144,13 @@ void *Tstepcount(void *argument)
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
 #if defined(_OPENMP)
-#pragma omp parallel for default(shared) private(i, ompthID, tsID) \
+#pragma omp parallel for default(shared) private(i, tsID) \
   schedule(dynamic,1)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined(_OPENMP)
-              ompthID = omp_get_thread_num();
-#else
-              ompthID = 0;
-#endif
+	      int ompthID = cdo_omp_get_thread_num();
+
 	      for ( tsID = 0; tsID < nts; tsID++ )
 		mem[ompthID].array1[tsID] = vars[tsID][varID][levelID].ptr[i];
 

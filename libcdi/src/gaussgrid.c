@@ -15,7 +15,7 @@
 
 
 static
-void cpledn(int kn, int kodd, double *pfn, double pdx, int kflag, 
+void cpledn(size_t kn, size_t kodd, double *pfn, double pdx, int kflag, 
             double *pw, double *pdxn, double *pxmod)
 {
   double zdlk;
@@ -24,7 +24,7 @@ void cpledn(int kn, int kodd, double *pfn, double pdx, int kflag,
   double zdlmod;
   double zdlxn;
 
-  int ik, jn;
+  size_t ik, jn;
 
   /* 1.0 Newton iteration step */
 
@@ -41,7 +41,7 @@ void cpledn(int kn, int kodd, double *pfn, double pdx, int kflag,
 
   if (kflag == 0) 
     {
-      for(jn = 2-kodd; jn <= kn; jn += 2) 
+      for(size_t jn = 2-kodd; jn <= kn; jn += 2) 
 	{
 	  /* normalised ordinary Legendre polynomial == \overbar{p_n}^0 */
 	  zdlk   = zdlk + pfn[ik]*cos((double)(jn)*zdlx);
@@ -73,9 +73,8 @@ void cpledn(int kn, int kodd, double *pfn, double pdx, int kflag,
 }
 
 static
-void gawl(double *pfn, double *pl, double *pw, int kn)
+void gawl(double *pfn, double *pl, double *pw, size_t kn)
 {
-  int iodd;
   double pmod = 0;
   int iflag;
   int itemax;
@@ -88,7 +87,7 @@ void gawl(double *pfn, double *pl, double *pw, int kn)
   iflag  =  0;
   itemax = 20;
 
-  iodd   = (kn % 2);
+  size_t iodd   = (kn % 2);
 
   zdlx   =  *pl;
 
@@ -109,7 +108,7 @@ void gawl(double *pfn, double *pl, double *pw, int kn)
 }
 
 static
-void gauaw(int kn, double *restrict pl, double *restrict pw)
+void gauaw(size_t kn, double *restrict pl, double *restrict pw)
 {
   /*
    * 1.0 Initialize Fourier coefficients for ordinary Legendre polynomials
@@ -121,24 +120,22 @@ void gauaw(int kn, double *restrict pl, double *restrict pw)
 
   double z, zfnn;
 
-  int ik, ins2, isym, jgl, jglm1, jn, iodd;
-
-  zfn    = (double *) malloc((kn+1)*(kn+1)*sizeof(double));
-  zfnlat = (double *) malloc((kn/2+1+1)*sizeof(double));  
+  zfn    = (double *) malloc((kn+1) * (kn+1) * sizeof(double));
+  zfnlat = (double *) malloc((kn/2+1+1)*sizeof(double));
 
   zfn[0] = M_SQRT2;
-  for (jn = 1; jn <= kn; jn++)
+  for (size_t jn = 1; jn <= kn; jn++)
     {
       zfnn = zfn[0];
-      for (jgl = 1; jgl <= jn; jgl++)
+      for (size_t jgl = 1; jgl <= jn; jgl++)
 	{
 	  zfnn *= sqrt(1.0-0.25/((double)(jgl*jgl))); 
 	}
 
       zfn[jn*(kn+1)+jn] = zfnn;
 
-      iodd = jn % 2;
-      for (jgl = 2; jgl <= jn-iodd; jgl += 2) 
+      size_t iodd = jn % 2;
+      for (size_t jgl = 2; jgl <= jn-iodd; jgl += 2) 
 	{
 	  zfn[jn*(kn+1)+jn-jgl] = zfn[jn*(kn+1)+jn-jgl+2]
 	    *((double)((jgl-1)*(2*jn-jgl+2)))/((double)(jgl*(2*jn-jgl+1)));
@@ -148,9 +145,9 @@ void gauaw(int kn, double *restrict pl, double *restrict pw)
 
   /* 2.0 Gaussian latitudes and weights */
 
-  iodd = kn % 2;
-  ik = iodd;
-  for (jgl = iodd; jgl <= kn; jgl += 2)
+  size_t iodd = kn % 2;
+  size_t ik = iodd;
+  for (size_t jgl = iodd; jgl <= kn; jgl += 2)
     {
       zfnlat[ik] = zfn[kn*(kn+1)+jgl];
       ik++;
@@ -161,9 +158,9 @@ void gauaw(int kn, double *restrict pl, double *restrict pw)
    *     Legendre polynomial of degree kn.
    */
 
-  ins2 = kn/2+(kn % 2);
+  size_t ins2 = kn/2+(kn % 2);
 
-  for (jgl = 1; jgl <= ins2; jgl++) 
+  for (size_t jgl = 1; jgl <= ins2; jgl++) 
     {
       z = ((double)(4*jgl-1))*M_PI/((double)(4*kn+2)); 
       pl[jgl-1] = z+1.0/(tan(z)*((double)(8*kn*kn)));
@@ -171,23 +168,23 @@ void gauaw(int kn, double *restrict pl, double *restrict pw)
 
   /* 2.2 Computes roots and weights for transformed theta */
 
-  for (jgl = ins2; jgl >= 1 ; jgl--) 
+  for (size_t jgl = ins2; jgl >= 1 ; jgl--) 
     {
-      jglm1 = jgl-1;
+      size_t jglm1 = jgl-1;
       gawl(zfnlat, &(pl[jglm1]), &(pw[jglm1]), kn);
     }
 
   /* convert to physical latitude */
 
-  for (jgl = 0; jgl < ins2; jgl++) 
+  for (size_t jgl = 0; jgl < ins2; jgl++) 
     {
       pl[jgl] = cos(pl[jgl]);
     }
 
-  for (jgl = 1; jgl <= kn/2; jgl++) 
+  for (size_t jgl = 1; jgl <= kn/2; jgl++) 
     {
-      jglm1 = jgl-1;
-      isym =  kn-jgl;
+      size_t jglm1 = jgl-1;
+      size_t isym =  kn-jgl;
       pl[isym] =  -pl[jglm1];
       pw[isym] =  pw[jglm1];
     }
@@ -291,7 +288,7 @@ void gauaw_old(double *pa, double *pw, int nlat)
 }
 #endif
 
-void gaussaw(double *restrict pa, double *restrict pw, int nlat)
+void gaussaw(double *restrict pa, double *restrict pw, size_t nlat)
 {
   //gauaw_old(pa, pw, nlat);
   gauaw(nlat, pa, pw);

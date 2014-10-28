@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
+
 #include <stdio.h>
 
 #include "cdi.h"
@@ -45,8 +49,8 @@ cksum_stream(const char *fname, size_t *table_len)
         nvars = -1;
         break;
       }
-    checksum_state = xcalloc(nvars, sizeof (checksum_state[0]));
-    varSize = xmalloc(nvars * sizeof (varSize[0]));
+    checksum_state = xcalloc((size_t)nvars, sizeof (checksum_state[0]));
+    varSize = xmalloc((size_t)nvars * sizeof (varSize[0]));
 
     for (i = 0; i < nvars; ++i)
       {
@@ -86,8 +90,8 @@ cksum_stream(const char *fname, size_t *table_len)
           break;
         }
       if (varSize[i].y == 0) varSize[i].y = 1;
-      varSize[i].chars = (size_t)varSize[i].x * varSize[i].y * varSize[i].z
-        * sizeof (buf[0]);
+      varSize[i].chars = (size_t)varSize[i].x * (size_t)varSize[i].y
+        * (size_t)varSize[i].z * sizeof (buf[0]);
       if (var_size_max_chars < varSize[i].chars)
         var_size_max_chars = varSize[i].chars;
     }
@@ -118,7 +122,7 @@ cksum_stream(const char *fname, size_t *table_len)
         ++tsID;
       }
 
-    file_vars = xmalloc(nvars * sizeof (file_vars[0]));
+    file_vars = xmalloc((size_t)nvars * sizeof (file_vars[0]));
     for (i = 0; i < nvars; ++i)
       {
         file_vars[i].code = vlistInqVarCode(vlistID, i);
@@ -134,7 +138,7 @@ cksum_stream(const char *fname, size_t *table_len)
   free(checksum_state);
   free(varSize);
   free(buf);
-  *table_len = nvars;
+  *table_len = (size_t)nvars;
 
   return file_vars;
 }

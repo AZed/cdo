@@ -86,6 +86,7 @@ typedef struct
   int         timave;
   int         timaccu;
   int         typeOfGeneratingProcess;
+  int         productDefinitionTemplate;
   int         chunktype;
   int         xyz;
   int         missvalused; /* TRUE if missval is defined */
@@ -113,10 +114,12 @@ typedef struct
   /* (Optional) list of keyword/double value pairs */
   int    opt_grib_dbl_nentries;
   char*  opt_grib_dbl_keyword[MAX_OPT_GRIB_ENTRIES];
+  int    opt_grib_dbl_update[MAX_OPT_GRIB_ENTRIES];
   double opt_grib_dbl_val[MAX_OPT_GRIB_ENTRIES];
   /* (Optional) list of keyword/integer value pairs */
   int    opt_grib_int_nentries;
   char*  opt_grib_int_keyword[MAX_OPT_GRIB_ENTRIES];
+  int    opt_grib_int_update[MAX_OPT_GRIB_ENTRIES];
   int    opt_grib_int_val[MAX_OPT_GRIB_ENTRIES];
 #endif
 }
@@ -125,6 +128,7 @@ var_t;
 
 typedef struct
 {
+  int         locked;
   int         self;
   int         nvars;        /* number of variables                */
   int         ngrids;
@@ -167,8 +171,42 @@ void    vlistDefVarValidrange(int vlistID, int varID, const double *validrange);
 /*      vlistInqVarValidrange: Get the valid range of a Variable */
 int     vlistInqVarValidrange(int vlistID, int varID, double *validrange);
 
-int vlist_att_compare(vlist_t *a, int varIDA, vlist_t *b, int varIDB,
-                      int attnum);
+int vlist_att_compare(vlist_t *a, int varIDA, vlist_t *b, int varIDB, int attnum);
+
+void vlist_lock(int vlistID);
+void vlist_unlock(int vlistID);
+
+static inline void
+vlistAdd2GridIDs(vlist_t *vlistptr, int gridID)
+{
+  int index, ngrids = vlistptr->ngrids;
+  for ( index = 0; index < ngrids; index++ )
+    if (vlistptr->gridIDs[index] == gridID ) break;
+  if ( index == ngrids )
+    {
+      if (ngrids >= MAX_GRIDS_PS)
+        Error("Internal limit exceeded: more than %d grids.", MAX_GRIDS_PS);
+      ++(vlistptr->ngrids);
+      vlistptr->gridIDs[ngrids] = gridID;
+    }
+}
+
+static inline void
+vlistAdd2ZaxisIDs(vlist_t *vlistptr, int zaxisID)
+{
+  int index, nzaxis = vlistptr->nzaxis;
+  for ( index = 0; index < nzaxis; index++ )
+    if ( zaxisID == vlistptr->zaxisIDs[index] ) break;
+
+  if ( index == nzaxis )
+    {
+      if ( nzaxis >= MAX_ZAXES_PS )
+	Error("Internal limit exceeded: more than %d zaxis.", MAX_ZAXES_PS);
+      vlistptr->zaxisIDs[nzaxis] = zaxisID;
+      vlistptr->nzaxis++;
+    }
+}
+
 
 #if  defined  (HAVE_LIBGRIB_API)
 extern int   cdiNAdditionalGRIBKeys;

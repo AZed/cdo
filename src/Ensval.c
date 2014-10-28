@@ -437,7 +437,7 @@ void *Ensval(void *argument)
 	      osum += brs_o[k];
 	    }
 	    
-	    if ( abs(osum-1) > 1e-06 || abs(gsum-1) > 1e-06 )  {
+	    if ( fabs(osum-1) > 1.e-06 || fabs(gsum-1) > 1.e-06 )  {
 	      cdoAbort("Internal error - normalization constraint of problem not fulfilled");
 	      cdoAbort("This is likely due to missing values");
 	    }

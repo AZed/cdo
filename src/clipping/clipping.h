@@ -73,14 +73,17 @@ void cell_clipping ( unsigned N,
 
 /**
   * \brief calculates partial areas for all overlapping parts of the source
-  *        cells, this is required for conservative remapping
+  *        cells with triangular target cells. This is required for
+  *        conservative remapping
   *
   * Some of the underlying concepts can be found in
   *
   * See e.g. Joseph O'Rourke, Computational Geometry in C, 2nd Ed., 1998
   *          Sec. 7.6 Intersections of Convex Polygons, page 253.
   *
-  * The routine takes (a list of) source cells and a target cell. It determines the
+  * The routine takes (a list of) source cells and a convex target cell. As
+  * a triangle is always convex we recommend to use this routine only for
+  * triangular target cells. It determines the
   * clipping points of the intersection between a source and the target cells using
   * cell_clipping internally. In a second step areas are calculated for each
   * intersection described in the overlap cells. If a target cell is fully
@@ -101,6 +104,40 @@ void compute_overlap_areas(unsigned N,
                            struct grid_cell target_cell,
                            double * partial_areas);
 
+/**
+  * \brief calculates partial areas for all overlapping parts of the source
+  *        cells with arbitrary target cells, this is required for conservative
+  *        remapping.
+  *
+  * Some of the underlying concepts can be found in
+  *
+  * See e.g. Joseph O'Rourke, Computational Geometry in C, 2nd Ed., 1998
+  *          Sec. 7.6 Intersections of Convex Polygons, page 253.
+  *
+  * The routine takes (a list of) source cells and a target cell. It determines the
+  * clipping points of the intersection between a source and the target cells using
+  * cell_clipping internally. In a second step areas are calculated for each
+  * intersection described in the overlap cells. If a target cell is fully
+  * covered by N source cells the N partial areas should add up to the area of
+  * the target cell.
+  *
+  * @param[in]  N             number of source cells
+  * @param[in]  source_cell   list of source cells
+  * @param[in]  target_cell   target cell
+  * @param[in]  target_node_x x-coordinate of target cell node or center point
+  * @param[in]  target_node_y y-coordinate of target cell node or center point
+  * @param[out] partial_areas list of N partial weights, one weight for each
+  *                           source-target intersection
+  *
+  * \remark source and target cell have to be convex
+  *
+ **/
+void compute_concave_overlap_areas (unsigned N,
+                                    struct grid_cell * source_cell,
+                                    struct grid_cell target_cell,
+                                    double * target_node_x,
+                                    double * target_node_y,
+                                    double * partial_areas);
 /**
   * \brief correct interpolation weights
   *

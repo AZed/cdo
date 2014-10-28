@@ -72,12 +72,13 @@ void grid_store_delete(grid_store_t* grid_store)
 	  grid_layer = grid_layer->next;
 	  free(grid_layer_f);
 	}
-
+      /*
       if ( cdoVerbose )
 	{
 	  fprintf(stderr, "block = %ld nlayers = %ld  allocated = %ld  used = %ld\n",
 		  iblk+1, nlayers, nlayers*blksize, j);
 	}
+      */
     }
 
   free(grid_store->blksize);

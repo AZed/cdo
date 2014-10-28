@@ -57,13 +57,14 @@
 /*
  *  Macros for the product definition section ( Section 1 )
  */
-#define  ISEC1_TABLE4_MINUTE    0
-#define  ISEC1_TABLE4_HOUR      1
-#define  ISEC1_TABLE4_DAY       2
-#define  ISEC1_TABLE4_3HOURS   10
-#define  ISEC1_TABLE4_6HOURS   11
-#define  ISEC1_TABLE4_12HOURS  12
-#define  ISEC1_TABLE4_QUARTER  13
+#define  ISEC1_TABLE4_MINUTE      0
+#define  ISEC1_TABLE4_HOUR        1
+#define  ISEC1_TABLE4_DAY         2
+#define  ISEC1_TABLE4_3HOURS     10
+#define  ISEC1_TABLE4_6HOURS     11
+#define  ISEC1_TABLE4_12HOURS    12
+#define  ISEC1_TABLE4_QUARTER    13
+#define  ISEC1_TABLE4_30MINUTES  14
 
 
 #define  ISEC1_CodeTable            (isec1[ 0])  /*  Version number of code table                 */
@@ -222,12 +223,6 @@ void  gribPrintBDS(int nrec, long recpos, long recsize, unsigned char *gribbuffe
 void  gribCheck1(int nrec, long recpos, long recsize, unsigned char *gribbuffer);
 void  gribRepair1(int nrec, long recsize, unsigned char *gribbuffer);
 
-int grib1Sections(unsigned char *gribbuffer, long recsize, unsigned char **pdsp,
-		  unsigned char **gdsp, unsigned char **bmsp, unsigned char **bdsp);
-int grib2Sections(unsigned char *gribbuffer, long recsize, unsigned char **idsp,
-		  unsigned char **lusp, unsigned char **gdsp, unsigned char **pdsp,
-		  unsigned char **drsp, unsigned char **bmsp, unsigned char **bdsp);
-
 int   gribGetZip(long recsize, unsigned char *gribbuffer, long *urecsize);
 
 int   gribBzip(unsigned char *dbuf, long dbufsize, unsigned char *sbuf, long sbufsize);
@@ -246,7 +241,7 @@ int   gribFileSeek(int fileID, long *offset);
 int   gribReadSize(int fileID);
 int   gribVersion(unsigned char *buffer, size_t buffersize);
 
-int   gribGinfo(off_t recpos, long recsize, unsigned char *gribbuffer, int *intnum, float *fltnum, off_t *bignum);
+int   grib_info_for_grads(off_t recpos, long recsize, unsigned char *gribbuffer, int *intnum, float *fltnum, off_t *bignum);
 
 double calculate_pfactor(const double* spectralField, long fieldTruncation, long subsetTruncation);
 

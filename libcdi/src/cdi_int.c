@@ -5,19 +5,17 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#include "dmemory.h"
-
+#include "cdf.h"
 #include "cdi.h"
-#include "cdi_cksum.h"
 #include "cdi_int.h"
+#include "dmemory.h"
+#include "file.h"
 #include "gribapi.h"
 #ifdef HAVE_LIBNETCDF
 #include "stream_cdf.h"
 #endif
 #include "namespace.h"
-#include "serialize.h"
 #include "resource_handle.h"
-#include "resource_unpack.h"
 
 #if  defined  (HAVE_LIBCGRIBEX)
 #include "cgribex.h"
@@ -66,32 +64,14 @@ const char Filetypes[][9] = {
 
 int CDI_Debug   = 0;    /* If set to 1, debugging           */
 
-static int  STREAM_Debug = 0;   /* If set to 1, debugging */
-
 int cdiGribApiDebug     = 0;
 int cdiDefaultLeveltype = -1;
-static int cdiDataUnreduced = 0;
-static int cdiSortName = 0;
-static int cdiHaveMissval = 0;
+int cdiDataUnreduced = 0;
+int cdiSortName = 0;
+int cdiHaveMissval = 0;
 
 
-static int    streamCompareP ( void * streamptr1, void * streamptr2 );
-static void   streamDestroyP ( void * streamptr );
-static void   streamPrintP   ( void * streamptr, FILE * fp );
-static int    streamGetPackSize ( void * streamptr, void *context);
-static void   streamPack        ( void * streamptr, void * buff, int size, int * position, void *context );
-static int    streamTxCode      ( void );
-
-const resOps streamOps = {
-  streamCompareP,
-  streamDestroyP,
-  streamPrintP,
-  streamGetPackSize,
-  streamPack,
-  streamTxCode
-};
-
-long cdiGetenvInt(char *envName)
+static long cdiGetenvInt(char *envName)
 {
   char *envString;
   long envValue = -1;
@@ -129,6 +109,126 @@ long cdiGetenvInt(char *envName)
     }
 
   return (envValue);
+}
+
+static void
+cdiPrintDefaults(void)
+{
+  fprintf(stderr, "default instID     :  %d\n"
+          "default modelID    :  %d\n"
+          "default tableID    :  %d\n"
+          "default missval    :  %g\n", cdiDefaultInstID,
+          cdiDefaultModelID, cdiDefaultTableID, cdiDefaultMissval);
+}
+
+void cdiPrintVersion(void)
+{
+  fprintf(stderr, "     CDI library version : %s\n", cdiLibraryVersion());
+#if  defined  (HAVE_LIBCGRIBEX)
+  fprintf(stderr, " CGRIBEX library version : %s\n", cgribexLibraryVersion());
+#endif
+#if  defined  (HAVE_LIBGRIB_API)
+  fprintf(stderr, "GRIB_API library version : %s\n", gribapiLibraryVersionString());
+#endif
+#if  defined  (HAVE_LIBNETCDF)
+  fprintf(stderr, "  netCDF library version : %s\n", cdfLibraryVersion());
+#endif
+#if  defined  (HAVE_LIBHDF5)
+  fprintf(stderr, "    HDF5 library version : %s\n", hdfLibraryVersion());
+#endif
+#if  defined  (HAVE_LIBSERVICE)
+  fprintf(stderr, " SERVICE library version : %s\n", srvLibraryVersion());
+#endif
+#if  defined  (HAVE_LIBEXTRA)
+  fprintf(stderr, "   EXTRA library version : %s\n", extLibraryVersion());
+#endif
+#if  defined  (HAVE_LIBIEG)
+  fprintf(stderr, "     IEG library version : %s\n", iegLibraryVersion());
+#endif
+  fprintf(stderr, "    FILE library version : %s\n", fileLibraryVersion());
+}
+
+void cdiDebug(int level)
+{
+  if ( level == 1 || (level &  2) ) CDI_Debug = 1;
+
+  if ( CDI_Debug ) Message("debug level %d", level);
+
+  if ( level == 1 || (level &  4) ) memDebug(1);
+
+  if ( level == 1 || (level &  8) ) fileDebug(1);
+
+  if ( level == 1 || (level & 16) )
+    {
+#if  defined  (HAVE_LIBGRIB)
+      gribSetDebug(1);
+#endif
+#if  defined  (HAVE_LIBNETCDF)
+      cdfDebug(1);
+#endif
+#if  defined  (HAVE_LIBSERVICE)
+      srvDebug(1);
+#endif
+#if  defined  (HAVE_LIBEXTRA)
+      extDebug(1);
+#endif
+#if  defined  (HAVE_LIBIEG)
+      iegDebug(1);
+#endif
+    }
+
+  if ( CDI_Debug )
+    {
+      cdiPrintDefaults();
+      cdiPrintDatatypes();
+    }
+}
+
+
+int cdiHaveFiletype(int filetype)
+{
+  int status = 0;
+
+  switch (filetype)
+    {
+#if  defined  (HAVE_LIBSERVICE)
+    case FILETYPE_SRV:  { status = 1; break; }
+#endif
+#if  defined  (HAVE_LIBEXTRA)
+    case FILETYPE_EXT:  { status = 1; break; }
+#endif
+#if  defined  (HAVE_LIBIEG)
+    case FILETYPE_IEG:  { status = 1; break; }
+#endif
+#if  defined  (HAVE_LIBGRIB)
+#if  defined  (HAVE_LIBGRIB_API) || defined  (HAVE_LIBCGRIBEX)
+    case FILETYPE_GRB:  { status = 1; break; }
+#endif
+#if  defined  (HAVE_LIBGRIB_API)
+    case FILETYPE_GRB2: { status = 1; break; }
+#endif
+#endif
+#if  defined  (HAVE_LIBNETCDF)
+    case FILETYPE_NC:   { status = 1; break; }
+#if  defined  (HAVE_NETCDF2)
+    case FILETYPE_NC2:  { status = 1; break; }
+#endif
+#if  defined  (HAVE_NETCDF4)
+    case FILETYPE_NC4:  { status = 1; break; }
+    case FILETYPE_NC4C: { status = 1; break; }
+#endif
+#endif
+    default: { status = 0; break; }
+    }
+
+  return (status);
+}
+
+void cdiDefTableID(int tableID)
+{
+  cdiDefaultTableID = tableID;
+  int modelID = cdiDefaultModelID = tableInqModel(tableID);
+  cdiDefaultInstID = modelInqInstitut(modelID);
 }
 
 static
@@ -271,9 +371,6 @@ void cdiInitialize(void)
 
       envString = getenv("PARTAB_PATH");
       if ( envString ) cdiPartabPath = strdup(envString);
-
-      envString = getenv("STREAM_DEBUG");
-      if ( envString ) STREAM_Debug = atoi(envString);
     }
 }
 
@@ -289,108 +386,6 @@ const char *strfiletype(int filetype)
     name = Filetypes[0];
 
   return (name);
-}
-
-
-stream_t *stream_to_pointer(int idx)
-{
-  return ( stream_t *) reshGetVal ( idx, &streamOps );
-}
-
-static
-void streamDefaultValue ( stream_t * streamptr )
-{
-  int i;
-
-  streamptr->self              = UNDEFID;
-  streamptr->accesstype        = UNDEFID;
-  streamptr->accessmode        = 0;
-  streamptr->filetype          = UNDEFID;
-  streamptr->byteorder         = UNDEFID;
-  streamptr->fileID            = 0;
-  streamptr->dimgroupID        = UNDEFID;
-  streamptr->filemode          = 0;
-  streamptr->numvals           = 0;
-  streamptr->filename          = NULL;
-  streamptr->record            = NULL;
-  streamptr->varsAllocated     = 0;
-  streamptr->nrecs             = 0;
-  streamptr->nvars             = 0;
-  streamptr->vars              = NULL;
-  streamptr->varinit           = 0;
-  streamptr->ncmode            = 0;
-  streamptr->curTsID           = UNDEFID;
-  streamptr->rtsteps           = 0;
-  streamptr->ntsteps           = UNDEFID;
-  streamptr->numTimestep       = 0;
-  streamptr->tsteps            = NULL;
-  streamptr->tstepsTableSize   = 0;
-  streamptr->tstepsNextID      = 0;
-  streamptr->historyID         = UNDEFID;
-  streamptr->vlistID           = UNDEFID;
-  streamptr->globalatts        = 0;
-  streamptr->localatts         = 0;
-  streamptr->vct.ilev          = 0;
-  streamptr->vct.mlev          = 0;
-  streamptr->vct.ilevID        = UNDEFID;
-  streamptr->vct.mlevID        = UNDEFID;
-  streamptr->unreduced         = cdiDataUnreduced;
-  streamptr->sortname          = cdiSortName;
-  streamptr->have_missval      = cdiHaveMissval;
-  streamptr->comptype          = COMPRESS_NONE;
-  streamptr->complevel         = 0;
-
-  basetimeInit(&streamptr->basetime);
-
-  for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->xdimID[i]   = UNDEFID;
-  for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ydimID[i]   = UNDEFID;
-  for ( i = 0; i < MAX_ZAXES_PS; i++ ) streamptr->zaxisID[i]  = UNDEFID;
-  for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncxvarID[i] = UNDEFID;
-  for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncyvarID[i] = UNDEFID;
-  for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncavarID[i] = UNDEFID;
-
-  streamptr->curfile           = 0;
-  streamptr->nfiles            = 0;
-  streamptr->fnames            = NULL;
-
-  streamptr->gribContainers    = NULL;
-  streamptr->vlistIDorig       = UNDEFID;
-}
-
-
-stream_t *stream_new_entry(void)
-{
-  stream_t *streamptr;
-
-  cdiInitialize(); /* ***************** make MT version !!! */
-
-  streamptr = (stream_t *) xmalloc(sizeof(stream_t));
-  streamDefaultValue ( streamptr );
-  streamptr->self = reshPut (( void * ) streamptr, &streamOps );
-
-  return streamptr;
-}
-
-
-void stream_delete_entry(stream_t *streamptr)
-{
-  int idx;
-
-  xassert ( streamptr );
-
-  idx = streamptr->self;
-  free ( streamptr );
-  reshRemove ( idx, &streamOps );
-
-  if ( STREAM_Debug )
-    Message("Removed idx %d from stream list", idx);
-}
-
-
-void stream_check_ptr(const char *caller, stream_t *streamptr)
-{
-  if ( streamptr == NULL )
-    Errorc("stream undefined!");
 }
 
 
@@ -426,364 +421,6 @@ double cdiInqMissval(void)
 
   return (cdiDefaultMissval);
 }
-
-
-void vlist_check_contents(int vlistID)
-{
-  int index, nzaxis, zaxisID;
-
-  nzaxis = vlistNzaxis(vlistID);
-
-  for ( index = 0; index < nzaxis; index++ )
-    {
-      zaxisID = vlistZaxis(vlistID, index);
-      if ( zaxisInqType(zaxisID) == ZAXIS_GENERIC )
-	cdiCheckZaxis(zaxisID);
-    }
-}
-
-
-int streamInqFileID(int streamID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  return (streamptr->fileID);
-}
-
-/* not used anymore */
-/*
-void streamDefineTaxis(int streamID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  if ( streamptr->tsteps == NULL )
-    {
-      int varID, nvars;
-      int vlistID;
-
-      vlistID = streamptr->vlistID;
-
-      nvars = vlistNvars(vlistID);
-      for ( varID = 0; varID < nvars; varID++ )
-	if ( vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT ) break;
-
-      if ( varID == nvars )
-	{
-	  int taxisID;
-
-	  taxisID = vlistInqTaxis(vlistID);
-	  if ( taxisID == CDI_UNDEFID )
-	    {
-	      taxisID = taxisCreate(TAXIS_ABSOLUTE);
-	      vlistDefTaxis(vlistID, taxisID);
-	    }
-
-	  (void) streamDefTimestep(streamID, 0);
-	}
-      else
-	Error("time axis undefined");
-    }
-}
-*/
-
-void streamDefDimgroupID(int streamID, int dimgroupID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  streamptr->dimgroupID = dimgroupID;
-}
-
-
-int streamInqDimgroupID(int streamID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  return (streamptr->dimgroupID);
-}
-
-
-void cdiDefAccesstype(int streamID, int type)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  if ( streamptr->accesstype == UNDEFID )
-    {
-      streamptr->accesstype = type;
-    }
-  else
-    {
-      if ( streamptr->accesstype != type )
-	{
-	  if ( streamptr->accesstype == TYPE_REC )
-	    Error("Changing access type from REC to VAR not allowed!");
-	  else
-	    Error("Changing access type from VAR to REC not allowed!");
-	}
-    }
-}
-
-
-int cdiInqAccesstype(int streamID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  return (streamptr->accesstype);
-} 
-
-
-int streamInqNvars ( int streamID )
-{
-  stream_t * streamptr;
-  streamptr = ( stream_t * ) reshGetVal ( streamID, &streamOps );
-  return ( streamptr->nvars );
-}
-
-
-int  streamCompareP ( void * streamptr1, void * streamptr2 )
-{
-  stream_t * s1 = ( stream_t * ) streamptr1;
-  stream_t * s2 = ( stream_t * ) streamptr2;
-  int differ = -1;
-  int equal  = 0;
-  int len;
-
-  xassert ( s1 );
-  xassert ( s2 );
-
-  if ( s1->filetype  != s2->filetype  ) return differ;
-  if (  namespaceAdaptKey2 ( s1->vlistIDorig ) !=
-	namespaceAdaptKey2 ( s2->vlistIDorig )) return differ;
-  if ( s1->byteorder != s2->byteorder ) return differ;
-  if ( s1->comptype  != s2->comptype  ) return differ;
-  if ( s1->complevel != s2->complevel ) return differ;
-
-  if ( s1->filename )
-    {
-      len = strlen ( s1->filename ) + 1;
-      if ( memcmp ( s1->filename, s2->filename, len ))
-	return differ;
-    }
-  else if ( s2->filename )
-    return differ;
-
-  return equal;
-}
-
-
-void streamDestroyP ( void * streamptr )
-{
-  int id;
-  stream_t * sp = ( stream_t * ) streamptr;
-
-  xassert ( sp );
-
-  id = sp->self;
-  streamClose ( id );
-}
-
-
-void streamPrintP   ( void * streamptr, FILE * fp )
-{
-  stream_t * sp = ( stream_t * ) streamptr;
-
-  if ( !sp ) return;
-
-  fprintf ( fp, "#\n");
-  fprintf ( fp, "# streamID %d\n", sp->self);
-  fprintf ( fp, "#\n");
-  fprintf ( fp, "self          = %d\n", sp->self );
-  fprintf ( fp, "accesstype    = %d\n", sp->accesstype );
-  fprintf ( fp, "accessmode    = %d\n", sp->accessmode );
-  fprintf ( fp, "filetype      = %d\n", sp->filetype );
-  fprintf ( fp, "byteorder     = %d\n", sp->byteorder );
-  fprintf ( fp, "fileID        = %d\n", sp->fileID );
-  fprintf ( fp, "dimgroupID    = %d\n", sp->dimgroupID );
-  fprintf ( fp, "filemode      = %d\n", sp->filemode );
-  fprintf ( fp, "//off_t numvals;\n" );
-  fprintf ( fp, "filename      = %s\n", sp->filename );
-  fprintf ( fp, "//Record   *record;\n" );
-  fprintf ( fp, "nrecs         = %d\n", sp->nrecs );
-  fprintf ( fp, "nvars         = %d\n", sp->nvars );
-  fprintf ( fp, "varlocked     = %d\n", sp->varlocked );
-  fprintf ( fp, "//svarinfo_t *vars;\n" );
-  fprintf ( fp, "varsAllocated = %d\n", sp->varsAllocated );
-  fprintf ( fp, "varinit       = %d\n", sp->varinit );
-  fprintf ( fp, "curTsID       = %d\n", sp->curTsID );
-  fprintf ( fp, "rtsteps       = %d\n", sp->rtsteps );
-  fprintf ( fp, "//long ntsteps;\n" );
-  fprintf ( fp, "numTimestep   = %d\n", sp->numTimestep );
-  fprintf ( fp, "//  tsteps_t   *tsteps;\n" );
-  fprintf ( fp, "tstepsTableSize= %d\n", sp->tstepsTableSize );
-  fprintf ( fp, "tstepsNextID  = %d\n", sp->tstepsNextID );
-  fprintf ( fp, "//basetime_t  basetime;\n" );
-  fprintf ( fp, "ncmode        = %d\n", sp->ncmode );
-  fprintf ( fp, "vlistID       = %d\n", sp->vlistID );
-  fprintf ( fp, "//  int       xdimID[MAX_GRIDS_PS];\n" );
-  fprintf ( fp, "//  int       ydimID[MAX_GRIDS_PS];\n" );
-  fprintf ( fp, "//  int       zaxisID[MAX_ZAXES_PS];\n" );
-  fprintf ( fp, "//  int       ncxvarID[MAX_GRIDS_PS];\n" );
-  fprintf ( fp, "//  int       ncyvarID[MAX_GRIDS_PS];\n" );
-  fprintf ( fp, "//  int       ncavarID[MAX_GRIDS_PS];\n" );
-  fprintf ( fp, "historyID     = %d\n", sp->historyID );
-  fprintf ( fp, "globalatts    = %d\n", sp->globalatts );
-  fprintf ( fp, "localatts     = %d\n", sp->localatts );
-  fprintf ( fp, "//  VCT       vct;\n" );
-  fprintf ( fp, "unreduced     = %d\n", sp->unreduced );
-  fprintf ( fp, "sortname      = %d\n", sp->sortname );
-  fprintf ( fp, "have_missval  = %d\n", sp->have_missval );
-  fprintf ( fp, "ztype         = %d\n", sp->comptype );
-  fprintf ( fp, "zlevel        = %d\n", sp->complevel );
-  fprintf ( fp, "curfile       = %d\n", sp->curfile );
-  fprintf ( fp, "nfiles        = %d\n", sp->nfiles );
-  fprintf ( fp, "//  char    **fnames;\n" );
-  fprintf ( fp, "//  void    **gribContainers;\n" );
-  fprintf ( fp, "vlistIDorig   = %d\n", sp->vlistIDorig );
-}
-
-
-void streamGetIndexList ( int nstreams, int * streamIndexList )
-{
-  reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
-}
-
-void
-cdiStreamSetupVlist(stream_t *streamptr, int vlistID, int vlistIDorig)
-{
-  int nvars = vlistNvars(vlistID);
-  streamptr->vlistID = vlistID;
-  streamptr->vlistIDorig = vlistIDorig;
-  for (int varID = 0; varID < nvars; varID++ )
-    {
-      int gridID  = vlistInqVarGrid(vlistID, varID);
-      int zaxisID = vlistInqVarZaxis(vlistID, varID);
-      stream_new_var(streamptr, gridID, zaxisID);
-      if ( streamptr->have_missval )
-        vlistDefVarMissval(vlistID, varID,
-                           vlistInqVarMissval(vlistID, varID));
-    }
-
-  if (streamptr->filemode == 'w' )
-    {
-      if ( streamptr->filetype == FILETYPE_NC  ||
-           streamptr->filetype == FILETYPE_NC2 ||
-           streamptr->filetype == FILETYPE_NC4 ||
-           streamptr->filetype == FILETYPE_NC4C )
-        {
-#ifdef HAVE_LIBNETCDF
-          void (*myCdfDefVars)(stream_t *streamptr)
-            = (void (*)(stream_t *))
-            namespaceSwitchGet(NSSWITCH_CDF_STREAM_SETUP).func;
-          myCdfDefVars(streamptr);
-#endif
-        }
-      else if ( streamptr->filetype == FILETYPE_GRB  ||
-                streamptr->filetype == FILETYPE_GRB2 )
-        {
-          gribContainersNew(streamptr);
-        }
-    }
-}
-
-
-static int
-streamTxCode(void)
-{
-  return STREAM;
-}
-
-
-int streamNint = 11 ;
-
-
-static int
-streamGetPackSize(void * voidP, void *context)
-{
-  stream_t * streamP = ( stream_t * ) voidP;
-  int packBufferSize
-    = serializeGetSize(streamNint, DATATYPE_INT, context)
-    + serializeGetSize(2, DATATYPE_UINT32, context)
-    + serializeGetSize((int)strlen(streamP->filename) + 1,
-                       DATATYPE_TXT, context)
-    + serializeGetSize(1, DATATYPE_FLT64, context);
-  return packBufferSize;
-}
-
-
-static void
-streamPack(void * streamptr, void * packBuffer, int packBufferSize,
-           int * packBufferPos, void *context)
-{
-  stream_t * streamP = ( stream_t * ) streamptr;
-  int intBuffer[streamNint];
-
-  intBuffer[0]  = streamP->self;
-  intBuffer[1]  = streamP->filetype;
-  intBuffer[2]  = (int)strlen(streamP->filename) + 1;
-  intBuffer[3]  = streamP->vlistID;
-  intBuffer[4]  = streamP->vlistIDorig;
-  intBuffer[5]  = streamP->byteorder;
-  intBuffer[6]  = streamP->comptype;
-  intBuffer[7]  = streamP->complevel;
-  intBuffer[8]  = cdiDataUnreduced;
-  intBuffer[9]  = cdiSortName;
-  intBuffer[10] = cdiHaveMissval;
-
-  serializePack(intBuffer, streamNint, DATATYPE_INT, packBuffer, packBufferSize, packBufferPos, context);
-  uint32_t d = cdiCheckSum(DATATYPE_INT, streamNint, intBuffer);
-  serializePack(&d, 1, DATATYPE_UINT32, packBuffer, packBufferSize, packBufferPos, context);
-
-  serializePack(&cdiDefaultMissval, 1, DATATYPE_FLT64, packBuffer, packBufferSize, packBufferPos, context);
-  serializePack(streamP->filename, intBuffer[2], DATATYPE_TXT, packBuffer, packBufferSize, packBufferPos, context);
-  d = cdiCheckSum(DATATYPE_TXT, intBuffer[2], streamP->filename);
-  serializePack(&d, 1, DATATYPE_UINT32, packBuffer, packBufferSize, packBufferPos, context);
-}
-
-struct streamAssoc
-streamUnpack(char * unpackBuffer, int unpackBufferSize,
-             int * unpackBufferPos, int originNamespace, void *context)
-{
-  int intBuffer[streamNint], streamID;
-  uint32_t d;
-  char filename[CDI_MAX_NAME];
-
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  intBuffer, streamNint, DATATYPE_INT, context);
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_UINT32, context);
-  xassert(cdiCheckSum(DATATYPE_INT, streamNint, intBuffer) == d);
-
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &cdiDefaultMissval, 1, DATATYPE_FLT64, context);
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &filename, intBuffer[2], DATATYPE_TXT, context);
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_UINT32, context);
-  xassert(d == cdiCheckSum(DATATYPE_TXT, intBuffer[2], filename));
-  streamID = streamOpenWrite ( filename, intBuffer[1] );
-  xassert ( streamID >= 0 &&
-            namespaceAdaptKey ( intBuffer[0], originNamespace ) == streamID );
-  streamDefByteorder(streamID, intBuffer[5]);
-  streamDefCompType(streamID, intBuffer[6]);
-  streamDefCompLevel(streamID, intBuffer[7]);
-  cdiDefGlobal("REGULARGRID", intBuffer[8]);
-  cdiDefGlobal("SORTNAME", intBuffer[9]);
-  cdiDefGlobal("HAVE_MISSVAL", intBuffer[10]);
-  struct streamAssoc retval = { streamID, intBuffer[3], intBuffer[4] };
-  return retval;
-}
-
 
 /*
  * Local Variables:

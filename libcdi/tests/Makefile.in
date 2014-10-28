@@ -82,7 +82,7 @@ TESTS = cksum_verify$(EXEEXT) test_cksum_grib test_cksum_nc \
 	test_cksum_nc4 test_cksum_ieg test_chunk_cksum pio_write_run \
 	pio_cksum_mpinonb pio_cksum_fpguard pio_cksum_asynch \
 	pio_cksum_writer pio_cksum_cdf test_resource_copy$(EXEEXT) \
-	pio_write_deco2d_run $(am__append_1)
+	pio_write_deco2d_run test_f2003 $(am__append_1)
 check_PROGRAMS = cksum_verify$(EXEEXT) test_grib$(EXEEXT) \
 	cksum_write$(EXEEXT) cksum_read$(EXEEXT) pio_write$(EXEEXT) \
 	test_resource_copy$(EXEEXT) cksum_write_chunk$(EXEEXT) \
@@ -96,7 +96,8 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(srcdir)/test_cksum_nc2.in $(srcdir)/test_cksum_nc4.in \
 	$(srcdir)/test_cksum_extra.in $(srcdir)/test_cksum_service.in \
 	$(srcdir)/test_cksum_ieg.in $(srcdir)/test_chunk_cksum.in \
-	$(srcdir)/pio_write_run.in $(srcdir)/pio_write_deco2d_run.in \
+	$(srcdir)/test_f2003.in $(srcdir)/pio_write_run.in \
+	$(srcdir)/pio_write_deco2d_run.in \
 	$(srcdir)/pio_cksum_mpinonb.in $(srcdir)/pio_cksum_fpguard.in \
 	$(srcdir)/pio_cksum_asynch.in $(srcdir)/pio_cksum_writer.in \
 	$(srcdir)/pio_cksum_cdf.in \
@@ -105,6 +106,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
+	$(top_srcdir)/m4/acx_check_strptr_convert.m4 \
 	$(top_srcdir)/m4/acx_lang_other_suffix_conftest.m4 \
 	$(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/acx_sl_fc_mod_path_flag.m4 \
@@ -121,7 +123,7 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/config.h
 CONFIG_CLEAN_FILES = test_cksum_grib test_cksum_nc test_cksum_nc2 \
 	test_cksum_nc4 test_cksum_extra test_cksum_service \
-	test_cksum_ieg test_chunk_cksum pio_write_run \
+	test_cksum_ieg test_chunk_cksum test_f2003 pio_write_run \
 	pio_write_deco2d_run pio_cksum_mpinonb pio_cksum_fpguard \
 	pio_cksum_asynch pio_cksum_writer pio_cksum_cdf \
 	test_resource_copy_mpi_run
@@ -540,6 +542,8 @@ test_cksum_service: $(top_builddir)/config.status $(srcdir)/test_cksum_service.i
 test_cksum_ieg: $(top_builddir)/config.status $(srcdir)/test_cksum_ieg.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 test_chunk_cksum: $(top_builddir)/config.status $(srcdir)/test_chunk_cksum.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_f2003: $(top_builddir)/config.status $(srcdir)/test_f2003.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 pio_write_run: $(top_builddir)/config.status $(srcdir)/pio_write_run.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@

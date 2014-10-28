@@ -2,6 +2,8 @@
 #  include "config.h"
 #endif
 
+#include <limits.h>
+
 #include "dmemory.h"
 #include "cdi.h"
 #include "cdi_int.h"
@@ -33,7 +35,7 @@ static int  MODEL_Debug = 0;   /* If set to 1, debugging */
 static void modelInit(void);
 
 
-static int    modelCompareP ( void * modelptr1, void * modelptr2 );
+static int modelCompareP(void *modelptr1, void *modelptr2);
 static void   modelDestroyP ( void * modelptr );
 static void   modelPrintP   ( void * modelptr, FILE * fp );
 static int    modelGetSizeP ( void * modelptr, void *context);
@@ -113,8 +115,9 @@ void modelDefaultEntries ( void )
   instID  = institutInq(  0,   1, "NCEP", NULL);
   resH[9] = modelDef(instID,  80, "T62L28MRF");
 
+  /* pre-defined models are not synchronized */
   for ( i = 0; i < nDefModels ; i++ )
-    reshSetStatus(resH[i], &modelOps, RESH_PRE_ASSIGNED);
+    reshSetStatus(resH[i], &modelOps, RESH_IN_USE);
 }
 
 static
@@ -247,9 +250,15 @@ char *modelInqNamePtr(int modelID)
 }
 
 
-int  modelCompareP ( void * modelptr1, void * modelptr2 )
+static int
+modelCompareP(void *modelptr1, void *modelptr2)
 {
-  return 0;
+  model_t *model1 = modelptr1, *model2 = modelptr2;
+  int diff = (namespaceResHDecode(model1->instID).idx
+              != namespaceResHDecode(model2->instID).idx)
+    | (model1->modelgribID != model2->modelgribID)
+    | (strcmp(model1->name, model2->name) != 0);
+  return diff;
 }
 
 
@@ -292,10 +301,11 @@ enum {
 
 static int modelGetSizeP(void * modelptr, void *context)
 {
-  model_t *p = (model_t*) modelptr;
-  int txsize = serializeGetSize(model_nints, DATATYPE_INT, context)
-    + serializeGetSize(p->name?strlen(p->name) + 1:0, DATATYPE_TXT, context);
-  return txsize;
+  model_t *p = (model_t*)modelptr;
+  size_t txsize = (size_t)serializeGetSize(model_nints, DATATYPE_INT, context)
+    + (size_t)serializeGetSize(p->name?(int)strlen(p->name) + 1:0, DATATYPE_TXT, context);
+  xassert(txsize <= INT_MAX);
+  return (int)txsize;
 }
 
 
@@ -321,8 +331,9 @@ modelUnpack(void *buf, int size, int *position, int originNamespace, void *conte
   serializeUnpack(buf, size, position, tempbuf, model_nints, DATATYPE_INT, context);
   if (tempbuf[3] != 0)
     {
-      name = (char*) xmalloc(tempbuf[3]);
-      serializeUnpack(buf, size, position, name, tempbuf[3], DATATYPE_TXT, context);
+      name = (char *)xmalloc((size_t)tempbuf[3]);
+      serializeUnpack(buf, size, position,
+                      name, tempbuf[3], DATATYPE_TXT, context);
     }
   else
     {

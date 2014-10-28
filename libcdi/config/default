@@ -19,19 +19,19 @@ case "${HOSTNAME}" in
                     --enable-swig \
                     --enable-python \
                     --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
+                    --with-grib_api=$HOME/local/gribapi-1.12.3 \
                     --with-netcdf=$HOME/local \
                     --with-szlib=$HOME/local \
 	            CC=icc CFLAGS="-g -D_REENTRANT -Wall -O3 -march=native -Df2cFortran -fp-model source"
 	;;
-    bailung*)
+    bailung*|d133*|d134*)
 	./configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     --enable-iso-c-interface \
                     --enable-swig \
                     --enable-python \
                     --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
+                    --with-grib_api=$HOME/local/gribapi-1.12.3 \
                     --with-netcdf=$HOME/local \
                     --with-szlib=$HOME/local \
 	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -Df2cFortran"

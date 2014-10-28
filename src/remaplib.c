@@ -588,13 +588,13 @@ void grid_check_lat_borders_rad(int n, double *ybounds)
 {
   if ( ybounds[0] > ybounds[n-1] )
     {
-      if ( RAD2DEG*ybounds[0]   >  88 ) ybounds[0]   =  PIH;
-      if ( RAD2DEG*ybounds[n-1] < -88 ) ybounds[n-1] = -PIH;
+      if ( RAD2DEG*ybounds[0]   >  PIH ) ybounds[0]   =  PIH;
+      if ( RAD2DEG*ybounds[n-1] < -PIH ) ybounds[n-1] = -PIH;
     }
   else
     {
-      if ( RAD2DEG*ybounds[0]   < -88 ) ybounds[0]   = -PIH;
-      if ( RAD2DEG*ybounds[n-1] >  88 ) ybounds[n-1] =  PIH;
+      if ( RAD2DEG*ybounds[0]   < -PIH ) ybounds[0]   = -PIH;
+      if ( RAD2DEG*ybounds[n-1] >  PIH ) ybounds[n-1] =  PIH;
     }
 }
 
@@ -678,8 +678,11 @@ void remap_define_grid(int map_type, int gridID, remapgrid_t *grid)
 
   grid->dims[0] = gridInqXsize(gridID);
   grid->dims[1] = gridInqYsize(gridID);
-  if ( grid->dims[0] == 0 ) cdoAbort("%s grid without longitude coordinates!", gridNamePtr(gridInqType(grid->gridID)));
-  if ( grid->dims[1] == 0 ) cdoAbort("%s grid without latitude coordinates!", gridNamePtr(gridInqType(grid->gridID)));
+  if ( gridInqType(grid->gridID) != GRID_UNSTRUCTURED )
+    {
+      if ( grid->dims[0] == 0 ) cdoAbort("%s grid without longitude coordinates!", gridNamePtr(gridInqType(grid->gridID)));
+      if ( grid->dims[1] == 0 ) cdoAbort("%s grid without latitude coordinates!", gridNamePtr(gridInqType(grid->gridID)));
+    }
 
   grid->is_cyclic = gridIsCircular(gridID);
 
@@ -982,29 +985,29 @@ void remap_vars_init(int map_type, long src_grid_size, long tgt_grid_size, remap
 #if defined(_OPENMP)
   if ( ompNumThreads > 1 )
     {
-      if      ( map_type == MAP_TYPE_CONSERV   ) rv->sort_add = TRUE;
+      if      ( map_type == MAP_TYPE_CONSERV     ) rv->sort_add = TRUE;
       else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_BILINEAR  ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_BICUBIC   ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_DISTWGT   ) rv->sort_add = TRUE;
+      else if ( map_type == MAP_TYPE_BILINEAR    ) rv->sort_add = TRUE;
+      else if ( map_type == MAP_TYPE_BICUBIC     ) rv->sort_add = TRUE;
+      else if ( map_type == MAP_TYPE_DISTWGT     ) rv->sort_add = TRUE;
       else cdoAbort("Unknown mapping method!");
     }
   else
 #endif
     {
-      if      ( map_type == MAP_TYPE_CONSERV   ) rv->sort_add = TRUE;
+      if      ( map_type == MAP_TYPE_CONSERV     ) rv->sort_add = TRUE;
       else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_BILINEAR  ) rv->sort_add = FALSE;
-      else if ( map_type == MAP_TYPE_BICUBIC   ) rv->sort_add = FALSE;
-      else if ( map_type == MAP_TYPE_DISTWGT   ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_BILINEAR    ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_BICUBIC     ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_DISTWGT     ) rv->sort_add = FALSE;
       else cdoAbort("Unknown mapping method!");
     }
 
-  if      ( map_type == MAP_TYPE_CONSERV   ) rv->num_wts = 3;
+  if      ( map_type == MAP_TYPE_CONSERV     ) rv->num_wts = 3;
   else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->num_wts = 1;
-  else if ( map_type == MAP_TYPE_BILINEAR  ) rv->num_wts = 1;
-  else if ( map_type == MAP_TYPE_BICUBIC   ) rv->num_wts = 4;
-  else if ( map_type == MAP_TYPE_DISTWGT   ) rv->num_wts = 1;
+  else if ( map_type == MAP_TYPE_BILINEAR    ) rv->num_wts = 1;
+  else if ( map_type == MAP_TYPE_BICUBIC     ) rv->num_wts = 4;
+  else if ( map_type == MAP_TYPE_DISTWGT     ) rv->num_wts = 1;
   else cdoAbort("Unknown mapping method!");
 
    /*
@@ -1248,7 +1251,6 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
 #if defined(_OPENMP)
   double **src_cls2;
   double **src_wts2;
-  int ompthID;
 #endif
 
   for ( i = 0; i < dst_size; ++i ) dst_array[i] = missval;
@@ -1276,13 +1278,13 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(dst_size, src_cls2, src_wts2, num_links, dst_add, src_add, src_array, map_wts, num_wts, dst_array, max_cls)					\
-  private(i, n, k, ompthID, src_cls, src_wts, ncls, imax, wts) \
+  private(i, n, k, src_cls, src_wts, ncls, imax, wts) \
   schedule(dynamic,1)
 #endif
   for ( i = 0; i < dst_size; ++i )
     {
 #if defined(_OPENMP)
-      ompthID = omp_get_thread_num();
+      int ompthID = cdo_omp_get_thread_num();
       src_cls = src_cls2[ompthID];
       src_wts = src_wts2[ompthID];
 #endif

@@ -145,9 +145,7 @@ int intersect(double pix, double piy, double pjx, double pjy,
 	     ccw(pkx, pky, plx, ply, pjx, pjy) <= 0 ) );
 }
 
-#ifndef MAX_CORNERS 
-#define MAX_CORNERS 8+1
-#endif
+static
 void verify_grid(int gridtype, int gridsize, int ncorner,
 		double *grid_center_lon, double *grid_center_lat,
 		double *grid_corner_lon, double *grid_corner_lat)
@@ -156,11 +154,12 @@ void verify_grid(int gridtype, int gridsize, int ncorner,
   int l0;
   int nout;
   int isinside, convex, alone, isnegative;
-  int cuts[MAX_CORNERS][MAX_CORNERS];  
+  const int mnv = ncorner+1;
+  int cuts[mnv][mnv];  
   int *alone_cell;          
   int check_corners;
   double lon, lat = 0;
-  double lon_bounds[MAX_CORNERS], lat_bounds[MAX_CORNERS];
+  double lon_bounds[mnv], lat_bounds[mnv];
   double area, sumarea;
 
   alone_cell = (int*) malloc(gridsize*ncorner*sizeof(int));
@@ -385,7 +384,7 @@ void verify_grid(int gridtype, int gridsize, int ncorner,
 
   if ( nout )
     cdoWarning("%d of %d cells are not Convex!", nout, gridsize);
-  
+
   if ( check_corners )
     {
       /* 

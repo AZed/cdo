@@ -47,6 +47,8 @@ void *Splitrec(void *argument)
 
   cdoInitialize(argument);
 
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
+
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));

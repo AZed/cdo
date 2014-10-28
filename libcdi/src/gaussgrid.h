@@ -1,7 +1,7 @@
 #ifndef _GAUSSGRID_H
 #define _GAUSSGRID_H
 
-void   gaussaw(double *restrict pa, double *restrict pw, int nlat);
+void   gaussaw(double *restrict pa, double *restrict pw, size_t nlat);
 
 #endif  /* _GAUSSGRID_H */
 /*

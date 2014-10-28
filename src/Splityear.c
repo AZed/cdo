@@ -54,6 +54,8 @@ void *Splityear(void *argument)
 
   cdoInitialize(argument);
 
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
+
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   memset(cyear, 0, MAX_YEARS*sizeof(int));

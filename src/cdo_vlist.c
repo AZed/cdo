@@ -175,23 +175,26 @@ void vlistCompare(int vlistID1, int vlistID2, int flag)
 
   for ( varID = 0; varID < nvars; varID++ )
     {
-      if ( flag & CMP_CODE )
-	if ( vlistInqVarCode(vlistID1, varID) != vlistInqVarCode(vlistID2, varID) )
-	  cdoAbort("Input streams have different structure!");
-
-      if ( (flag & CMP_NAME) && nvars > 1 )
+      if ( nvars > 1 )
 	{
-	  char name1[CDI_MAX_NAME], name2[CDI_MAX_NAME];
-	  vlistInqVarName(vlistID1, varID, name1);
-	  vlistInqVarName(vlistID2, varID, name2);
-	  strtolower(name1);
-	  strtolower(name2);
-	  if ( strcmp(name1, name2) != 0 )
+	  if ( flag & CMP_CODE )
+	    if ( vlistInqVarCode(vlistID1, varID) != vlistInqVarCode(vlistID2, varID) )
+	      cdoAbort("Input streams have different structure!");
+
+	  if ( flag & CMP_NAME )
 	    {
-	      cdoWarning("Input streams have different parameters!");
-	      lchecknames = TRUE;
-	      flag -= CMP_NAME;
-	      //    break;
+	      char name1[CDI_MAX_NAME], name2[CDI_MAX_NAME];
+	      vlistInqVarName(vlistID1, varID, name1);
+	      vlistInqVarName(vlistID2, varID, name2);
+	      strtolower(name1);
+	      strtolower(name2);
+	      if ( strcmp(name1, name2) != 0 )
+		{
+		  cdoWarning("Input streams have different parameters!");
+		  lchecknames = TRUE;
+		  flag -= CMP_NAME;
+		  //    break;
+		}
 	    }
 	}
 

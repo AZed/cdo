@@ -21,9 +21,6 @@
       Detrend    detrend         Detrend
 */
 
-#if defined(_OPENMP)
-#  include <omp.h>
-#endif
 
 #include <cdi.h>
 #include "cdo.h"
@@ -94,7 +91,6 @@ void taxisDefDTinfo(int taxisID, dtinfo_t dtinfo)
 
 void *Detrend(void *argument)
 {
-  int ompthID;
   int gridsize;
   int nrecs;
   int gridID, varID, levelID, recID;
@@ -178,15 +174,12 @@ void *Detrend(void *argument)
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
 #if defined(_OPENMP)
-#pragma omp parallel for default(shared) private(i, ompthID, tsID)
+#pragma omp parallel for default(shared) private(i, tsID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined(_OPENMP)
-              ompthID = omp_get_thread_num();
-#else
-              ompthID = 0;
-#endif
+              int ompthID = cdo_omp_get_thread_num();
+
 	      for ( tsID = 0; tsID < nts; tsID++ )
 		ompmem[ompthID].array1[tsID] = vars[tsID][varID][levelID].ptr[i];
 

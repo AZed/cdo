@@ -11,6 +11,7 @@
 #include "vlist.h"
 #include "namespace.h"
 #include "serialize.h"
+#include "resource_handle.h"
 #include "resource_unpack.h"
 #include "taxis.h"
 #include "zaxis.h"
@@ -24,7 +25,8 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
   int unpackBufferPos = 0;
   int numAssociations = 0, sizeAssociations = 16;
   struct streamAssoc *associations
-    = xmalloc(sizeof (associations[0]) * sizeAssociations);
+    = (struct streamAssoc *)xmalloc(sizeof (associations[0])
+                                    * (size_t)sizeAssociations);
 
   while ( unpackBufferPos < unpackBufferSize )
     {
@@ -63,7 +65,7 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
           if (sizeAssociations == numAssociations)
             associations
               = xrealloc(associations,
-                         sizeof (associations[0]) * (sizeAssociations *= 2));
+                         sizeof (associations[0]) * (size_t)(sizeAssociations *= 2));
 	  associations[numAssociations]
             = streamUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
                            originNamespace, context);
@@ -73,6 +75,11 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
           vlistUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
                       originNamespace, context, 1);
 	  break;
+        case RESH_DELETE:
+          serializeUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
+                          &token2, 1, DATATYPE_INT, context);
+          reshDestroy(namespaceAdaptKey(token2, originNamespace));
+          break;
 	default:
 	  xabort ( "TOKEN MAPS NO VALID DATATYPE" );
 	}

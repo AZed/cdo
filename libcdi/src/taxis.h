@@ -42,6 +42,9 @@ double   cdiEncodeTimeval(int date, int time, taxis_t* taxis);
 void     timeval2vtime(double timevalue, taxis_t* taxis, int* vdate, int* vtime);
 double   vtime2timeval(int vdate, int vtime, taxis_t *taxis);
 
+void    ptaxisDefName(taxis_t *taxisptr, const char *name);
+void    ptaxisDefLongname(taxis_t *taxisptr, const char *name);
+void    taxisDestroyKernel(taxis_t *taxisptr);
 #if !defined (SX)
 extern const resOps taxisOps;
 #endif

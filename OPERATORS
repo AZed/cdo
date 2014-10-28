@@ -58,6 +58,8 @@ Operator catalog:
    Splittime     splityear       Split years
    Splittime     splitmon        Split months
    Splitsel      splitsel        Split time selection
+   Distgrid      distgrid        Distribute horizontal grid
+   Collgrid      collgrid        Collect horizontal grid
 -------------------------------------------------------------
    Selection
 -------------------------------------------------------------

@@ -166,13 +166,11 @@ int processSelf(void)
 
 int processNums(void)
 {
-  int pnums = 0;
-
 #if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
 #endif
 
-  pnums = NumProcess;
+  int pnums = NumProcess;
 
 #if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
@@ -184,13 +182,11 @@ int processNums(void)
 
 int processNumsActive(void)
 {
-  int pnums = 0;
-
 #if defined(HAVE_LIBPTHREAD)
   pthread_mutex_lock(&processMutex);
 #endif
 
-  pnums = NumProcessActive;
+  int pnums = NumProcessActive;
 
 #if defined(HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
@@ -210,11 +206,7 @@ void processAddNvals(off_t nvals)
 
 off_t processInqNvals(int processID)
 {
-  off_t nvals = 0;
-
-  nvals = Process[processID].nvals;
-
-  return (nvals);
+  return (Process[processID].nvals);
 }
 
 
@@ -331,15 +323,32 @@ const char *processInqPrompt(void)
 }
 
 #if defined(HAVE_GLOB_H)
+static
+int get_glob_flags(void)
+{
+  int glob_flags = 0;
+
+#if defined (GLOB_NOCHECK)
+  glob_flags |= GLOB_NOCHECK;
+#endif
+#if defined (GLOB_TILDE)
+  glob_flags |= GLOB_TILDE;
+#endif
+
+  return (glob_flags);
+}
+
 /* Convert a wildcard pattern into a list of blank-separated filenames which match the wildcard. */
+static
 argument_t *glob_pattern(const char *restrict wildcard)
 {
   size_t cnt, length = 0;
+  int glob_flags = get_glob_flags();
   glob_t glob_results;
   char **p;
   argument_t *argument = NULL;
 
-  glob(wildcard, GLOB_NOCHECK, 0, &glob_results);
+  glob(wildcard, glob_flags, 0, &glob_results);
 
   /* How much space do we need?  */
   for ( p = glob_results.gl_pathv, cnt = glob_results.gl_pathc; cnt; p++, cnt-- )
@@ -545,20 +554,63 @@ void setStreamNames(int argc, char *argv[])
 }
 
 static
+int find_wildcard(const char *string, size_t len)
+{
+  int status = 0;
+
+  if ( len > 0 )
+    {
+      if ( string[0] == '~' ) status = 1;
+
+      if ( status == 0 )
+	{
+	  for ( size_t i = 0; i < len; ++i )
+	    if ( string[i] == '?' || string[i] == '*' || string[i] == '[' )
+	      {
+		status = 1;
+		break;
+	      }
+	}
+    }
+
+  return status;
+}
+
+
+char *expand_filename(const char *string)
+{
+  char *filename = NULL;
+
+  if ( find_wildcard(string, strlen(string)) )
+    {
+#if defined(HAVE_GLOB_H)
+      int glob_flags = get_glob_flags();
+      glob_t glob_results;
+
+      glob(string, glob_flags, 0, &glob_results);
+
+      if ( glob_results.gl_pathc == 1 ) filename = strdupx(glob_results.gl_pathv[0]);
+
+      globfree(&glob_results);
+#endif
+    }
+
+  return filename;
+}
+
+static
 int expand_wildcards(int processID, int streamCnt)
 {
-  int i;
   const char *streamname0 = Process[processID].streamNames[0].args;
-  int len = strlen(streamname0);
 
-  for ( i = 0; i < len; ++i ) if ( streamname0[i] == '?' || streamname0[i] == '*' || streamname0[i] == '[' ) break;
-  if ( i < len )
+  if ( find_wildcard(streamname0, strlen(streamname0)) )
     {
 #if defined(HAVE_GLOB_H)
       argument_t *glob_arg = glob_pattern(streamname0);
 
       if ( strcmp(streamname0, glob_arg->args) != 0 )
 	{
+	  int i;
 	  streamCnt = streamCnt - 1 + glob_arg->argc;
 
 	  free(Process[processID].streamNames[0].argv);

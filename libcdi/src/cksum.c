@@ -1,10 +1,15 @@
-#include <inttypes.h>
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#ifdef WORDS_BIGENDIAN
+#include <limits.h>
+#endif
+
+#include "cksum.h"
 
 static const uint32_t crctab[] = {
   0x00000000,
@@ -71,18 +76,13 @@ memcrc(const unsigned char *b, size_t n)
  */
 
 
-  register uint32_t i, c, s = 0;
+  uint32_t s = 0;
 
-
-  for (i = n; i > 0; --i) {
-    c = (uint32_t)(*b++);
-    s = (s << 8) ^ crctab[(s >> 24) ^ c];
-  }
-
+  memcrc_r(&s, b, n);
 
   /* Extend with the length of the string. */
   while (n != 0) {
-    c = n & 0377;
+    register uint32_t c = n & 0377;
     n >>= 8;
     s = (s << 8) ^ crctab[(s >> 24) ^ c];
   }
@@ -100,11 +100,11 @@ memcrc_r(uint32_t *state, const unsigned char *block, size_t block_len)
  */
 
 
-  register uint32_t i, c, s = *state;
+  register uint32_t c, s = *state;
   register size_t n = block_len;
   register const unsigned char *b = block;
 
-  for (i = n; i > 0; --i) {
+  for (; n > 0; --n) {
     c = (uint32_t)(*b++);
     s = (s << 8) ^ crctab[(s >> 24) ^ c];
   }
@@ -172,7 +172,7 @@ uint32_t
 memcrc_finish(uint32_t *state, off_t total_size)
 {
   register uint32_t c, s = *state;
-  register off_t n = total_size;
+  register uint64_t n = (uint64_t)total_size;
 
   /* Extend with the length of the string. */
   while (n != 0) {

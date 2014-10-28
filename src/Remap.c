@@ -70,7 +70,7 @@ void get_map_type(int operfunc, int *map_type, int *submap_type, int *num_neighb
       break;
     case REMAPLAF:
     case GENLAF:
-      *map_type = MAP_TYPE_CONSERV;
+      *map_type = MAP_TYPE_CONSERV_YAC;
       *submap_type = SUBMAP_TYPE_LAF;
       break;
     case REMAPSUM:
@@ -108,6 +108,19 @@ int maptype2operfunc(int map_type, int submap_type, int num_neighbors, int remap
 
   if ( map_type == MAP_TYPE_CONSERV )
     {
+      if ( remap_order == 2 )
+	{
+	  operfunc = REMAPCON2;
+	  // cdoPrint("Using remapcon2");
+	}
+      else
+	{
+	  operfunc = REMAPCON;
+	  // cdoPrint("Using remapcon");
+	}
+    }
+  else if ( map_type == MAP_TYPE_CONSERV_YAC )
+    {
       if ( submap_type == SUBMAP_TYPE_LAF )
 	{
 	  operfunc = REMAPLAF;
@@ -115,22 +128,9 @@ int maptype2operfunc(int map_type, int submap_type, int num_neighbors, int remap
 	}
       else
 	{
-	  if ( remap_order == 2 )
-	    {
-	      operfunc = REMAPCON2;
-	      // cdoPrint("Using remapcon2");
-	    }
-	  else
-	    {
-	      operfunc = REMAPCON;
-	      // cdoPrint("Using remapcon");
-	    }
+	  operfunc = REMAPYCON;
+	  // cdoPrint("Using remapycon");
 	}
-    }
-  else if ( map_type == MAP_TYPE_CONSERV_YAC )
-    {
-      operfunc = REMAPYCON;
-      // cdoPrint("Using remapycon");
     }
   else if ( map_type == MAP_TYPE_BILINEAR )
     {
@@ -175,7 +175,7 @@ void print_remap_info(int operfunc, remapgrid_t *src_grid, remapgrid_t *tgt_grid
   else if ( operfunc == REMAPDIS  || operfunc == GENDIS  )  strcpy(line, "SCRIP distance-weighted average");
   else if ( operfunc == REMAPCON  || operfunc == GENCON  )  strcpy(line, "SCRIP first order conservative");
   else if ( operfunc == REMAPCON2 || operfunc == GENCON2 )  strcpy(line, "SCRIP second order conservative");
-  else if ( operfunc == REMAPLAF  || operfunc == GENLAF  )  strcpy(line, "SCRIP largest area fraction");
+  else if ( operfunc == REMAPLAF  || operfunc == GENLAF  )  strcpy(line, "YAC largest area fraction");
   else if ( operfunc == REMAPYCON || operfunc == GENYCON )  strcpy(line, "YAC first order conservative");
   else                                                      strcpy(line, "Unknown");
 
@@ -1069,10 +1069,10 @@ void *Remap(void *argument)
 		{
 		  print_remap_info(operfunc, &remaps[r].src_grid, &remaps[r].tgt_grid, nmiss1);
 
-		  if      ( map_type == MAP_TYPE_CONSERV   ) scrip_remap_weights_conserv(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
-		  else if ( map_type == MAP_TYPE_BILINEAR  ) scrip_remap_weights_bilinear(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
-		  else if ( map_type == MAP_TYPE_BICUBIC   ) scrip_remap_weights_bicubic(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
-		  else if ( map_type == MAP_TYPE_DISTWGT   ) scrip_remap_weights_distwgt(num_neighbors, &remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
+		  if      ( map_type == MAP_TYPE_CONSERV     ) scrip_remap_weights_conserv(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
+		  else if ( map_type == MAP_TYPE_BILINEAR    ) scrip_remap_weights_bilinear(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
+		  else if ( map_type == MAP_TYPE_BICUBIC     ) scrip_remap_weights_bicubic(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
+		  else if ( map_type == MAP_TYPE_DISTWGT     ) scrip_remap_weights_distwgt(num_neighbors, &remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
 		  else if ( map_type == MAP_TYPE_CONSERV_YAC ) remap_weights_conserv(&remaps[r].src_grid, &remaps[r].tgt_grid, &remaps[r].vars);
 
 		  if ( remaps[r].vars.num_links != remaps[r].vars.max_links )

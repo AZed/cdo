@@ -1,6 +1,8 @@
+#include <limits.h>
 #include <stdio.h>
 
 #include "cdi.h"  		/* CALENDAR_ */
+#include "error.h"
 #include "timebase.h"
 
 
@@ -112,17 +114,17 @@ static int encode_day(int dpy, int year, int month, int day)
 {
   int i;
   int *dpm = NULL;
-  double rval;
-
-  rval = dpy * year + day;
+  long rval = (long)dpy * year + day;
 
   if      ( dpy == 360 ) dpm = month_360;
   else if ( dpy == 365 ) dpm = month_365;
   else if ( dpy == 366 ) dpm = month_366;
-  
-  if ( dpm ) for ( i = 0; i < month-1; i++ ) rval += dpm[i];
 
-  return (rval);
+  if ( dpm ) for ( i = 0; i < month-1; i++ ) rval += dpm[i];
+  if (rval > INT_MAX || rval < INT_MIN)
+    Error("Unhandled date: %ld", rval);
+
+  return (int)rval;
 }
 
 

@@ -5,87 +5,115 @@
 #
 CONFPATH=`echo $0 | cut -c 1-6`
 if [ "$CONFPATH" != "../../" ] ; then
-CONFPATH='./'
+  CONFPATH='./'
 fi
 #
-if test -z "$1" ; then
-  HOSTNAME=`hostname`
-else
-  HOSTNAME=$1
-fi
+COMP=""
+HOSTNAME=`hostname`
+#
+while test $# != 0
+do
+  case $1 in
+      CC=?*)
+          COMP=`expr "X$1" : 'X[^=]*=\(.*\)'`
+          ;;
+      *)
+          HOSTNAME=$1
+          ;;
+  esac
+  shift
+done
 #
 set -x
 #
 case "${HOSTNAME}" in
-    icc)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --enable-maintainer-mode \
-                    --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
-                    --with-netcdf=$HOME/local \
-                    --with-hdf5=$HOME/local \
-                    --with-szlib=$HOME/local \
-                    --with-udunits2=$HOME/local/udunits-2.1.24 \
-                    --with-proj=/opt/local \
-                    --with-curl=/opt/local \
-	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -openmp -fp-model source -fast-transcendentals" \
-                    LIBS="-L/opt/local/lib -lopenjpeg"
-	;;
 # i386-apple-darwin10
-    bailung*)
-	${CONFPATH}configure --prefix=$HOME/local \
+    bailung*|d133*|d134*)
+        CDOLIBS="--with-fftw3 \
+                 --with-jasper=$HOME/local \
+                 --with-grib_api=$HOME/local/gribapi-1.12.3 \
+                 --with-netcdf=$HOME/local \
+                 --with-hdf5=$HOME/local \
+                 --with-szlib=$HOME/local \
+                 --with-udunits2=$HOME/local/udunits-2.1.24 \
+                 --with-proj=/opt/local \
+                 --with-curl=/opt/local"
+
+        if  test "$COMP" = icc ; then
+	  ${CONFPATH}configure  \
+                    $CDOLIBS \
+                    LIBS="-L/opt/local/lib -lopenjpeg" \
+	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+        elif  test "$COMP" = clang ; then
+	  ${CONFPATH}configure  \
+                    $CDOLIBS \
+                    LIBS="-L/opt/local/lib -lopenjpeg" \
+	            CC=clang CFLAGS="-g -Wall -O3"
+        else
+	  ${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
-                    --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
-                    --with-netcdf=$HOME/local \
-                    --with-hdf5=$HOME/local \
-                    --with-szlib=$HOME/local \
-                    --with-udunits2=$HOME/local/udunits-2.1.24 \
-                    --with-proj=/opt/local \
-                    --with-curl=/opt/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -std=c99 -pedantic -O3 -march=native" \
-                    LIBS="-L/opt/local/lib -lopenjpeg"
+                    $CDOLIBS \
+                    LIBS="-L/opt/local/lib -lopenjpeg" \
+	            CC=gcc CFLAGS="-g -pipe -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fstack-protector"
 #                    --with-libxml2=/usr 
-#                    --with-magics=/Users/m214003/local/magics-2.14.9 
+#                    --with-magics=/Users/m214003/local/magics-2.14.9
+        fi
 	;;
     hama*)
-	${CONFPATH}configure --prefix=$HOME/local \
+        CDOLIBS="--with-fftw3 \
+                 --with-jasper=/opt/local \
+                 --with-grib_api=$HOME/local/gribapi-1.9.16 \
+                 --with-netcdf=/opt/local \
+                 --with-hdf5=/opt/local \
+                 --with-szlib=$HOME/local \
+                 --with-proj=/opt/local \
+                 --with-curl=/opt/local"
+
+        if  test "$COMP" = icc ; then
+	  ${CONFPATH}configure --prefix=$HOME/local \
+                    $CDOLIBS \
+	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -openmp -fp-model source -fast-transcendentals"
+        elif  test "$COMP" = clang ; then
+	  ${CONFPATH}configure  \
+                    $CDOLIBS \
+	            CC=clang CFLAGS="-g -Wall -O3"
+        else
+	  ${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
-                    --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
-                    --with-netcdf=/opt/local \
-                    --with-hdf5=/opt/local \
-                    --with-szlib=$HOME/local \
-                    --with-proj=/opt/local \
-                    --with-curl=/opt/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native"
+                    $CDOLIBS \
+	            CC=gcc CFLAGS="-g -pipe -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fstack-protector"
 #                    --with-libxml2=/usr \
 #                    --with-magics=/Users/m214003/local/Magics-2.18.14nio \
-	;;
-# ia64-xxx-linux
-    ds*)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=/pool/ia64/netcdf/netcdf-3.6.0-p1 \
-                    --with-szlib=$HOME/local \
-                    CC=icc CFLAGS="-g -O2 -Wall -fno-alias -DMIN_BUF_SIZE=4194304"
-	;;
-    wasser*)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=/home/dkrz/m214089/local/ia64 \
-                    CC=icc CFLAGS="-g -O2 -Wall -fno-alias"
+        fi
 	;;
 # x86_64-squeeze-x64-linux
     thunder*)
-        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
-                    --enable-all-static \
-                    --with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
+        CDOLIBS="--with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
                     --with-grib_api=/sw/squeeze-x64/grib_api-1.9.9-static \
                     --with-netcdf=/sw/squeeze-x64/netcdf-4.2-static \
                     --with-hdf5=/sw/squeeze-x64/hdf5-1.8.8-static \
                     --with-szlib=/sw/squeeze-x64/szip-2.1 \
                     --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
-                    --with-proj=/sw/squeeze-x64/proj-4.7.0 \
-                    CC=gcc CFLAGS='-g -Wall -O3 -march=native'
+                    --with-proj=/sw/squeeze-x64/proj-4.7.0"
+
+        if  test "$COMP" = icc ; then
+          ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
+                    --enable-all-static \
+                    --with-fftw3 \
+                    $CDOLIBS \
+	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+        elif  test "$COMP" = pgcc ; then
+          ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
+                    --enable-all-static \
+                    $CDOLIBS \
+	            CC=pgcc CFLAGS="-g -fast"
+	else
+          ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
+                    --enable-all-static \
+                    --with-fftw3 \
+                    $CDOLIBS \
+                    CC=gcc CFLAGS='-g -Wall -O3 -mavx'
+	fi
 	;;
 # x86_64-lenny-linux-gnu
     squall*)
@@ -99,6 +127,18 @@ case "${HOSTNAME}" in
                     --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
                     --with-proj=/sw/squeeze-x64/proj-4.7.0 \
                     CC=gcc CFLAGS='-g -Wall -O3'
+	;;
+# ia64-xxx-linux
+    ds*)
+	${CONFPATH}configure --prefix=$HOME/local \
+                    --with-netcdf=/pool/ia64/netcdf/netcdf-3.6.0-p1 \
+                    --with-szlib=$HOME/local \
+                    CC=icc CFLAGS="-g -O2 -Wall -fno-alias -DMIN_BUF_SIZE=4194304"
+	;;
+    wasser*)
+	${CONFPATH}configure --prefix=$HOME/local \
+                    --with-netcdf=/home/dkrz/m214089/local/ia64 \
+                    CC=icc CFLAGS="-g -O2 -Wall -fno-alias"
 	;;
 # x86_64-archlinux
     thingol*)
@@ -170,23 +210,15 @@ case "${HOSTNAME}" in
         LDFLAGS="-lpng"
         export LDFLAGS
 	${CONFPATH}configure --prefix=$HOME/local/centos58-x64 \
+                    --with-proj=/sw/centos58-x64/proj-4.7.0 \
+                    --with-hdf5=/sw/centos58-x64/hdf5-1.8.10-patch1 \
+                    --with-udunits2=/sw/centos58-x64/udunits-2.1.19 \
                     --with-jasper=/sw/centos58-x64/jasper-1.900.1 \
                     --with-grib_api=/sw/centos58-x64/grib_api-1.9.0-static \
                     --with-netcdf=/sw/centos58-x64/netcdf-4.2.1.1 \
                     --with-szlib=/sw/centos58-x64/szip-2.1 \
                     --with-zlib=/usr \
-	            CC=gcc44 CFLAGS="-g -Wall -O3"
-	;;
-# powerpc-ibm-aix5.2.0.0
-    ecga*)
-
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-jasper=/usr/local/lib/metaps/lib/grib_api/jasper_64 \
-                    --with-grib_api=$HOME/gribapi/1.9.8 \
-                    --with-netcdf=/usr/local/apps/netCDF/3.6.2/LP64 \
-                    --with-szlib=$HOME/local \
-                    AR="ar -X 64"  LDFLAGS="-brtl" \
-	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
+	            CC=gcc CFLAGS="-g -Wall -O3"
 	;;
 # powerpc-ibm-aix5.3.0.0
     blizzard*)
@@ -202,13 +234,6 @@ case "${HOSTNAME}" in
                     AR="ar -X 64"  LDFLAGS="-brtl -R/sw/aix61/openssl-1.0.0d/lib:/sw/aix61/zlib-1.2.6/lib" \
  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
 	;;
-    vip*)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=$HOME/local \
-                    --with-szlib=$HOME/local \
-                    AR="ar -X 64"  LDFLAGS="-brtl" \
-	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
-	;;
 # powerpc-ibm-aix6.0.0.0
     c1a*)
 	${CONFPATH}configure --prefix=$HOME/local \
@@ -218,14 +243,15 @@ case "${HOSTNAME}" in
                     AR="ar -X 64"  LDFLAGS="-brtl" \
 	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
 	;;
-# powerpc-ibm-aix6.0.0.0
-    dwd | p???et01)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=/uhome/mpischul/local \
-                    AR="ar -X 64"  LDFLAGS="-brtl" \
-	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
-	;;
     *)
 	echo "configuration for hostname $HOSTNAME not found!"
+	;;
+# x86_64-unknown-linux-gnu (cray)
+    brisi*)
+        ${CONFPATH}configure  \
+                    --with-netcdf=/opt/cray/netcdf/4.3.2/INTEL/140 \
+                    --with-hdf5=/opt/cray/hdf5/1.8.13/INTEL/140 \
+                    --with-fftw3 \
+                    CC=gcc CFLAGS='-g -Wall -O3'
 	;;
 esac

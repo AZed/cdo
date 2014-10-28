@@ -65,7 +65,6 @@ static const resOps gridOps = {
   gridTxCode
 };
 
-
 static int  GRID_Debug = 0;   /* If set to 1, debugging */
 
 
@@ -212,7 +211,7 @@ int gridSize(void)
   return reshCountType ( &gridOps );
 }
 
-
+// used also in CDO
 void gridGenXvals(int xsize, double xfirst, double xlast, double xinc, double *xvals)
 {
   if ( (! (fabs(xinc) > 0)) && xsize > 1 )
@@ -235,32 +234,28 @@ void gridGenXvals(int xsize, double xfirst, double xlast, double xinc, double *x
 static
 void calc_gaussgrid(double *yvals, int ysize, double yfirst, double ylast)
 {
-  long yhsize;
-
-  double *yw = (double *)xmalloc(ysize*sizeof(double));
-  gaussaw(yvals, yw, ysize);
+  double *yw = (double *)xmalloc((size_t)ysize * sizeof(double));
+  gaussaw(yvals, yw, (size_t)ysize);
   free(yw);
-  for (long i = 0; i < ysize; i++ )
+  for (int i = 0; i < ysize; i++ )
     yvals[i] = asin(yvals[i])/M_PI*180.0;
 
   if ( yfirst < ylast && yfirst > -90.0 && ylast < 90.0 )
     {
-      double ytmp;
-      yhsize = ysize/2;
-      for (long i = 0; i < yhsize; i++ )
+      int yhsize = ysize/2;
+      for (int i = 0; i < yhsize; i++ )
         {
-          ytmp = yvals[i];
+          double ytmp = yvals[i];
           yvals[i] = yvals[ysize-i-1];
           yvals[ysize-i-1] = ytmp;
         }
     }
 }
 
-
+// used also in CDO
 void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double yinc, double *yvals)
 {
-  long i;
-  double deleps = 0.002;
+  const double deleps = 0.002;
 
   if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_GAUSSIAN_REDUCED )
     {
@@ -279,8 +274,9 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
 		/* printf("%g %g %g %g %g %d\n", ylast, yfirst, ylast-yfirst,yinc, 180/yinc, ny); */
 		if ( ny > ysize && ny < 4096 )
 		  {
-		    ytmp = (double *) malloc(ny*sizeof(double));
+		    ytmp = (double *)xmalloc((size_t)ny * sizeof (double));
 		    calc_gaussgrid(ytmp, ny, yfirst, ylast);
+                    int i;
 		    for ( i = 0; i < (ny-ysize); i++ )
 		      if ( fabs(ytmp[i] - yfirst) < deleps ) break;
 
@@ -292,12 +288,12 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
 
 		if ( lfound )
 		  {
-		    for ( i = 0; i < ysize; i++ ) yvals[i] = ytmp[i+nstart];
+		    for (int i = 0; i < ysize; i++) yvals[i] = ytmp[i+nstart];
 		  }
 		else
 		  {
 		    Warning("Cannot calculate gaussian latitudes for lat1 = %g latn = %g!", yfirst, ylast);
-		    for ( i = 0; i < ysize; i++ ) yvals[i] = 0;
+		    for (int i = 0; i < ysize; i++ ) yvals[i] = 0;
 		    yvals[0] = yfirst;
 		    yvals[ysize-1] = ylast;
 		  }
@@ -339,7 +335,7 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
 
       if ( yfirst > ylast && yinc > 0 ) yinc = -yinc;
 
-      for ( i = 0; i < ysize; i++ )
+      for (int i = 0; i < ysize; i++ )
         yvals[i] = yfirst + i*yinc;
     }
   /*
@@ -390,19 +386,16 @@ gridDefYvals(gridID, lats);
 */
 int gridCreate(int gridtype, int size)
 {
-  int gridID;
-  grid_t *gridptr;
-
   if ( CDI_Debug ) Message("gridtype=%s  size=%d", gridNamePtr(gridtype), size);
 
   if ( size < 0 || size > INT_MAX ) Error("Grid size (%d) out of bounds (0 - %d)!", size, INT_MAX);
 
   gridInit();
 
-  gridptr = gridNewEntry(CDI_UNDEFID);
+  grid_t *gridptr = gridNewEntry(CDI_UNDEFID);
   if ( ! gridptr ) Error("No memory");
 
-  gridID = gridptr->self;
+  int gridID = gridptr->self;
 
   if ( CDI_Debug ) Message("gridID: %d", gridID);
 
@@ -529,9 +522,7 @@ void gridDestroyKernel( grid_t * gridptr )
 */
 void gridDestroy(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   gridDestroyKernel ( gridptr );
 }
@@ -577,20 +568,15 @@ The function @func{gridDefXname} defines the name of a X-axis.
 */
 void gridDefXname(int gridID, const char *xname)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning ("%s", "Operation not executed." );
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
   if ( xname )
-    strcpy(gridptr->xname, xname);
+    {
+      strcpy(gridptr->xname, xname);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -609,18 +595,14 @@ The function @func{gridDefXlongname} defines the longname of a X-axis.
 */
 void gridDefXlongname(int gridID, const char *xlongname)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning ("%s", "Operation not executed." );
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
+  grid_check_ptr(gridID, gridptr);
 
   if ( xlongname )
-    strcpy(gridptr->xlongname, xlongname);
+    {
+      strcpy(gridptr->xlongname, xlongname);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -639,20 +621,15 @@ The function @func{gridDefXunits} defines the units of a X-axis.
 */
 void gridDefXunits(int gridID, const char *xunits)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed." );
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
   if ( xunits )
-    strcpy(gridptr->xunits, xunits);
+    {
+      strcpy(gridptr->xunits, xunits);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -671,20 +648,15 @@ The function @func{gridDefYname} defines the name of a Y-axis.
 */
 void gridDefYname(int gridID, const char *yname)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
   if ( yname )
-    strcpy(gridptr->yname, yname);
+    {
+      strcpy(gridptr->yname, yname);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -703,20 +675,15 @@ The function @func{gridDefYlongname} defines the longname of a Y-axis.
 */
 void gridDefYlongname(int gridID, const char *ylongname)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
   if ( ylongname )
-    strcpy(gridptr->ylongname, ylongname);
+    {
+      strcpy(gridptr->ylongname, ylongname);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -735,20 +702,15 @@ The function @func{gridDefYunits} defines the units of a Y-axis.
 */
 void gridDefYunits(int gridID, const char *yunits)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
   if ( yunits )
-    strcpy(gridptr->yunits, yunits);
+    {
+      strcpy(gridptr->yunits, yunits);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -772,9 +734,7 @@ The function @func{gridInqXname} returns the name of a X-axis.
 */
 void gridInqXname(int gridID, char *xname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -802,9 +762,7 @@ The function @func{gridInqXlongname} returns the longname of a X-axis.
 */
 void gridInqXlongname(int gridID, char *xlongname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -832,9 +790,7 @@ The function @func{gridInqXunits} returns the units of a X-axis.
 */
 void gridInqXunits(int gridID, char *xunits)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -844,9 +800,7 @@ void gridInqXunits(int gridID, char *xunits)
 
 void gridInqXstdname(int gridID, char *xstdname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -874,9 +828,7 @@ The function @func{gridInqYname} returns the name of a Y-axis.
 */
 void gridInqYname(int gridID, char *yname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -904,9 +856,7 @@ The function @func{gridInqYlongname} returns the longname of a Y-axis.
 */
 void gridInqYlongname(int gridID, char *ylongname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -934,9 +884,7 @@ The function @func{gridInqYunits} returns the units of a Y-axis.
 */
 void gridInqYunits(int gridID, char *yunits)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -945,9 +893,7 @@ void gridInqYunits(int gridID, char *yunits)
 
 void gridInqYstdname(int gridID, char *ystdname)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -976,9 +922,7 @@ The valid CDI grid types are @func{GRID_GENERIC}, @func{GRID_GAUSSIAN},
 */
 int gridInqType(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1004,14 +948,11 @@ The function @func{gridInqSize} returns the size of a Grid.
 */
 int gridInqSize(int gridID)
 {
-  int size = 0;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
+  int size = gridptr->size;
 
   if ( ! size )
     {
@@ -1050,9 +991,7 @@ int nsp2trunc(int nsp)
 
 int gridInqTrunc(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1072,19 +1011,15 @@ int gridInqTrunc(int gridID)
 
 void gridDefTrunc(int gridID, int trunc)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->trunc = trunc;
+  if (gridptr->trunc != trunc)
+    {
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+      gridptr->trunc = trunc;
+    }
 }
 
 /*
@@ -1103,15 +1038,7 @@ The function @func{gridDefXsize} defines the number of values of a X-axis.
 */
 void gridDefXsize(int gridID, int xsize)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1121,7 +1048,11 @@ void gridDefXsize(int gridID, int xsize)
   if ( gridInqType(gridID) == GRID_UNSTRUCTURED && xsize != gridInqSize(gridID) )
     Error("xsize %d must be equal to gridsize %d for gridtype: UNSTRUCTURED", xsize, gridInqSize(gridID));
 
-  gridptr->xsize = xsize;
+  if (gridptr->xsize != xsize)
+    {
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+      gridptr->xsize = xsize;
+    }
 
   if ( gridInqType(gridID) != GRID_UNSTRUCTURED )
     {
@@ -1144,19 +1075,15 @@ void gridDefXsize(int gridID, int xsize)
 */
 void gridDefPrec(int gridID, int prec)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->prec = prec;
+  if (gridptr->prec != prec)
+    {
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+      gridptr->prec = prec;
+    }
 }
 
 /*
@@ -1171,9 +1098,7 @@ void gridDefPrec(int gridID, int prec)
 */
 int gridInqPrec(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1198,9 +1123,7 @@ The function @func{gridInqXsize} returns the number of values of a X-axis.
 */
 int gridInqXsize(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1223,15 +1146,7 @@ The function @func{gridDefYsize} defines the number of values of a Y-axis.
 */
 void gridDefYsize(int gridID, int ysize)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1241,7 +1156,11 @@ void gridDefYsize(int gridID, int ysize)
   if ( gridInqType(gridID) == GRID_UNSTRUCTURED && ysize != gridInqSize(gridID) )
     Error("ysize %d must be equal gridsize %d for gridtype: UNSTRUCTURED", ysize, gridInqSize(gridID));
 
-  gridptr->ysize = ysize;
+  if (gridptr->ysize != ysize)
+    {
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+      gridptr->ysize = ysize;
+    }
 
   if ( gridInqType(gridID) != GRID_UNSTRUCTURED )
     {
@@ -1270,9 +1189,7 @@ The function @func{gridInqYsize} returns the number of values of a Y-axis.
 */
 int gridInqYsize(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1296,19 +1213,15 @@ of a Gaussian grid.
 */
 void gridDefNP(int gridID, int np)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning ("%s", "Operation not executed." );
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->np = np;
+  if (gridptr->np != np)
+    {
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+      gridptr->np = np;
+    }
 }
 
 /*
@@ -1330,9 +1243,7 @@ of a Gaussian grid.
 */
 int gridInqNP(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1351,22 +1262,14 @@ int gridInqNP(int gridID)
 */
 void gridDefRowlon(int gridID, int nrowlon, const int *rowlon)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->rowlon = (int *) malloc(nrowlon*sizeof(int));
+  gridptr->rowlon = (int *)xmalloc((size_t)nrowlon * sizeof(int));
   gridptr->nrowlon = nrowlon;
-
-  memcpy(gridptr->rowlon, rowlon, nrowlon*sizeof(int));
+  memcpy(gridptr->rowlon, rowlon, (size_t)nrowlon * sizeof(int));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 /*
@@ -1381,35 +1284,30 @@ void gridDefRowlon(int gridID, int nrowlon, const int *rowlon)
 */
 void gridInqRowlon(int gridID, int *rowlon)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
   if ( gridptr->rowlon == 0 )  Error("undefined pointer!");
 
-  memcpy(rowlon, gridptr->rowlon, gridptr->nrowlon*sizeof(int));
+  memcpy(rowlon, gridptr->rowlon, (size_t)gridptr->nrowlon * sizeof(int));
 }
 
 
 int gridInqMask(int gridID, int *mask)
 {
-  long size, i;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
+  long size = gridptr->size;
 
   if ( CDI_Debug && size == 0 )
     Warning("Size undefined for gridID = %d", gridID);
 
-  if ( mask && gridptr->mask )
-    for ( i = 0; i < size; ++i )
-      mask[i] = gridptr->mask[i];
+  if (mask && gridptr->mask)
+    for (long i = 0; i < size; ++i)
+      mask[i] = (int)gridptr->mask[i];
 
   if ( gridptr->mask == NULL ) size = 0;
 
@@ -1419,18 +1317,9 @@ int gridInqMask(int gridID, int *mask)
 
 void gridDefMask(int gridID, const int *mask)
 {
-  long size, i;
-  grid_t *gridptr;
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
-
-  size = gridptr->size;
+  long size = gridptr->size;
 
   if ( size == 0 )
     Error("Size undefined for gridID = %d", gridID);
@@ -1446,33 +1335,30 @@ void gridDefMask(int gridID, const int *mask)
   else
     {
       if ( gridptr->mask == NULL )
-	gridptr->mask = (mask_t *) malloc(size*sizeof(mask_t));
+	gridptr->mask = (mask_t *)xmalloc((size_t)size*sizeof(mask_t));
       else if ( CDI_Debug )
 	Warning("grid mask already defined!");
 
-      for ( i = 0; i < size; ++i )
-	gridptr->mask[i] = mask[i];
+      for (long i = 0; i < size; ++i )
+	gridptr->mask[i] = (mask_t)(mask[i] != 0);
     }
 }
 
 
 int gridInqMaskGME(int gridID, int *mask)
 {
-  long size, i;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
+  long size = gridptr->size;
 
   if ( CDI_Debug && size == 0 )
     Warning("Size undefined for gridID = %d", gridID);
 
   if ( mask && gridptr->mask_gme )
-    for ( i = 0; i < size; ++i )
-      mask[i] = gridptr->mask_gme[i];
+    for (long i = 0; i < size; ++i)
+      mask[i] = (int)gridptr->mask_gme[i];
 
   if ( gridptr->mask_gme == NULL ) size = 0;
 
@@ -1482,31 +1368,22 @@ int gridInqMaskGME(int gridID, int *mask)
 
 void gridDefMaskGME(int gridID, const int *mask)
 {
-  long size, i;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
+  long size = gridptr->size;
 
   if ( size == 0 )
     Error("Size undefined for gridID = %d", gridID);
 
   if ( gridptr->mask_gme == NULL )
-    gridptr->mask_gme = (mask_t *) malloc(size*sizeof(mask_t));
+    gridptr->mask_gme = (mask_t *)xmalloc((size_t)size * sizeof (mask_t));
   else if ( CDI_Debug )
     Warning("mask already defined!");
 
-  for ( i = 0; i < size; ++i )
-    gridptr->mask_gme[i] = mask[i];
+  for (long i = 0; i < size; ++i)
+    gridptr->mask_gme[i] = (mask_t)(mask[i] != 0);
 }
 
 /*
@@ -1531,13 +1408,11 @@ Otherwise, 0 is returned and @func{xvals} is empty.
 */
 int gridInqXvals(int gridID, double *xvals)
 {
-  long size;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
+  long size;
   if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
     size = gridptr->size;
   else if ( gridptr->type == GRID_GAUSSIAN_REDUCED )
@@ -1549,7 +1424,7 @@ int gridInqXvals(int gridID, double *xvals)
     Warning("size undefined for gridID = %d", gridID);
 
   if ( size && xvals && gridptr->xvals )
-    memcpy(xvals, gridptr->xvals, size*sizeof(double));
+    memcpy(xvals, gridptr->xvals, (size_t)size * sizeof (double));
 
   if ( gridptr->xvals == NULL ) size = 0;
 
@@ -1572,19 +1447,12 @@ The function @func{gridDefXvals} defines all values of the X-axis.
 */
 void gridDefXvals(int gridID, const double *xvals)
 {
-  int gridtype;
-  long size;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
+
+  int gridtype;
+  long size;
 
   gridtype = gridptr->type;
 
@@ -1600,8 +1468,10 @@ void gridDefXvals(int gridID, const double *xvals)
 
   if (gridptr->xvals && CDI_Debug)
     Warning("values already defined!");
-  gridptr->xvals = (double *)xrealloc(gridptr->xvals, size * sizeof(double));
-  memcpy(gridptr->xvals, xvals, size*sizeof(double));
+  gridptr->xvals = (double *)xrealloc(gridptr->xvals,
+                                      (size_t)size * sizeof(double));
+  memcpy(gridptr->xvals, xvals, (size_t)size * sizeof (double));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 /*
@@ -1626,23 +1496,20 @@ Otherwise, 0 is returned and @func{yvals} is empty.
 */
 int gridInqYvals(int gridID, double *yvals)
 {
-  long size;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
-    size = gridptr->size;
-  else
-    size = gridptr->ysize;
+  int gridtype = gridptr->type;
+  long size
+    = (gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED)
+    ? gridptr->size : gridptr->ysize;
 
   if ( CDI_Debug && size == 0 )
     Warning("size undefined for gridID = %d!", gridID);
 
   if ( size && yvals && gridptr->yvals )
-    memcpy(yvals, gridptr->yvals, size*sizeof(double));
+    memcpy(yvals, gridptr->yvals, (size_t)size * sizeof (double));
 
   if ( gridptr->yvals == NULL ) size = 0;
 
@@ -1665,26 +1532,14 @@ The function @func{gridDefYvals} defines all values of the Y-axis.
 */
 void gridDefYvals(int gridID, const double *yvals)
 {
-  int gridtype;
-  long size;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
-  gridtype = gridptr->type;
-
-  if ( gridtype == GRID_UNSTRUCTURED || gridtype == GRID_CURVILINEAR )
-    size = gridptr->size;
-  else
-    size = gridptr->ysize;
+  int gridtype = gridptr->type;
+  long size
+    = (gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED)
+    ? gridptr->size : gridptr->ysize;
 
   if ( size == 0 )
     Error("Size undefined for gridID = %d!", gridID);
@@ -1692,17 +1547,16 @@ void gridDefYvals(int gridID, const double *yvals)
   if (gridptr->yvals && CDI_Debug)
     Warning("Values already defined!");
 
-  gridptr->yvals = (double *)xrealloc(gridptr->yvals, size*sizeof(double));
-  memcpy(gridptr->yvals, yvals, size*sizeof(double));
+  gridptr->yvals = (double *)xrealloc(gridptr->yvals, (size_t)size * sizeof (double));
+  memcpy(gridptr->yvals, yvals, (size_t)size * sizeof (double));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 
 double gridInqXval(int gridID, int index)
 {
   double xval = 0;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1725,9 +1579,7 @@ double gridInqXval(int gridID, int index)
 double gridInqYval(int gridID, int index)
 {
   double yval = 0;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1757,17 +1609,13 @@ double gridInqXinc(int gridID)
 
   if ( (! (fabs(xinc) > 0)) && gridptr->xvals )
     {
-      int xsize;
-      double *xvals;
-
-      xsize = gridptr->xsize;
-      xvals = gridptr->xvals;
-
+      int xsize = gridptr->xsize;
       if ( xsize > 1 )
         {
-          long i;
+          double *xvals = gridptr->xvals;
           xinc = fabs(xvals[xsize-1] - xvals[0])/(xsize-1);
-          for ( i = 2; i < xsize; i++ )
+          int i;
+          for (i = 2; i < xsize; i++ )
             if ( fabs(fabs(xvals[i-1] - xvals[i]) - xinc) > 0.01*xinc ) break;
 
           if ( i < xsize ) xinc = 0;
@@ -1805,8 +1653,8 @@ double gridInqYinc(int gridID)
 
       if ( ysize > 1 )
         {
-          long i;
           yinc = fabs(yvals[1] - yvals[0]);
+          int i;
           for ( i = 2; i < ysize; i++ )
             if ( fabs(fabs(yvals[i] - yvals[i-1]) - yinc) > (yinc/1000) ) break;
 
@@ -1830,9 +1678,7 @@ double gridInqYinc(int gridID)
 */
 double gridInqXpole(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1851,23 +1697,19 @@ double gridInqXpole(int gridID)
 */
 void gridDefXpole(int gridID, double xpole)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
   if ( memcmp(gridptr->xstdname, "grid", 4) != 0 )
     strcpy(gridptr->xstdname, "grid_longitude");
 
-  gridptr->isRotated = TRUE;
-  gridptr->xpole = xpole;
+  if (gridptr->isRotated != TRUE || gridptr->xpole != xpole)
+    {
+      gridptr->isRotated = TRUE;
+      gridptr->xpole = xpole;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -1882,9 +1724,7 @@ void gridDefXpole(int gridID, double xpole)
 */
 double gridInqYpole(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1903,23 +1743,19 @@ double gridInqYpole(int gridID)
 */
 void gridDefYpole(int gridID, double ypole)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
   if ( memcmp(gridptr->ystdname, "grid", 4) != 0 )
     strcpy(gridptr->ystdname, "grid_latitude");
 
-  gridptr->isRotated = TRUE;
-  gridptr->ypole = ypole;
+  if (gridptr->isRotated != TRUE || gridptr->ypole != ypole)
+    {
+      gridptr->isRotated = TRUE;
+      gridptr->ypole = ypole;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -1934,9 +1770,7 @@ void gridDefYpole(int gridID, double ypole)
 */
 double gridInqAngle(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -1955,20 +1789,16 @@ double gridInqAngle(int gridID)
 */
 void gridDefAngle(int gridID, double angle)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->isRotated = TRUE;
-  gridptr->angle = angle;
+  if (gridptr->isRotated != TRUE || gridptr->angle != angle)
+    {
+      gridptr->isRotated = TRUE;
+      gridptr->angle = angle;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -1983,9 +1813,7 @@ void gridDefAngle(int gridID, double angle)
 */
 int gridInqGMEnd(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2004,19 +1832,15 @@ int gridInqGMEnd(int gridID)
 */
 void gridDefGMEnd(int gridID, int nd)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->nd = nd;
+  if (gridptr->nd != nd)
+    {
+      gridptr->nd = nd;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -2031,9 +1855,7 @@ void gridDefGMEnd(int gridID, int nd)
 */
 int gridInqGMEni(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2052,19 +1874,15 @@ int gridInqGMEni(int gridID)
 */
 void gridDefGMEni(int gridID, int ni)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->ni = ni;
+  if (gridptr->ni != ni)
+    {
+      gridptr->ni = ni;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -2079,9 +1897,7 @@ void gridDefGMEni(int gridID, int ni)
 */
 int gridInqGMEni2(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2100,18 +1916,15 @@ int gridInqGMEni2(int gridID)
 */
 void gridDefGMEni2(int gridID, int ni2)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->ni2 = ni2;
+  if (gridptr->ni2 != ni2)
+    {
+      gridptr->ni2 = ni2;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -2126,9 +1939,7 @@ void gridDefGMEni2(int gridID, int ni2)
 */
 int gridInqGMEni3(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2137,19 +1948,15 @@ int gridInqGMEni3(int gridID)
 
 void gridDefGMEni3(int gridID, int ni3)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->ni3 = ni3;
+  if (gridptr->ni3 != ni3)
+    {
+      gridptr->ni3 = ni3;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -2164,16 +1971,18 @@ void gridDefGMEni3(int gridID, int ni3)
 */
 void gridChangeType(int gridID, int gridtype)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  if ( CDI_Debug ) 
+  if ( CDI_Debug )
     Message("Changed grid type from %s to %s", gridNamePtr(gridptr->type), gridNamePtr(gridtype));
 
-  gridptr->type = gridtype;
+  if (gridptr->type != gridtype)
+    {
+      gridptr->type = gridtype;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 static
@@ -2282,9 +2091,7 @@ void grid_check_cyclic(grid_t *gridptr)
 
 int gridIsCircular(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2296,9 +2103,7 @@ int gridIsCircular(int gridID)
 
 int gridIsRotated(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2313,9 +2118,7 @@ int compareXYvals(int gridID, long xsize, long ysize, double *xvals0, double *yv
 
   if ( !differ && xsize == gridInqXvals(gridID, NULL) )
     {
-      double *xvals;
-
-      xvals = (double *) malloc(xsize*sizeof(double));
+      double *xvals = (double *)xmalloc((size_t)xsize * sizeof (double));
 
       gridInqXvals(gridID, xvals);
 
@@ -2331,9 +2134,7 @@ int compareXYvals(int gridID, long xsize, long ysize, double *xvals0, double *yv
 
   if ( !differ && ysize == gridInqYvals(gridID, NULL) )
     {
-      double *yvals;
-
-      yvals = (double *) malloc(ysize*sizeof(double));
+      double *yvals = (double *)xmalloc((size_t)ysize * sizeof (double));
 
       gridInqYvals(gridID, yvals);
 
@@ -2351,7 +2152,7 @@ int compareXYvals(int gridID, long xsize, long ysize, double *xvals0, double *yv
 }
 
 static
-int compareXYvals2(int gridID, long gridsize, double *xvals, double *yvals)
+int compareXYvals2(int gridID, int gridsize, double *xvals, double *yvals)
 {
   int differ = 0;
 
@@ -2501,12 +2302,21 @@ int gridCompare(int gridID, grid_t grid)
 	    {
               char uuidOfHGrid[17];
               gridInqUUID(gridID, uuidOfHGrid);
-
+              /*
+              printf("compare unstructured grids\n");
+	      printf("gridID        %d\n", gridID);
+	      printf("gridsize      %d\n", grid.size);
+              if ( uuidOfHGrid[0] != 0 && grid.uuid[0] != 0 && memcmp(grid.uuid, uuidOfHGrid, 16) )
+                printf("uuidOfHGrid     differ\n");
+              printf("nvertex      %d  %d\n", grid.nvertex, gridInqNvertex(gridID));
+              printf("number       %d  %d\n", grid.number, gridInqNumber(gridID));
+              printf("position     %d  %d\n", grid.position, gridInqPosition(gridID));
+              */
               if ( uuidOfHGrid[0] != 0 && grid.uuid[0] != 0 )
                 if ( !differ && memcmp(uuidOfHGrid, grid.uuid, 16) != 0 ) differ = 1;
               if ( !differ && grid.nvertex != gridInqNvertex(gridID) ) differ = 1;
               if ( !differ && grid.number != gridInqNumber(gridID) ) differ = 1;
-              if ( !differ && grid.position != gridInqPosition(gridID) ) differ = 1;
+              if ( !differ && grid.number > 0 && grid.position != gridInqPosition(gridID) ) differ = 1;
 	      if ( !differ )
 		differ = compareXYvals2(gridID, grid.size, grid.xvals, grid.yvals);
 	    }
@@ -2677,8 +2487,7 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
   if ( g1->reference )
     {
       if ( !g2->reference ) return differ;
-      size = strlen ( g1->reference ) + 1;
-      if ( memcmp ( g1->reference, g2->reference, size ) ) return differ;
+      if ( strcmp(g1->reference, g2->reference) ) return differ;
     }
   else if ( g2->reference )
     return differ;
@@ -2687,7 +2496,7 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
     {
       xassert ( g1->size );
       if ( !g2->mask ) return differ;
-      if ( memcmp ( g1->mask, g2->mask, g1->size*sizeof(unsigned char)) ) return differ;
+      if ( memcmp ( g1->mask, g2->mask, (size_t)g1->size * sizeof(mask_t)) ) return differ;
     }
   else if ( g2->mask )
     return differ;
@@ -2696,7 +2505,7 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
     {
       xassert ( g1->size );
       if ( !g2->mask_gme ) return differ;
-      if ( memcmp ( g1->mask_gme, g2->mask_gme, g1->size*sizeof(unsigned char)) ) return differ;
+      if ( memcmp ( g1->mask_gme, g2->mask_gme, (size_t)g1->size * sizeof(mask_t)) ) return differ;
     }
   else if ( g2->mask_gme )
     return differ;
@@ -2707,12 +2516,9 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
 
 int gridGenerate(grid_t grid)
 {
-  int gridID;
-  grid_t *gridptr;
+  int gridID = gridCreate(grid.type, grid.size);
 
-  gridID = gridCreate(grid.type, grid.size);
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -2747,7 +2553,8 @@ int gridGenerate(grid_t grid)
 	  }
 	else if ( grid.xdef == 2 )
 	  {
-	    double *xvals = (double *) malloc(grid.xsize*sizeof(double));
+	    double *xvals
+              = (double *)xmalloc((size_t)grid.xsize * sizeof (double));
 	    gridGenXvals(grid.xsize, grid.xfirst, grid.xlast, grid.xinc, xvals);
 	    gridDefXvals(gridID, xvals);
 	    free(xvals);
@@ -2764,7 +2571,8 @@ int gridGenerate(grid_t grid)
 	  }
 	else if ( grid.ydef == 2 )
 	  {
-	    double *yvals = (double *) malloc(grid.ysize*sizeof(double));
+	    double *yvals
+              = (double *)xmalloc((size_t)grid.ysize * sizeof (double));
 	    gridGenYvals(grid.type, grid.ysize, grid.yfirst, grid.ylast, grid.yinc, yvals);
 	    gridDefYvals(gridID, yvals);
 	    free(yvals);
@@ -2848,7 +2656,8 @@ int gridGenerate(grid_t grid)
 	  }
 	else if ( grid.ydef == 2 )
 	  {
-	    double *yvals = (double *) malloc(grid.ysize*sizeof(double));
+	    double *yvals
+              = (double *)xmalloc((size_t)grid.ysize * sizeof (double));
 	    gridGenYvals(grid.type, grid.ysize, grid.yfirst, grid.ylast, grid.yinc, yvals);
 	    gridDefYvals(gridID, yvals);
 	    free(yvals);
@@ -2931,21 +2740,15 @@ The function @func{gridDuplicate} duplicates a horizontal Grid.
 */
 int gridDuplicate(int gridID)
 {
-  int gridIDnew;
-  int gridtype, gridsize;
-  int nrowlon;
-  int size;
-  grid_t *gridptr, *gridptrnew;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
-  gridtype = gridInqType(gridID);
-  gridsize = gridInqSize(gridID);
+  int gridtype = gridInqType(gridID);
+  int gridsize = gridInqSize(gridID);
 
-  gridIDnew = gridCreate(gridtype, gridsize);
-  gridptrnew = ( grid_t *) reshGetVal ( gridIDnew, &gridOps );
+  int gridIDnew = gridCreate(gridtype, gridsize);
+  grid_t *gridptrnew = reshGetVal(gridIDnew, &gridOps);
 
   grid_copy(gridptrnew, gridptr);
 
@@ -2958,85 +2761,73 @@ int gridDuplicate(int gridID)
   strcpy(gridptrnew->xstdname, gridptr->xstdname);
   strcpy(gridptrnew->ystdname, gridptr->ystdname);
 
-  if ( gridptr->reference )  gridptrnew->reference = strdupx(gridptr->reference);
+  if (gridptr->reference)
+    gridptrnew->reference = strdupx(gridptr->reference);
 
-  nrowlon = gridptr->nrowlon;
+  size_t nrowlon = (size_t)gridptr->nrowlon;
+  int irregular = gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED;
   if ( nrowlon )
     {
-      gridptrnew->rowlon = (int *) malloc(nrowlon*sizeof(int));
-      memcpy(gridptrnew->rowlon, gridptr->rowlon, nrowlon*sizeof(int));
+      gridptrnew->rowlon = (int *)xmalloc(nrowlon * sizeof (int));
+      memcpy(gridptrnew->rowlon, gridptr->rowlon, nrowlon * sizeof(int));
     }
 
   if ( gridptr->xvals != NULL )
     {
-      if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED )
-	size = gridsize;
-      else
-        size = gridptr->xsize;
+      size_t size  = (size_t)(irregular ? gridsize : gridptr->xsize);
 
-      gridptrnew->xvals = (double *) malloc(size*sizeof(double));
-      memcpy(gridptrnew->xvals, gridptr->xvals, size*sizeof(double));
+      gridptrnew->xvals = (double *)xmalloc(size * sizeof (double));
+      memcpy(gridptrnew->xvals, gridptr->xvals, size * sizeof (double));
     }
 
   if ( gridptr->yvals != NULL )
     {
-      if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED )
-	size = gridsize;
-      else
-        size = gridptr->ysize;
+      size_t size  = (size_t)(irregular ? gridsize : gridptr->ysize);
 
-      gridptrnew->yvals = (double *) malloc(size*sizeof(double));
-      memcpy(gridptrnew->yvals, gridptr->yvals, size*sizeof(double));
+      gridptrnew->yvals = xmalloc(size * sizeof (double));
+      memcpy(gridptrnew->yvals, gridptr->yvals, size * sizeof (double));
     }
 
   if ( gridptr->xbounds != NULL )
     {
-      if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED )
-	size = gridsize;
-      else
-        size = gridptr->xsize;
+      size_t size  = (size_t)(irregular ? gridsize : gridptr->xsize)
+        * (size_t)gridptr->nvertex;
 
-      size *= gridptr->nvertex;
-
-      gridptrnew->xbounds = (double *) malloc(size*sizeof(double));
-      memcpy(gridptrnew->xbounds, gridptr->xbounds, size*sizeof(double));
+      gridptrnew->xbounds = xmalloc(size * sizeof (double));
+      memcpy(gridptrnew->xbounds, gridptr->xbounds, size * sizeof (double));
     }
 
   if ( gridptr->ybounds != NULL )
     {
-      if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED )
-	size = gridsize;
-      else
-        size = gridptr->ysize;
+      size_t size = (size_t)(irregular ? gridsize : gridptr->ysize)
+        * (size_t)gridptr->nvertex;
 
-      size *= gridptr->nvertex;
-
-      gridptrnew->ybounds = (double *) malloc(size*sizeof(double));
-      memcpy(gridptrnew->ybounds, gridptr->ybounds, size*sizeof(double));
+      gridptrnew->ybounds = xmalloc(size * sizeof (double));
+      memcpy(gridptrnew->ybounds, gridptr->ybounds, size * sizeof (double));
     }
 
   if ( gridptr->area != NULL )
     {
-      size = gridsize;
+      size_t size = (size_t)gridsize;
 
-      gridptrnew->area = (double *) malloc(size*sizeof(double));
-      memcpy(gridptrnew->area, gridptr->area, size*sizeof(double));
+      gridptrnew->area = xmalloc(size * sizeof (double));
+      memcpy(gridptrnew->area, gridptr->area, size * sizeof (double));
     }
 
   if ( gridptr->mask != NULL )
     {
-      size = gridsize;
+      size_t size = (size_t)gridsize;
 
-      gridptrnew->mask = (mask_t *) malloc(size*sizeof(mask_t));
-      memcpy(gridptrnew->mask, gridptr->mask, size*sizeof(mask_t));
+      gridptrnew->mask = xmalloc(size * sizeof(mask_t));
+      memcpy(gridptrnew->mask, gridptr->mask, size * sizeof (mask_t));
     }
 
   if ( gridptr->mask_gme != NULL )
     {
-      size = gridsize;
+      size_t size = (size_t)gridsize;
 
-      gridptrnew->mask_gme = (mask_t *) malloc(size*sizeof(mask_t));
-      memcpy(gridptrnew->mask_gme, gridptr->mask_gme, size*sizeof(mask_t));
+      gridptrnew->mask_gme = xmalloc(size * sizeof (mask_t));
+      memcpy(gridptrnew->mask_gme, gridptr->mask_gme, size * sizeof(mask_t));
     }
 
   return (gridIDnew);
@@ -3045,38 +2836,38 @@ int gridDuplicate(int gridID)
 
 void gridCompress(int gridID)
 {
-  int gridtype, gridsize;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridtype = gridInqType(gridID);
-  gridsize = gridInqSize(gridID);
-
+  int gridtype = gridInqType(gridID);
   if ( gridtype == GRID_UNSTRUCTURED )
     {
       if ( gridptr->mask_gme != NULL )
 	{
-	  long i, j, iv, nv;
+          size_t gridsize = (size_t)gridInqSize(gridID);
+	  size_t nv = (size_t)gridptr->nvertex;
 
-	  nv = gridptr->nvertex;
-
-	  j = 0;
-	  for ( i = 0; i < gridsize; i++ )
+	  size_t j = 0;
+          double *area = gridptr->area,
+            *xvals = gridptr->xvals,
+            *yvals = gridptr->yvals,
+            *xbounds = gridptr->xbounds,
+            *ybounds = gridptr->ybounds;
+          mask_t *mask_gme = gridptr->mask_gme;
+	  for (size_t i = 0; i < gridsize; i++ )
 	    {
-	      if ( gridptr->mask_gme[i] )
+	      if (mask_gme[i])
 		{
-		  if ( gridptr->xvals != NULL ) gridptr->xvals[j] = gridptr->xvals[i];
-		  if ( gridptr->yvals != NULL ) gridptr->yvals[j] = gridptr->yvals[i];
-		  if ( gridptr->area  != NULL ) gridptr->area[j]  = gridptr->area[i];
-		  if ( gridptr->xbounds != NULL )
-		    for ( iv = 0; iv < nv; iv++ )
-		      gridptr->xbounds[j*nv+iv] = gridptr->xbounds[i*nv+iv];
-		  if ( gridptr->ybounds != NULL )
-		    for ( iv = 0; iv < nv; iv++ )
-		      gridptr->ybounds[j*nv+iv] = gridptr->ybounds[i*nv+iv];
+		  if (xvals) xvals[j] = xvals[i];
+		  if (yvals) yvals[j] = yvals[i];
+		  if (area) area[j]  = area[i];
+		  if (xbounds != NULL)
+		    for (size_t iv = 0; iv < nv; iv++)
+		      xbounds[j * nv + iv] = xbounds[i * nv + iv];
+		  if (ybounds != NULL)
+		    for (size_t iv = 0; iv < nv; iv++)
+		      ybounds[j * nv + iv] = ybounds[i * nv + iv];
 
 		  j++;
 		}
@@ -3084,27 +2875,28 @@ void gridCompress(int gridID)
 
 	  /* fprintf(stderr, "grid compress %d %d %d\n", i, j, gridsize); */
 	  gridsize = j;
-	  gridptr->size  = gridsize;
-	  gridptr->xsize = gridsize;
-	  gridptr->ysize = gridsize;
+	  gridptr->size  = (int)gridsize;
+	  gridptr->xsize = (int)gridsize;
+	  gridptr->ysize = (int)gridsize;
 
 	  if ( gridptr->xvals )
-	    gridptr->xvals = (double *) realloc(gridptr->xvals, gridsize*sizeof(double));
+	    gridptr->xvals = (double *)xrealloc(gridptr->xvals, gridsize*sizeof(double));
 
 	  if ( gridptr->yvals )
-	    gridptr->yvals = (double *) realloc(gridptr->yvals, gridsize*sizeof(double));
+	    gridptr->yvals = (double *)xrealloc(gridptr->yvals, gridsize*sizeof(double));
 
 	  if ( gridptr->area )
-	    gridptr->area  = (double *) realloc(gridptr->area, gridsize*sizeof(double));
+	    gridptr->area  = (double *)xrealloc(gridptr->area, gridsize*sizeof(double));
 
 	  if ( gridptr->xbounds )
-	    gridptr->xbounds = (double *) realloc(gridptr->xbounds, nv*gridsize*sizeof(double));
+	    gridptr->xbounds = (double *)xrealloc(gridptr->xbounds, nv*gridsize*sizeof(double));
 
 	  if ( gridptr->ybounds )
-	    gridptr->ybounds = (double *) realloc(gridptr->ybounds, nv*gridsize*sizeof(double));
+	    gridptr->ybounds = (double *)xrealloc(gridptr->ybounds, nv*gridsize*sizeof(double));
 
 	  free(gridptr->mask_gme);
 	  gridptr->mask_gme = NULL;
+          reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 	}
     }
   else
@@ -3114,59 +2906,43 @@ void gridCompress(int gridID)
 
 void gridDefArea(int gridID, const double *area)
 {
-  long size;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
+  size_t size = gridptr->size;
 
   if ( size == 0 )
     Error("size undefined for gridID = %d", gridID);
 
   if ( gridptr->area == NULL )
-    gridptr->area = (double *) malloc(size*sizeof(double));
+    gridptr->area = (double *)xmalloc(size*sizeof(double));
   else if ( CDI_Debug )
     Warning("values already defined!");
 
-  memcpy(gridptr->area, area, size*sizeof(double));
+  memcpy(gridptr->area, area, size * sizeof(double));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 
 void gridInqArea(int gridID, double *area)
 {
-  long size;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  size = gridptr->size;
-
-  if ( gridptr->area )
-    memcpy(area, gridptr->area, size*sizeof(double));
+  if (gridptr->area)
+    memcpy(area, gridptr->area, (size_t)gridptr->size * sizeof (double));
 }
 
 
 int gridHasArea(int gridID)
 {
-  int hasArea = FALSE;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  if ( gridptr->area != NULL ) hasArea = TRUE;
+  int hasArea = (gridptr->area != NULL);
 
   return (hasArea);
 }
@@ -3174,9 +2950,7 @@ int gridHasArea(int gridID)
 
 const double *gridInqAreaPtr(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3186,27 +2960,21 @@ const double *gridInqAreaPtr(int gridID)
 
 void gridDefNvertex(int gridID, int nvertex)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->nvertex = nvertex;
+  if (gridptr->nvertex != nvertex)
+    {
+      gridptr->nvertex = nvertex;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 int gridInqNvertex(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3229,41 +2997,31 @@ The function @func{gridDefXbounds} defines all bounds of the X-axis.
 */
 void gridDefXbounds(int gridID, const double *xbounds)
 {
-  long size;
-  long nvertex;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning ("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  nvertex = gridptr->nvertex;
+  size_t nvertex = (size_t)gridptr->nvertex;
   if ( nvertex == 0 )
     {
       Warning("nvertex undefined for gridID = %d. Cannot define bounds!", gridID);
       return;
     }
 
-  if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
-    size = nvertex*gridptr->size;
-  else
-    size = nvertex*gridptr->xsize;
-
+  int irregular = gridptr->type == GRID_CURVILINEAR
+    || gridptr->type == GRID_UNSTRUCTURED;
+  size_t size = nvertex
+    * (size_t)(irregular ? gridptr->size : gridptr->xsize);
   if ( size == 0 )
     Error("size undefined for gridID = %d", gridID);
 
-  if ( gridptr->xbounds == NULL )
-    gridptr->xbounds = (double *) malloc(size*sizeof(double));
+  if (gridptr->xbounds == NULL)
+    gridptr->xbounds = xmalloc(size * sizeof (double));
   else if ( CDI_Debug )
     Warning("values already defined!");
 
-  memcpy(gridptr->xbounds, xbounds, size*sizeof(double));
+  memcpy(gridptr->xbounds, xbounds, size * sizeof (double));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 /*
@@ -3288,28 +3046,23 @@ Otherwise, 0 is returned and @func{xbounds} is empty.
 */
 int gridInqXbounds(int gridID, double *xbounds)
 {
-  long size;
-  long nvertex;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  nvertex = gridptr->nvertex;
+  size_t nvertex = (size_t)gridptr->nvertex;
   if ( CDI_Debug && nvertex == 0 )
     Warning("nvertex undefined for gridID = %d", gridID);
 
-  if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
-    size = nvertex*gridptr->size;
-  else
-    size = nvertex*gridptr->xsize;
+  int irregular = gridptr->type == GRID_CURVILINEAR
+    || gridptr->type == GRID_UNSTRUCTURED;
+  size_t size = nvertex * (size_t)(irregular ? gridptr->size : gridptr->xsize);
 
   if ( CDI_Debug && size == 0 )
     Warning("size undefined for gridID = %d", gridID);
 
   if ( size && xbounds && gridptr->xbounds )
-    memcpy(xbounds, gridptr->xbounds, size*sizeof(double));
+    memcpy(xbounds, gridptr->xbounds, size * sizeof (double));
 
   if ( gridptr->xbounds == NULL ) size = 0;
 
@@ -3319,9 +3072,7 @@ int gridInqXbounds(int gridID, double *xbounds)
 
 const double *gridInqXboundsPtr(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3344,41 +3095,31 @@ The function @func{gridDefYbounds} defines all bounds of the Y-axis.
 */
 void gridDefYbounds(int gridID, const double *ybounds)
 {
-  long size;
-  long nvertex;
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  nvertex = gridptr->nvertex;
+  size_t nvertex = (size_t)gridptr->nvertex;
   if ( nvertex == 0 )
     {
       Warning("nvertex undefined for gridID = %d. Cannot define bounds!", gridID);
       return;
     }
 
-  if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
-    size = nvertex*gridptr->size;
-  else
-    size = nvertex*gridptr->ysize;
+  int irregular = gridptr->type == GRID_CURVILINEAR
+    || gridptr->type == GRID_UNSTRUCTURED;
+  size_t size = nvertex * (size_t)(irregular ? gridptr->size : gridptr->ysize);
 
   if ( size == 0 )
     Error("size undefined for gridID = %d", gridID);
 
   if ( gridptr->ybounds == NULL )
-    gridptr->ybounds = (double *) malloc(size*sizeof(double));
+    gridptr->ybounds = xmalloc(size * sizeof (double));
   else if ( CDI_Debug )
     Warning("values already defined!");
 
-  memcpy(gridptr->ybounds, ybounds, size*sizeof(double));
+  memcpy(gridptr->ybounds, ybounds, size * sizeof (double));
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 /*
@@ -3403,28 +3144,23 @@ Otherwise, 0 is returned and @func{ybounds} is empty.
 */
 int gridInqYbounds(int gridID, double *ybounds)
 {
-  long size;
-  long nvertex;
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  nvertex = gridptr->nvertex;
+  size_t nvertex = (size_t)gridptr->nvertex;
   if ( CDI_Debug && nvertex == 0 )
     Warning("nvertex undefined for gridID = %d", gridID);
 
-  if ( gridptr->type == GRID_CURVILINEAR || gridptr->type == GRID_UNSTRUCTURED )
-    size = nvertex*gridptr->size;
-  else
-    size = nvertex*gridptr->ysize;
+  int irregular = gridptr->type == GRID_CURVILINEAR
+    || gridptr->type == GRID_UNSTRUCTURED;
+  size_t size = nvertex * (size_t)(irregular ? gridptr->size : gridptr->ysize);
 
   if ( CDI_Debug && size == 0 )
     Warning("size undefined for gridID = %d", gridID);
 
   if ( size && ybounds && gridptr->ybounds )
-    memcpy(ybounds, gridptr->ybounds, size*sizeof(double));
+    memcpy(ybounds, gridptr->ybounds, size * sizeof (double));
 
   if ( gridptr->ybounds == NULL ) size = 0;
 
@@ -3434,9 +3170,7 @@ int gridInqYbounds(int gridID, double *ybounds)
 
 const double *gridInqYboundsPtr(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3698,7 +3432,7 @@ void gridPrintKernel(grid_t * gridptr, int opt, FILE *fp)
             int *rowlon;
             nbyte0 = fprintf(fp, "rowlon    = ");
             nbyte  = nbyte0;
-            rowlon = (int *) malloc(ysize*sizeof(int));
+            rowlon = (int *)xmalloc((size_t)ysize*sizeof(int));
             gridInqRowlon(gridID, rowlon);
             for ( i = 0; i < ysize; i++ )
               {
@@ -3792,9 +3526,7 @@ void gridPrintKernel(grid_t * gridptr, int opt, FILE *fp)
 
 void gridPrint ( int gridID, int opt )
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3861,9 +3593,7 @@ void gridPrintP ( void * voidptr, FILE * fp )
 
 const double *gridInqXvalsPtr(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3873,9 +3603,7 @@ const double *gridInqXvalsPtr(int gridID)
 
 const double *gridInqYvalsPtr(int gridID)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3908,15 +3636,7 @@ void gridDefLCC(int gridID, double originLon, double originLat, double lonParY,
                 double lat1, double lat2, double xinc, double yinc,
                 int projflag, int scanflag)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3935,6 +3655,7 @@ void gridDefLCC(int gridID, double originLon, double originLat, double lonParY,
       gridptr->lcc_projflag  = projflag;
       gridptr->lcc_scanflag  = scanflag;
       gridptr->lcc_defined   = TRUE;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
     }
 }
 
@@ -3964,9 +3685,7 @@ void gridInqLCC(int gridID, double *originLon, double *originLat, double *lonPar
                 double *lat1, double *lat2, double *xinc, double *yinc,
                 int *projflag, int *scanflag)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -3994,15 +3713,7 @@ void gridInqLCC(int gridID, double *originLon, double *originLat, double *lonPar
 
 void gridDefLcc2(int gridID, double earth_radius, double lon_0, double lat_0, double lat_1, double lat_2)
 {
-  grid_t *gridptr;
-
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4017,15 +3728,14 @@ void gridDefLcc2(int gridID, double earth_radius, double lon_0, double lat_0, do
       gridptr->lcc2_lat_1   = lat_1;
       gridptr->lcc2_lat_2   = lat_2;
       gridptr->lcc2_defined = TRUE;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
     }
 }
 
 
 void gridInqLcc2(int gridID, double *earth_radius, double *lon_0, double *lat_0, double *lat_1, double *lat_2)
 {
-  grid_t *gridptr;
-
-  gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4049,13 +3759,7 @@ void gridInqLcc2(int gridID, double *earth_radius, double *lon_0, double *lat_0,
 
 void gridDefLaea(int gridID, double earth_radius, double lon_0, double lat_0)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4068,6 +3772,7 @@ void gridDefLaea(int gridID, double earth_radius, double lon_0, double lat_0)
       gridptr->laea_lon_0   = lon_0;
       gridptr->laea_lat_0   = lat_0;
       gridptr->laea_defined = TRUE;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
     }
 }
 
@@ -4097,17 +3802,16 @@ void gridInqLaea(int gridID, double *earth_radius, double *lon_0, double *lat_0)
 
 void gridDefComplexPacking(int gridID, int lcomplex)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->lcomplex = lcomplex;
+
+  if (gridptr->lcomplex != lcomplex)
+    {
+      gridptr->lcomplex = lcomplex;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
@@ -4123,17 +3827,15 @@ int gridInqComplexPacking(int gridID)
 
 void gridDefHasDims(int gridID, int hasdims)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->hasdims = hasdims;
+  if (gridptr->hasdims != hasdims)
+    {
+      gridptr->hasdims = hasdims;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
@@ -4162,17 +3864,15 @@ The function @func{gridDefNumber} defines the reference number for an unstructur
 */
 void gridDefNumber(int gridID, const int number)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->number = number;
+  if (gridptr->number != number)
+    {
+      gridptr->number = number;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -4192,7 +3892,7 @@ The function @func{gridInqNumber} returns the reference number to an unstructure
 */
 int gridInqNumber(int gridID)
 {
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t* gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4215,17 +3915,15 @@ The function @func{gridDefPosition} defines the position of grid in the referenc
 */
 void gridDefPosition(int gridID, int position)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
-  gridptr->position = position;
+  if (gridptr->position != position)
+    {
+      gridptr->position = position;
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -4245,7 +3943,7 @@ The function @func{gridInqPosition} returns the position of grid in the referenc
 */
 int gridInqPosition(int gridID)
 {
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4268,12 +3966,6 @@ The function @func{gridDefReference} defines the reference URI for an unstructur
 */
 void gridDefReference(int gridID, const char *reference)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
@@ -4287,6 +3979,7 @@ void gridDefReference(int gridID, const char *reference)
         }
 
       gridptr->reference = strdupx(reference);
+      reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
     }
 }
 
@@ -4339,17 +4032,12 @@ The function @func{gridDefUUID} defines the UUID for an unstructured grid.
 */
 void gridDefUUID(int gridID, const char *uuid)
 {
-  if ( reshGetStatus ( gridID, &gridOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
 
   grid_check_ptr(gridID, gridptr);
 
   memcpy(gridptr->uuid, uuid, 16);
+  reshSetStatus(gridID, &gridOps, RESH_DESYNC_IN_USE);
 }
 
 /*
@@ -4369,7 +4057,7 @@ The function @func{gridInqUUID} returns the UUID to an unstructured grid.
 */
 void gridInqUUID(int gridID, char *uuid)
 {
-  grid_t* gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
+  grid_t *gridptr = (grid_t *)reshGetVal(gridID, &gridOps);
 
   grid_check_ptr(gridID, gridptr);
 
@@ -4404,7 +4092,7 @@ enum { gridNint    = 27,
 };
 
 
-static int gridGetComponentFlags ( grid_t * gridP )
+static int gridGetComponentFlags(const grid_t * gridP)
 {
   int flags = (gridHasMaskFlag & (int)((unsigned)(gridP->mask == NULL) - 1U))
     | (gridHasGMEMaskFlag & (int)((unsigned)(gridP->mask_gme == NULL) - 1U))
@@ -4500,8 +4188,9 @@ gridGetPackSize(void * voidP, void *context)
 
   if (gridP->reference)
     {
+      size_t len = strlen(gridP->reference);
       packBuffSize += serializeGetSize(1, DATATYPE_INT, context)
-        + serializeGetSize(strlen(gridP->reference) + 1, DATATYPE_TXT, context)
+        + serializeGetSize((int)len + 1, DATATYPE_TXT, context)
         + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
@@ -4580,7 +4269,7 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
   if (memberMask & gridHasRowLonFlag)
     {
       xassert(gridP->nrowlon);
-      gridP->rowlon = (int*) xmalloc(gridP->nrowlon * sizeof (int));
+      gridP->rowlon = (int *)xmalloc((size_t)gridP->nrowlon * sizeof (int));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->rowlon, gridP->nrowlon , DATATYPE_INT, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4622,14 +4311,13 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
     gridP->angle = doubleBuffer[23];
   }
 
+  int irregular = gridP->type == GRID_UNSTRUCTURED
+    || gridP->type == GRID_CURVILINEAR;
   if (memberMask & gridHasXValsFlag)
     {
-      if (gridP->type == GRID_UNSTRUCTURED || gridP->type == GRID_CURVILINEAR)
-	size = gridP->size;
-      else
-	size = gridP->xsize;
+      size = irregular ? gridP->size : gridP->xsize;
 
-      gridP->xvals = (double*) xmalloc(size * sizeof (double));
+      gridP->xvals = (double *)xmalloc((size_t)size * sizeof (double));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->xvals, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4639,12 +4327,9 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
 
   if (memberMask & gridHasYValsFlag)
     {
-      if ( gridP->type == GRID_UNSTRUCTURED || gridP->type == GRID_CURVILINEAR )
-	size = gridP->size;
-      else
-	size = gridP->ysize;
+      size = irregular ? gridP->size : gridP->ysize;
 
-      gridP->yvals =  (double*) xmalloc( size * sizeof (double));
+      gridP->yvals = (double *)xmalloc((size_t)size * sizeof (double));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->yvals, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4654,8 +4339,9 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
 
   if (memberMask & gridHasAreaFlag)
     {
-      xassert((size = gridP->size));
-      gridP->area = (double*) xmalloc(size * sizeof (double));
+      size = gridP->size;
+      xassert(size);
+      gridP->area = (double *)xmalloc((size_t)size * sizeof (double));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->area, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4665,13 +4351,10 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
 
   if (memberMask & gridHasXBoundsFlag)
     {
-      if (gridP->type == GRID_CURVILINEAR || gridP->type == GRID_UNSTRUCTURED)
-	size = gridP->nvertex * gridP->size;
-      else
-	size = gridP->nvertex * gridP->xsize;
+      size = gridP->nvertex * (irregular ? gridP->size : gridP->xsize);
       xassert(size);
 
-      gridP->xbounds = (double*) xmalloc(size * sizeof (double));
+      gridP->xbounds = (double *)xmalloc((size_t)size * sizeof (double));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->xbounds, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4681,13 +4364,10 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
 
   if (memberMask & gridHasYBoundsFlag)
     {
-      if (gridP->type == GRID_CURVILINEAR || gridP->type == GRID_UNSTRUCTURED)
-	size = gridP->nvertex * gridP->size;
-      else
-	size = gridP->nvertex * gridP->ysize;
+      size = gridP->nvertex * (irregular ? gridP->size : gridP->ysize);
       xassert(size);
 
-      gridP->ybounds = (double*) xmalloc(size * sizeof (double));
+      gridP->ybounds = (double *)xmalloc((size_t)size * sizeof (double));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
 			  gridP->ybounds, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4716,7 +4396,7 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       int referenceSize;
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       &referenceSize, 1, DATATYPE_INT, context);
-      gridP->reference = (char*) xmalloc(referenceSize);
+      gridP->reference = (char *)xmalloc((size_t)referenceSize);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->reference, referenceSize, DATATYPE_TXT, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4727,7 +4407,7 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
   if (memberMask & gridHasMaskFlag)
     {
       xassert((size = gridP->size));
-      gridP->mask = (mask_t*) xmalloc(size * sizeof (mask_t));
+      gridP->mask = (mask_t *)xmalloc((size_t)size * sizeof (mask_t));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->mask, gridP->size, DATATYPE_UCHAR, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4738,7 +4418,7 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
   if (memberMask & gridHasGMEMaskFlag)
     {
       xassert((size = gridP->size));
-      gridP->mask_gme = (mask_t*) xmalloc(size * sizeof (mask_t));
+      gridP->mask_gme = (mask_t *)xmalloc((size_t)size * sizeof (mask_t));
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->mask_gme, gridP->size, DATATYPE_UCHAR, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
@@ -4929,7 +4609,7 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
   if ( gridP->reference )
     {
-      size = strlen ( gridP->reference ) + 1;
+      size = (int)strlen(gridP->reference) + 1;
       serializePack(&size, 1, DATATYPE_INT,
                     packBuffer, packBufferSize, packBufferPos, context);
       serializePack(gridP->reference, size, DATATYPE_TXT,

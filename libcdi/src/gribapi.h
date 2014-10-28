@@ -42,7 +42,7 @@
 #define  GRIB2_GTYPE_GME                 100  /*  hexagonal GME grid                                   */
 #define  GRIB2_GTYPE_UNSTRUCTURED        101  /*  General Unstructured Grid                            */
 
-const char *gribapiLibraryVersion(void);
+const char *gribapiLibraryVersionString(void);
 void gribContainersNew(stream_t * streamptr);
 void gribContainersDelete(stream_t * streamptr);
 void *gribHandleNew(int editionNumber);

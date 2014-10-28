@@ -532,7 +532,7 @@ buildStreamMap(struct winHeaderEntry *winDict)
 {
   int streamIDOld = CDI_UNDEFID;
   int oldStreamIdx = CDI_UNDEFID;
-  int filetype = CDI_UNDEFID;
+  int filetype = FILETYPE_UNDEF;
   int sizeStreamMap = 16;
   struct streamMapping *streamMap = (struct streamMapping *) xmalloc(sizeStreamMap * sizeof (streamMap[0]));
   int numDataEntries = winDict[0].specific.headerSize.numDataEntries;
@@ -972,7 +972,8 @@ cdiPioStreamCDFOpenWrap(const char *filename, const char *filemode,
     case FILETYPE_NC4:
     case FILETYPE_NC4C:
       {
-        int rank, fileID;
+        /* Only needs initialization to shut up gcc */
+        int rank = -1, fileID;
         int ioMode = commInqIOMode();
         if (ioMode == PIO_NONE
             || commInqRankColl() == (rank = cdiPioNextOpenRank()))

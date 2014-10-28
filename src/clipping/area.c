@@ -690,7 +690,7 @@ double partial_area ( double a_lon, double a_lat,
 
 /* ----------------------------------- */
 
-static double inline inner_angle ( double plat, double plon,
+static inline double inner_angle ( double plat, double plon,
                                    double qlat, double qlon ) {
 
   double t = sin((qlon-plon))*cos(qlat);

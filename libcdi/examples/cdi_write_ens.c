@@ -10,29 +10,24 @@ int main(int argc, char *argv[])
   int filetype = FILETYPE_GRB2;
   int nlat = 18, nlon = 2*nlat;
   double *data = NULL;
-  double missval;
   int nlevel;
   int varID;
-  int datasize = 0;
   int streamID1, streamID2;
-  int gridID, zaxisID, code, vdate, vtime;
+  int gridID, zaxisID;
   int nrecs, nvars;
-  int gridtype, gridsize = 0;
   int tsID;
-  int timeID = 0;
-  int level, levelID;
-  int offset;
+  int levelID;
   int vlistID, taxisID;
   int nmiss;
 
   int instID;
   int i1,i2,i3;
 
-  datasize = nlon * nlat;
-  data = (double *) malloc(datasize*sizeof(double));
-  memset(data, 0, datasize*sizeof(double));
+  size_t datasize = (size_t)nlon * (size_t)nlat;
+  data = (double *) malloc(datasize * sizeof (double));
+  memset(data, 0, datasize * sizeof (double));
 
-  gridID = gridCreate(GRID_GAUSSIAN, datasize);
+  gridID = gridCreate(GRID_GAUSSIAN, (int)datasize);
   gridDefXsize(gridID, nlon);
   gridDefYsize(gridID, nlat);
 
@@ -87,11 +82,11 @@ int main(int argc, char *argv[])
 
   for ( varID = 0; varID < nvars; varID++ )
     {
-      gridID   = vlistInqVarGrid(vlistID, varID);
-      zaxisID  = vlistInqVarZaxis(vlistID, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(zaxisID);
-      if ( gridsize*nlevel > datasize ) datasize = gridsize*nlevel;
+      int gridID   = vlistInqVarGrid(vlistID, varID);
+      int zaxisID  = vlistInqVarZaxis(vlistID, varID);
+      size_t gridsize = (size_t)gridInqSize(gridID);
+      size_t nlevel = (size_t)zaxisInqSize(zaxisID);
+      if ( gridsize * nlevel > datasize ) datasize = gridsize * nlevel;
     }
 
   data = (double *) malloc(datasize*sizeof(double));
@@ -102,8 +97,8 @@ int main(int argc, char *argv[])
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
-      vdate = taxisInqVdate(taxisID);
-      vtime = taxisInqVtime(taxisID);
+      /* int vdate =  */taxisInqVdate(taxisID);
+      /* int vtime =  */taxisInqVtime(taxisID);
 
       streamDefTimestep(streamID2, tsID);
 
@@ -111,18 +106,18 @@ int main(int argc, char *argv[])
 	{
 	  streamReadVar(streamID1, varID, data, &nmiss);
 
-	  code     = vlistInqVarCode(vlistID, varID);
+	  /* int code     =  */vlistInqVarCode(vlistID, varID);
 	  gridID   = vlistInqVarGrid(vlistID, varID);
 	  zaxisID  = vlistInqVarZaxis(vlistID, varID);
-	  gridtype = gridInqType(gridID);
-	  gridsize = gridInqSize(gridID);
+	  /* int gridtype =  */gridInqType(gridID);
+	  /* int gridsize =  */gridInqSize(gridID);
 	  nlevel   = zaxisInqSize(zaxisID);
-	  missval  = vlistInqVarMissval(vlistID, varID);
+	  /* double missval =  */vlistInqVarMissval(vlistID, varID);
 
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      level  = (int) zaxisInqLevel(zaxisID, levelID);
-	      offset = gridsize*levelID;
+	      /* int level  = (int)  */zaxisInqLevel(zaxisID, levelID);
+	      /* int offset = gridsize*levelID; */
 	    }
 
 	  streamWriteVar(streamID2, varID, data, nmiss);
