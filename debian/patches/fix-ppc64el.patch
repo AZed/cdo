@@ -1,0 +1,46 @@
+Index: b/libcdi/src/cgribexlib.c
+===================================================================
+--- a/libcdi/src/cgribexlib.c
++++ b/libcdi/src/cgribexlib.c
+@@ -14,6 +14,7 @@
+ #endif
+ 
+ #ifdef _ARCH_PWR6
++#include <ppu_intrinsics.h>
+ #pragma options nostrict
+ #endif
+ 
+@@ -941,8 +942,8 @@
+     size_t i, j;
+     size_t residual =  datasize % __UNROLL_DEPTH_1;
+     size_t ofs = datasize - residual;
+-    double register dmin[__UNROLL_DEPTH_1];
+-    double register dmax[__UNROLL_DEPTH_1];
++    double dmin[__UNROLL_DEPTH_1];
++    double dmax[__UNROLL_DEPTH_1];
+ 
+     for ( j = 0; j < __UNROLL_DEPTH_1; j++) 
+       {
+Index: b/libcdi/src/cdilib.c
+===================================================================
+--- a/libcdi/src/cdilib.c
++++ b/libcdi/src/cdilib.c
+@@ -4,6 +4,7 @@
+ /* CDILIB_VERSION="1.6.5" */
+ 
+ #ifdef _ARCH_PWR6
++#include <ppu_intrinsics.h>
+ #pragma options nostrict
+ #endif
+ 
+@@ -49436,8 +49437,8 @@
+     size_t i, j;
+     size_t residual =  datasize % __UNROLL_DEPTH_1;
+     size_t ofs = datasize - residual;
+-    double register dmin[__UNROLL_DEPTH_1];
+-    double register dmax[__UNROLL_DEPTH_1];
++    double dmin[__UNROLL_DEPTH_1];
++    double dmax[__UNROLL_DEPTH_1];
+ 
+     for ( j = 0; j < __UNROLL_DEPTH_1; j++) 
+       {

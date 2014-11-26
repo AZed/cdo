@@ -1,3 +1,10 @@
+cdo (1.6.5+dfsg.1-1ubuntu1) vivid; urgency=medium
+
+  * Resynchronise with Debian.  Remaining changes:
+    - Fix build failure on ppc64el.
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Wed, 26 Nov 2014 14:32:19 +0000
+
 cdo (1.6.5+dfsg.1-1) unstable; urgency=medium
 
   * New upstream release.
@@ -15,6 +22,19 @@ cdo (1.6.4+dfsg.1-5) unstable; urgency=medium
     Closes: #747001.
 
  -- Alastair McKinstry <mckinstry@debian.org>  Fri, 12 Sep 2014 10:24:13 +0100
+
+cdo (1.6.4+dfsg.1-4ubuntu2) vivid; urgency=medium
+
+  * Rebuild against libhdf5-8.
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Mon, 10 Nov 2014 14:20:57 +0000
+
+cdo (1.6.4+dfsg.1-4ubuntu1) utopic; urgency=medium
+
+  * Don't statically link libraries.
+  * Fix build failure on ppc64el.
+
+ -- Matthias Klose <doko@ubuntu.com>  Thu, 11 Sep 2014 14:18:33 +0200
 
 cdo (1.6.4+dfsg.1-4) unstable; urgency=medium
 
