@@ -1,0 +1,384 @@
+/*
+  This file is part of CDO. CDO is a collection of Operators to
+  manipulate and analyse Climate model Data.
+
+  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  See COPYING file for copying and redistribution conditions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
+#include "cdo.h"
+#include "cdo_int.h"
+#include "cdi.h"
+/* RQ */
+#include "nth_element.h"
+/* QR */
+
+void merfun(FIELD field1, FIELD *field2, int function)
+{
+  if      ( function == func_min )  mermin(field1, field2);
+  else if ( function == func_max )  mermax(field1, field2);  
+  else if ( function == func_sum )  mersum(field1, field2);  
+  else if ( function == func_mean ) mermean(field1, field2);  
+  else if ( function == func_avg )  meravg(field1, field2);  
+  else if ( function == func_std )  merstd(field1, field2);  
+  else if ( function == func_var )  mervar(field1, field2);
+  else cdoAbort("function %d not implemented!", function);
+}
+
+
+void mermin(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double rmin = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      if ( nmiss > 0 )
+	{
+	  rmin = DBL_MAX;
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
+	      if ( array[j*nx+i] < rmin ) rmin = array[j*nx+i];
+
+	  if ( IS_EQUAL(rmin, DBL_MAX) )
+	    {
+	      rnmiss++;
+	      rmin = missval;
+	    }
+	}
+      else
+	{
+	  rmin = DBL_MAX;
+	  for ( j = 0; j < ny; j++ )
+	    if ( array[j*nx+i] < rmin )  rmin = array[j*nx+i];
+	}
+
+      field2->ptr[i] = rmin;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void mermax(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double rmax = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      if ( nmiss > 0 )
+	{
+	  rmax = -DBL_MAX;
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
+	      if ( array[j*nx+i] > rmax ) rmax = array[j*nx+i];
+
+	  if ( IS_EQUAL(rmax, -DBL_MAX) )
+	    {
+	      rnmiss++;
+	      rmax = missval;
+	    }
+	}
+      else
+	{
+	  rmax = DBL_MIN;
+	  for ( j = 0; j < ny; j++ )
+	    if ( array[j*nx+i] > rmax )  rmax = array[j*nx+i];
+	}
+
+      field2->ptr[i] = rmax;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void mersum(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double rsum = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      if ( nmiss > 0 )
+	{
+	  rsum = 0;
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
+	      rsum += array[j*nx+i];
+	}
+      else
+	{
+	  rsum = 0;
+	  for ( j = 0; j < ny; j++ )
+	    rsum += array[j*nx+i];
+	}
+
+      field2->ptr[i] = rsum;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void mermean(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval1 = field1.missval;
+  double missval2 = field1.missval;
+  double *array  = field1.ptr;
+  double *w      = field1.weight;
+  double rsum = 0, rsumw = 0, ravg = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      rsum  = 0;
+      rsumw = 0;
+      if ( nmiss > 0 )
+	{
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval1) &&
+		 !DBL_IS_EQUAL(w[j*nx+i], missval1) )
+	      {
+		rsum  += w[j*nx+i] * array[j*nx+i];
+		rsumw += w[j*nx+i];
+	      }
+	}
+      else
+	{
+	  for ( j = 0; j < ny; j++ )
+	    {
+	      rsum  += w[j*nx+i] * array[j*nx+i];
+	      rsumw += w[j*nx+i];
+	    }
+	}
+
+      ravg = DIV(rsum, rsumw);
+
+      if ( DBL_IS_EQUAL(ravg, missval1) ) rnmiss++;
+
+      field2->ptr[i] = ravg;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void meravg(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid     = field1.grid;
+  int    nmiss    = field1.nmiss;
+  double missval1 = field1.missval;
+  double missval2 = field1.missval;
+  double *array   = field1.ptr;
+  double *w       = field1.weight;
+  double rsum = 0, rsumw = 0, ravg = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      rsum  = 0;
+      rsumw = 0;
+      if ( nmiss > 0 )
+	{
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(w[j*nx+i], missval1) )
+	      {
+		rsum  = ADD(rsum, MUL(w[j*nx+i], array[j*nx+i]));
+		rsumw += w[j*nx+i];
+	      }
+	}
+      else
+	{
+	  for ( j = 0; j < ny; j++ )
+	    {
+	      rsum  += w[j*nx+i] * array[j*nx+i];
+	      rsumw += w[j*nx+i];
+	    }
+	}
+
+      ravg = DIV(rsum, rsumw);
+
+      if ( DBL_IS_EQUAL(ravg, missval1) ) rnmiss++;
+
+      field2->ptr[i] = ravg;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void mervar(FIELD field1, FIELD *field2)
+{
+  int i, j, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double *w      = field1.weight;
+  double rsum = 0, rsumw = 0, rvar = 0;
+  double rsumq = 0, rsumwq = 0;
+
+  nx    = gridInqXsize(grid);
+  ny    = gridInqYsize(grid);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      rsum   = 0;
+      rsumq  = 0;
+      rsumw  = 0;
+      rsumwq = 0;
+      if ( nmiss > 0 )
+	{
+	  for ( j = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) &&
+		 !DBL_IS_EQUAL(w[j*nx+i], missval) )
+	      {
+		rsum   += w[j*nx+i] * array[j*nx+i];
+		rsumq  += w[j*nx+i] * array[j*nx+i] * array[j*nx+i];
+		rsumw  += w[j*nx+i];
+		rsumwq += w[j*nx+i] * w[j*nx+i];
+	      }
+	}
+      else
+	{
+	  for ( j = 0; j < ny; j++ )
+	    {
+	      rsum   += w[j*nx+i] * array[j*nx+i];
+	      rsumq  += w[j*nx+i] * array[j*nx+i] * array[j*nx+i];
+	      rsumw  += w[j*nx+i];
+	      rsumwq += w[j*nx+i] * w[j*nx+i];
+	    }
+	}
+
+      rvar = IS_NOT_EQUAL(rsumw, 0) ? (rsumq*rsumw - rsum*rsum) / (rsumw*rsumw) : missval;
+
+      if ( DBL_IS_EQUAL(rvar, missval) ) rnmiss++;
+
+      field2->ptr[i] = rvar;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+
+void merstd(FIELD field1, FIELD *field2)
+{
+  int i, nx, rnmiss = 0;
+  int    grid    = field1.grid;
+  double missval = field1.missval;
+  double rvar, rstd;
+
+  nx    = gridInqXsize(grid);
+
+  mervar(field1, field2);
+
+  for ( i = 0; i < nx; i++ )
+    {
+      rvar = field2->ptr[i];
+      rstd = (IS_NOT_EQUAL(rvar, 0) && !DBL_IS_EQUAL(rvar, missval)) ? sqrt(rvar) : missval;
+
+      if ( DBL_IS_EQUAL(rvar, missval) ) rnmiss++;
+
+      field2->ptr[i] = rstd;
+    }
+
+  field2->nmiss  = rnmiss;
+}
+
+/* RQ */
+void merpctl(FIELD field1, FIELD *field2, int p)
+{
+  static const char func[] = "merpctl";
+
+  int i, j, l, nx, ny, rnmiss = 0;
+  int    grid    = field1.grid;
+  int    nmiss   = field1.nmiss;
+  double missval = field1.missval;
+  double *array  = field1.ptr;
+  double *array2;
+
+  nx = gridInqXsize(grid);
+  ny = gridInqYsize(grid);
+  
+  array2 = (double *) malloc(nx*sizeof(double));
+  
+  if ( nmiss > 0 )
+    {
+      for ( i = 0; i < nx; i++ )
+        {
+          for ( j = 0, l = 0; j < ny; j++ )
+	    if ( !DBL_IS_EQUAL(array[j*nx+i], missval) )
+	      array2[l++] = array[j*nx+i];
+	    
+          if ( l > 0 )
+            {
+              field2->ptr[i] = nth_element(array2, l, (int)ceil(l*(p/100.0))-1);
+            }
+          else
+            {
+              field2->ptr[i] = missval;
+              rnmiss++;
+            }
+        }
+    }
+  else
+    {
+      for ( i = 0; i < nx; i++ )
+      	{
+          if ( ny > 0 )
+            {
+              for ( j = 0; j < ny; j++ )
+                array2[j] = array[j*nx+i];
+              field2->ptr[i] = nth_element(array2, ny, (int)ceil(ny*(p/100.0))-1);
+            }
+          else
+            {
+              field2->ptr[i] = missval;
+              rnmiss++;
+            }
+      	}
+    }
+
+  field2->nmiss = rnmiss;
+}
+/* QR */

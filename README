@@ -1,0 +1,60 @@
+
+CDO - Climate Data Operators
+----------------------------
+
+     This package contains the source code for CDO. This program
+     was developed at the Max-Planck-Institute for Meteorology.
+     CDO is a collection of Operators to manipulate and analyse 
+     Climate model Data.
+     Supported data formats are GRIB, netCDF, SERVICE, EXTRA and IEG.
+
+     CDO is licensed under the GNU General Public License, version 2.
+     Read the file COPYING in the source distribution for details.
+
+Operators:
+
+     There are more than 400 operators available. Read OPEATORS for
+     a short overview of all operators.
+
+Documentation:
+
+     A detailed description of all operators can be found in: ./doc/cdo.pdf
+
+     Online reference manuals:   cdo -h <operator>
+
+Building and installing it:
+
+     1. Run ./configure, with some options if you wish. The standard
+        options are documented in the INSTALL file. The configuration
+        script has some more options; type 'configure -h' to see them.
+
+        The most interesting ones are the usual
+          --prefix=<installation directory> and
+          --with-netcdf=<directory> to enable netCDF support.
+
+        The netCDF-4 configuration depends on the netCDF-4 and HDF5 installation!
+	You have to define the location of the HDF5 installation if netCDF-4 was 
+        build with HDF5 support:
+ 
+          --with-netcdf=<netCDF-4 root directory> --with-hdf5=<HDF5 root directory> 
+
+        You have to specify also the location of the SZLIB if HDF5 was build with 
+        SZLIB support.
+
+        To process szip compressed GRIB files you have to enable SZLIB support with:
+          --with-szlib=<directory>
+
+     2. Do "make" to compile the program.
+
+     3. (Optional) Do "make install", possibly as root if the destination
+        permissions require that. This installs CDO in the directory
+        specified during configuration. The default prefix is /usr/local.
+
+Porting:
+
+     This package was designed for maximum portability. It is written entirely
+     in ANSI C99, and will compile on most UNIX platforms.
+     
+Contact:
+
+     Send questions, comments and bug reports to Uwe.Schulzweida@zmaw.de

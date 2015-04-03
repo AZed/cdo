@@ -1,0 +1,319 @@
+CDO NEWS
+--------
+
+Version 1.4.0.1 (21 October 2009):
+
+   * Fixed bugs:
+      o seltime: bug fix for scanning of input parameter
+      o IEG format: bug fix for identification of lonlat grids
+      o GRIB format: bug fix for decoding of missing values (scalar version only)
+
+Version 1.4.0 (5 October 2009):
+
+   * New features:
+      o added support of time units 'seconds' to all operators
+   * New operators:
+      o Import binary data sets (via a GrADS data descriptor file) - import_binary
+      o Set valid range - setvrange
+   * Changed operators:
+      o gridarea: added support for hexagonal GME grid and tripolar MPIOM grid
+      o remapnn: added support for unstructured grids without bounds (full grid search)
+      o Seasstat: added env. CDO_SEASON_START to set the start month of seasons
+      o ieg format: added support for Gaussian grids
+   * Fixed bugs:
+      o shifttime: bug fix for negative time increments
+      o import_cmsaf: read native float datatype
+
+Version 1.3.2 (15 June 2009):
+
+   * New features:
+      o Changed compiler to ANSI C99
+      o Added option -Q to sort netCDF variable names
+   * Changed operators:
+      o splitsel: changed the number of output digits from 3 to 6
+      o remapeta: correct humidity up to highest level *nctop* where condensation is allowed
+      o remapcon: change max_subseg from 1000 to 100000
+   * Fixed bugs:
+      o settaxis: bug fix for time increment 'months'
+      o remaplaf: fixed buffer overflow
+      o remapdis, remapnn: set num_srch_bins to 1 if REMAP_EXTRAPOLATE=OFF
+
+Version 1.3.1 (16 April 2009):
+
+   * New features:
+      o The default calendar is now set to "proleptic gregorian".
+        To use a standard calendar set the environment variable CDI_CALENDAR=standard.
+      o Added support for Lambert Conformal Conic projections
+      o Added support for missval = NaN
+   * Changed operators:
+      o ml2pl: added support for Geopotential Height
+      o Settime: added "seconds" support to operator "settunits", "settaxis" and "shifttime"
+      o percentile: change default number of bins from 100 to 101
+   * Fixed bugs:
+      o import_cmsaf: bug fix for datasets with gain/offset and more than 1 timestep
+      o remaplaf: bug fix for fields with missing values
+      o remapnn: bug fix for distance equal zero
+      o mermean: bug fix for weights from 'zonmean' (cdo mermean -zonmean)
+      o chlevel: fixed bug that happens when the list of oldlev,newlev 
+                 contains the same level more than once
+
+Version 1.3.0 (15 January 2009):
+
+   * New features:
+      o add support for Sinusoidal and Lambert Azimuthal Equal Area projections
+   * New operators:
+      o Second order conservative remapping - remapcon2
+      o Nearest neighbor remapping - remapnn
+      o Largest area fraction remapping - remaplaf
+      o Reciprocal value - reci
+   * Changed operators:
+      o import_cmsaf: add support for monthly mean diurnal cycle
+      o remap: set num_srch_bins to nlat/2 (speedup)
+   * Fixed bugs:
+      o setzaxis: changed datatype from float to double
+      o sellonlatbox: bug fix for curvilinear grids
+      o merge: bug fix for usage in CDO pipes
+      o gridarea, gridweights: bug fix for gridboxes with delta lon >= 180 degree
+      o intlevel: bug fix for datasets with missing values
+      o yseasstd, yseasvar: fixed wrong array index
+
+Version 1.2.1 (13 November 2008):
+
+   * New features:
+      o Option '-u' to determinate whether to overwrite existing files
+   * New operators:
+      o Import CM-SAF files - import_cmsaf
+      o Mathematical function 'power' - pow
+   * Changed operators:
+      o sellonlatbox: add support for grid type 'CELL' and units 'radians'
+      o remapdis: add support for grid type 'CELL' without bounds (full grid search)
+      o Timstat: use time axis with bounds from input
+      o copy, cat: concatenate time constant fields
+   * Fixed bugs:
+      o zonvar: activation was missing
+      o ifthen:  bug fix for datasets with different missing values
+      o runmean: bug fix for datasets with missing values
+
+Version 1.2.0 (13 August 2008):
+
+   * New features:
+      o add support for netCDF4 classic with deflate (option -z zip)
+   * New operators:
+      o Linear level interpolation - intlevel
+      o Invert levels - invertlev
+      o Select levels by index - sellevidx
+      o Import AMSR binary files - import_amsr
+   * Changed operators:
+      o remapeta: add missing value support
+   * Fixed bugs:
+      o Operator yseasmean, yhourmean and ydaymean: bug fix for datasets with missing values
+      o Module Ninfo and Showinfo: bug fix for datasets with time constant parameter only
+        Affected operators: ndate, nmon, nyear, showdate, showtime, showmon, showyear
+
+Version 1.1.1 (8 April 2008):
+
+   * New features:
+      o Module Vertint: add support for GME data
+
+   * New operators:
+      o Regression - regres
+      o Grid cell area/weights - gridarea, gridweights
+      o Z-axis description - zaxisdes
+
+   * Fixed bugs:
+      o Module Exprf: using MT safe version of bison and flex
+      o Module Vertint: bug fix for input with time constant fields
+      o Module Arithc: recalculate number of missing values
+      o Operator splitsel: bug fix for multilevel/multivar datasets
+
+Version 1.1.0 (25 January 2008):
+
+   * New features:
+      o Support for Lambert conformal grids in GRIB format
+      o Improved support for netCDF attributes
+
+   * New operators:
+      o Monthly arithmetic - monadd, monsub, monmul, mondiv
+
+   * Fixed bugs:
+      o Operator setlevel and chlevel: bug fix for usage in pipes
+      o Operator cat: bug fix for large existing output files (>2GB) on 32-bit machines
+      o Operator gradsdes: bug fix for monthly mean data with start day > 28
+      o Operator expr: change exponent precedence from left to right
+
+Version 1.0.9 (22 October 2007):
+
+   * New operators:
+      o Multi-year hourly statistical values
+         - yhourmin, yhourmax, yhoursum, yhourmean, yhouravg, yhourstd, yhourvar
+   * Changed operators:
+      o ymonstat: write original order of timesteps
+      o gradsdes: add GRIB level type to VARS
+   * Fixed bugs:
+      o Operator ifthen: bug fix for masks that varies not with time
+
+
+Version 1.0.8 (27 June 2007):
+
+   * New operators:
+      o Remap vertical hybrid level - remapeta
+      o 9 point smoothing - smooth9
+      o Mask region - maskregion
+      o Split selected time steps - splitsel
+      o Set range to constant - setrtoc, setrtoc2
+      o Histogram - histcount, histsum, histmean, histfreq
+      o Show GRIB level types - showltype
+      o Select GRIB level types - selltype
+      o Set GRIB level type - setltype
+   * Changed operators:
+      o Renamed chvar, selvar, delvar, showvar, setvar and splitvar
+             to chname, selname, delname, showname, setname and splitname
+      o Renamed selmin, selmax, selsum, selmean, selavg, selvar, selstd
+             to timselmin, timselmax, timselsum, timselmean, timselavg, timselvar, timselstd
+      o Renamed selpctl to timselpctl
+      o Renamed nvar to npar and vardes to pardes
+   * Fixed bugs:
+      o Module Ymonstat gave wrong results with missing values
+        Affected operators: ymonmean, ymonstd, ymonvar
+      o Library ieglib has had a memory leak for IEG output
+
+Version 1.0.7 (8 March 2007):
+
+   * New operators:
+      o Divergence and vorticity to U and V wind (linear) - dv2uvl
+      o U and V wind to divergence and vorticity (linear) - uv2dvl
+      o Select single month - selsmon
+   * Changed operators:
+      o tchill is renamed to wct
+      o eca_strwind is split into eca_strwin, eca_strbre, eca_strgal and eca_hurr
+   * Fixed bugs:
+      o fldmax has had wrong results if the field has
+        missing values and all other values are less than zero.
+
+Version 1.0.6 (12 December 2006):
+
+   * New operators:
+      o Variance for all statistic modules
+         - vertvar, timvar, yearvar, monvar, dayvar, hourvar,
+           runvar, seasvar, selvar, ydayvar, ydrunvar, ymonvar, yseasvar
+
+Developer version 1.0.5 (30 November 2006):
+
+  * New operators:
+      o Show file format - showformat 
+      o Windchill temperature - tchill
+      o Humidity index - hi
+      o ECA Indices of Daily Temperature and Precipitation Extremes
+        - eca_* (37 different indices!)
+
+Developer version 1.0.4 (7 November 2006):
+
+  * New operators:
+      o Multi-year daily running statistical values
+         - ydrunmin, ydrunmax, ydrunsum, ydrunmean, ydrunavg, ydrunstd
+      o Percentile values for different time ranges
+         - timpctl, hourpctl, daypctl, monpctl, yearpctl, selpctl, runpctl, seaspctl
+      o Multi-year percentile values
+         - ydaypctl, ymonpctl, yseaspctl, ydrunpctl
+      o Ensemble and field percentiles
+         - enspctl, fldpctl, zonpctl, merpctl
+
+Developer version 1.0.3 (3 November 2006):
+
+  * New operators:
+      o Time interpolation - intntime 
+      o Backward transformation of velocity components U and V from MPIOM - mrotuvb
+
+Version 1.0.2 (18 September 2006):
+
+  * Rename operator gradsdes to gradsdes1 and set the alias gradsdes to gradsdes2
+  * Remapping of rotated lonlat grids with remapbi* and genbi* has been changed at the bounds.
+    Generated interpolation weights with older CDO versions can't be used anymore and must
+    be recalculated with genbi*.
+  * New operators:
+      o ydaysum - Multi-year daily sum
+      o ymonsum - Multi-year monthly sum
+      o yseassum - Multi-year seasonally sum
+      o int - Convert to integer value
+      o nint - Convert to nearest integer value
+
+Version 1.0.1 (1 August 2006):
+
+  * New CDO option '-b' to set the number of bits for the output precision
+  * New operators:
+      o selstdname - Select standard names
+      o showstdname - Show standard names
+      o setclonlatbox - Set a longitude/latitude box to constant [Etienne Tourigny]
+      o setcindexbox - Set an index box to constant
+
+Version 1.0.0 (15 June 2006):
+
+  * New operators:
+      o dv2ps - Divergence and vorticity to velocity potential and stream function
+
+Version 0.9.13 (4 May 2006):
+
+  * New operators:
+      o mergetime - Merge datasets sorted by date and time
+      o input, inputext, inputsrv - ASCII input
+      o abs - Absolute value
+      o atan2 - Arc tangent of two fields
+
+Version 0.9.12 (6 March 2006):
+
+  * New operators:
+      o uv2dv, dv2uv - Wind transformation
+
+Version 0.9.11 (1 Februar 2006):
+
+  * Support of GME grids
+  * New operators:
+      o selmin, selmax, selsum, selmean, selavg, selstd - Time range statistic
+      o sp2gpl, gp2spl - Spectral transformation of TL-Model data (e.g. ERA40)
+      o replace - Replace variables
+
+Version 0.9.10 (19 December 2005):
+
+  * Support of REMO IEG format
+  * New operators:
+      o ifthenelse - IF ifile1 THEN ifile2 ELSE ifile3
+
+Version 0.9.9 (19 October 2005):
+
+  * New operators:
+      o ensmin, ensmax, enssum, ensmean, ensavg, ensstd, ensvar - Ensemble statistic
+      o gradsdes2 - Creates a GrADS data descriptor file with a portable GrADS map
+      o enlarge - Enlarge all fields to a user given grid
+      o gencon - Generate conservative interpolation weights
+      o remap - Remapping with the interpolation weights from a netCDF file 
+
+Version 0.9.8 (19 July 2005):
+
+  * New operators:
+      o setlevel - Set level
+      o chlevel - Change level 
+      o chlevelc - Change level of one code
+      o chlevelv - Change level of one variable
+
+Version 0.9.7 (26 May 2005):
+
+  * New operators:
+      o setcalendar - Set calendar
+      o masklonlatbox - Mask lon/lat box
+      o maskindexbox - Mask index box
+      o muldpm - Multiply with days per month
+      o divdpm - Divide with days per month
+ 
+
+Version 0.9.6 (4 April 2005):
+
+  * Support of rotated regular grids.
+  * New operator:
+      o detrend - Linear detrending of time series. 
+
+Version 0.9.4 (3 Jan 2005):
+ 
+  * Support of PINGO grid description files. 
+  * New operator: 
+      o gradsdes - Creates a GrADS data descriptor file.
+                   Supported file formats are GRIB, SERVICE and EXTRA. 

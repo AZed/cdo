@@ -1,0 +1,457 @@
+===========================
+CDO  Climate Data Operators
+===========================
+
+Operator catalog:
+
+-------------------------------------------------------------
+   Information
+-------------------------------------------------------------
+      Info       info            Dataset information listed by code number
+      Info       infov           Dataset information listed by variable name
+      Info       map             Dataset information and simple map
+      Sinfo      sinfo           Short dataset information listed by code number
+      Sinfo      sinfov          Short dataset information listed by variable name
+      Diff       diff            Compare two datasets listed by code number
+      Diff       diffv           Compare two datasets listed by variable name
+      Ninfo      npar            Number of parameters
+      Ninfo      nlevel          Number of levels
+      Ninfo      nyear           Number of years
+      Ninfo      nmon            Number of months
+      Ninfo      ndate           Number of dates
+      Ninfo      ntime           Number of time steps
+      Showinfo   showformat      Show file format
+      Showinfo   showcode        Show code numbers
+      Showinfo   showname        Show variable names
+      Showinfo   showstdname     Show standard names
+      Showinfo   showlevel       Show levels
+      Showinfo   showltype       Show GRIB level types
+      Showinfo   showyear        Show years
+      Showinfo   showmon         Show months
+      Showinfo   showdate        Show dates
+      Showinfo   showtime        Show time steps
+      Filedes    pardes          Parameter description
+      Filedes    griddes         Grid description
+      Filedes    zaxisdes        Z-axis description
+      Filedes    vct             Vertical coordinate table
+-------------------------------------------------------------
+   File operations
+-------------------------------------------------------------
+      Copy       copy            Copy datasets
+      Copy       cat             Concatenate datasets
+      Replace    replace         Replace variables
+      Merge      merge           Merge datasets with different fields
+      Merge      mergetime       Merge datasets sorted by date and time
+      Split      splitcode       Split code numbers
+      Split      splitname       Split variable names
+      Split      splitlevel      Split levels
+      Split      splitgrid       Split grids
+      Split      splitzaxis      Split z-axes
+      Splittime  splithour       Split hours
+      Splittime  splitday        Split days
+      Splittime  splitmon        Split months
+      Splittime  splitseas       Split seasons
+      Splittime  splityear       Split years
+      Splitsel   splitsel        Split time selection
+-------------------------------------------------------------
+   Selection
+-------------------------------------------------------------
+      Select     selcode         Select variables by code number
+      Select     delcode         Delete variables by code number
+      Select     selname         Select variables by name
+      Select     delname         Delete variables by name
+      Select     selstdname      Select variables by standard name
+      Select     sellevel        Select levels
+      Select     sellevidx       Select levels by index
+      Select     selgrid         Select grids
+      Select     selgridname     Select grids by name
+      Select     selzaxis        Select z-axes
+      Select     selzaxisname    Select z-axes by name
+      Select     selltype        Select GRIB level types
+      Select     seltabnum       Select parameter table numbers
+      Seltime    seltimestep     Select time steps
+      Seltime    seltime         Select times
+      Seltime    selhour         Select hours
+      Seltime    selday          Select days
+      Seltime    selmon          Select months
+      Seltime    selyear         Select years
+      Seltime    selseas         Select seasons
+      Seltime    seldate         Select dates
+      Seltime    selsmon         Select single month
+      Selbox     sellonlatbox    Select a longitude/latitude box
+      Selbox     selindexbox     Select an index box
+-------------------------------------------------------------
+   Conditional selection
+-------------------------------------------------------------
+      Cond       ifthen          If then
+      Cond       ifnotthen       If not then
+      Cond2      ifthenelse      If then else
+      Condc      ifthenc         If then constant
+      Condc      ifnotthenc      If not then constant
+-------------------------------------------------------------
+   Comparison
+-------------------------------------------------------------
+      Comp       eq              Equal
+      Comp       ne              Not equal
+      Comp       le              Less equal
+      Comp       lt              Less than
+      Comp       ge              Greater equal
+      Comp       gt              Greater than
+      Compc      eqc             Equal constant
+      Compc      nec             Not equal constant
+      Compc      lec             Less equal constant
+      Compc      ltc             Less than constant
+      Compc      gec             Greater equal constant
+      Compc      gtc             Greater than constant
+-------------------------------------------------------------
+   Modification
+-------------------------------------------------------------
+      Set        setpartab       Set parameter table
+      Set        setcode         Set code number
+      Set        setname         Set variable name
+      Set        setlevel        Set level
+      Set        setltype        Set GRIB level type
+      Settime    setdate         Set date
+      Settime    settime         Set time of the day
+      Settime    setday          Set day
+      Settime    setmon          Set month
+      Settime    setyear         Set year
+      Settime    settunits       Set time units
+      Settime    settaxis        Set time axis
+      Settime    setreftime      Set reference time
+      Settime    setcalendar     Set calendar
+      Settime    shifttime       Shift time steps
+      Change     chcode          Change code number
+      Change     chname          Change variable name
+      Change     chlevel         Change level
+      Change     chlevelc        Change level of one code
+      Change     chlevelv        Change level of one variable
+      Setgrid    setgrid         Set grid
+      Setgrid    setgridtype     Set grid type
+      Setzaxis   setzaxis        Set z-axis
+      Setgatt    setgatt         Set global attribute
+      Setgatt    setgatts        Set global attributes
+      Invert     invertlat       Invert latitudes
+      Invertlev  invertlev       Invert levels
+      Maskregion maskregion      Mask regions
+      Maskbox    masklonlatbox   Mask a longitude/latitude box
+      Maskbox    maskindexbox    Mask an index box
+      Setbox     setclonlatbox   Set a longitude/latitude box to constant
+      Setbox     setcindexbox    Set an index box to constant
+      Enlarge    enlarge         Enlarge fields
+      Setmiss    setmissval      Set a new missing value
+      Setmiss    setctomiss      Set constant to missing value
+      Setmiss    setmisstoc      Set missing value to constant
+      Setmiss    setrtomiss      Set range to missing value
+      Setmiss    setvrange       Set valid range
+-------------------------------------------------------------
+   Arithmetic
+-------------------------------------------------------------
+      Exprf      expr            Evaluate expressions
+      Exprf      exprf           Evaluate expressions from script file
+      Math       abs             Absolute value
+      Math       int             Integer value
+      Math       nint            Nearest integer value
+      Math       pow             Power
+      Math       sqr             Square
+      Math       sqrt            Square root
+      Math       exp             Exponential
+      Math       ln              Natural logarithm
+      Math       log10           Base 10 logarithm
+      Math       sin             Sine
+      Math       cos             Cosine
+      Math       tan             Tangent
+      Math       asin            Arc sine
+      Math       acos            Arc cosine
+      Math       reci            Reciprocal value
+      Arithc     addc            Add a constant
+      Arithc     subc            Subtract a constant
+      Arithc     mulc            Multiply with a constant
+      Arithc     divc            Divide by a constant
+      Arith      add             Add two fields
+      Arith      sub             Subtract two fields
+      Arith      mul             Multiply two fields
+      Arith      div             Divide two fields
+      Arith      min             Minimum of two fields
+      Arith      max             Maximum of two fields
+      Arith      atan2           Arc tangent of two fields
+      Monarith   monadd          Add monthly time series
+      Monarith   monsub          Subtract monthly time series
+      Monarith   monmul          Multiply monthly time series
+      Monarith   mondiv          Divide monthly time series
+      Ymonarith  ymonadd         Add multi-year monthly time series
+      Ymonarith  ymonsub         Subtract multi-year monthly time series
+      Ymonarith  ymonmul         Multiply multi-year monthly time series
+      Ymonarith  ymondiv         Divide multi-year monthly time series
+      Arithdays  muldpm          Multiply with days per month
+      Arithdays  divdpm          Divide by days per month
+      Arithdays  muldpy          Multiply with days per year
+      Arithdays  divdpy          Divide by days per year
+-------------------------------------------------------------
+   Statistical values
+-------------------------------------------------------------
+      Ensstat    ensmin          Ensemble minimum
+      Ensstat    ensmax          Ensemble maximum
+      Ensstat    enssum          Ensemble sum
+      Ensstat    ensmean         Ensemble mean
+      Ensstat    ensavg          Ensemble average
+      Ensstat    ensvar          Ensemble variance
+      Ensstat    ensstd          Ensemble standard deviation
+      Ensstat    enspctl         Ensemble percentiles
+      Fldstat    fldmin          Field minimum
+      Fldstat    fldmax          Field maximum
+      Fldstat    fldsum          Field sum
+      Fldstat    fldmean         Field mean
+      Fldstat    fldavg          Field average
+      Fldstat    fldvar          Field variance
+      Fldstat    fldstd          Field standard deviation
+      Fldstat    fldpctl         Field percentiles
+      Zonstat    zonmin          Zonal minimum
+      Zonstat    zonmax          Zonal maximum
+      Zonstat    zonsum          Zonal sum
+      Zonstat    zonmean         Zonal mean
+      Zonstat    zonavg          Zonal average
+      Zonstat    zonvar          Zonal variance
+      Zonstat    zonstd          Zonal standard deviation
+      Zonstat    zonpctl         Zonal percentiles
+      Merstat    mermin          Meridional minimum
+      Merstat    mermax          Meridional maximum
+      Merstat    mersum          Meridional sum
+      Merstat    mermean         Meridional mean
+      Merstat    meravg          Meridional average
+      Merstat    mervar          Meridional variance
+      Merstat    merstd          Meridional standard deviation
+      Merstat    merpctl         Meridional percentiles
+      Vertstat   vertmin         Vertical minimum
+      Vertstat   vertmax         Vertical maximum
+      Vertstat   vertsum         Vertical sum
+      Vertstat   vertmean        Vertical mean
+      Vertstat   vertavg         Vertical average
+      Vertstat   vertvar         Vertical variance
+      Vertstat   vertstd         Vertical standard deviation
+      Timselstat timselmin       Time range minimum
+      Timselstat timselmax       Time range maximum
+      Timselstat timselsum       Time range sum
+      Timselstat timselmean      Time range mean
+      Timselstat timselavg       Time range average
+      Timselstat timselvar       Time range variance
+      Timselstat timselstd       Time range standard deviation
+      Timselpctl timselpctl      Time range percentiles
+      Runstat    runmin          Running minimum
+      Runstat    runmax          Running maximum
+      Runstat    runsum          Running sum
+      Runstat    runmean         Running mean
+      Runstat    runavg          Running average
+      Runstat    runvar          Running variance
+      Runstat    runstd          Running standard deviation
+      Runpctl    runpctl         Running percentiles
+      Timstat    timmin          Time minimum
+      Timstat    timmax          Time maximum
+      Timstat    timsum          Time sum
+      Timstat    timmean         Time mean
+      Timstat    timavg          Time average
+      Timstat    timvar          Time variance
+      Timstat    timstd          Time standard deviation
+      Timpctl    timpctl         Time percentiles
+      Hourstat   hourmin         Hourly minimum
+      Hourstat   hourmax         Hourly maximum
+      Hourstat   hoursum         Hourly sum
+      Hourstat   hourmean        Hourly mean
+      Hourstat   houravg         Hourly average
+      Hourstat   hourvar         Hourly variance
+      Hourstat   hourstd         Hourly standard deviation
+      Hourpctl   hourpctl        Hourly percentiles
+      Daystat    daymin          Daily minimum
+      Daystat    daymax          Daily maximum
+      Daystat    daysum          Daily sum
+      Daystat    daymean         Daily mean
+      Daystat    dayavg          Daily average
+      Daystat    dayvar          Daily variance
+      Daystat    daystd          Daily standard deviation
+      Daypctl    daypctl         Daily percentiles
+      Monstat    monmin          Monthly minimum
+      Monstat    monmax          Monthly maximum
+      Monstat    monsum          Monthly sum
+      Monstat    monmean         Monthly mean
+      Monstat    monavg          Monthly average
+      Monstat    monvar          Monthly variance
+      Monstat    monstd          Monthly standard deviation
+      Monpctl    monpctl         Monthly percentiles
+      Yearstat   yearmin         Yearly minimum
+      Yearstat   yearmax         Yearly maximum
+      Yearstat   yearsum         Yearly sum
+      Yearstat   yearmean        Yearly mean
+      Yearstat   yearavg         Yearly average
+      Yearstat   yearvar         Yearly variance
+      Yearstat   yearstd         Yearly standard deviation
+      Yearpctl   yearpctl        Yearly percentiles
+      Seasstat   seasmin         Seasonal minimum
+      Seasstat   seasmax         Seasonal maximum
+      Seasstat   seassum         Seasonal sum
+      Seasstat   seasmean        Seasonal mean
+      Seasstat   seasavg         Seasonal average
+      Seasstat   seasvar         Seasonal variance
+      Seasstat   seasstd         Seasonal standard deviation
+      Seaspctl   seaspctl        Seasonal percentiles
+      Yhourstat  yhourmin        Multi-year hourly minimum
+      Yhourstat  yhourmax        Multi-year hourly maximum
+      Yhourstat  yhoursum        Multi-year hourly sum
+      Yhourstat  yhourmean       Multi-year hourly mean
+      Yhourstat  yhouravg        Multi-year hourly average
+      Yhourstat  yhourvar        Multi-year hourly variance
+      Yhourstat  yhourstd        Multi-year hourly standard deviation
+      Ydaystat   ydaymin         Multi-year daily minimum
+      Ydaystat   ydaymax         Multi-year daily maximum
+      Ydaystat   ydaysum         Multi-year daily sum
+      Ydaystat   ydaymean        Multi-year daily mean
+      Ydaystat   ydayavg         Multi-year daily average
+      Ydaystat   ydayvar         Multi-year daily variance
+      Ydaystat   ydaystd         Multi-year daily standard deviation
+      Ydaypctl   ydaypctl        Multi-year daily percentiles
+      Ymonstat   ymonmin         Multi-year monthly minimum
+      Ymonstat   ymonmax         Multi-year monthly maximum
+      Ymonstat   ymonsum         Multi-year monthly sum
+      Ymonstat   ymonmean        Multi-year monthly mean
+      Ymonstat   ymonavg         Multi-year monthly average
+      Ymonstat   ymonvar         Multi-year monthly variance
+      Ymonstat   ymonstd         Multi-year monthly standard deviation
+      Ymonpctl   ymonpctl        Multi-year monthly percentiles
+      Yseasstat  yseasmin        Multi-year seasonal minimum
+      Yseasstat  yseasmax        Multi-year seasonal maximum
+      Yseasstat  yseassum        Multi-year seasonal sum
+      Yseasstat  yseasmean       Multi-year seasonal mean
+      Yseasstat  yseasavg        Multi-year seasonal average
+      Yseasstat  yseasvar        Multi-year seasonal variance
+      Yseasstat  yseasstd        Multi-year seasonal standard deviation
+      Yseaspctl  yseaspctl       Multi-year seasonal percentiles
+      Ydrunstat  ydrunmin        Multi-year daily running minimum
+      Ydrunstat  ydrunmax        Multi-year daily running maximum
+      Ydrunstat  ydrunsum        Multi-year daily running sum
+      Ydrunstat  ydrunmean       Multi-year daily running mean
+      Ydrunstat  ydrunavg        Multi-year daily running average
+      Ydrunstat  ydrunvar        Multi-year daily running variance
+      Ydrunstat  ydrunstd        Multi-year daily running standard deviation
+      Ydrunpctl  ydrunpctl       Multi-year daily running percentiles
+-------------------------------------------------------------
+   Regression
+-------------------------------------------------------------
+      Regres     regres          Regression
+      Detrend    detrend         Detrend
+      Trend      trend           Trend
+      Subtrend   subtrend        Subtract trend
+-------------------------------------------------------------
+   Interpolation
+-------------------------------------------------------------
+      Remapgrid  remapbil        Bilinear interpolation
+      Remapgrid  remapbic        Bicubic interpolation
+      Remapgrid  remapdis        Distance-weighted average remapping
+      Remapgrid  remapnn         Nearest neighbor remapping
+      Remapgrid  remapcon        First order conservative remapping
+      Remapgrid  remapcon2       Second order conservative remapping
+      Remapgrid  remaplaf        Largest area fraction remapping
+      Genweights genbil          Generate bilinear interpolation weights
+      Genweights genbic          Generate bicubic interpolation weights
+      Genweights gendis          Generate distance-weighted average remap weights
+      Genweights gennn           Generate nearest neighbor remap weights
+      Genweights gencon          Generate 1st order conservative remap weights
+      Genweights gencon2         Generate 2nd order conservative remap weights
+      Genweights genlaf          Generate largest area fraction remap weights
+      Remap      remap           SCRIP grid remapping
+      Intgrid    interpolate     PINGO grid interpolation
+      Remapeta   remapeta        Remap vertical hybrid level
+      Vertint    ml2pl           Model to pressure level interpolation
+      Vertint    ml2hl           Model to height level interpolation
+      Intlevel   intlevel        Linear level interpolation
+      Inttime    inttime         Interpolation between time steps
+      Inttime    intntime        Interpolation between time steps
+      Intyear    intyear         Interpolation between two years
+-------------------------------------------------------------
+   Transformation
+-------------------------------------------------------------
+      Spectral   sp2gp           Spectral to gridpoint
+      Spectral   sp2gpl          Spectral to gridpoint (linear)
+      Spectral   gp2sp           Gridpoint to spectral
+      Spectral   gp2spl          Gridpoint to spectral (linear)
+      Spectral   sp2sp           Spectral to spectral
+      Spectral   spcut           Cut spectral wave number
+      Wind       dv2uv           Divergence and vorticity to U and V wind
+      Wind       dv2uvl          Divergence and vorticity to U and V wind (linear)
+      Wind       uv2dv           U and V wind to divergence and vorticity
+      Wind       uv2dvl          U and V wind to divergence and vorticity (linear)
+-------------------------------------------------------------
+   Formatted I/O
+-------------------------------------------------------------
+      Input      input           ASCII input
+      Input      inputsrv        SERVICE ASCII input
+      Input      inputext        EXTRA ASCII input
+      Output     output          ASCII output
+      Output     outputf         Formatted output
+      Output     outputint       Integer output
+      Output     outputsrv       SERVICE ASCII output
+      Output     outputext       EXTRA ASCII output
+-------------------------------------------------------------
+   Miscellaneous
+-------------------------------------------------------------
+      Gridcell   gridarea        Grid cell area
+      Gridcell   gridweights     Grid cell weights
+      Gradsdes   gradsdes1       GrADS data descriptor file (version 1 GRIB map)
+      Gradsdes   gradsdes2       GrADS data descriptor file (version 2 GRIB map)
+      Smooth9    smooth9         9 point smoothing
+      Setrange   setrtoc         Set range to constant
+      Setrange   setrtoc2        Set range to constant others to constant2
+      Timsort    timsort         Sort over the time
+      Vargen     const           Create a constant field
+      Vargen     random          Create a field with random values
+      Rotuv      rotuvb          Backward rotation
+      Mastrfu    mastrfu         Mass stream function
+      Histogram  histcount       Histogram count
+      Histogram  histsum         Histogram sum
+      Histogram  histmean        Histogram mean
+      Histogram  histfreq        Histogram frequency
+      Wct        wct             Windchill temperature
+      Fdns       fdns            Frost days where no snow index per time period
+      Strwin     strwin          Strong wind days index per time period
+      Strbre     strbre          Strong breeze days index per time period
+      Strgal     strgal          Strong gale days index per time period
+      Hurr       hurr            Hurricane days index per time period
+      Importamsr import_amsr     Import AMSR binary files
+      Importcmsaf import_cmsaf    Import CM-SAF HDF5 files
+      Importbinary import_binary   Import binary data sets
+-------------------------------------------------------------
+   Climate indices
+-------------------------------------------------------------
+      EcaCdd     eca_cdd         Consecutive dry days index per time period
+      EcaCfd     eca_cfd         Consecutive frost days index per time period
+      EcaCsu     eca_csu         Consecutive summer days index per time period
+      EcaCwd     eca_cwd         Consecutive wet days index per time period
+      EcaCwdi    eca_cwdi        Cold wave duration index wrt mean of reference period
+      EcaCwfi    eca_cwfi        Cold-spell days index wrt 10th percentile of reference period
+      EcaEtr     eca_etr         Intra-period extreme temperature range
+      EcaFd      eca_fd          Frost days index per time period
+      EcaGsl     eca_gsl         Growing season length index
+      EcaHd      eca_hd          Heating degree days per time period
+      EcaHwdi    eca_hwdi        Heat wave duration index wrt mean of reference period
+      EcaHwfi    eca_hwfi        Warm spell days index wrt 90th percentile of reference period
+      EcaId      eca_id          Ice days index per time period
+      EcaR10mm   eca_r10mm       Heavy precipitation days index per time period
+      EcaR20mm   eca_r20mm       Very heavy precipitation days index per time period
+      EcaR75p    eca_r75p        Moderate wet days wrt 75th percentile of reference period
+      EcaR75ptot eca_r75ptot     Precipitation percent due to R75p days
+      EcaR90p    eca_r90p        Wet days wrt 90th percentile of reference period
+      EcaR90ptot eca_r90ptot     Precipitation percent due to R90p days
+      EcaR95p    eca_r95p        Very wet days wrt 95th percentile of reference period
+      EcaR95ptot eca_r95ptot     Precipitation percent due to R95p days
+      EcaR99p    eca_r99p        Extremely wet days wrt 99th percentile of reference period
+      EcaR99ptot eca_r99ptot     Precipitation percent due to R99p days
+      EcaRr1     eca_rr1         Wet days index per time period
+      EcaRx1day  eca_rx1day      Highest one day precipitation amount per time period
+      EcaRx5day  eca_rx5day      Highest five-day precipitation amount per time period
+      EcaSdii    eca_sdii        Simple daily intensity index per time period
+      EcaSu      eca_su          Summer days index per time period
+      EcaTg10p   eca_tg10p       Cold days percent wrt 10th percentile of reference period
+      EcaTg90p   eca_tg90p       Warm days percent wrt 90th percentile of reference period
+      EcaTn10p   eca_tn10p       Cold nights percent wrt 10th percentile of reference period
+      EcaTn90p   eca_tn90p       Warm nights percent wrt 90th percentile of reference period
+      EcaTr      eca_tr          Tropical nights index per time period
+      EcaTx10p   eca_tx10p       Very cold days percent wrt 10th percentile of reference period
+      EcaTx90p   eca_tx90p       Very warm days percent wrt 90th percentile of reference period
