@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -254,7 +254,7 @@ void *Mrotuv(void *argument)
     cdoAbort("Grid %s unsupported!", gridNamePtr(gridInqType(gridID1)));
   
   if ( gridInqType(gridID1) != GRID_CURVILINEAR )
-    gridID1 = gridToCurvilinear(gridID1);
+    gridID1 = gridToCurvilinear(gridID1, 0);
 
   if ( gridsize != gridInqSize(gridID1) ) cdoAbort("Internal problem: gridsize changed!");
 

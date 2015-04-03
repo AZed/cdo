@@ -6,6 +6,9 @@ completions:
 	  ruby -KN $(srcdir)/makecompl.rb -o cdoCompletion; \
 	fi
 
+test:
+	(cd ruby;ruby test/test_cdo.rb) && (cd python; python test/test_cdo.py)
+
 if MAINTAINER_MODE
 all-local: completions
 

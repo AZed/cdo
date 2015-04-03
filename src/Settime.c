@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -67,6 +67,42 @@ int get_tunits(const char *unit, int *incperiod, int *incunit, int *tunit)
   return (0);
 }
 
+static
+void shifttime(int calendar, int tunit, int ijulinc, int *pdate, int *ptime)
+{
+  int year, month, day;
+  int vdate = *pdate;
+  int vtime = *ptime;
+  juldate_t juldate;
+
+  if ( tunit == TUNIT_MONTH || tunit == TUNIT_YEAR )
+    {
+      cdiDecodeDate(vdate, &year, &month, &day);
+	      
+      month += ijulinc;
+
+      while ( month > 12 ) { month -= 12; year++; }
+      while ( month <  1 ) { month += 12; year--; }
+
+      vdate = cdiEncodeDate(year, month, day);
+
+      *pdate = vdate;
+    }
+  else
+    {
+      juldate = juldate_encode(calendar, vdate, vtime);
+      juldate = juldate_add_seconds(ijulinc, juldate);
+      juldate_decode(calendar, juldate, &vdate, &vtime);
+
+      *pdate = vdate;
+      *ptime = vtime;
+
+      if ( cdoVerbose )
+	cdoPrint("juldate, ijulinc, vdate, vtime: %g %d %d %d",
+		 juldate_to_seconds(juldate), ijulinc, vdate, vtime);
+    }
+}
+
 
 void *Settime(void *argument)
 {
@@ -78,6 +114,7 @@ void *Settime(void *argument)
   int tsID1, recID, varID, levelID;
   int vlistID1, vlistID2;
   int vdate, vtime;
+  int vdateb[2], vtimeb[2];
   int sdate = 0, stime = 0;
   int taxisID1, taxisID2 = CDI_UNDEFID;
   int nmiss;
@@ -89,26 +126,31 @@ void *Settime(void *argument)
   int taxis_has_bounds, copy_timestep = FALSE;
   int calendar;
   int newcalendar = CALENDAR_STANDARD;
+  int nargs;
   const char *datestr, *timestr;
+  char *rstr;
   juldate_t juldate;
   double *array = NULL;
 
   cdoInitialize(argument);
 
-  SETYEAR     = cdoOperatorAdd("setyear",     0,  0, "year");
-  SETMON      = cdoOperatorAdd("setmon",      0,  0, "month");
-  SETDAY      = cdoOperatorAdd("setday",      0,  0, "day");
-  SETDATE     = cdoOperatorAdd("setdate",     0,  0, "date (format: YYYY-MM-DD)");
-  SETTIME     = cdoOperatorAdd("settime",     0,  0, "time (format: hh:mm:ss)");
-  SETTUNITS   = cdoOperatorAdd("settunits",   0,  0, "time units (seconds, minutes, hours, days, months, years)");
-  SETTAXIS    = cdoOperatorAdd("settaxis",    0,  0, "date,time<,increment> (format YYYY-MM-DD,hh:mm:ss)");
-  SETREFTIME  = cdoOperatorAdd("setreftime",  0,  0, "date,time<,units> (format YYYY-MM-DD,hh:mm:ss)");
-  SETCALENDAR = cdoOperatorAdd("setcalendar", 0,  0, "calendar (standard, proleptic, 360days, 365days, 366days)");
-  SHIFTTIME   = cdoOperatorAdd("shifttime",   0,  0, "shift value");
+  SETYEAR     = cdoOperatorAdd("setyear",     0,  1, "year");
+  SETMON      = cdoOperatorAdd("setmon",      0,  1, "month");
+  SETDAY      = cdoOperatorAdd("setday",      0,  1, "day");
+  SETDATE     = cdoOperatorAdd("setdate",     0,  1, "date (format: YYYY-MM-DD)");
+  SETTIME     = cdoOperatorAdd("settime",     0,  1, "time (format: hh:mm:ss)");
+  SETTUNITS   = cdoOperatorAdd("settunits",   0,  1, "time units (seconds, minutes, hours, days, months, years)");
+  SETTAXIS    = cdoOperatorAdd("settaxis",    0, -2, "date,time<,increment> (format YYYY-MM-DD,hh:mm:ss)");
+  SETREFTIME  = cdoOperatorAdd("setreftime",  0, -2, "date,time<,units> (format YYYY-MM-DD,hh:mm:ss)");
+  SETCALENDAR = cdoOperatorAdd("setcalendar", 0,  1, "calendar (standard, proleptic, 360days, 365days, 366days)");
+  SHIFTTIME   = cdoOperatorAdd("shifttime",   0,  1, "shift value");
 
   operatorID = cdoOperatorID();
+  // nargs = cdoOperatorF2(operatorID);
 
   operatorInputArg(cdoOperatorEnter(operatorID));
+
+  //  if ( operatorArgc()
 
   if ( operatorID == SETTAXIS || operatorID == SETREFTIME )
     {
@@ -124,7 +166,8 @@ void *Settime(void *argument)
 	}
       else
 	{
-	  sdate = atoi(datestr);
+	  sdate = (int)strtol(datestr, &rstr, 10);
+	  if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", datestr);
 	}
 
       if ( strchr(timestr, ':') )
@@ -134,16 +177,17 @@ void *Settime(void *argument)
 	}
       else
 	{
-	  stime = atoi(timestr);
+	  stime = (int)strtol(timestr, &rstr, 10);
+	  if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", timestr);
 	}
 
       if ( operatorArgc() == 3 )
 	{
-	  char *unit = operatorArgv()[2];
-	  incperiod = atoi(unit);
-	  while ( isdigit((int) *unit) ) unit++;
+	  const char *timeunits = operatorArgv()[2];
+	  incperiod = (int)strtol(timeunits, NULL, 10);;
+	  while ( isdigit((int) *timeunits) ) timeunits++;
 
-	  get_tunits(unit, &incperiod, &incunit, &tunit);
+	  get_tunits(timeunits, &incperiod, &incunit, &tunit);
 	}
       /* increment in seconds */
       ijulinc = incperiod * incunit;
@@ -159,7 +203,8 @@ void *Settime(void *argument)
 	}
       else
 	{
-	  newval = atoi(datestr);
+	  newval = (int)strtol(datestr, &rstr, 10);
+	  if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", datestr);
 	}
     }
   else if ( operatorID == SETTIME )
@@ -174,17 +219,18 @@ void *Settime(void *argument)
 	}
       else
 	{
-	  newval = atoi(timestr);
+	  newval = (int)strtol(timestr, &rstr, 10);
+	  if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", timestr);
 	}
     }
   else if ( operatorID == SHIFTTIME )
     {
-      char *unit = operatorArgv()[0];
-      incperiod = atoi(unit);
-      if ( unit[0] == '-' || unit[0] == '+' ) unit++;
-      while ( isdigit((int) *unit) ) unit++;
+      const char *timeunits = operatorArgv()[0];
+      incperiod = (int)strtol(timeunits, NULL, 10);;
+      if ( timeunits[0] == '-' || timeunits[0] == '+' ) timeunits++;
+      while ( isdigit((int) *timeunits) ) timeunits++;
 
-      get_tunits(unit, &incperiod, &incunit, &tunit);
+      get_tunits(timeunits, &incperiod, &incunit, &tunit);
 
       /* increment in seconds */
       ijulinc = incperiod * incunit;
@@ -192,9 +238,9 @@ void *Settime(void *argument)
   else if ( operatorID == SETTUNITS )
     {
       int idum;
-      char *unit = operatorArgv()[0];
+      const char *timeunits = operatorArgv()[0];
       incperiod = 0;
-      get_tunits(unit, &incperiod, &idum, &tunit);
+      get_tunits(timeunits, &incperiod, &idum, &tunit);
     }
   else if ( operatorID == SETCALENDAR )
     {
@@ -210,7 +256,8 @@ void *Settime(void *argument)
     }
   else
     {
-      newval = atoi(operatorArgv()[0]);
+      newval = (int)strtol(operatorArgv()[0], &rstr, 10);
+      if ( *rstr != 0 ) cdoAbort("Parameter string contains invalid characters: %s", operatorArgv()[0]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -308,11 +355,13 @@ void *Settime(void *argument)
       taxisDefCalendar(taxisID2, newcalendar);
     }
 
-  if ( taxis_has_bounds && copy_timestep == FALSE )
-    {
-      cdoWarning("Time bounds unsupported by this operator, removed!");
-      taxisDeleteBounds(taxisID2);
-    }
+  if ( operatorID != SHIFTTIME )
+    if ( taxis_has_bounds && copy_timestep == FALSE )
+      {
+	cdoWarning("Time bounds unsupported by this operator, removed!");
+	taxisDeleteBounds(taxisID2);
+	taxis_has_bounds = FALSE;
+      }
 
   vlistDefTaxis(vlistID2, taxisID2);
 
@@ -363,25 +412,13 @@ void *Settime(void *argument)
 	}
       else if ( operatorID == SHIFTTIME )
 	{
-	  if ( tunit == TUNIT_MONTH || tunit == TUNIT_YEAR )
+	  shifttime(calendar, tunit, ijulinc, &vdate, &vtime);
+	  if ( taxis_has_bounds )
 	    {
-	      cdiDecodeDate(vdate, &year, &month, &day);
-	      
-	      month += ijulinc;
-
-	      while ( month > 12 ) { month -= 12; year++; }
-	      while ( month <  1 ) { month += 12; year--; }
-
-	      vdate = cdiEncodeDate(year, month, day);
-	    }
-	  else
-	    {
-	      juldate = juldate_encode(calendar, vdate, vtime);
-	      juldate = juldate_add_seconds(ijulinc, juldate);
-	      juldate_decode(calendar, juldate, &vdate, &vtime);
-	      if ( cdoVerbose )
-		cdoPrint("juldate, ijulinc, vdate, vtime: %g %d %d %d",
-			 juldate_to_seconds(juldate), ijulinc, vdate, vtime);
+	      taxisInqVdateBounds(taxisID1, &vdateb[0], &vdateb[1]);
+	      taxisInqVtimeBounds(taxisID1, &vtimeb[0], &vtimeb[1]);	      
+	      shifttime(calendar, tunit, ijulinc, &vdateb[0], &vtimeb[0]);
+	      shifttime(calendar, tunit, ijulinc, &vdateb[1], &vtimeb[1]);
 	    }
 	}
       else if ( operatorID == SETREFTIME || operatorID == SETCALENDAR || operatorID == SETTUNITS )
@@ -420,6 +457,11 @@ void *Settime(void *argument)
 
 	  taxisDefVdate(taxisID2, vdate);
 	  taxisDefVtime(taxisID2, vtime);
+	  if ( taxis_has_bounds )
+	    {
+	      taxisDefVdateBounds(taxisID2, vdateb[0], vdateb[1]);
+	      taxisDefVtimeBounds(taxisID2, vtimeb[0], vtimeb[1]);
+	    }
 	}
 
       streamDefTimestep(streamID2, tsID1);

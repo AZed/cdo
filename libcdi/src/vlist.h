@@ -7,6 +7,7 @@
 #  include "cdi_limits.h"
 #endif
 
+#define VALIDMISS 1.e+303
 
 /*
  * CDI attribute
@@ -63,6 +64,7 @@ typedef struct
   int         timaccu;
   int         xyz;
   int         missvalused; /* TRUE if missval is defined */
+  int         lvalidrange;
   char       *name;
   char       *longname;
   char       *stdname;
@@ -70,6 +72,7 @@ typedef struct
   double      missval;
   double      scalefactor;
   double      addoffset;
+  double      validrange[2];
   levinfo_t  *levinfo;
   int         comptype;     // compression type
   int         complevel;    // compression level
@@ -112,6 +115,12 @@ int      vlistHasTime(int vlistID);
 
 int      vlistDelAtts(int vlistID, int varID);
 int      vlistCopyVarAtts(int vlistID1, int varID_1, int vlistID2, int varID_2);
+
+/*      vlistDefVarValidrange: Define the valid range of a Variable */
+void    vlistDefVarValidrange(int vlistID, int varID, const double *validrange);
+
+/*      vlistInqVarValidrange: Get the valid range of a Variable */
+int     vlistInqVarValidrange(int vlistID, int varID, double *validrange);
 
 #endif  /* _VLIST_H */
 /*

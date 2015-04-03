@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,7 @@ void *CDItest(void *argument)
   int vlistID1, vlistID2 = -1;
   int nmiss;
   int taxisID1, taxisID2 = CDI_UNDEFID;
+  int max_copy = 3;
   double *array = NULL;
   double s_utime, s_stime;
   double e_utime, e_stime;
@@ -48,9 +49,12 @@ void *CDItest(void *argument)
 
   NCOPY = cdoOperatorAdd("ncopy",   0, 0, NULL);
 
-  if ( UNCHANGED_RECORD ) lcopy = TRUE;
+  //  if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   operatorID = cdoOperatorID();
+
+  //  operatorInputArg("Number of copies");
+  if ( operatorArgc() == 1 ) max_copy = atoi(operatorArgv()[0]);
 
   processStartTime(&s_utime, &s_stime);
 
@@ -121,7 +125,7 @@ void *CDItest(void *argument)
 
       cdoPrint("Copy number %d: %.2fs %.2fs %.2fs", n, c_usertime, c_systime, c_cputime);
 
-      if ( n == 3 ) break;
+      if ( n == max_copy ) break;
     }
 
   cdoFinish();

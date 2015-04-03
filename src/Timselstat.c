@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,8 @@ void *Timselstat(void *argument)
   int gridsize;
   int vdate = 0, vtime = 0;
   int vdate0 = 0, vtime0 = 0;
+  int vdate_lb = 0, vdate_ub = 0, date_lb = 0, date_ub = 0;
+  int vtime_lb = 0, vtime_ub = 0, time_lb = 0, time_ub = 0;
   int nrecs = 0, nrecords;
   int gridID, varID, levelID, recID;
   int tsID;
@@ -49,6 +51,7 @@ void *Timselstat(void *argument)
   int i;
   int streamID1, streamID2;
   int vlistID1, vlistID2, taxisID1, taxisID2;
+  int taxis_has_bounds = FALSE;
   int nmiss;
   int nvars, nlevel;
   int ndates = 0, noffset = 0, nskip = 0, nargc;
@@ -86,6 +89,7 @@ void *Timselstat(void *argument)
   vlistID2 = vlistDuplicate(vlistID1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
+  taxis_has_bounds = taxisHasBounds(taxisID1);
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
@@ -173,6 +177,19 @@ void *Timselstat(void *argument)
 
 	  vdate = taxisInqVdate(taxisID1);
 	  vtime = taxisInqVtime(taxisID1);
+
+	  if ( taxis_has_bounds )
+	    {
+	      taxisInqVdateBounds(taxisID1, &date_lb, &date_ub);
+	      taxisInqVtimeBounds(taxisID1, &time_lb, &time_ub);
+	      if ( nsets == 0 )
+		{
+		  vdate_lb = date_lb;
+		  vtime_lb = time_lb;
+		}
+	      vdate_ub = date_ub;
+	      vtime_ub = time_ub;
+	    }
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -292,6 +309,11 @@ void *Timselstat(void *argument)
 
       taxisDefVdate(taxisID2, vdate0);
       taxisDefVtime(taxisID2, vtime0);
+      if ( taxis_has_bounds )
+	{
+	  taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
+	  taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
+	}
       streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )

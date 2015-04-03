@@ -200,7 +200,7 @@ void *Sinfo(void *argument)
 	    {
 	      double level1, level2;
 	      nbyte = nbyte0;
-	      nbyte0 = fprintf(stdout, "%32s : ", "bounds");
+	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
 		  if ( nbyte > 80 )
@@ -282,6 +282,9 @@ void *Sinfo(void *argument)
 		      else
 			fprintf(stdout, "  Calendar = unknown");
 		    }
+
+		  if ( taxisHasBounds(taxisID) )
+		    fprintf(stdout, "  Bounds = true");
 
 		  fprintf(stdout, "\n");
 		}

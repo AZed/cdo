@@ -250,7 +250,7 @@ void *Wct(void *argument);
 
 
 #define  ArithOperators         {"add",  "sub",  "mul",  "div", "min", "max", "atan2"}
-#define  ArithcOperators        {"addc", "subc", "mulc", "divc"}
+#define  ArithcOperators        {"addc", "subc", "mulc", "divc", "mod"}
 #define  ArithdaysOperators     {"muldpm", "divdpm", "muldpy", "divdpy", "muldoy"}
 #define  ArithlatOperators      {"mulcoslat", "divcoslat"}
 #define  CatOperators           {"cat"}
@@ -291,7 +291,7 @@ void *Wct(void *argument);
 #define  FilterOperators        {"bandpass", "highpass", "lowpass"}
 #define  FldrmsOperators        {"fldrms"}
 #define  FldstatOperators       {"fldmin", "fldmax", "fldsum", "fldmean", "fldavg", "fldvar", "fldstd", "fldpctl"}
-#define  Fldstat2Operators      {"fldcor"}
+#define  Fldstat2Operators      {"fldcor", "fldcovar"}
 #define  FourierOperators       {"fourier"}
 #define  GatherOperators        {"gather"}
 #define  GengridOperators       {"gengrid"}
@@ -412,7 +412,7 @@ void *Wct(void *argument);
 #define    MonstatOperators     {"monmin",  "monmax",  "monsum",  "monmean",  "monavg",  "monvar",  "monstd"}
 #define    DaystatOperators     {"daymin",  "daymax",  "daysum",  "daymean",  "dayavg",  "dayvar",  "daystd"}
 #define    HourstatOperators    {"hourmin", "hourmax", "hoursum", "hourmean", "houravg", "hourvar", "hourstd"}
-#define  Timstat2Operators      {"timcor"}
+#define  Timstat2Operators      {"timcor", "timcovar"}
 #define  Timstat3Operators      {"meandiff2test", "varquot2test"}
 #define  TinfoOperators         {"tinfo"}
 #define  TocomplexOperators     {"retocomplex", "imtocomplex"}
@@ -727,6 +727,8 @@ static char *opalias[][2] =
   {"anomaly",             "ymonsub"    },
   {"deltap_fl",           "deltap"     },
   {"diffv",               "diffn"      },
+  {"covar0",              "timcovar"   },
+  {"covar0r",             "fldcovar"   },
   {"ggstat",              "info"       },
   {"ggstats",             "sinfo"      },
   {"globavg",             "fldavg"     },
@@ -845,7 +847,10 @@ int operatorInqModID(char *operatorName)
 	  if ( modID != -1 ) break;
 	}
     }
-  
+
+  if ( modID == -1 && *operatorName == 0 )
+    Error("Operator name missing!");
+
   if ( modID == -1 )
     {
       FILE *fp;
@@ -858,6 +863,7 @@ int operatorInqModID(char *operatorName)
 	  fprintf(stderr, "Use commandline option -h for help.");
 	  Error("operator missing! %s is a file on disk!", operatorName);
 	}
+
       fprintf(stderr, "Operator >%s< not found!\n", operatorName);
       fprintf(stderr, "Similar operators are:\n");
       nbyte = fprintf(stderr, "   ");
@@ -947,12 +953,18 @@ void operatorPrintAll(void)
 
   for ( i = 0; i < NumModules; i++ )
     {
-      if ( Modules[i].help == NULL ) continue;
       j = 0;
       while ( Modules[i].operators[j] )
 	{
 	  opernames[nop++] = Modules[i].operators[j++];
 	}
+    }
+  /*
+   * Add operator aliases
+   */
+  for ( i = 0; i < nopalias; i++ )
+    {
+      opernames[nop++] = opalias[i][0];
     }
 
   qsort(opernames, nop, sizeof(char *), cmpname);
@@ -960,7 +972,7 @@ void operatorPrintAll(void)
   nbyte = fprintf(stderr, "   ");
   for ( i = 0; i < nop; i++ )
     {
-      if ( nbyte > 75 )
+      if ( nbyte > 85 )
 	{
 	  fprintf(stdout, "\n");
 	  nbyte = fprintf(stderr, "   ");

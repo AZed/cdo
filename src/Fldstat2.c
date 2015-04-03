@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,9 +29,10 @@
 
 
 /* routine corr copied from PINGO */
+/* correclation in space */
 static
-double corr(double * restrict in0, double * restrict in1,
-	    const double * restrict weight, double missval, long gridsize)
+double correlation_s(const double * restrict in0, const double * restrict in1,
+		     const double * restrict weight, double missval, long gridsize)
 {
   long i;
   double sum0, sum1, sum00, sum01, sum11, wsum0;
@@ -43,8 +44,7 @@ double corr(double * restrict in0, double * restrict in1,
 	
   for ( i = 0; i < gridsize; ++i )
     {
-      if ( weight[i] != missval &&
-	   in0[i] != missval && in1[i] != missval)
+      if ( weight[i] != missval && in0[i] != missval && in1[i] != missval)
 	    {
 	      sum0  += weight[i] * in0[i];
 	      sum1  += weight[i] * in1[i];
@@ -59,6 +59,36 @@ double corr(double * restrict in0, double * restrict in1,
         DIV((sum01 * wsum0 - sum0 * sum1),
 	     SQRT((sum00 * wsum0 - sum0 * sum0) *
 	          (sum11 * wsum0 - sum1 * sum1))) : missval;
+
+  return (out);
+}
+
+/* covariance in space */
+static
+double covariance_s(const double * restrict in0, const double * restrict in1,
+		    const double * restrict weight, double missval, long gridsize)
+{
+  long i;
+  double sum0, sum1, sum01, wsum0, wsum00;
+  double out;
+
+  sum0 = sum1 = sum01 = 0;
+  wsum0 = wsum00 = 0;
+
+  for ( i = 0; i < gridsize; ++i )
+    {
+      if ( weight[i] != missval && in0[i] != missval && in1[i] != missval )
+	{
+	  sum0   += weight[i] * in0[i];
+	  sum1   += weight[i] * in1[i];
+	  sum01  += weight[i] * in0[i] * in1[i];
+	  wsum0  += weight[i];
+	  wsum00 += weight[i] * weight[i];
+	}
+    }
+
+  out = wsum0 ?
+        (sum01 * wsum0 - sum0 * sum1) / (wsum0 * wsum0) : missval;
 
   return (out);
 }
@@ -88,14 +118,11 @@ void *Fldstat2(void *argument)
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("fldcor", 0, 0, NULL);
+  cdoOperatorAdd("fldcor",   func_cor,   0, NULL);
+  cdoOperatorAdd("fldcovar", func_covar, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
-
-  if ( operfunc == func_mean || operfunc == func_avg ||
-       operfunc == func_var  || operfunc == func_std )
-    needWeights = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
@@ -165,7 +192,14 @@ void *Fldstat2(void *argument)
 
 	  missval = vlistInqVarMissval(vlistID1, varID);
 
-	  sglval = corr(array1, array2, weight, missval, gridsize);
+	  if ( operfunc == func_cor )
+	    {
+	      sglval = correlation_s(array1, array2, weight, missval, gridsize);
+	    }
+	  else if ( operfunc == func_covar )
+	    {
+	      sglval = covariance_s(array1, array2, weight, missval, gridsize);
+	    }
 
 	  if ( DBL_IS_EQUAL(sglval, missval) )
 	    nmiss3 = 1;

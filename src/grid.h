@@ -9,8 +9,9 @@ int referenceToGrid(int gridID);
 void gridToDegree(const char *units, const char *string, int gridsize, double *array);
 int gridToZonal(int gridID);
 int gridToMeridional(int gridID);
-int gridToUnstructured(int gridID);
-int gridToCurvilinear(int gridID);
+int gridToUnstructured(int gridID, int lbounds);
+int gridToCurvilinear(int gridID, int lbounds);
+int gridCurvilinearToRegular(int gridID);
 int gridToRegular(int gridID);
 void field2regular(int gridID1, int gridID2, double missval, double *array, int nmiss);
 
@@ -29,7 +30,7 @@ void correct_sinxvals(int xsize, int ysize, double *xvals);
 struct cart gc2cc(struct geo *position);
 void factorni(int kni, int *kni2, int *kni3);
 void gme_grid_restore(double *p, int ni, int nd);
-void gme_grid(int gridsize, double *rlon, double *rlat,
+void gme_grid(int lbounds, int gridsize, double *rlon, double *rlat,
 	      double *blon, double *blat, int *imask,
               int ni, int nd, int ni2, int ni3);
 

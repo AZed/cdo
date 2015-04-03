@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -578,7 +578,8 @@ int check_range(long n, double *vals, double valid_min, double valid_max)
   return (status);
 }
 
-int gridToCurvilinear(int gridID1)
+
+int gridToCurvilinear(int gridID1, int lbounds)
 {
   int gridID2;
   int gridtype, gridsize;
@@ -687,6 +688,8 @@ int gridToCurvilinear(int gridID1)
 	if ( xvals2D ) free(xvals2D);
 	if ( yvals2D ) free(yvals2D);
 
+	if ( !lbounds ) goto NO_BOUNDS;
+
 	if ( gridtype == GRID_LCC )
 	  {		
 	    xbounds2D = (double *) malloc(4*gridsize*sizeof(double));
@@ -761,9 +764,6 @@ int gridToCurvilinear(int gridID1)
 		  gridGenYbounds(ny, yvals, ybounds);
 	      }
 
-	    if ( xvals ) free(xvals);
-	    if ( yvals ) free(yvals);
-
 	    if ( xbounds && ybounds )
 	      {
 		xbounds2D = (double *) malloc(4*gridsize*sizeof(double));
@@ -833,6 +833,11 @@ int gridToCurvilinear(int gridID1)
 	      }
 	  }
 
+      NO_BOUNDS:
+
+	if ( xvals ) free(xvals);
+	if ( yvals ) free(yvals);
+
 	gridCopyMask(gridID1, gridID2, gridsize);
 
 	break;
@@ -848,7 +853,7 @@ int gridToCurvilinear(int gridID1)
 }
 
 
-int gridToUnstructured(int gridID1)
+int gridToUnstructured(int gridID1, int lbounds)
 {
   int gridID2;
   int gridtype, gridsize;
@@ -867,8 +872,6 @@ int gridToUnstructured(int gridID1)
 	int nx, ny;
 	double *xvals, *yvals;
 	double *xvals2D, *yvals2D;
-	double *xbounds = NULL, *ybounds = NULL;
-	double *xbounds2D, *ybounds2D;
 
 	gridDefXname(gridID2, "lon");
 	gridDefYname(gridID2, "lat");
@@ -925,54 +928,60 @@ int gridToUnstructured(int gridID1)
 	free(xvals2D);
 	free(yvals2D);
 
-	if ( gridInqXbounds(gridID1, NULL) )
+	if ( lbounds )
 	  {
-	    xbounds = (double *) malloc(2*nx*sizeof(double));
-	    gridInqXbounds(gridID1, xbounds);
-	  }
-	else if ( nx > 1 )
-	  {
-	    xbounds = (double *) malloc(2*nx*sizeof(double));
-	    gridGenXbounds(nx, xvals, xbounds);
-	  }
+	    double *xbounds = NULL, *ybounds = NULL;
+	    double *xbounds2D, *ybounds2D;
 
-	if ( gridInqYbounds(gridID1, NULL) )
-	  {
-	    ybounds = (double *) malloc(2*ny*sizeof(double));
-	    gridInqYbounds(gridID1, ybounds);
-	  }
-	else if ( ny > 1 )
-	  {
-	    ybounds = (double *) malloc(2*ny*sizeof(double));
-	    gridGenYbounds(ny, yvals, ybounds);
-	  }
+	    if ( gridInqXbounds(gridID1, NULL) )
+	      {
+		xbounds = (double *) malloc(2*nx*sizeof(double));
+		gridInqXbounds(gridID1, xbounds);
+	      }
+	    else if ( nx > 1 )
+	      {
+		xbounds = (double *) malloc(2*nx*sizeof(double));
+		gridGenXbounds(nx, xvals, xbounds);
+	      }
+
+	    if ( gridInqYbounds(gridID1, NULL) )
+	      {
+		ybounds = (double *) malloc(2*ny*sizeof(double));
+		gridInqYbounds(gridID1, ybounds);
+	      }
+	    else if ( ny > 1 )
+	      {
+		ybounds = (double *) malloc(2*ny*sizeof(double));
+		gridGenYbounds(ny, yvals, ybounds);
+	      }
+
+	    if ( xbounds && ybounds )
+	      {
+		xbounds2D = (double *) malloc(4*gridsize*sizeof(double));
+		ybounds2D = (double *) malloc(4*gridsize*sizeof(double));
+
+		if ( gridIsRotated(gridID1) )
+		  {
+		    gridGenRotBounds(gridID1, nx, ny, xbounds, ybounds, xbounds2D, ybounds2D);
+		  }
+		else
+		  {
+		    gridGenXbounds2D(nx, ny, xbounds, xbounds2D);
+		    gridGenYbounds2D(nx, ny, ybounds, ybounds2D);
+		  }
+
+		gridDefXbounds(gridID2, xbounds2D);
+		gridDefYbounds(gridID2, ybounds2D);
+
+		free(xbounds);
+		free(ybounds);
+		free(xbounds2D);
+		free(ybounds2D);
+	      }
+	    }
 
 	free(xvals);
 	free(yvals);
-
-	if ( xbounds && ybounds )
-	  {
-	    xbounds2D = (double *) malloc(4*gridsize*sizeof(double));
-	    ybounds2D = (double *) malloc(4*gridsize*sizeof(double));
-
-	    if ( gridIsRotated(gridID1) )
-	      {
-		gridGenRotBounds(gridID1, nx, ny, xbounds, ybounds, xbounds2D, ybounds2D);
-	      }
-	    else
-	      {
-		gridGenXbounds2D(nx, ny, xbounds, xbounds2D);
-		gridGenYbounds2D(nx, ny, ybounds, ybounds2D);
-	      }
-
-	    gridDefXbounds(gridID2, xbounds2D);
-	    gridDefYbounds(gridID2, ybounds2D);
-
-	    free(xbounds);
-	    free(ybounds);
-	    free(xbounds2D);
-	    free(ybounds2D);
-	  }
 
 	gridCopyMask(gridID1, gridID2, gridsize);
 
@@ -994,7 +1003,7 @@ int gridToUnstructured(int gridID1)
 	int nv = 6;
 	int *imask;
 	double *xvals, *yvals;
-	double *xbounds, *ybounds;
+	double *xbounds = NULL, *ybounds = NULL;
 
 	nd  = gridInqGMEnd(gridID1);
 	ni  = gridInqGMEni(gridID1);
@@ -1004,21 +1013,25 @@ int gridToUnstructured(int gridID1)
 	imask   = (int *) malloc(gridsize*sizeof(int));
 	xvals   = (double *) malloc(gridsize*sizeof(double));
 	yvals   = (double *) malloc(gridsize*sizeof(double));
-	xbounds = (double *) malloc(nv*gridsize*sizeof(double));
-	ybounds = (double *) malloc(nv*gridsize*sizeof(double));
+	if ( lbounds )
+	  {
+	    xbounds = (double *) malloc(nv*gridsize*sizeof(double));
+	    ybounds = (double *) malloc(nv*gridsize*sizeof(double));
+	  }
 
-	gme_grid(gridsize, xvals, yvals, xbounds, ybounds, imask, ni, nd, ni2, ni3);
+	gme_grid(lbounds, gridsize, xvals, yvals, xbounds, ybounds, imask, ni, nd, ni2, ni3);
 	
 	for ( i = 0; i < gridsize; i++ )
 	  {
 	    xvals[i] *= RAD2DEG;
 	    yvals[i] *= RAD2DEG;
 
-	    for ( j = 0; j < nv; j++ )
-	      {
-		xbounds[i*nv + j] *= RAD2DEG;
-		ybounds[i*nv + j] *= RAD2DEG;
-	      }
+	    if ( lbounds )
+	      for ( j = 0; j < nv; j++ )
+		{
+		  xbounds[i*nv + j] *= RAD2DEG;
+		  ybounds[i*nv + j] *= RAD2DEG;
+		}
 	    /* printf("%d %g %g\n", i, xvals[i], yvals[i]); */
 	  }
 	
@@ -1032,8 +1045,11 @@ int gridToUnstructured(int gridID1)
 
 	gridDefNvertex(gridID2, nv);
 
-	gridDefXbounds(gridID2, xbounds);
-	gridDefYbounds(gridID2, ybounds);
+	if ( lbounds )
+	  {
+	    gridDefXbounds(gridID2, xbounds);
+	    gridDefYbounds(gridID2, ybounds);
+	  }
 
 	gridDefXunits(gridID2, "degrees_east");
 	gridDefYunits(gridID2, "degrees_north");
@@ -1041,8 +1057,8 @@ int gridToUnstructured(int gridID1)
 	free (imask);
 	free (xvals);
 	free (yvals);
-	free (xbounds);
-	free (ybounds);
+	if ( xbounds ) free (xbounds);
+	if ( ybounds ) free (ybounds);
 	
 	gridCopyMask(gridID1, gridID2, gridsize);
 
@@ -1054,6 +1070,92 @@ int gridToUnstructured(int gridID1)
 	break;
       }
     }
+
+  return (gridID2);
+}
+
+
+int gridCurvilinearToRegular(int gridID1)
+{
+  int gridID2 = -1;
+  int gridtype, gridsize;
+  long index;
+  long i, j;
+  int nx, ny;
+  int lx = TRUE, ly = TRUE;
+  double *xvals = NULL, *yvals = NULL;
+  double *xvals2D = NULL, *yvals2D = NULL;
+	
+  gridtype = gridInqType(gridID1);
+  gridsize = gridInqSize(gridID1);
+
+  if ( gridtype != GRID_CURVILINEAR ) return (gridID2);
+
+  nx = gridInqXsize(gridID1);
+  ny = gridInqYsize(gridID1);
+	
+  xvals2D = (double *) malloc(gridsize*sizeof(double));
+  yvals2D = (double *) malloc(gridsize*sizeof(double));
+
+  gridInqXvals(gridID1, xvals2D);
+  gridInqYvals(gridID1, yvals2D);
+
+  xvals = (double *) malloc(nx*sizeof(double));
+  yvals = (double *) malloc(ny*sizeof(double));
+
+  gridInqXvals(gridID1, xvals);
+  gridInqYvals(gridID1, yvals);
+
+  for ( i = 0; i < nx; i++ ) xvals[i] = xvals2D[i];
+  for ( j = 0; j < ny; j++ ) yvals[j] = yvals2D[j*nx];
+
+  for ( j = 1; j < ny; j++ )
+    for ( i = 0; i < nx; i++ )
+      {
+	if ( IS_NOT_EQUAL(xvals[i], xvals2D[j*nx+i]) )
+	  {
+	    lx = FALSE;
+	    j = ny;
+	    break;
+	  }
+      }
+	
+  for ( i = 1; i < nx; i++ )
+    for ( j = 0; j < ny; j++ )
+      {
+	if ( IS_NOT_EQUAL(yvals[j], yvals2D[j*nx+i]) )
+	  {
+	    ly = FALSE;
+	    i = nx;
+	    break;
+	  }
+      }
+
+  free(xvals2D);
+  free(yvals2D);
+
+  if ( lx && ly )
+    {
+      char xunits[CDI_MAX_NAME], yunits[CDI_MAX_NAME];
+      
+      gridID2  = gridCreate(GRID_LONLAT, gridsize);
+      gridDefXsize(gridID2, nx);
+      gridDefYsize(gridID2, ny);
+      
+      //  gridDefPrec(gridID2, DATATYPE_FLT32);
+
+      gridInqXunits(gridID1, xunits);
+      gridInqYunits(gridID1, yunits);
+
+      gridToDegree(xunits, "grid1 center lon", nx, xvals);
+      gridToDegree(yunits, "grid1 center lat", ny, yvals);
+
+      gridDefXvals(gridID2, xvals);
+      gridDefYvals(gridID2, yvals);
+    }
+
+  free(xvals);
+  free(yvals);
 
   return (gridID2);
 }
@@ -1299,7 +1401,7 @@ int gridGenArea(int gridID, double *area)
       if ( gridtype == GRID_GME )
 	{
 	  lgriddestroy = TRUE;
-	  gridID = gridToUnstructured(gridID);
+	  gridID = gridToUnstructured(gridID, 1);
 	  grid_mask = (int *) malloc(gridsize*sizeof(int));
 	  gridInqMaskGME(gridID, grid_mask);
 	}
@@ -1312,7 +1414,7 @@ int gridGenArea(int gridID, double *area)
       else
 	{
 	  lgriddestroy = TRUE;
-	  gridID = gridToCurvilinear(gridID);
+	  gridID = gridToCurvilinear(gridID, 1);
 	  lgrid_gen_bounds = TRUE;
 	}
     }
@@ -1426,7 +1528,7 @@ int gridGenWeights(int gridID, double *grid_area, double *grid_wgts)
   
   if ( gridtype == GRID_GME )
     {
-      gridID = gridToUnstructured(gridID);	  
+      gridID = gridToUnstructured(gridID, 1);	  
       grid_mask = (int *) malloc(gridsize*sizeof(int));
       gridInqMaskGME(gridID, grid_mask);
     }

@@ -316,6 +316,9 @@ void *Tinfo(void *argument)
 	      calendar = taxisInqCalendar(taxisID);
 	      if ( calendar != CDI_UNDEFID ) printCalendar(calendar);
 
+	      if ( taxisHasBounds(taxisID) )
+		fprintf(stdout, "  Bounds = true");
+
 	      fprintf(stdout, "\n");
 	    }
 	}

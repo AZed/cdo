@@ -24,9 +24,6 @@
 #include "grid.h"
 #include "pstream.h"
 #include "dtypes.h"
-#if defined (_OPENMP)
-#include <omp.h>
-#endif
 #include "ecacore.h"
 #include "ecautil.h"
 
@@ -1053,9 +1050,9 @@ void eca4(const ECA_REQUEST_4 *request)
   if ( gridtype != GRID_UNSTRUCTURED && gridtype != GRID_CURVILINEAR ) 
     {
       if ( gridtype == GRID_GME )
-        gridID = gridToUnstructured(gridID);
+        gridID = gridToUnstructured(gridID, 1);
       else
-        gridID = gridToCurvilinear(gridID);
+        gridID = gridToCurvilinear(gridID, 1);
     }
   gridsize    = gridInqSize(gridID);
   /* for later check on northern\southern hemisphere */

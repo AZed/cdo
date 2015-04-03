@@ -129,6 +129,8 @@ void farcdiv(field_t *field, double rconst);
 void farcadd(field_t *field, double rconst);
 void farcsub(field_t *field, double rconst);
 
+void farmod(field_t *field, double divisor);
+
 void farinv(field_t *field);
 
 /* field2.c */

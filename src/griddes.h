@@ -43,6 +43,7 @@ typedef struct {
   int     size;
   int     xsize;
   int     ysize;
+  int     np;
   int     lcomplex;
   int     def_xfirst;
   int     def_yfirst;

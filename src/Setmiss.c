@@ -114,6 +114,7 @@ void *Setmiss(void *argument)
 	vlistDefVarMissval(vlistID2, varID, missval2);
     }
 
+  /*
   if ( operatorID == SETVRANGE )
     {
       double range[2];
@@ -124,7 +125,7 @@ void *Setmiss(void *argument)
       for ( varID = 0; varID < nvars; varID++ )
 	vlistDefAttFlt(vlistID2, varID, "valid_range", DATATYPE_FLT64, 2, range);
     }
-
+  */
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);

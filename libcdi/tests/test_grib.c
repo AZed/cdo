@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 #include "cdi.h"
 
@@ -25,9 +25,10 @@ int main(int argc, char *argv[])
   int vlistID, taxisID;
   int nmiss;
 
-  
+
   datasize = nlon * nlat;
   data = (double *) malloc(datasize*sizeof(double));
+  memset(data, 0, datasize*sizeof(double));
 
   gridID = gridCreate(GRID_GAUSSIAN, datasize);
   gridDefXsize(gridID, nlon);
@@ -83,6 +84,7 @@ int main(int argc, char *argv[])
     }
 
   data = (double *) malloc(datasize*sizeof(double));
+  memset(data, 0, datasize*sizeof(double));
 
   taxisID = vlistInqTaxis(vlistID);
 
@@ -124,12 +126,3 @@ int main(int argc, char *argv[])
 
   return (0);
 }
-/*
- * Local Variables:
- * c-file-style: "Java"
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * show-trailing-whitespace: t
- * require-trailing-newline: t
- * End:
- */

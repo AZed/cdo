@@ -17,6 +17,7 @@
 #define  GRIB1_LTYPE_ALTITUDE            103
 #define  GRIB1_LTYPE_HEIGHT              105
 #define  GRIB1_LTYPE_SIGMA               107
+#define  GRIB1_LTYPE_SIGMA_LAYER         108
 #define  GRIB1_LTYPE_HYBRID              109
 #define  GRIB1_LTYPE_HYBRID_LAYER        110
 #define  GRIB1_LTYPE_LANDDEPTH           111

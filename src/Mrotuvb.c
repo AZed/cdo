@@ -305,12 +305,12 @@ void *Mrotuvb(void *argument)
     cdoAbort("Grid %s unsupported!", gridNamePtr(gridInqType(gridID1)));
   
   if ( gridInqType(gridID1) != GRID_CURVILINEAR )
-    gridID1 = gridToCurvilinear(gridID1);
+    gridID1 = gridToCurvilinear(gridID1, 1);
 
   if ( gridsize != gridInqSize(gridID1) ) cdoAbort("Internal problem: gridsize changed!");
 
   if ( gridInqType(gridID2) != GRID_CURVILINEAR )
-    gridID2 = gridToCurvilinear(gridID2);
+    gridID2 = gridToCurvilinear(gridID2, 1);
 
   if ( gridsize != gridInqSize(gridID2) ) cdoAbort("Internal problem: gridsize changed!");
 

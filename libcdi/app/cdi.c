@@ -331,7 +331,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	    fprintf(stdout, "var ");
 
 	  datatype = vlistInqVarDatatype(vlistID, varID);
-	  
+
 	  if      ( datatype == DATATYPE_PACK   ) strcpy(pstr, "P0");
 	  else if ( datatype > 0 && datatype <= 32  ) sprintf(pstr, "P%d", datatype);
 	  else if ( datatype == DATATYPE_CPX32  ) strcpy(pstr, "C32");
@@ -355,11 +355,11 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  fprintf(stdout, "%9d", gridsize);
 
-	  fprintf(stdout, " %3d ", gridID + 1);
+	  fprintf(stdout, " %3d ", vlistGridIndex(vlistID, gridID) + 1);
 
 	  levelsize = zaxisInqSize(zaxisID);
 	  fprintf(stdout, " %6d", levelsize);
-	  fprintf(stdout, " %3d", zaxisID + 1);
+	  fprintf(stdout, " %3d", vlistZaxisIndex(vlistID, zaxisID) + 1);
 
 	  fprintf(stdout, "\n");
 	}
@@ -381,9 +381,9 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  zaxisInqUnits(zaxisID, units);
 	  units[12] = 0;
 	  if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
-	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", zaxisID+1, longname, ltype);
+	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, ltype);
 	  else
-	    nbyte0    = fprintf(stdout, "  %4d : %-17s  %5s : ", zaxisID+1, longname, units);
+	    nbyte0    = fprintf(stdout, "  %4d : %-17s  %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {
@@ -401,7 +401,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	    {
 	      double level1, level2;
 	      nbyte = nbyte0;
-	      nbyte0 = fprintf(stdout, "%32s : ", "bounds");
+	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
 		  if ( nbyte > 80 )
@@ -442,7 +442,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 		  fprintf(stdout, "     RefTime = %4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
 			  year, month, day, hour, minute, second);
-		      
+
 		  unit = taxisInqTunit(taxisID);
 		  if ( unit != CDI_UNDEFID )
 		    {
@@ -461,7 +461,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 		      else
 			fprintf(stdout, "  Units = unknown");
 		    }
-	      
+
 		  calendar = taxisInqCalendar(taxisID);
 		  if ( calendar != CDI_UNDEFID )
 		    {
@@ -478,6 +478,9 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 		      else
 			fprintf(stdout, "  Calendar = unknown");
 		    }
+
+		  if ( taxisHasBounds(taxisID) )
+		    fprintf(stdout, "  Bounds = true");
 
 		  fprintf(stdout, "\n");
 		}
@@ -520,7 +523,7 @@ void setDefaultDataType(char *datatypestr)
 {
   static union {unsigned long l; unsigned char c[sizeof(long)];} u_byteorder = {1};
   int nbits = -1;
-  enum {D_UINT, D_INT, D_FLT};
+  enum {D_UINT, D_INT, D_FLT, D_CPX};
   int dtype = -1;
 
   if      ( *datatypestr == 'i' || *datatypestr == 'I' )
@@ -536,6 +539,11 @@ void setDefaultDataType(char *datatypestr)
   else if ( *datatypestr == 'f' || *datatypestr == 'F' )
     {
       dtype = D_FLT;
+      datatypestr++;
+    }
+  else if ( *datatypestr == 'c' || *datatypestr == 'C' )
+    {
+      dtype = D_CPX;
       datatypestr++;
     }
 
@@ -561,7 +569,7 @@ void setDefaultDataType(char *datatypestr)
 	  else
 	    {
 	      fprintf(stderr, "Unsupported number of bits %d!\n", nbits);
-	      fprintf(stderr, "Use 32/64 for filetype nc, srv, ext, ieg and 1-32 for grb.\n");
+	      fprintf(stderr, "Use I8/I16/I32/F32/F64 for nc/nc2/nc4/nc4c; F32/F64 for grb2/srv/ext/ieg; P1 - P24 for grb/grb2.\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
@@ -599,19 +607,36 @@ void setDefaultDataType(char *datatypestr)
 		  exit(EXIT_FAILURE);
 		}
 	    }
+	  else if ( dtype == D_CPX )
+	    {
+	      if      ( nbits == 32 ) DefaultDataType = DATATYPE_CPX32;
+	      else if ( nbits == 64 ) DefaultDataType = DATATYPE_CPX64;
+	      else
+		{
+		  fprintf(stderr, "Unsupported number of bits = %d for datatype CPX!\n", nbits);
+		  exit(EXIT_FAILURE);
+		}
+	    }
 	}
     }
 
-  if ( *datatypestr == 'l' || *datatypestr == 'L' )
+  if ( *datatypestr != 0 )
     {
-      if ( IsBigendian() ) DefaultByteorder = CDI_LITTLEENDIAN;
-      datatypestr++;
-    }
-
-  if ( *datatypestr == 'b' || *datatypestr == 'B' )
-    {
-      if ( ! IsBigendian() ) DefaultByteorder = CDI_BIGENDIAN;
-      datatypestr++;
+      if ( *datatypestr == 'l' || *datatypestr == 'L' )
+	{
+	  if ( IsBigendian() ) DefaultByteorder = CDI_LITTLEENDIAN;
+	  datatypestr++;
+	}
+      else if ( *datatypestr == 'b' || *datatypestr == 'B' )
+	{
+	  if ( ! IsBigendian() ) DefaultByteorder = CDI_BIGENDIAN;
+	  datatypestr++;
+	}
+      else
+	{
+	  fprintf(stderr, "Unsupported character in number of bytes: >%s< !\n", datatypestr);
+	  exit(EXIT_FAILURE);
+	}
     }
 }
 
@@ -652,18 +677,18 @@ void setDefaultFileType(char *filetypestr)
 	      fprintf(stderr, "Unexpected character >%c< in file type >%s<!\n", *ftstr, filetypestr);
 	      fprintf(stderr, "Use format[_nbits] with:\n");
 	      fprintf(stderr, "    format = grb, grb2, nc, nc2, nc4, nc4c, srv, ext or ieg\n");
-	      fprintf(stderr, "    nbits  = 32/64 for nc/nc2/nc4/nc4c/srv/ext/ieg; 1 - 24 for grb/grb2\n");
+	      fprintf(stderr, "    nbits  = 32/64 for grb2/nc/nc2/nc4/nc4c/srv/ext/ieg; 1 - 24 for grb/grb2\n");
 	      exit(EXIT_FAILURE);
 	    }
 	}
     }
 }
 
-
+static
 int handle_error(int cdiErrno, const char *fmt, ...)
 {
   va_list args;
-	
+
   va_start(args, fmt);
 
   printf("\n");
@@ -677,7 +702,7 @@ int handle_error(int cdiErrno, const char *fmt, ...)
   return (cdiErrno);
 }
 
-
+static
 void defineCompress(const char *arg)
 {
   size_t len = strlen(arg);
@@ -731,10 +756,13 @@ int main(int argc, char *argv[])
   if (Progname == 0) Progname = argv[0];
   else               Progname++;
 
-  while ( (c = getopt(argc, argv, "f:t:w:z:cdhlMmqRrsvVZ")) != EOF )
+  while ( (c = getopt(argc, argv, "b:f:t:w:z:cdhlMmqRrsvVZ")) != EOF )
     {
       switch (c)
 	{
+	case 'b':
+	  setDefaultDataType(optarg);
+	  break;
 	case 'd':
 	  Debug = 1;
 	  break;
@@ -785,10 +813,7 @@ int main(int argc, char *argv[])
 
   if ( optind < argc ) fname1 = argv[optind++];
   if ( optind < argc ) fname2 = argv[optind++];
-  if ( optind < argc ) 
-    {
-      fprintf(stderr, "optind: %d argc: %d\n", optind, argc);
-    }
+  if ( optind < argc ) fprintf(stderr, "optind: %d argc: %d\n", optind, argc);
 
   if ( Debug || Version ) version();
 
@@ -856,7 +881,7 @@ int main(int argc, char *argv[])
       if ( Debug ) fprintf(stderr, "ntsteps = %d\n", ntsteps);
 
       if ( fname2 ) vlistID2 = vlistDuplicate(vlistID1);
-	  
+
       for ( varID = 0; varID < nvars; varID++)
 	{
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
@@ -894,7 +919,7 @@ int main(int argc, char *argv[])
 
 	  if ( otableID == CDI_UNDEFID ) otableID = itableID;
 	}
-      
+
       if ( vlistNumber(vlistID1) != CDI_REAL ) datasize *= 2;
       data = (double *) malloc(datasize*sizeof(double));
 
@@ -937,7 +962,7 @@ int main(int argc, char *argv[])
 		  gridID   = vlistInqVarGrid(vlistID1, varID);
 		  zaxisID  = vlistInqVarZaxis(vlistID1, varID);
 		  param    = vlistInqVarParam(vlistID1, varID);
- 
+
 		  cdiParamToString(param, paramstr, sizeof(paramstr));
 
 		  if ( Vardis ) vlistInqVarName(vlistID1, varID, varname);
@@ -950,7 +975,7 @@ int main(int argc, char *argv[])
 		  gridsize = gridInqSize(gridID);
 		  level    = zaxisInqLevel(zaxisID, levelID);
 		  missval  = vlistInqVarMissval(vlistID1, varID);
-		  
+
 		  if ( Info )
 		    printInfo(gridtype, vdate, vtime, varname, level, gridsize, number, nmiss, missval, data, Vardis);
 
@@ -1022,12 +1047,3 @@ int main(int argc, char *argv[])
 
   return (0);
 }
-/*
- * Local Variables:
- * c-file-style: "Java"
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * show-trailing-whitespace: t
- * require-trailing-newline: t
- * End:
- */

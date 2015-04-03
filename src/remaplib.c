@@ -38,6 +38,7 @@
 
 */
 /*
+  2012-01-16 Uwe Schulzweida: alloc grid2_bound_box only for conservative remapping
   2011-01-07 Uwe Schulzweida: Changed remap weights from 2D to 1D array
   2009-05-25 Uwe Schulzweida: Changed restrict data type from double to int
   2009-01-11 Uwe Schulzweida: OpenMP parallelization
@@ -49,14 +50,7 @@
 #  include "config.h"
 #endif
 
-#if defined (_OPENMP)
-#  include <omp.h>
-#endif
-
-#include <string.h>
 #include <limits.h>
-#include <float.h>
-#include <math.h>
 #include <time.h>
 
 #include <cdi.h>
@@ -135,10 +129,10 @@ void remapGridFree(remapgrid_t *rg)
       free(rg->grid1_center_lon);
       free(rg->grid2_center_lat);
       free(rg->grid2_center_lon);
-      free(rg->grid1_area);
-      free(rg->grid2_area);
-      free(rg->grid1_frac);
-      free(rg->grid2_frac);
+      if ( rg->grid1_area ) free(rg->grid1_area);
+      if ( rg->grid2_area ) free(rg->grid2_area);
+      if ( rg->grid1_frac ) free(rg->grid1_frac);
+      if ( rg->grid2_frac ) free(rg->grid2_frac);
 
       if ( rg->grid1_corner_lat ) free(rg->grid1_corner_lat);
       if ( rg->grid1_corner_lon ) free(rg->grid1_corner_lon);
@@ -426,7 +420,8 @@ void remapGridRealloc(int map_type, remapgrid_t *rg)
     }
 
   rg->grid1_bound_box = (restr_t *) realloc(rg->grid1_bound_box, 4*rg->grid1_size*sizeof(restr_t));
-  rg->grid2_bound_box = (restr_t *) realloc(rg->grid2_bound_box, 4*rg->grid2_size*sizeof(restr_t));
+  if ( rg->luse_grid2_corners )
+    rg->grid2_bound_box = (restr_t *) realloc(rg->grid2_bound_box, 4*rg->grid2_size*sizeof(restr_t));
 }
 
 /*****************************************************************************/
@@ -846,7 +841,6 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
   if ( map_type == MAP_TYPE_DISTWGT || map_type == MAP_TYPE_DISTWGT1 )
     {
       free(rg->grid1_bound_box); rg->grid1_bound_box = NULL;
-      free(rg->grid2_bound_box); rg->grid2_bound_box = NULL;
     }
 }
 
@@ -935,9 +929,8 @@ void calc_lonlat_bins(remapgrid_t *rg, int map_type)
     }
 
   if ( map_type == MAP_TYPE_DISTWGT || map_type == MAP_TYPE_DISTWGT1 )
-    {
+    { 
       free(rg->grid1_bound_box); rg->grid1_bound_box = NULL;
-      free(rg->grid2_bound_box); rg->grid2_bound_box = NULL;
     }
 }
 
@@ -1012,7 +1005,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	gridInqType(rg->gridID1) == GRID_LAEA || 
 	gridInqType(rg->gridID1) == GRID_SINUSOIDAL) )
     {
-      rg->gridID1 = gridID1 = gridToCurvilinear(rg->gridID1);
+      rg->gridID1 = gridID1 = gridToCurvilinear(rg->gridID1, 1);
     }
 
   if ( !rg->lextrapolate && gridInqSize(rg->gridID1) > 1 &&
@@ -1040,7 +1033,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
     {
       if ( gridInqType(rg->gridID1) == GRID_GME )
 	{
-	  gridID1_gme = gridToUnstructured(rg->gridID1);
+	  gridID1_gme = gridToUnstructured(rg->gridID1, 1);
 	  rg->grid1_nvgp = gridInqSize(gridID1_gme);
 	  gridID1 = gridDuplicate(gridID1_gme);
 	  gridCompress(gridID1);
@@ -1049,7 +1042,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       else
 	{
 	  lgrid1_destroy = TRUE;
-	  gridID1 = gridToCurvilinear(rg->gridID1);
+	  gridID1 = gridToCurvilinear(rg->gridID1, 1);
 	  lgrid1_gen_bounds = TRUE;
 	}
     }
@@ -1058,7 +1051,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
     {
       if ( gridInqType(rg->gridID2) == GRID_GME )
 	{
-	  gridID2_gme = gridToUnstructured(rg->gridID2);
+	  gridID2_gme = gridToUnstructured(rg->gridID2, 1);
 	  rg->grid2_nvgp = gridInqSize(gridID2_gme);
 	  gridID2 = gridDuplicate(gridID2_gme);
 	  gridCompress(gridID2);
@@ -1067,7 +1060,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       else
 	{
 	  lgrid2_destroy = TRUE;
-	  gridID2 = gridToCurvilinear(rg->gridID2);
+	  gridID2 = gridToCurvilinear(rg->gridID2, 1);
 	  lgrid2_gen_bounds = TRUE;
 	}
     }
@@ -1113,17 +1106,14 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	  gridInqXbounds(gridID1, rg->grid1_corner_lon);
 	  gridInqYbounds(gridID1, rg->grid1_corner_lat);
 	}
+      else if ( lgrid1_gen_bounds )
+	{
+	  genXbounds(rg->grid1_dims[0], rg->grid1_dims[1], rg->grid1_center_lon, rg->grid1_corner_lon, 0);
+	  genYbounds(rg->grid1_dims[0], rg->grid1_dims[1], rg->grid1_center_lat, rg->grid1_corner_lat);
+	}
       else
 	{
-	  if ( lgrid1_gen_bounds )
-	    {
-	      genXbounds(rg->grid1_dims[0], rg->grid1_dims[1], rg->grid1_center_lon, rg->grid1_corner_lon, 0);
-	      genYbounds(rg->grid1_dims[0], rg->grid1_dims[1], rg->grid1_center_lat, rg->grid1_corner_lat);
-	    }
-	  else
-	    {
-	      cdoAbort("grid1 corner missing!");
-	    }
+	  cdoAbort("grid1 corner missing!");
 	}
     }
 
@@ -1174,17 +1164,14 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	  gridInqXbounds(gridID2, rg->grid2_corner_lon);
 	  gridInqYbounds(gridID2, rg->grid2_corner_lat);
 	}
+      else if ( lgrid2_gen_bounds )
+	{
+	  genXbounds(rg->grid2_dims[0], rg->grid2_dims[1], rg->grid2_center_lon, rg->grid2_corner_lon, 0);
+	  genYbounds(rg->grid2_dims[0], rg->grid2_dims[1], rg->grid2_center_lat, rg->grid2_corner_lat);
+	}
       else
 	{
-	  if ( lgrid2_gen_bounds )
-	    {
-	      genXbounds(rg->grid2_dims[0], rg->grid2_dims[1], rg->grid2_center_lon, rg->grid2_corner_lon, 0);
-	      genYbounds(rg->grid2_dims[0], rg->grid2_dims[1], rg->grid2_center_lat, rg->grid2_corner_lat);
-	    }
-	  else
-	    {
-	      cdoAbort("grid2 corner missing!");
-	    }
+	  cdoAbort("grid2 corner missing!");
 	}
     }
 
@@ -1320,28 +1307,17 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 	    }
 	}
     }
-  else
-    {
-      if ( rg->grid2_rank != 2 ) cdoAbort("Internal problem, grid2 rank = %d!", rg->grid2_rank);
-
-      nx = rg->grid2_dims[0];
-      ny = rg->grid2_dims[1];
-
-      if ( cdoVerbose ) cdoPrint("Grid2: boundbox_from_center");
-
-      boundbox_from_center(rg->grid2_is_cyclic, rg->grid2_size, nx, ny, 
-			   rg->grid2_center_lon, rg->grid2_center_lat, rg->grid2_bound_box);
-    }
-
 
   check_lon_boundbox_range(rg->grid1_size, rg->grid1_bound_box);
-  check_lon_boundbox_range(rg->grid2_size, rg->grid2_bound_box);
+  if ( rg->lneed_grid2_corners )
+    check_lon_boundbox_range(rg->grid2_size, rg->grid2_bound_box);
 
 
   /* Try to check for cells that overlap poles */
 
   check_lat_boundbox_range(rg->grid1_size, rg->grid1_bound_box, rg->grid1_center_lat);
-  check_lat_boundbox_range(rg->grid2_size, rg->grid2_bound_box, rg->grid2_center_lat);
+  if ( rg->lneed_grid2_corners )
+    check_lat_boundbox_range(rg->grid2_size, rg->grid2_bound_box, rg->grid2_center_lat);
 
 
   /*
@@ -1571,6 +1547,28 @@ long get_max_add(long num_links, long size, const int *restrict add)
   return (max_add);
 }
 
+static 
+int binary_search_int(const int *array, int len, int value)
+{       
+  int low = 0, high = len - 1, midpoint = 0;
+ 
+  while ( low <= high )
+    {
+      midpoint = low + (high - low)/2;      
+ 
+      // check to see if value is equal to item in array
+      if ( value == array[midpoint] )
+	return midpoint;
+      else if ( value < array[midpoint] )
+	high = midpoint - 1;
+      else
+	low = midpoint + 1;
+    }
+ 
+  // item was not found
+  return -1;
+}
+
 /*
   -----------------------------------------------------------------------
 
@@ -1669,17 +1667,21 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
       {
       long min_add = 1, max_add = 0;
 
-      for ( n = 0; n < num_links; n++ )
-	if ( i == dst_add[n] ) break;
+      n = binary_search_int(dst_add, num_links, i);
 
-      if ( n < num_links )
+      if ( n >= 0 && n < num_links )
 	{
 	  min_add = n;
 	  
-	  for ( n = min_add+1; n < num_links; n++ )
+	  for ( n = min_add+1; n < num_links; ++n )
 	    if ( i != dst_add[n] ) break;
 
 	  max_add = n;
+
+	  for ( n = min_add; n > 0; --n )
+	    if ( i != dst_add[n-1] ) break;
+
+	  min_add = n;
 	}
 
       ncls = 0;
@@ -5503,18 +5505,18 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /* Finish centroid computation */
 
-  for ( n = 0; n < grid1_size; n++ )
+  for ( n = 0; n < grid1_size; ++n )
     if ( IS_NOT_EQUAL(rg->grid1_area[n], 0) )
       {
-        grid1_centroid_lat[n] = grid1_centroid_lat[n]/rg->grid1_area[n];
-        grid1_centroid_lon[n] = grid1_centroid_lon[n]/rg->grid1_area[n];
+        grid1_centroid_lat[n] /= rg->grid1_area[n];
+        grid1_centroid_lon[n] /= rg->grid1_area[n];
       }
 
-  for ( n = 0; n < grid2_size; n++ )
+  for ( n = 0; n < grid2_size; ++n )
     if ( IS_NOT_EQUAL(rg->grid2_area[n], 0) )
       {
-        grid2_centroid_lat[n] = grid2_centroid_lat[n]/rg->grid2_area[n];
-        grid2_centroid_lon[n] = grid2_centroid_lon[n]/rg->grid2_area[n];
+        grid2_centroid_lat[n] /= rg->grid2_area[n];
+        grid2_centroid_lon[n] /= rg->grid2_area[n];
       }
 
   /* 2010-10-08 Uwe Schulzweida: remove all links with weights < 1.e-9 */
@@ -5541,6 +5543,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
     cdoPrint("Removed number of links = %ld", rv->num_links - num_links);
   rv->num_links = num_links;
   */
+
   /* Include centroids in weights and normalize using destination area if requested */
 
   num_links = rv->num_links;
@@ -5625,19 +5628,13 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
     cdoPrint("Total number of links = %ld", rv->num_links);
 
   for ( n = 0; n < grid1_size; n++ )
-    if ( IS_NOT_EQUAL(rg->grid1_area[n], 0) ) rg->grid1_frac[n] = rg->grid1_frac[n]/rg->grid1_area[n];
+    if ( IS_NOT_EQUAL(rg->grid1_area[n], 0) ) rg->grid1_frac[n] /= rg->grid1_area[n];
 
   for ( n = 0; n < grid2_size; n++ )
-    if ( IS_NOT_EQUAL(rg->grid2_area[n], 0) ) rg->grid2_frac[n] = rg->grid2_frac[n]/rg->grid2_area[n];
+    if ( IS_NOT_EQUAL(rg->grid2_area[n], 0) ) rg->grid2_frac[n] /= rg->grid2_area[n];
 
   /* Perform some error checking on final weights  */
-  /*
-  for ( n = 0; n < grid2_size; n++ )
-    {
-      grid2_centroid_lat[n] = 0;
-      grid2_centroid_lon[n] = 0;
-    }
-  */
+
   if ( lcheck )
     {
       for ( n = 0; n < grid1_size; n++ )
@@ -5647,34 +5644,22 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
 	  if ( grid1_centroid_lat[n] < -PIH-.01 || grid1_centroid_lat[n] > PIH+.01 )
 	    cdoPrint("Grid 1 centroid lat error: %d %g", n, grid1_centroid_lat[n]);
+
+	  grid1_centroid_lat[n] = 0;
+	  grid1_centroid_lon[n] = 0;
 	}
-    }
 
-  for ( n = 0; n < grid1_size; n++ )
-    {
-      grid1_centroid_lat[n] = 0;
-      grid1_centroid_lon[n] = 0;
-    }
-
-  if ( lcheck )
-    {
       for ( n = 0; n < grid2_size; n++ )
 	{
 	  if ( rg->grid2_area[n] < -.01 )
 	    cdoPrint("Grid 2 area error: %d %g", n, rg->grid2_area[n]);
 	  if ( grid2_centroid_lat[n] < -PIH-.01 || grid2_centroid_lat[n] > PIH+.01 )
 	    cdoPrint("Grid 2 centroid lat error: %d %g", n, grid2_centroid_lat[n]);
+
+	  grid2_centroid_lat[n] = 0;
+	  grid2_centroid_lon[n] = 0;
 	}
-    }
 
-  for ( n = 0; n < grid2_size; n++ )
-    {
-      grid2_centroid_lat[n] = 0;
-      grid2_centroid_lon[n] = 0;
-    }
-
-  if ( lcheck )
-    {
       for ( n = 0; n < num_links; n++ )
 	{
 	  grid1_add = rv->grid1_add[n];
@@ -5688,33 +5673,27 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 	    cdoPrint("Map 1 weight > 1! grid1idx=%d grid2idx=%d nlink=%d wts=%g",
 		     grid1_add, grid2_add, n, rv->wts[3*n]);
 	}
-    }
 
-#if defined (SX)
-#pragma vdir nodep
-#endif
-  for ( n = 0; n < num_links; n++ )
-    {
-      grid2_add = rv->grid2_add[n];
-      grid2_centroid_lat[grid2_add] += rv->wts[3*n];
-    }
+      for ( n = 0; n < num_links; n++ )
+	{
+	  grid2_add = rv->grid2_add[n];
+	  grid2_centroid_lat[grid2_add] += rv->wts[3*n];
+	}
 
-  /* Uwe Schulzweida: check if grid2_add is valid */
-  if ( lcheck )
-  if ( grid2_add != -1 )
-    for ( n = 0; n < grid2_size; n++ )
-      {
-        if ( rv->norm_opt == NORM_OPT_DESTAREA )
-          norm_factor = rg->grid2_frac[grid2_add];
-        else if ( rv->norm_opt == NORM_OPT_FRACAREA )
-          norm_factor = ONE;
-        else if ( rv->norm_opt == NORM_OPT_NONE )
-	  norm_factor = rg->grid2_area[grid2_add];
-
-        if ( fabs(grid2_centroid_lat[grid2_add] - norm_factor) > .01 )
-          cdoPrint("Error: sum of wts for map1 %d %g %g",
-		   grid2_add, grid2_centroid_lat[grid2_add], norm_factor);
-      }
+      /* 2012-01-24 Uwe Schulzweida: changed [grid2_add] to [n] (bug fix) */
+      for ( n = 0; n < grid2_size; n++ )
+	{
+	  if ( rv->norm_opt == NORM_OPT_DESTAREA )
+	    norm_factor = rg->grid2_frac[n];
+	  else if ( rv->norm_opt == NORM_OPT_FRACAREA )
+	    norm_factor = ONE;
+	  else if ( rv->norm_opt == NORM_OPT_NONE )
+	    norm_factor = rg->grid2_area[n];
+	    
+	  if ( grid2_centroid_lat[n] > 0 && fabs(grid2_centroid_lat[n] - norm_factor) > .01 )
+	    cdoPrint("Error: sum of wts for map1 %d %g %g", n, grid2_centroid_lat[n], norm_factor);
+	}
+    } // lcheck
 
   free(grid1_centroid_lat);
   free(grid1_centroid_lon);
@@ -7157,7 +7136,7 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
   if ( gridInqType(gridID1) == GRID_GME )
     {
       rg->grid1_nvgp = gridInqSize(gridID1);
-      gridID1_gme_c = gridToUnstructured(gridID1);
+      gridID1_gme_c = gridToUnstructured(gridID1, 1);
     }
 
   remapGridRealloc(rv->map_type, rg);

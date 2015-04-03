@@ -220,6 +220,58 @@ AC_ARG_WITH([jasper],
              AC_MSG_RESULT([suppressed])])
 AC_SUBST([JASPER_LIBS])
 #  ----------------------------------------------------------------------
+#  Link application with openjpeg library (needed for GRIB2 compression)
+OPENJPEG_LIBS=''
+AC_ARG_WITH([openjpeg],
+            [AS_HELP_STRING([--with-openjpeg=<directory>],
+                            [Specify location of openjpeg library. You must specify its location if GRIB_API was built with openjpeg.])],
+            [AS_CASE(["$with_openjpeg"],
+                     [no],[AC_MSG_CHECKING([for openjpeg library])
+                           AC_MSG_RESULT([suppressed])],
+                     [yes],[AC_CHECK_HEADERS([openjpeg.h])
+                            AC_SEARCH_LIBS([opj_image_create],[openjpeg],[AC_DEFINE([HAVE_LIBOPENJPEG],[1],[Define to 1 for JPEG compression for GRIB2])],
+                                           [AC_MSG_ERROR([Could not link to openjpeg library! Required for GRIB_API])])
+                            AC_SUBST([openjpeg_LIBS],[" -lopenjpeg"])],
+                     [*],[OPENJPEG_ROOT=$with_openjpeg
+                          AS_IF([test -d "$OPENJPEG_ROOT"],
+                                [LDFLAGS="$LDFLAGS -L$OPENJPEG_ROOT/lib"
+                                 CPPFLAGS="$CPPFLAGS -I$OPENJPEG_ROOT/include"
+                                 AC_SEARCH_LIBS([opj_image_create],
+                                                [openjpeg],
+                                                [AC_DEFINE([HAVE_LIBOPENJPEG],[1],[Define to 1 for JPEG compression for GRIB2])],
+                                                [AC_MSG_ERROR([Could not link to openjpeg library! Required for GRIB_API])])
+                                 OPENJPEG_LIBS=" -L$OPENJPEG_ROOT/lib -lopenjpeg"],
+                                [AC_MSG_ERROR([$OPENJPEG_ROOT is not a directory! openjpeg suppressed])])])],
+            [AC_MSG_CHECKING([for the openjpeg library])
+             AC_MSG_RESULT([suppressed])])
+AC_SUBST([OPENJPEG_LIBS])
+#  ----------------------------------------------------------------------
+#  Link application with LIBPNG library (needed for GRIB2 compression)
+LIBPNG_LIBS=''
+AC_ARG_WITH([libpng],
+            [AS_HELP_STRING([--with-libpng=<directory>],
+                            [Specify location of LIBPNG library. You must specify its location if GRIB_API was built with LIBPNG.])],
+            [AS_CASE(["$with_libpng"],
+                     [no],[AC_MSG_CHECKING([for libpng library])
+                           AC_MSG_RESULT([suppressed])],
+                     [yes],[AC_CHECK_HEADERS([libpng14/png.h])
+                            AC_SEARCH_LIBS([png_warning],[png14],[AC_DEFINE([HAVE_LIBLIBPNG],[1],[Define to 1 for PNG compression for GRIB2])],
+                                           [AC_MSG_ERROR([Could not link to libpng library! Required for GRIB_API])])
+                            AC_SUBST([LIBPNG_LIBS],[" -lpng14"])],
+                     [*],[LIBPNG_ROOT=$with_libpng
+                          AS_IF([test -d "$LIBPNG_ROOT"],
+                                [LDFLAGS="$LDFLAGS -L$LIBPNG_ROOT/lib"
+                                 CPPFLAGS="$CPPFLAGS -I$LIBPNG_ROOT/include"
+                                 AC_SEARCH_LIBS([png_warning],
+                                                [png14],
+                                                [AC_DEFINE([HAVE_LIBLIBPNG],[1],[Define to 1 for PNG compression for GRIB2])],
+                                                [AC_MSG_ERROR([Could not link to libpng library! Required for GRIB_API])])
+                                 LIBPNG_LIBS=" -L$LIBPNG_ROOT/lib -lpng14"],
+                                [AC_MSG_ERROR([$LIBPNG_ROOT is not a directory! LIBPNG suppressed])])])],
+            [AC_MSG_CHECKING([for the LIBPNG library])
+             AC_MSG_RESULT([suppressed])])
+AC_SUBST([LIBPNG_LIBS])
+#  ----------------------------------------------------------------------
 #  Compile application with GRIB_API library (for GRIB2 support)
 GRIB_API_INCLUDE=''
 GRIB_API_LIBS=''

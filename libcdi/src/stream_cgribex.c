@@ -76,6 +76,7 @@ int cgribexGetZaxisHasBounds(int grb_ltype)
 
   switch (grb_ltype)
     {
+    case GRIB1_LTYPE_SIGMA_LAYER:
     case GRIB1_LTYPE_HYBRID_LAYER:
     case GRIB1_LTYPE_LANDDEPTH_LAYER:
       {
@@ -161,7 +162,7 @@ int cgribexGetTsteptype(int timerange)
 static
 void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 {
-  int gridtype; 
+  int gridtype;
 
   gridtype = cgribexGetGridType(isec2);
 
@@ -184,6 +185,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	grid->size  = ISEC4_NumValues;
 	grid->xsize = ISEC2_NumLon;
 	grid->ysize = ISEC2_NumLat;
+        if ( gridtype == GRID_GAUSSIAN ) grid->np = ISEC2_NumPar;
 	grid->xinc  = 0;
 	grid->yinc  = 0;
 	grid->xdef  = 0;
@@ -213,7 +215,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	      }
 	    grid->xfirst = ISEC2_FirstLon * 0.001;
 	    grid->xlast  = ISEC2_LastLon  * 0.001;
-	    grid->xdef   = 2;	    
+	    grid->xdef   = 2;
 	  }
 	grid->ydef  = 0;
 	/* if ( ISEC2_FirstLat != 0 || ISEC2_LastLat != 0 ) */
@@ -230,18 +232,19 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	      }
 	    grid->yfirst = ISEC2_FirstLat * 0.001;
 	    grid->ylast  = ISEC2_LastLat  * 0.001;
-	    grid->ydef   = 2;	    
+	    grid->ydef   = 2;
 	  }
 	break;
       }
     case GRID_GAUSSIAN_REDUCED:
       {
+        grid->np     = ISEC2_NumPar;
 	grid->size   = ISEC4_NumValues;
         grid->rowlon = ISEC2_RowLonPtr;
 	grid->ysize  = ISEC2_NumLat;
-	grid->xinc  = 0;
-	grid->yinc  = 0;
-	grid->xdef  = 0;
+	grid->xinc   = 0;
+	grid->yinc   = 0;
+	grid->xdef   = 0;
 	/* if ( ISEC2_FirstLon != 0 || ISEC2_LastLon != 0 ) */
 	  {
 	    if ( grid->xsize > 1 )
@@ -253,7 +256,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	      }
 	    grid->xfirst = ISEC2_FirstLon * 0.001;
 	    grid->xlast  = ISEC2_LastLon  * 0.001;
-	    grid->xdef   = 2;	    
+	    grid->xdef   = 2;
 	  }
 	grid->ydef  = 0;
 	/* if ( ISEC2_FirstLat != 0 || ISEC2_LastLat != 0 ) */
@@ -267,7 +270,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	      }
 	    grid->yfirst = ISEC2_FirstLat * 0.001;
 	    grid->ylast  = ISEC2_LastLat  * 0.001;
-	    grid->ydef   = 2;	    
+	    grid->ydef   = 2;
 	  }
 	break;
       }
@@ -291,7 +294,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 	grid->lcc_projflag  = ISEC2_Lambert_ProjFlag;
 	grid->lcc_scanflag  = ISEC2_ScanFlag;
 
-	grid->xdef   = 0;	    
+	grid->xdef   = 0;
 	grid->ydef   = 0;
 
 	break;
@@ -348,7 +351,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid)
 #if  defined  (HAVE_LIBCGRIBEX)
 static
 void cgribexAddRecord(int streamID, int param, int *isec1, int *isec2, double *fsec2, double *fsec3,
-		      int *isec4, long recsize, off_t position, int prec, int comptype, int lmv)
+		      int *isec4, long recsize, off_t position, int datatype, int comptype, int lmv)
 {
   int zaxistype;
   int gridID = CDI_UNDEFID, varID;
@@ -401,11 +404,11 @@ void cgribexAddRecord(int streamID, int param, int *isec1, int *isec2, double *f
 
   lbounds = cgribexGetZaxisHasBounds(ISEC1_LevelType);
 
-  if ( prec > 32 ) prec = DATATYPE_PACK32;
-  if ( prec <  0 ) prec = DATATYPE_PACK;
+  if ( datatype > 32 ) datatype = DATATYPE_PACK32;
+  if ( datatype <  0 ) datatype = DATATYPE_PACK;
 
   varAddRecord(recID, param, gridID, zaxistype, lbounds, level1, level2,
-	       prec, &varID, &levelID, tsteptype, numavg, ISEC1_LevelType, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, tsteptype, numavg, ISEC1_LevelType, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -523,7 +526,7 @@ int cgribexScanTimestep1(int streamID)
   int varID;
   size_t readsize;
   int nrecords, nrecs, recID;
-  int prec;
+  int datatype;
   long recsize = 0;
   int warn_time = TRUE;
   int warn_numavg = TRUE;
@@ -616,9 +619,9 @@ int cgribexScanTimestep1(int streamID)
       gribDateTime(isec1, &vdate, &vtime);
 
       if ( ISEC4_NumBits > 0 && ISEC4_NumBits <= 32 )
-	prec = ISEC4_NumBits;
+	datatype = ISEC4_NumBits;
       else
-        prec = DATATYPE_PACK;
+        datatype = DATATYPE_PACK;
 
       if ( nrecs == 0 )
 	{
@@ -693,7 +696,7 @@ int cgribexScanTimestep1(int streamID)
 	Message("%4d %8d %4d  %8d %8d %6d", nrecs, (int)recpos, param, level1, vdate, vtime);
 
       cgribexAddRecord(streamID, param, isec1, isec2, fsec2, fsec3,
-		       isec4, recsize, recpos, prec, comptype, lmv);
+		       isec4, recsize, recpos, datatype, comptype, lmv);
     }
 
   streamptr->rtsteps = 1;
@@ -1470,7 +1473,7 @@ void cgribexDefParam(int *isec1, int param)
       Warning("Can not convert GRIB2 parameter (%s) to GRIB1!", paramstr);
       lwarn = FALSE;
     }
-    
+
   if ( pnum < 0 ) pnum = -pnum;
 
   ISEC1_CodeTable = pcat;
@@ -1710,8 +1713,8 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 	double yfirst = 0, ylast = 0, yinc = 0;
 
 	if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_GAUSSIAN_REDUCED )
-	  ISEC2_GridType = GRIB1_GTYPE_GAUSSIAN;
-	else if ( gridtype == GRID_LONLAT && gridIsRotated(gridID) )
+          ISEC2_GridType = GRIB1_GTYPE_GAUSSIAN;
+        else if ( gridtype == GRID_LONLAT && gridIsRotated(gridID) )
 	  ISEC2_GridType = GRIB1_GTYPE_LATLON_ROT;
 	else
 	  ISEC2_GridType = GRIB1_GTYPE_LATLON;
@@ -1777,7 +1780,11 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 	  ISEC2_LonIncr = 0;
 
 	if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_GAUSSIAN_REDUCED )
-	  ISEC2_NumPar = nlat/2;
+          {
+            int np = gridInqNP(gridID);
+            if ( np == 0 ) np = nlat/2;
+            ISEC2_NumPar = np;
+          }
 	else
 	  {
 	    ISEC2_LatIncr = NINT(yinc*1000);
@@ -1787,10 +1794,10 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 	    if ( ISEC2_LatIncr < 0 ) ISEC2_LatIncr = -ISEC2_LatIncr;
 	  }
 
-	if ( ISEC2_NumLon > 1 && ISEC2_NumLat == 1 ) 
+	if ( ISEC2_NumLon > 1 && ISEC2_NumLat == 1 )
 	  if ( ISEC2_LonIncr != 0 && ISEC2_LatIncr == 0 ) ISEC2_LatIncr = ISEC2_LonIncr;
 
-	if ( ISEC2_NumLon == 1 && ISEC2_NumLat > 1 ) 
+	if ( ISEC2_NumLon == 1 && ISEC2_NumLat > 1 )
 	  if ( ISEC2_LonIncr == 0 && ISEC2_LatIncr != 0 ) ISEC2_LonIncr = ISEC2_LatIncr;
 
 	if ( ISEC2_LatIncr == 0 || ISEC2_LonIncr == 0 )
@@ -2039,12 +2046,21 @@ void cgribexDefLevel(int *isec1, int *isec2, double *fsec2, int zaxisID, int lev
       }
     case ZAXIS_SIGMA:
       {
-	level = zaxisInqLevel(zaxisID, levelID);
+	if ( zaxisInqLbounds(zaxisID, NULL) && zaxisInqUbounds(zaxisID, NULL) )
+	  {
+	    ISEC1_LevelType = GRIB1_LTYPE_SIGMA_LAYER;
+	    ISEC1_Level1    = (int) zaxisInqLbound(zaxisID, levelID);
+	    ISEC1_Level2    = (int) zaxisInqUbound(zaxisID, levelID);
+	  }
+	else
+	  {
+            level = zaxisInqLevel(zaxisID, levelID);
 
-	ilevel = (int) level;
-	ISEC1_LevelType = GRIB1_LTYPE_SIGMA;
-	ISEC1_Level1    = ilevel;
-	ISEC1_Level2    = 0;
+            ilevel = (int) level;
+            ISEC1_LevelType = GRIB1_LTYPE_SIGMA;
+            ISEC1_Level1    = ilevel;
+            ISEC1_Level2    = 0;
+          }
 
 	break;
       }
