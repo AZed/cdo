@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -57,14 +57,15 @@ const char* calendar2str(int calendar)
 }
 
 static
-void limit_string_length(char* string)
+void limit_string_length(char* string, size_t maxlen)
 {
+  string[maxlen-1] = 0;
   size_t len = strlen(string);
 
   if ( len > 10 )
     {
       for ( size_t i = 3; i < len; ++i )
-	if ( string[i] == ' ' )
+	if ( string[i] == ' ' || string[i] == ',' || (i>10 && string[i] == '.') )
 	  {
 	    string[i] = 0;
 	    break;
@@ -159,15 +160,15 @@ void *Sinfo(void *argument)
 	  /* institute info */
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  strcpy(tmpname, "unknown");
-	  if ( instptr ) strcpy(tmpname, instptr);
-	  limit_string_length(tmpname);
+	  if ( instptr ) strncpy(tmpname, instptr, CDI_MAX_NAME);
+	  limit_string_length(tmpname, CDI_MAX_NAME);
 	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* source info */
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  strcpy(tmpname, "unknown");
-	  if ( modelptr ) strcpy(tmpname, modelptr);
-	  limit_string_length(tmpname);
+	  if ( modelptr ) strncpy(tmpname, modelptr, CDI_MAX_NAME);
+	  limit_string_length(tmpname, CDI_MAX_NAME);
 	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* tsteptype */

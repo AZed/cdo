@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -324,12 +324,12 @@ void *Filedes(void *argument)
       int opt = 0;
       if ( operatorID == GRIDDES ) opt = 1;
       for ( index = 0; index < ngrids; index++ )
-	gridPrint(vlistGrid(vlistID, index), opt);
+	gridPrint(vlistGrid(vlistID, index), index+1, opt);
     }
   else if ( operatorID == ZAXISDES )
     {
       for ( index = 0; index < nzaxis; index++ )
-	zaxisPrint(vlistZaxis(vlistID, index));
+	zaxisPrint(vlistZaxis(vlistID, index), index+1);
     }
   else if ( operatorID == VCT || operatorID == VCT2 )
     {

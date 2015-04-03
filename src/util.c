@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,9 +19,18 @@
 #define _XOPEN_SOURCE 600 /* ftello */
 #endif
 
+#if defined(HAVE_CONFIG_H)
+#  include "config.h"
+#endif
+
 #if defined(_OPENMP)
 #  include <omp.h>
 #endif
+
+#if defined(HAVE_FNMATCH_H)
+#include <fnmatch.h>
+#endif
+
 
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +42,107 @@
 #include "modules.h"
 #include "util.h"
 
+
+#if ! defined(VERSION)
+#  define  VERSION  "0.0.1"
+#endif
+ 
+
+/* refactor: moved here from *.c */
+
+int CDO_opterr = 0;      // refactor: moved here from cdo_getopt.c
+char *CDO_optarg = NULL; // refactor: moved here from cdo_getopt.c
+int CDO_optind = 1;      // refactor: moved here from cdo_getopt.c
+int remap_genweights = TRUE;  // refactor: moved here from Remap.c
+
+
+/* refactor: moved here from cdo.c */
+
+char *Progname;
+char CDO_Version[] = "Climate Data Operators version "VERSION" (http://mpimet.mpg.de/cdo)"; // refactor: moved here from cdo.c
+
+int ompNumThreads = 1;
+
+int stdin_is_tty  = 0;
+int stdout_is_tty = 0;
+int stderr_is_tty = 0;
+
+char* cdoGridSearchDir   = NULL;
+
+int cdoDefaultFileType   = CDI_UNDEFID;
+int cdoDefaultDataType   = CDI_UNDEFID;
+int cdoDefaultByteorder  = CDI_UNDEFID;
+int cdoDefaultTableID    = CDI_UNDEFID;
+int cdoDefaultInstID     = CDI_UNDEFID;     // moved here from institution.c, was UNDEFID
+int cdoDefaultTimeType   = CDI_UNDEFID;
+
+int cdoLockIO            = FALSE;
+int cdoCheckDatarange    = FALSE;
+
+int CDO_Color            = FALSE;
+int CDO_Use_FFTW         = TRUE;
+int cdoDiag              = FALSE;
+
+int CDO_Append_History   = TRUE;
+int CDO_Reset_History    = FALSE;
+
+int cdoCompType          = COMPRESS_NONE;  // compression type
+int cdoCompLevel         = 0;              // compression level
+int cdoDebug             = 0;
+int cdoChunkType         = CDI_UNDEFID;
+int cdoLogOff            = FALSE;
+int cdoSilentMode        = FALSE;
+int cdoOverwriteMode     = FALSE;
+int cdoBenchmark         = FALSE;
+int cdoTimer             = FALSE;
+int cdoVerbose           = FALSE;
+int cdoCompress          = FALSE;
+int cdoInteractive       = FALSE;
+int cdoParIO             = FALSE;
+int cdoRegulargrid       = FALSE;
+
+int cdoNumVarnames       = 0;
+char **cdoVarnames       = NULL;
+
+char CDO_File_Suffix[32];
+
+int cdoExpMode           = -1;
+char *cdoExpName         = NULL;
+
+int timer_read, timer_write;
+
+
+#if defined(HAVE_FNMATCH_H)
+int wildcardmatch(const char *pattern, const char *string)
+{
+  return fnmatch(pattern, string, 0);
+}
+#else
+// The wildcardmatch function checks if two given strings match. 
+// The first string may contain wildcard characters
+// * --> Matches with 0 or more instances of any character or set of characters.
+// ? --> Matches with any one character.
+// source code from http://www.geeksforgeeks.org/wildcard-character-matching/
+int wildcardmatch(const char *w, const char *s)
+{
+    // If we reach at the end of both strings, we are done
+    if ( *w == '\0' && *s == '\0' ) return 0;
+ 
+    // Make sure that the characters after '*' are present in second string.
+    // This function assumes that the first string will not contain two consecutive '*'
+    if ( *w == '*' && *(w+1) != '\0' && *s == '\0' ) return 1;
+ 
+    // If the first string contains '?', or current characters of both strings match
+    if ( (*w == '?' && *s != '\0') || *w == *s ) return wildcardmatch(w+1, s+1);
+ 
+    // If there is *, then there are two possibilities
+    // a) We consider current character of second string
+    // b) We ignore current character of second string.
+    if ( *w == '*' ) return wildcardmatch(w+1, s) || wildcardmatch(w, s+1);
+
+    return 1;
+}
+#endif
 
 int cdo_omp_get_thread_num(void)
 {
@@ -95,9 +205,9 @@ char *getOperatorName(const char *operatorArg)
       commapos = strchr(operatorArg, ',');
 
       if ( commapos )
-	len = commapos - operatorArg;
+        len = commapos - operatorArg;
       else
-	len = strlen(operatorArg);
+        len = strlen(operatorArg);
 
       operatorName = (char*) malloc(len+1);
 
@@ -130,10 +240,10 @@ void file_argument_free(argument_t *argument)
   if ( argument )
     {
       if ( argument->argc )
-	{
-	  assert(argument->argc == 1);
-	  free(argument->argv);
-	}
+        {
+          assert(argument->argc == 1);
+          free(argument->argv);
+        }
       free(argument);
     }
 }
@@ -163,27 +273,27 @@ void argument_free(argument_t *argument)
   if ( argument )
     {
       if ( argument->argc )
-	{
-	  int argc =  argument->argc;
-	  for ( int i = 0; i < argc; ++i )
-	    {
-	      if ( argument->argv[i] )
-		{
-		  free(argument->argv[i]);
-		  argument->argv[i] = NULL;
-		}
-	    }
+        {
+          int argc =  argument->argc;
+          for ( int i = 0; i < argc; ++i )
+            {
+              if ( argument->argv[i] )
+                {
+                  free(argument->argv[i]);
+                  argument->argv[i] = NULL;
+                }
+            }
 
-	  free(argument->argv);
-	  argument->argv = NULL;
-	  argument->argc = 0;
-	}
+          free(argument->argv);
+          argument->argv = NULL;
+          argument->argc = 0;
+        }
 
       if ( argument->args )
-	{
-	  free(argument->args);
-	  argument->args = NULL;
-	}
+        {
+          free(argument->args);
+          argument->args = NULL;
+        }
 
       free(argument);
     }
@@ -213,12 +323,12 @@ char *getFileArg(char *argument)
       blankpos = strchr(argument, ' ');
 
       if ( blankpos )
-	{
-	  parg = blankpos + 1;
-	  len = strlen(parg);
-	  fileArg = (char*) malloc(len+1);
-	  strcpy(fileArg, parg);
-	}
+        {
+          parg = blankpos + 1;
+          len = strlen(parg);
+          fileArg = (char*) malloc(len+1);
+          strcpy(fileArg, parg);
+        }
     }
 
   return (fileArg);
@@ -246,8 +356,36 @@ void strtolower(char *str)
     {
       len = (int) strlen(str);
       for ( i = 0; i < len; i++ )
-	str[i] = tolower((int) str[i]);
+        str[i] = tolower((int) str[i]);
     }
+}
+
+
+double parameter2double(const char *string)
+{
+  char *endptr = NULL;
+
+  double fval = strtod(string, &endptr);
+
+  if ( *endptr != 0 )
+    cdoAbort("Float parameter >%s< contains invalid character at position %d!",
+	     string, (int)(endptr-string+1));
+
+  return (fval);
+}
+
+
+int parameter2int(const char *string)
+{
+  char *endptr = NULL;
+
+  int ival = (int) strtol(string, &endptr, 10);
+
+  if ( *endptr != 0 )
+    cdoAbort("Integer parameter >%s< contains invalid character at position %d!",
+	     string, (int)(endptr-string+1));
+
+  return (ival);
 }
 
 
@@ -266,12 +404,12 @@ int get_season_start(void)
       else if ( strcmp(envstr, "JAN") == 0 ) season_start = START_JAN;
       
       if ( cdoVerbose )
-	{
-	  if      ( season_start == START_DEC )
-	    cdoPrint("Set SEASON_START to December");
-	  else if ( season_start == START_JAN )
-	    cdoPrint("Set SEASON_START to January");
-	}
+        {
+          if      ( season_start == START_DEC )
+            cdoPrint("Set SEASON_START to December");
+          else if ( season_start == START_JAN )
+            cdoPrint("Set SEASON_START to January");
+        }
     }
 
   return (season_start);
@@ -320,9 +458,9 @@ int userFileOverwrite(const char *filename)
   if ( len == 3 )
     {
       if ( pline[0] == 'y' && pline[1] == 'e' && pline[2] == 's' )
-	status = 1;
+        status = 1;
       else if ( pline[0] == 'Y' && pline[1] == 'E' && pline[2] == 'S' )
-	status = 1;
+        status = 1;
     }
   else if ( len == 1 )
     {
@@ -416,21 +554,21 @@ int str2datatype(const char *datatypestr)
   if ( len > 1 )
     {
       int ilen = atoi(datatypestr+1);
-      if      ( memcmp(datatypestr, "P0",  len) == 0 ) datatype = DATATYPE_PACK;
-      else if ( memcmp(datatypestr, "P",     1) == 0 &&
-		ilen > 0 && ilen <= 32 )               datatype = atoi(datatypestr+1);
-      else if ( memcmp(datatypestr, "C32", len) == 0 ) datatype = DATATYPE_CPX32;
-      else if ( memcmp(datatypestr, "C64", len) == 0 ) datatype = DATATYPE_CPX64;
-      else if ( memcmp(datatypestr, "F32", len) == 0 ) datatype = DATATYPE_FLT32;
-      else if ( memcmp(datatypestr, "F64", len) == 0 ) datatype = DATATYPE_FLT64;
-      else if ( memcmp(datatypestr, "I8",  len) == 0 ) datatype = DATATYPE_INT8;
-      else if ( memcmp(datatypestr, "I16", len) == 0 ) datatype = DATATYPE_INT16;
-      else if ( memcmp(datatypestr, "I32", len) == 0 ) datatype = DATATYPE_INT32;
-      else if ( memcmp(datatypestr, "U8",  len) == 0 ) datatype = DATATYPE_UINT8;
-      else if ( memcmp(datatypestr, "U16", len) == 0 ) datatype = DATATYPE_UINT16;
-      else if ( memcmp(datatypestr, "U32", len) == 0 ) datatype = DATATYPE_UINT32;
-      else if ( memcmp(datatypestr, "real",   len) == 0 ) datatype = DATATYPE_FLT32;
-      else if ( memcmp(datatypestr, "double", len) == 0 ) datatype = DATATYPE_FLT64;
+      if      ( strncmp(datatypestr, "P0",  len) == 0 ) datatype = DATATYPE_PACK;
+      else if ( strncmp(datatypestr, "P",     1) == 0 &&
+                ilen > 0 && ilen <= 32 )               datatype = atoi(datatypestr+1);
+      else if ( strncmp(datatypestr, "C32", len) == 0 ) datatype = DATATYPE_CPX32;
+      else if ( strncmp(datatypestr, "C64", len) == 0 ) datatype = DATATYPE_CPX64;
+      else if ( strncmp(datatypestr, "F32", len) == 0 ) datatype = DATATYPE_FLT32;
+      else if ( strncmp(datatypestr, "F64", len) == 0 ) datatype = DATATYPE_FLT64;
+      else if ( strncmp(datatypestr, "I8",  len) == 0 ) datatype = DATATYPE_INT8;
+      else if ( strncmp(datatypestr, "I16", len) == 0 ) datatype = DATATYPE_INT16;
+      else if ( strncmp(datatypestr, "I32", len) == 0 ) datatype = DATATYPE_INT32;
+      else if ( strncmp(datatypestr, "U8",  len) == 0 ) datatype = DATATYPE_UINT8;
+      else if ( strncmp(datatypestr, "U16", len) == 0 ) datatype = DATATYPE_UINT16;
+      else if ( strncmp(datatypestr, "U32", len) == 0 ) datatype = DATATYPE_UINT32;
+      else if ( strncmp(datatypestr, "real",   len) == 0 ) datatype = DATATYPE_FLT32;
+      else if ( strncmp(datatypestr, "double", len) == 0 ) datatype = DATATYPE_FLT64;
     }
 
   return (datatype);
@@ -449,14 +587,14 @@ off_t filesize(const char *filename)
     {
       fp = fopen(filename, "r");
       if ( fp == NULL )
-	{
-	  fprintf(stderr, "Open failed on %s\n", filename);
-	}
+        {
+          fprintf(stderr, "Open failed on %s\n", filename);
+        }
       else
-	{
-	  fseek(fp, 0L, SEEK_END);
-	  pos = ftello(fp);
-	}
+        {
+          fseek(fp, 0L, SEEK_END);
+          pos = ftello(fp);
+        }
     }
   
   return pos;
@@ -520,3 +658,88 @@ void repl_filetypeext(char file[], const char *oldext, const char *newext)
   // add new file extension
   strcat(file, newext);
 }
+
+
+void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID, const char *refname)
+{
+  if ( strncmp(CDO_File_Suffix, "NULL", 4) != 0 )
+    {
+      if ( CDO_File_Suffix[0] != 0 )
+        {
+          strncat(filesuffix, CDO_File_Suffix, maxlen-1);
+        }
+      else
+        {
+          int lready = FALSE;
+          int lcompsz = FALSE;
+          
+          if ( filetype == cdoDefaultFileType && cdoDefaultDataType == -1 && cdoDefaultByteorder == -1 )
+            {
+              size_t len = 0;
+              if ( refname != NULL && *refname != 0 && *refname != '-' && *refname != '.' ) len = strlen(refname);
+
+              if ( len > 2 )
+                {
+                  char *result = strrchr(refname, '.');
+                  if ( result != NULL && result[1] != 0 )
+                    {
+                      int firstchar = tolower(result[1]);
+                      switch (firstchar)
+                        {
+                        case 'g':
+                          if ( cdoDefaultFileType == FILETYPE_GRB || cdoDefaultFileType == FILETYPE_GRB2 ) lready = TRUE;
+                          break;
+                        case 'n':
+                          if ( cdoDefaultFileType == FILETYPE_NC || cdoDefaultFileType == FILETYPE_NC2 ||
+                               cdoDefaultFileType == FILETYPE_NC4 || cdoDefaultFileType == FILETYPE_NC4C ) lready = TRUE;
+                          break;
+                        case 's':
+                          if ( cdoDefaultFileType == FILETYPE_SRV ) lready = TRUE;
+                          break;
+                        case 'e':
+                          if ( cdoDefaultFileType == FILETYPE_EXT ) lready = TRUE;
+                          break;
+                        case 'i':
+                          if ( cdoDefaultFileType == FILETYPE_IEG ) lready = TRUE;
+                          break;
+                        }
+                    }
+
+                  //if ( lready )  strncat(filesuffix, result, maxlen-1);
+		  if ( lready && ((len=strlen(result)) < (maxlen-1)) )
+		    {
+		      while ( len-- )
+			{
+			  if ( *result == '.' || isalnum(*result) ) 
+			    strncat(filesuffix, result, 1);
+			  result++;
+			}
+		    }
+                }
+            }
+
+          if ( !lready )
+            {
+              strncat(filesuffix, streamFilesuffix(cdoDefaultFileType), maxlen-1);
+              if ( cdoDefaultFileType == FILETYPE_GRB && vlistIsSzipped(vlistID) ) lcompsz = TRUE;
+            }
+
+          if ( cdoDefaultFileType == FILETYPE_GRB && cdoCompType == COMPRESS_SZIP ) lcompsz = TRUE;
+          if ( lcompsz ) strncat(filesuffix, ".sz", maxlen-1);
+        }
+    }
+}
+
+
+int cdoFiletype(void)
+{
+  if ( cdoDefaultFileType == CDI_UNDEFID )
+    {
+      cdoDefaultFileType = FILETYPE_GRB;
+      if ( ! cdoSilentMode )
+        cdoPrint("Set default filetype to GRIB");
+    }
+
+  return (cdoDefaultFileType);
+}
+

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -107,66 +107,56 @@ int covariance_t(long gridsize, double missval1, double missval2, int *nofvals,
 
 void *Timstat2(void *argument)
 {
-  int operatorID;
-  int operfunc;
   int nwork = 0;
-  int streamID1, streamID2, streamID3;
   int vdate = 0, vtime = 0;
-  int nrecs, nrecs2, nrecs3, nvars, nlevs;
+  int nrecs2, nlevs;
   long i, gridsize;
-  int tsID;
   int varID, recID, levelID, gridID;
   int nmiss;
-  int *recVarID, *recLevelID;
-  int vlistID1, vlistID2, vlistID3;
-  int taxisID1, taxisID2, taxisID3;
   double missval1, missval2;
-  double ****work = NULL;
-  int ***nofvals = NULL;
-  double *array1 = NULL, *array2 = NULL;
 
   cdoInitialize(argument);
 
   cdoOperatorAdd("timcor",   func_cor,   0, NULL);
   cdoOperatorAdd("timcovar", func_covar, 0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc   = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc   = cdoOperatorF1(operatorID);
 
   if      ( operfunc == func_cor   ) nwork = 5;
   else if ( operfunc == func_covar ) nwork = 3;
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
-  streamID2 = streamOpenRead(cdoStreamName(1));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID2 = streamOpenRead(cdoStreamName(1));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = streamInqVlist(streamID2);
-  vlistID3 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = streamInqVlist(streamID2);
+  int vlistID3 = vlistDuplicate(vlistID1);
 
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
  
-  nvars  = vlistNvars(vlistID1);
-  nrecs  = vlistNrecs(vlistID1);
-  nrecs3 = nrecs;
-  recVarID   = (int*) malloc(nrecs*sizeof(int));
-  recLevelID = (int*) malloc(nrecs*sizeof(int));
+  int nvars  = vlistNvars(vlistID1);
+  int nrecs  = vlistNrecs(vlistID1);
+  int nrecs3 = nrecs;
+  int *recVarID   = (int*) malloc(nrecs*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecs*sizeof(int));
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = vlistInqTaxis(vlistID2);
-  taxisID3 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  //int taxisID2 = vlistInqTaxis(vlistID2);
+  int taxisID3 = taxisDuplicate(taxisID1);
  
   vlistDefTaxis(vlistID3, taxisID3);
-  streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
+  int streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
 
   streamDefVlist(streamID3, vlistID3);
  
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1  = (double*) malloc(gridsize*sizeof(double));
-  array2  = (double*) malloc(gridsize*sizeof(double));
+  double *array1  = (double*) malloc(gridsize*sizeof(double));
+  double *array2  = (double*) malloc(gridsize*sizeof(double));
   				 
-  work    = (double ****) malloc(nvars*sizeof(double ***));
-  nofvals = (int ***) malloc(nvars*sizeof(int **));
+  double ****work = (double ****) malloc(nvars*sizeof(double ***));
+  int ***nofvals  = (int ***) malloc(nvars*sizeof(int **));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -191,7 +181,7 @@ void *Timstat2(void *argument)
 	}
     }
  
-  tsID=0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       vdate = taxisInqVdate(taxisID1);

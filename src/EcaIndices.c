@@ -315,7 +315,7 @@ void *EcaCsu(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_csu", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argT = parameter2double(operatorArgv()[0]);
 
   request.var1.name     = CSU_NAME;
   request.var1.longname = CSU_LONGNAME;
@@ -352,8 +352,8 @@ void *EcaCwdi(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cwdi", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
-  if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
+  if ( operatorArgc() > 0 ) argN = parameter2int(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) argT = parameter2double(operatorArgv()[1]);
   
   longname = (char*) malloc(strlen(CWDI_LONGNAME) + 80);
   sprintf(longname, CWDI_LONGNAME, argN, argT);
@@ -394,7 +394,7 @@ void *EcaCwfi(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cwfi", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argN = parameter2int(operatorArgv()[0]);
 
   longname = (char*) malloc(strlen(CWFI_LONGNAME) + 40);
   sprintf(longname, CWFI_LONGNAME, argN);
@@ -494,9 +494,9 @@ void *EcaGsl(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_gsl", 0, 10, NULL);
   
-  if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
-  if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
-  if ( operatorArgc() > 2 ) minLandFraction = atof(operatorArgv()[2]);
+  if ( operatorArgc() > 0 ) argN = parameter2int(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) argT = parameter2double(operatorArgv()[1]);
+  if ( operatorArgc() > 2 ) minLandFraction = parameter2double(operatorArgv()[2]);
 
   longname = (char*) malloc(strlen(GSL_LONGNAME) + 160);
   sprintf(longname, GSL_LONGNAME, argN, argT, argN, argT);
@@ -536,11 +536,11 @@ void *EcaHd(void *argument)
 
   if ( operatorArgc() > 0 ) 
     {
-      argX = atof(operatorArgv()[0]);
+      argX = parameter2double(operatorArgv()[0]);
       argA = argX;
     }
   if ( operatorArgc() > 1 ) 
-    argA = atof(operatorArgv()[1]);
+    argA = parameter2double(operatorArgv()[1]);
   
   request.var1.name     = HD_NAME;
   request.var1.longname = HD_LONGNAME;
@@ -573,8 +573,8 @@ void *EcaHwdi(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_hwdi", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
-  if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
+  if ( operatorArgc() > 0 ) argN = parameter2int(operatorArgv()[0]);
+  if ( operatorArgc() > 1 ) argT = parameter2double(operatorArgv()[1]);
   
   longname = (char*) malloc(strlen(HWDI_LONGNAME) + 80);
   sprintf(longname, HWDI_LONGNAME, argN, argT);
@@ -615,7 +615,7 @@ void *EcaHwfi(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_hwfi", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argN = parameter2int(operatorArgv()[0]);
 
   longname = (char*) malloc(strlen(HWFI_LONGNAME) + 40);
   sprintf(longname, HWFI_LONGNAME, argN);
@@ -682,7 +682,7 @@ void *EcaSu(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_su", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argT = parameter2double(operatorArgv()[0]);
   longname = (char*) malloc(strlen(SU_LONGNAME) + 40);
   sprintf(longname, SU_LONGNAME, argT);
 
@@ -817,7 +817,7 @@ void *EcaTr(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_tr", 0, 31, NULL);
 
-  if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argT = parameter2double(operatorArgv()[0]);
   longname = (char*) malloc(strlen(TR_LONGNAME) + 40);
   sprintf(longname, TR_LONGNAME, argT);
  
@@ -905,7 +905,7 @@ void *EcaCdd(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cdd", 0, 31, NULL);
 
-  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() == 1 ) threshold = parameter2double(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
 
   sprintf(lnamebuffer, CDD_LONGNAME, threshold);
@@ -944,7 +944,7 @@ void *EcaCwd(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_cwd", 0, 31, NULL);
 
-  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() == 1 ) threshold = parameter2double(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
 
   sprintf(lnamebuffer, CWD_LONGNAME, threshold);
@@ -997,7 +997,7 @@ void *EcaPd(void *argument)
       if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
       if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
 
-      threshold = atof(operatorArgv()[0]);
+      threshold = parameter2double(operatorArgv()[0]);
 
       if ( threshold < 0 ) cdoAbort("Parameter out of range: threshold = %d", threshold);
 
@@ -1259,7 +1259,7 @@ void *EcaRr1(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_rr1", 0, 31, NULL);
 
-  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() == 1 ) threshold = parameter2double(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
 
   sprintf(lnamebuffer, RR1_LONGNAME, threshold);
@@ -1325,7 +1325,7 @@ void *EcaRx5day(void *argument)
   ECA_REQUEST_1 request;
   
   cdoInitialize(argument);
-  if ( operatorArgc() > 0 ) argX = atof(operatorArgv()[0]);
+  if ( operatorArgc() > 0 ) argX = parameter2double(operatorArgv()[0]);
   
   longname = (char*) malloc(strlen(RX5DAY_LONGNAME2) + 40);
   sprintf(longname, RX5DAY_LONGNAME2, argX);
@@ -1367,7 +1367,7 @@ void *EcaSdii(void *argument)
   cdoInitialize(argument);
   cdoOperatorAdd("eca_sdii", 0, 31, NULL);
 
-  if ( operatorArgc() == 1 ) threshold = atof(operatorArgv()[0]);
+  if ( operatorArgc() == 1 ) threshold = parameter2double(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
 
   sprintf(lnamebuffer, SDII_LONGNAME, threshold);
@@ -1429,7 +1429,7 @@ void *Strwin(void *argument)
   cdoOperatorAdd("strwin", 0, 31, NULL);
 
   if ( operatorArgc() > 0 )
-    maxWind = atof(operatorArgv()[0]);
+    maxWind = parameter2double(operatorArgv()[0]);
 
   longname = (char*) malloc(strlen(STRWIN_LONGNAME) + 40);
   sprintf(longname, STRWIN_LONGNAME, maxWind);

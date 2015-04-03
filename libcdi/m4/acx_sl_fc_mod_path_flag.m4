@@ -61,22 +61,22 @@ AC_DEFUN([ACX_SL_FC_CHECK_MOD_PATH_FLAG],dnl
    AC_CACHE_CHECK([for flag to alter module search path],[mod_flag],
      [mkdir conftestdir
       cd conftestdir
-      AC_COMPILE_IFELSE([AC_LANG_SOURCE([      module cnftst
-       implicit none
-       integer :: i
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+[      module cnftst
+      implicit none
+      integer :: i
       end module cnftst])],,
         [AC_MSG_ERROR([Cannot compile fortran modules])])
       cd ..
       for i in -I -M -module -p; do
         FCFLAGS_save=$FCFLAGS
         FCFLAGS="$FCFLAGS ${i}conftestdir"
-        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[dnl
-       use cnftst
-       implicit none
-       i = 0
-])
-             ],[AS_VAR_SET([mod_flag],[$i]) ; FCFLAGS=$FCFLAGS_save ; break],
-             [:])
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],
+[      use cnftst
+      implicit none
+      i = 0])],
+          [AS_VAR_SET([mod_flag],[$i]) ; FCFLAGS=$FCFLAGS_save ; break],
+          [:])
         FCFLAGS=$FCFLAGS_save
       done
       FCFLAGS=$FCFLAGS_save

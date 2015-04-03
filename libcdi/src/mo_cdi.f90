@@ -1540,9 +1540,10 @@ module mo_cdi
         end function gridInqMask
       end interface
       interface
-        subroutine gridPrint(gridID,opt) bind(c,name='gridPrint')
+        subroutine gridPrint(gridID,index,opt) bind(c,name='gridPrint')
           import :: c_int
           integer(kind=c_int), value :: gridID
+          integer(kind=c_int), value :: index
           integer(kind=c_int), value :: opt
         end subroutine gridPrint
       end interface
@@ -2199,9 +2200,10 @@ module mo_cdi
         end subroutine zaxisResize
       end interface
       interface
-        subroutine zaxisPrint(zaxisID) bind(c,name='zaxisPrint')
+        subroutine zaxisPrint(zaxisID,index) bind(c,name='zaxisPrint')
           import :: c_int
           integer(kind=c_int), value :: zaxisID
+          integer(kind=c_int), value :: index
         end subroutine zaxisPrint
       end interface
       interface

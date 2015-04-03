@@ -1,6 +1,14 @@
 CDI NEWS
 --------
 
+Version 1.6.8 (26 March 2015):
+
+   Fixed bugs:
+     * cdfCopyRecord: incorrect checksum for freed object [Bug #5461]
+     * scan netcdf time units attribute
+     * fixed rounding error for negativ timevalue
+     * time unit second rounding error
+
 Version 1.6.7 (5 December 2014):
 
    Fixed bugs:

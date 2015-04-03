@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -84,43 +84,39 @@ void *Pack(void *argument)
   int gridsize;
   int nrecs;
   int gridID, varID, levelID, recID;
-  int tsID;
   int i;
   int nts;
   int nalloc = 0;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
-  int nvars, nlevel;
+  int nlevel;
   int datatype = DATATYPE_INT16;
+  dtlist_type *dtlist = dtlist_new();
   double missval1, missval2;
   field_t ***vars = NULL;
-  dtinfo_t *dtinfo = NULL;
 
   cdoInitialize(argument);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  nvars = vlistNvars(vlistID1);
+  int nvars = vlistNvars(vlistID1);
 
-  tsID = 0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  dtinfo = (dtinfo_t*) realloc(dtinfo, nalloc*sizeof(dtinfo_t));
 	  vars   = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
-      taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
+      dtlist_taxisInqTimestep(dtlist, taxisID1, tsID);
 
       vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
 
@@ -235,13 +231,13 @@ void *Pack(void *argument)
 	}
     }
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {
-      taxisDefDTinfo(taxisID2, dtinfo[tsID]);
+      dtlist_taxisDefTimestep(dtlist, taxisID2, tsID);
       streamDefTimestep(streamID2, tsID);
 
       for ( varID = 0; varID < nvars; varID++ )
@@ -264,7 +260,8 @@ void *Pack(void *argument)
     }
 
   if ( vars  ) free(vars);
-  if ( dtinfo ) free(dtinfo);
+
+  dtlist_delete(dtlist);
 
   streamClose(streamID2);
   streamClose(streamID1);

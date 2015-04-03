@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -83,7 +83,7 @@ void *Setbox(void *argument)
 
   operatorInputArg(cdoOperatorEnter(operatorID));
 
-  constant = atof(operatorArgv()[0]);
+  constant = parameter2double(operatorArgv()[0]);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 

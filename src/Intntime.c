@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -57,7 +57,7 @@ void *Intntime(void *argument)
   operatorInputArg("number of timesteps between 2 timesteps");
   if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
 
-  numts = atoi(operatorArgv()[0]);
+  numts = parameter2int(operatorArgv()[0]);
   if ( numts < 2 ) cdoAbort("parameter must be greater than 1!");
 
   streamID1 = streamOpenRead(cdoStreamName(0));

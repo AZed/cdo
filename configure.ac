@@ -4,7 +4,9 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdo], [1.6.7], [https://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.8], [http://mpimet.mpg.de/cdo])
+
+AC_DEFINE_UNQUOTED(CDO, ["$PACKAGE_VERSION"], [CDO version])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -18,6 +20,8 @@ AC_CONFIG_HEADERS([src/config.h])
 AM_MAINTAINER_MODE([disable])
 
 # Set up libtool.
+AM_PROG_AR
+#
 AC_MSG_NOTICE([setting up libtool])
 LT_INIT
 
@@ -25,6 +29,7 @@ LT_INIT
 AC_CHECK_TOOL([CC],[gcc],[:])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
+AC_C_RESTRICT
 AC_OPENMP
 AC_CHECK_TOOL([AR],[ar],[:])
 AC_CHECK_TOOL([CPP],[cpp],[:])
@@ -59,13 +64,13 @@ AC_CHECK_HEADERS(sys/resource.h)
 AC_CHECK_HEADERS(sys/times.h)
 AC_CHECK_HEADERS(malloc.h)
 AC_CHECK_HEADERS(glob.h)
+AC_CHECK_HEADERS(fnmatch.h)
+AC_CHECK_HEADERS(wordexp.h)
 #  ----------------------------------------------------------------------
 # Checks for the availability of functions
 AC_CHECK_FUNCS(mallinfo)
 #  ----------------------------------------------------------------------
 # Checks for the availability of ANSI-C99 functions
-AC_CHECK_DECLS([isnan],,,[AC_INCLUDES_DEFAULT
-@%:@include <math.h>])
 AC_CHECK_FUNCS(getrlimit)
 AC_CHECK_FUNCS(gethostname)
 
@@ -104,6 +109,11 @@ AC_SUBST([SYSTEM_TYPE],["$ac_cv_build"])
 #  ----------------------------------------------------------------------
 #  Check for math library
 AC_CHECK_LIB([m],[floor])
+#  ----------------------------------------------------------------------
+# Checks for the availability of ANSI-C99 math functions
+AC_CHECK_DECLS([isnan],,,[AC_INCLUDES_DEFAULT
+@%:@include <math.h>])
+AC_CHECK_FUNCS(sqrtl)
 #  ----------------------------------------------------------------------
 #  Enable DATA support
 AC_MSG_CHECKING([for DATA support])
@@ -217,7 +227,8 @@ AC_PROG_AWK
 AC_CONFIG_FILES([test/File.test test/Read_grib.test test/Read_netcdf.test test/Copy_netcdf.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([test/Cat.test test/Gridarea.test test/Genweights.test test/Remap.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([test/Select.test test/Spectral.test test/Timstat.test test/Vertint.test],[chmod a+x "$ac_file"])
-AC_CONFIG_FILES([test/Detrend.test test/Arith.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([test/Detrend.test test/Arith.test test/Gradsdes.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([test/wildcard.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([Makefile src/Makefile contrib/Makefile test/Makefile test/data/Makefile cdo.spec cdo.settings])
 AC_OUTPUT
 

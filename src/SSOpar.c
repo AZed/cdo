@@ -686,13 +686,12 @@ void *SSOpar(void *argument)
   int operatorID;
   int streamID1, streamID2;
   int vlistID1, vlistID2;
-  int gridsize, ngp = 0;
   int recID, nrecs;
   int i, offset, iv;
   int tsID, varID, levelID;
   int nvars;
   int zaxisID2, zaxisIDh = -1, nzaxis, surfaceID;
-  int ngrids, gridID = -1, zaxisID;
+  int zaxisID;
   int nlevel;
   int nvct;
   int geopID = -1, tempID = -1, humID = -1, psID = -1, lnpsID = -1, presID = -1, clwcID = -1, ciwcID = -1;
@@ -727,32 +726,11 @@ void *SSOpar(void *argument)
 
   vlistID1 = streamInqVlist(streamID1);
 
-  ngrids  = vlistNgrids(vlistID1);
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) == GRID_SPECTRAL )
-	{
-	  cdoAbort("Spectral data unsupported!");
-	}
-      else
-	{
-	  ngp = gridInqSize(gridID);
-	  break;
-	}
-    }
+  int gridID = vlistGrid(vlistID1, 0);
+  if ( gridInqType(gridID) == GRID_SPECTRAL )
+    cdoAbort("Spectral data unsupported!");
 
-  /* check gridsize */
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  if ( ngp != gridInqSize(gridID) )
-	    cdoAbort("Grids have different size!");
-	}
-    }
-
+  int gridsize = vlist_check_gridsize(vlistID1);
 
   nzaxis  = vlistNzaxis(vlistID1);
   lhavevct = FALSE;
@@ -866,25 +844,25 @@ void *SSOpar(void *argument)
 
   if ( tempID == -1 ) cdoAbort("Temperature not found!");
 
-  array  = (double*) malloc(ngp*sizeof(double));
+  array  = (double*) malloc(gridsize*sizeof(double));
 
-  geop   = (double*) malloc(ngp*sizeof(double));
-  ps     = (double*) malloc(ngp*sizeof(double));
+  geop   = (double*) malloc(gridsize*sizeof(double));
+  ps     = (double*) malloc(gridsize*sizeof(double));
 
-  temp   = (double*) malloc(ngp*nhlevf*sizeof(double));
-  hum    = (double*) malloc(ngp*nhlevf*sizeof(double));
-  lwater = (double*) malloc(ngp*nhlevf*sizeof(double));
-  iwater = (double*) malloc(ngp*nhlevf*sizeof(double));
+  temp   = (double*) malloc(gridsize*nhlevf*sizeof(double));
+  hum    = (double*) malloc(gridsize*nhlevf*sizeof(double));
+  lwater = (double*) malloc(gridsize*nhlevf*sizeof(double));
+  iwater = (double*) malloc(gridsize*nhlevf*sizeof(double));
 
-  half_press   = (double*) malloc(ngp*(nhlevf+1)*sizeof(double));
-  geopotheight = (double*) malloc(ngp*(nhlevf+1)*sizeof(double));
+  half_press   = (double*) malloc(gridsize*(nhlevf+1)*sizeof(double));
+  geopotheight = (double*) malloc(gridsize*(nhlevf+1)*sizeof(double));
 
   if ( zaxisIDh != -1 && geopID == -1 )
     {
       if ( ltq )
 	cdoWarning("Orography (surf. geopotential) not found - set to zero!");
 
-      memset(geop, 0, ngp*sizeof(double));
+      memset(geop, 0, gridsize*sizeof(double));
     }
 
   presID = lnpsID;
@@ -923,7 +901,6 @@ void *SSOpar(void *argument)
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	  zaxisID  = vlistInqVarZaxis(vlistID1, varID);
 	  nlevel   = zaxisInqSize(zaxisID);
 	  offset   = gridsize*levelID;
@@ -933,23 +910,23 @@ void *SSOpar(void *argument)
 	    {
 	      if ( varID == geopID )
 		{
-		  memcpy(geop, array, ngp*sizeof(double));
+		  memcpy(geop, array, gridsize*sizeof(double));
 		}
 	      else if ( varID == presID )
 		{
 		  if ( lnpsID != -1 )
-		    for ( i = 0; i < ngp; ++i ) ps[i] = exp(array[i]);
+		    for ( i = 0; i < gridsize; ++i ) ps[i] = exp(array[i]);
 		  else if ( psID != -1 )
-		    memcpy(ps, array, ngp*sizeof(double));
+		    memcpy(ps, array, gridsize*sizeof(double));
 		}
 	      else if ( varID == tempID )
-		memcpy(temp+offset, array, ngp*sizeof(double));
+		memcpy(temp+offset, array, gridsize*sizeof(double));
 	      else if ( varID == humID )
-		memcpy(hum+offset, array, ngp*sizeof(double));
+		memcpy(hum+offset, array, gridsize*sizeof(double));
 	      else if ( varID == clwcID )
-		memcpy(lwater+offset, array, ngp*sizeof(double));
+		memcpy(lwater+offset, array, gridsize*sizeof(double));
 	      else if ( varID == ciwcID )
-		memcpy(iwater+offset, array, ngp*sizeof(double));
+		memcpy(iwater+offset, array, gridsize*sizeof(double));
 	    }
 	}
 
@@ -957,13 +934,13 @@ void *SSOpar(void *argument)
 	{
 	  /* check range of ps_prog */
 
-	  minmaxval(ngp, ps, NULL, &minval, &maxval);
+	  minmaxval(gridsize, ps, NULL, &minval, &maxval);
 	  if ( minval < MIN_PS || maxval > MAX_PS )
 	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 
 	  /* check range of geop */
 
-	  minmaxval(ngp, geop, NULL, &minval, &maxval);
+	  minmaxval(gridsize, geop, NULL, &minval, &maxval);
 	  if ( minval < MIN_FIS || maxval > MAX_FIS )
 	    cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
 	}
@@ -972,11 +949,10 @@ void *SSOpar(void *argument)
       nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	  offset   = gridsize*levelID;
 	  single2  = temp + offset;
 
-	  minmaxval(ngp, single2, NULL, &minval, &maxval);
+	  minmaxval(gridsize, single2, NULL, &minval, &maxval);
 	  if ( minval < MIN_T || maxval > MAX_T )
 	    cdoWarning("Input temperature at level %d out of range (min=%g max=%g)!",
 		       levelID+1, minval, maxval);
@@ -989,7 +965,7 @@ void *SSOpar(void *argument)
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
 	  streamDefRecord(streamID2, varID, levelID);
-	  streamWriteRecord(streamID2, geopotheight+levelID*ngp, nmissout);
+	  streamWriteRecord(streamID2, geopotheight+levelID*gridsize, nmissout);
 	}
 
       tsID++;

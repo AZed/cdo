@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -84,8 +84,8 @@ void yar_store_link_cnsrv(remapvars_t *rv, long add1, long add2, double weight)
   if ( rv->num_links >= rv->max_links )
     resize_remap_vars(rv, rv->resize_increment);
 
-  rv->src_grid_add[nlink] = add1;
-  rv->tgt_grid_add[nlink] = add2;
+  rv->src_cell_add[nlink] = add1;
+  rv->tgt_cell_add[nlink] = add2;
 
   rv->wts[nlink] = weight;
 }
@@ -138,6 +138,39 @@ void set_source_data(double * source_data, double init_value,
          source_data[i + j * size_x] = init_value;
 }
 
+
+/*
+  This routine stores the address and weight for four links associated with one destination
+  point in the appropriate address and weight arrays and resizes those arrays if necessary.
+*/
+static
+void store_link_bilin(remapvars_t *rv, int dst_add, int src_add[4], double weights[4])
+{
+  /*
+    Input variables:
+    int dst_add       ! address on destination grid
+    int src_add[4]    ! addresses on source grid
+    double weights[4] ! array of remapping weights for these links
+  */
+  /* link index */
+  long nlink = rv->num_links;
+  /*
+     Increment number of links and check to see if remap arrays need
+     to be increased to accomodate the new link. Then store the link.
+  */
+  rv->num_links += 4;
+
+  if ( rv->num_links >= rv->max_links ) 
+    resize_remap_vars(rv, rv->resize_increment);
+
+  for ( long n = 0; n < 4; ++n )
+    {
+      rv->src_cell_add[nlink+n] = src_add[n];
+      rv->tgt_cell_add[nlink+n] = dst_add;
+      rv->wts         [nlink+n] = weights[n];
+    }
+
+} /* store_link_bilin */
 
 void yar_remap_bil(field_t *field1, field_t *field2)
 {
@@ -371,7 +404,7 @@ void yar_remap_bil(field_t *field1, field_t *field2)
 
   if ( cdoTimer ) timer_start(timer_yar_remap);
   yar_remap(array2, missval, gridInqSize(gridIDout), remap.vars.num_links, remap.vars.wts,
-	    remap.vars.num_wts, remap.vars.tgt_grid_add, remap.vars.src_grid_add, array1);
+	    remap.vars.num_wts, remap.vars.tgt_cell_add, remap.vars.src_cell_add, array1);
   if ( cdoTimer ) timer_stop(timer_yar_remap);
 
   nmiss = 0;
@@ -675,7 +708,7 @@ void yar_remap_con(field_t *field1, field_t *field2)
 
   if ( cdoTimer ) timer_start(timer_yar_remap);
   yar_remap(array2, missval, gridInqSize(gridIDout), remap.vars.num_links, remap.vars.wts,
-	    remap.vars.num_wts, remap.vars.tgt_grid_add, remap.vars.src_grid_add, array1);
+	    remap.vars.num_wts, remap.vars.tgt_cell_add, remap.vars.src_cell_add, array1);
   if ( cdoTimer ) timer_stop(timer_yar_remap);
 
   nmiss = 0;

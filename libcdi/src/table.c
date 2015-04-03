@@ -796,27 +796,21 @@ void tableFWriteC(FILE *ptfp, int tableID)
 
 int tableInqParCode(int tableID, char *varname, int *code)
 {
-  int item, npars;
-  int err = 0;
+  int err = 1;
 
-  npars = parTable[tableID].npars;
-
-  if ( tableID == UNDEFID || varname == NULL )
+  if ( tableID != UNDEFID && varname != NULL )
     {
-      err = 1;
-    }
-  else
-    {
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
-	  if ( parTable[tableID].pars[item].name )
-	    if ( strcmp(parTable[tableID].pars[item].name, varname) == 0 )
-	      {
-		*code = parTable[tableID].pars[item].id;
-		break;
-	      }
+	  if ( parTable[tableID].pars[item].name
+               && strcmp(parTable[tableID].pars[item].name, varname) == 0 )
+            {
+              *code = parTable[tableID].pars[item].id;
+              err = 0;
+              break;
+            }
 	}
-      if ( item == npars ) err = 1;
     }
 
   return (err);
@@ -825,27 +819,21 @@ int tableInqParCode(int tableID, char *varname, int *code)
 
 int tableInqParName(int tableID, int code, char *varname)
 {
-  int item, npars;
-  int err = 0;
+  int err = 1;
 
-  npars = parTable[tableID].npars;
-
-  if ( tableID == UNDEFID )
+  if ( tableID != UNDEFID )
     {
-      err = 1;
-    }
-  else
-    {
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
 	      if ( parTable[tableID].pars[item].name )
-		strcpy(varname, parTable[tableID].pars[item].name);
+		strcpy(varname, parTable[tableID].pars[item].name);     //FIXME: This may overrun the supplied buffer!
+              err = 0;
 	      break;
 	    }
 	}
-      if ( item == npars ) err = 1;
     }
 
   return (err);
@@ -855,12 +843,11 @@ int tableInqParName(int tableID, int code, char *varname)
 const char *tableInqParNamePtr(int tableID, int code)
 {
   const char *name = NULL;
-  int item, npars;
 
   if ( tableID != UNDEFID )
     {
-      npars = parTable[tableID].npars;
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
@@ -877,12 +864,11 @@ const char *tableInqParNamePtr(int tableID, int code)
 const char *tableInqParLongnamePtr(int tableID, int code)
 {
   const char *longname = NULL;
-  int item, npars;
 
   if ( tableID != UNDEFID )
     {
-      npars = parTable[tableID].npars;
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
@@ -899,12 +885,11 @@ const char *tableInqParLongnamePtr(int tableID, int code)
 const char *tableInqParUnitsPtr(int tableID, int code)
 {
   const char *units = NULL;
-  int item, npars;
 
   if ( tableID != UNDEFID )
     {
-      npars = parTable[tableID].npars;
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
@@ -920,30 +905,24 @@ const char *tableInqParUnitsPtr(int tableID, int code)
 
 int tableInqParLongname(int tableID, int code, char *longname)
 {
-  int item, npars;
-  int err = 0;
-
-  npars = parTable[tableID].npars;
-
   if ( ((tableID >= 0) & (tableID < MAX_TABLE)) | (tableID == UNDEFID) ) { } else
     Error("Invalid table ID %d", tableID);
 
-  if ( tableID == UNDEFID )
+  int err = 1;
+
+  if ( tableID != UNDEFID )
     {
-      err = 1;
-    }
-  else
-    {
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
 	      if ( parTable[tableID].pars[item].longname )
 		strcpy(longname, parTable[tableID].pars[item].longname);
+              err = 0;
 	      break;
 	    }
 	}
-      if ( item == npars ) err = 1;
     }
 
   return (err);
@@ -952,30 +931,25 @@ int tableInqParLongname(int tableID, int code, char *longname)
 
 int tableInqParUnits(int tableID, int code, char *units)
 {
-  int item, npars;
-  int err = 0;
-
-  npars = parTable[tableID].npars;
 
   if ( ((tableID >= 0) & (tableID < MAX_TABLE)) | (tableID == UNDEFID) ) { } else
     Error("Invalid table ID %d", tableID);
 
-  if ( tableID == UNDEFID )
+  int err = 1;
+
+  if ( tableID != UNDEFID )
     {
-      err = 1;
-    }
-  else
-    {
-      for ( item = 0; item < npars; item++ )
+      int npars = parTable[tableID].npars;
+      for ( int item = 0; item < npars; item++ )
 	{
 	  if ( parTable[tableID].pars[item].id == code )
 	    {
 	      if ( parTable[tableID].pars[item].units )
 		strcpy(units, parTable[tableID].pars[item].units);
+              err = 0;
 	      break;
 	    }
 	}
-      if ( item == npars ) err = 1;
     }
 
   return (err);
@@ -984,11 +958,13 @@ int tableInqParUnits(int tableID, int code, char *units)
 
 void tableInqPar(int tableID, int code, char *name, char *longname, char *units)
 {
-  int item, npars;
 
-  npars = parTable[tableID].npars;
+  if ( ((tableID >= 0) & (tableID < MAX_TABLE)) | (tableID == UNDEFID) ) { } else
+    Error("Invalid table ID %d", tableID);
 
-  for ( item = 0; item < npars; item++ )
+  int npars = parTable[tableID].npars;
+
+  for ( int item = 0; item < npars; item++ )
     {
       if ( parTable[tableID].pars[item].id == code )
 	{

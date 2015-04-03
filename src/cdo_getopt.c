@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,12 +19,10 @@
 #include <string.h>
 #include <assert.h>
 #include "cdo_getopt.h"
+#include "util.h" // refactor: necessary for accessing global vars
 
-char *CDO_optarg = NULL;
-int CDO_optind = 1;
-int CDO_optopt = 0;
-int CDO_opterr = 0;
-int CDO_optreset = 0;
+static int CDO_optopt = 0;
+static int CDO_optreset = 0; // TODO refactor: var without semantic effect
 
 int cdo_getopt(int argc, char * const *argv, const char *optstring)
 {

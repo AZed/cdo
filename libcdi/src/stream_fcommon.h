@@ -1,7 +1,9 @@
 #ifndef STREAM_FCOMMON_H
 #define STREAM_FCOMMON_H
 
+#ifndef  _CDI_INT_H
 #include "cdi_int.h"
+#endif
 
 enum {
   SINGLE_PRECISION = 4,

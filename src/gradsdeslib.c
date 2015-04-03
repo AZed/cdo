@@ -95,7 +95,7 @@ int qflag=0;
     if(*ch == '\"' && qflag == 0 ) {
       qflag=1;
       } else if(*ch == '\"' && qflag == 1 ) {
-	qflag=0;
+        qflag=0;
       }
     if (i>64 && i<91 && qflag==0) {
       i+=32;
@@ -351,7 +351,7 @@ gaint swap,mo1,mo2;
 }
 
 static char *mons[12] = {"jan","feb","mar","apr","may","jun",
-			 "jul","aug","sep","oct","nov","dec"};
+                         "jul","aug","sep","oct","nov","dec"};
 
 /* Parse an absolute date/time value.  Format is:
 
@@ -445,9 +445,9 @@ char monam[5];
     if (*ch>='0' && *ch<='9') {
       /* use fullyear only if year 1 = 0001*/
       if(*(ch+2)>='0' && *(ch+2)<='9') {
-	/*mfcmn.*/fullyear=1;
+        /*mfcmn.*/fullyear=1;
       } else {
-	/*mfcmn.*/fullyear=0;
+        /*mfcmn.*/fullyear=0;
       }
       ch = intprs (ch,&val);
     } else {
@@ -949,7 +949,7 @@ gaint ib,i,j,k,len,flag;
 /* Given a file name template and a dt structure, fill in to get the file name */
 
 char *gafndt (char *fn, struct dt *dtim, struct dt *dtimi, gadouble *vals, 
-	      struct gachsub *pch1st, struct gaens *ens1st, gaint t, gaint e, gaint *flag) {
+              struct gachsub *pch1st, struct gaens *ens1st, gaint t, gaint e, gaint *flag) {
 struct gachsub *pchsub;
 struct gaens *ens;
 struct dt stim;
@@ -1145,7 +1145,7 @@ char *fnout, *in, *out, *work, *in2, *out2;
             return (NULL);
           }
           in2 = fnout; 
-	  out2 = work;
+          out2 = work;
           while (in2!=out) {
             *out2 = *in2;
             in2++; out2++;
@@ -1165,34 +1165,34 @@ char *fnout, *in, *out, *work, *in2, *out2;
     else if  (*in=='%' && *(in+1)=='e') {
       eused=1;
       if (ens == NULL) {
-	gree(fnout,"f242");
-	return (NULL);
+        gree(fnout,"f242");
+        return (NULL);
       } else {
-	/* advance through array of ensemble structures, till we reach ensemble 'e' */
-	i=1;
-	while (i!=e) { i++; ens++; }
-	len = strlen(ens->name);
-	if (len < 1) {
-	  gree(fnout,"f243");
-	  return (NULL);
-	}
-	olen += len;
-	work = (char *)galloc(olen,"work2");     /* Reallocate output string */
-	if (work==NULL) {
-	  gree(fnout,"f244");
-	  return (NULL);
-	}
-	in2 = fnout;            /* copy the string we've got so far */
-	out2 = work;
-	while (in2!=out) {
-	  *out2 = *in2;
-	  in2++; out2++;
-	}
-	gree(fnout,"f245");
-	fnout = work;
-	out = out2;
-	getwrd(out,ens->name,len);
-	out += len;
+        /* advance through array of ensemble structures, till we reach ensemble 'e' */
+        i=1;
+        while (i!=e) { i++; ens++; }
+        len = strlen(ens->name);
+        if (len < 1) {
+          gree(fnout,"f243");
+          return (NULL);
+        }
+        olen += len;
+        work = (char *)galloc(olen,"work2");     /* Reallocate output string */
+        if (work==NULL) {
+          gree(fnout,"f244");
+          return (NULL);
+        }
+        in2 = fnout;            /* copy the string we've got so far */
+        out2 = work;
+        while (in2!=out) {
+          *out2 = *in2;
+          in2++; out2++;
+        }
+        gree(fnout,"f245");
+        fnout = work;
+        out = out2;
+        getwrd(out,ens->name,len);
+        out += len;
       }
       in+=2;
     }
@@ -1269,618 +1269,618 @@ int read_gradsdes(char *filename, dsets_t *pfi)
       reclen = (int)strlen(rec);
       jj = 0;
       while ( jj<reclen && rec[0]==' ' ) 
-	{
-	  for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
-	  jj++;
-	}
+        {
+          for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
+          jj++;
+        }
       /* replace newline with null at end of record */
       for (ichar = (int)strlen(rec) - 1 ;  ichar >= 0 ;  --ichar)
-	{
-	  if (rec[ichar] == '\n') {
-	    rec[ichar] = '\0' ;
-	    break ; 
-	  }
-	}
+        {
+          if (rec[ichar] == '\n') {
+            rec[ichar] = '\0' ;
+            break ; 
+          }
+        }
       /* Keep mixed case and lower case versions of rec handy */
       strcpy (mrec,rec);   
       lowcas(rec);
       
       if (!isalnum(mrec[0]))
-	{
-	  /* check if comment contains attribute metadata */
-	  /*
-	  if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0))
-	    {
-	      if ((ddfattr(mrec,pfi)) == -1) goto retrn;
-	    }
-	  */
-	}
+        {
+          /* check if comment contains attribute metadata */
+          /*
+          if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0))
+            {
+              if ((ddfattr(mrec,pfi)) == -1) goto retrn;
+            }
+          */
+        }
       else if (cmpwrd("byteswapped",rec))
-	{
-	  pfi->bswap = 1;
-	}
+        {
+          pfi->bswap = 1;
+        }
       else if (cmpwrd("fileheader",rec))
-	{
-	  if ( (ch=nxtwrd(rec))==NULL )
-	    {
-	      gaprnt (1,"Description file warning: Missing fileheader length\n");
-	    }
-	  else
-	    {
-	      ch = longprs(ch,&(pfi->fhdr));
-	      if (ch==NULL)
-		{
-		  gaprnt (1,"Fileheader record invalid\n");
-		  pfi->fhdr = 0;
-		}
-	    }
-	} 
+        {
+          if ( (ch=nxtwrd(rec))==NULL )
+            {
+              gaprnt (1,"Description file warning: Missing fileheader length\n");
+            }
+          else
+            {
+              ch = longprs(ch,&(pfi->fhdr));
+              if (ch==NULL)
+                {
+                  gaprnt (1,"Fileheader record invalid\n");
+                  pfi->fhdr = 0;
+                }
+            }
+        } 
       else if (cmpwrd("xyheader",rec)) 
-	{
-	  if ( (ch=nxtwrd(rec))==NULL )
-	    {
-	      gaprnt (1,"Description file warning: Missing xy grid header length\n");
-	    } 
-	  else 
-	    {
-	      ch = longprs(ch,&(pfi->xyhdr));
-	      if (ch==NULL)
-		{
-		  gaprnt (1,"xy grid header length invalid\n");
-		  pfi->xyhdr = 0;
-		}
-	      else
-		{
-		  pfi->xyhdr = pfi->xyhdr/4;
-		}
-	    }
-	} 
+        {
+          if ( (ch=nxtwrd(rec))==NULL )
+            {
+              gaprnt (1,"Description file warning: Missing xy grid header length\n");
+            } 
+          else 
+            {
+              ch = longprs(ch,&(pfi->xyhdr));
+              if (ch==NULL)
+                {
+                  gaprnt (1,"xy grid header length invalid\n");
+                  pfi->xyhdr = 0;
+                }
+              else
+                {
+                  pfi->xyhdr = pfi->xyhdr/4;
+                }
+            }
+        } 
       else if (cmpwrd("format",rec) || cmpwrd("options",rec))
-	{
-	  if ( (ch=nxtwrd(rec))==NULL )
-	    {
-	      gaprnt (1,"Description file warning: Missing options keyword\n");
-	    }
-	  else
-	    {
-	      while (ch!=NULL)
-		{
-		  if (cmpwrd("sequential",ch)) pfi->seqflg = 1;
-		  else if (cmpwrd("yrev",ch)) pfi->yrflg = 1;
-		  else if (cmpwrd("zrev",ch)) pfi->zrflg = 1;
-		  else if (cmpwrd("template",ch)) pfi->tmplat = 1;
-		  else if (cmpwrd("flt64",ch)) pfi->flt64 = 1;
-		  else if (cmpwrd("byteswapped",ch)) pfi->bswap = 1;
+        {
+          if ( (ch=nxtwrd(rec))==NULL )
+            {
+              gaprnt (1,"Description file warning: Missing options keyword\n");
+            }
+          else
+            {
+              while (ch!=NULL)
+                {
+                  if (cmpwrd("sequential",ch)) pfi->seqflg = 1;
+                  else if (cmpwrd("yrev",ch)) pfi->yrflg = 1;
+                  else if (cmpwrd("zrev",ch)) pfi->zrflg = 1;
+                  else if (cmpwrd("template",ch)) pfi->tmplat = 1;
+                  else if (cmpwrd("flt64",ch)) pfi->flt64 = 1;
+                  else if (cmpwrd("byteswapped",ch)) pfi->bswap = 1;
 #if GRIB2
-		  else if (cmpwrd("pascals",ch)) pfi->pa2mb = 1;
+                  else if (cmpwrd("pascals",ch)) pfi->pa2mb = 1;
 #endif
-		  else if (cmpwrd("365_day_calendar",ch))
-		    {
-		      pfi->calendar=1;
-		    }
-		  else if (cmpwrd("big_endian",ch))
-		    {
-		      if (!BYTEORDER) pfi->bswap = 1;
-		    }
-		  else if (cmpwrd("little_endian",ch))
-		    {
-		      if (BYTEORDER) pfi->bswap = 1;
-		    }
-		  else {
-		    gaprnt (0,"Open Error:  Data file type invalid\n");
-		    goto err9;
-		  }
-		  ch = nxtwrd(ch);
-		}
-	    }
-	}
+                  else if (cmpwrd("365_day_calendar",ch))
+                    {
+                      pfi->calendar=1;
+                    }
+                  else if (cmpwrd("big_endian",ch))
+                    {
+                      if (!BYTEORDER) pfi->bswap = 1;
+                    }
+                  else if (cmpwrd("little_endian",ch))
+                    {
+                      if (BYTEORDER) pfi->bswap = 1;
+                    }
+                  else {
+                    gaprnt (0,"Open Error:  Data file type invalid\n");
+                    goto err9;
+                  }
+                  ch = nxtwrd(ch);
+                }
+            }
+        }
       else if (cmpwrd("trailerbytes",rec))
-	{
-	  if ( (ch=nxtwrd(rec))==NULL )
-	    {
-	      gaprnt (1,"Trailerbytes record invalid\n");
-	    }
-	  else 
-	    {
-	      ch = intprs(ch,&trlb);
-	      if (ch==NULL)
-		{
-		  gaprnt (1,"Trailerbytes record invalid\n");
-		  trlb = 0;
-		}
-	      else 
-		{
-		  trlb = trlb/4;
-		}
-	    }
-	}
+        {
+          if ( (ch=nxtwrd(rec))==NULL )
+            {
+              gaprnt (1,"Trailerbytes record invalid\n");
+            }
+          else 
+            {
+              ch = intprs(ch,&trlb);
+              if (ch==NULL)
+                {
+                  gaprnt (1,"Trailerbytes record invalid\n");
+                  trlb = 0;
+                }
+              else 
+                {
+                  trlb = trlb/4;
+                }
+            }
+        }
       else if (cmpwrd("headerbytes",rec)|| cmpwrd("theader",rec))
-	{
-	  if ( (ch=nxtwrd(rec))==NULL )
-	    {
-	      gaprnt (1,"headerbytes/theader record invalid\n");
-	    }
-	  else 
-	    {
-	      ch = intprs(ch,&hdrb);
-	      if (ch==NULL)
-		{
-		  gaprnt (1,"headerbytes/theader record invalid\n");
-		  hdrb = 0;
-		}
-	      else
-		{
-		  hdrb = hdrb/4;
-		}
-	    }
-	}
+        {
+          if ( (ch=nxtwrd(rec))==NULL )
+            {
+              gaprnt (1,"headerbytes/theader record invalid\n");
+            }
+          else 
+            {
+              ch = intprs(ch,&hdrb);
+              if (ch==NULL)
+                {
+                  gaprnt (1,"headerbytes/theader record invalid\n");
+                  hdrb = 0;
+                }
+              else
+                {
+                  hdrb = hdrb/4;
+                }
+            }
+        }
       /* Handle the chsub records.  time1, time2, then a string,  multiple times */
       else if (cmpwrd("chsub",rec))
-	{
-	  /* point to first block in chain */
-	  pchsub = pfi->pchsub1;    
-	  if (pchsub!=NULL)
-	    {
-	      while (pchsub->forw!=NULL) {
-		pchsub = pchsub->forw;       /* advance to end of chain */
-	      }
-	    }
-	  flag = 0;
-	  ch = mrec;
-	  while (1) 
-	    {
-	      if ( (ch=nxtwrd(ch)) == NULL ) break;
-	      flag = 1;
-	      if ( (ch = intprs(ch,&tim1)) == NULL) break;
-	      if ( (ch=nxtwrd(ch)) == NULL ) break;
-	      if (*ch=='*' && (*(ch+1)==' '||*(ch+1)=='\t')) tim2 = -99;
-	      else if ( (ch = intprs(ch,&tim2)) == NULL) break;
-	      if ( (ch=nxtwrd(ch)) == NULL ) break;
-	      flag = 0;
-	      if (pchsub) 
-		{   /* chain exists */
-		  pchsub->forw = (struct gachsub *)galloc(sizeof(struct gachsub),"chsubnew");
-		  if (pchsub->forw==NULL) {
-		    gaprnt(0,"Open Error: memory allocation failed for pchsub\n");
-		    goto err8; 
-		  }
-		  pchsub = pchsub->forw;
-		  pchsub->forw = NULL;
-		} 
-	      else 
-		{        /* start a new chain */
-		  pfi->pchsub1 = (struct gachsub *)galloc(sizeof(struct gachsub),"chsub1");
-		  if (pfi->pchsub1==NULL)  {
-		    gaprnt(0,"Open Error: memory allocation failed for pchsub1\n");
-		    goto err8; 
-		  }
-		  pchsub = pfi->pchsub1;
-		  pchsub->forw = NULL;
-		}
-	      len = wrdlen(ch);
-	      if ((pchsub->ch = (char *)galloc(len+1,"chsubstr")) == NULL) goto err8;
-	      getwrd(pchsub->ch,ch,len);
-	      pchsub->t1 = tim1;
-	      pchsub->t2 = tim2;
-	    }
-	  if (flag) 
-	    {
-	      gaprnt (1,"Description file warning: Invalid chsub record; Ignored\n");
-	    }
-	}
+        {
+          /* point to first block in chain */
+          pchsub = pfi->pchsub1;    
+          if (pchsub!=NULL)
+            {
+              while (pchsub->forw!=NULL) {
+                pchsub = pchsub->forw;       /* advance to end of chain */
+              }
+            }
+          flag = 0;
+          ch = mrec;
+          while (1) 
+            {
+              if ( (ch=nxtwrd(ch)) == NULL ) break;
+              flag = 1;
+              if ( (ch = intprs(ch,&tim1)) == NULL) break;
+              if ( (ch=nxtwrd(ch)) == NULL ) break;
+              if (*ch=='*' && (*(ch+1)==' '||*(ch+1)=='\t')) tim2 = -99;
+              else if ( (ch = intprs(ch,&tim2)) == NULL) break;
+              if ( (ch=nxtwrd(ch)) == NULL ) break;
+              flag = 0;
+              if (pchsub) 
+                {   /* chain exists */
+                  pchsub->forw = (struct gachsub *)galloc(sizeof(struct gachsub),"chsubnew");
+                  if (pchsub->forw==NULL) {
+                    gaprnt(0,"Open Error: memory allocation failed for pchsub\n");
+                    goto err8; 
+                  }
+                  pchsub = pchsub->forw;
+                  pchsub->forw = NULL;
+                } 
+              else 
+                {        /* start a new chain */
+                  pfi->pchsub1 = (struct gachsub *)galloc(sizeof(struct gachsub),"chsub1");
+                  if (pfi->pchsub1==NULL)  {
+                    gaprnt(0,"Open Error: memory allocation failed for pchsub1\n");
+                    goto err8; 
+                  }
+                  pchsub = pfi->pchsub1;
+                  pchsub->forw = NULL;
+                }
+              len = wrdlen(ch);
+              if ((pchsub->ch = (char *)galloc(len+1,"chsubstr")) == NULL) goto err8;
+              getwrd(pchsub->ch,ch,len);
+              pchsub->t1 = tim1;
+              pchsub->t2 = tim2;
+            }
+          if (flag) 
+            {
+              gaprnt (1,"Description file warning: Invalid chsub record; Ignored\n");
+            }
+        }
       else if (cmpwrd("title",rec))
-	{
-	  if ( (ch=nxtwrd(mrec))==NULL )
-	    {
-	      gaprnt (1,"Description file warning: Missing title string\n");
-	    } 
-	  else
-	    {
-	      getstr (pfi->title,ch,MAX_NAMELEN);
-	      flgs[7] = 0;
-	    }
-	} 
+        {
+          if ( (ch=nxtwrd(mrec))==NULL )
+            {
+              gaprnt (1,"Description file warning: Missing title string\n");
+            } 
+          else
+            {
+              getstr (pfi->title,ch,MAX_NAMELEN);
+              flgs[7] = 0;
+            }
+        } 
       else if (cmpwrd("dset",rec))
-	{
-	  ch = nxtwrd(mrec);
-	  if (ch==NULL) 
-	    {
-	      gaprnt (0,"Descriptor File Error:  Data file name is missing\n");
-	      goto err9;
-	    }
-	  if (*ch=='^' || *ch=='$')
-	    {
-	      fnmexp (pfi->name,ch,filename);
-	    } 
-	  else 
-	    {
-	      getwrd (pfi->name,ch,MAX_NAMELEN);
-	    }
-	  flgs[5] = 0;
-	}   
+        {
+          ch = nxtwrd(mrec);
+          if (ch==NULL) 
+            {
+              gaprnt (0,"Descriptor File Error:  Data file name is missing\n");
+              goto err9;
+            }
+          if (*ch=='^' || *ch=='$')
+            {
+              fnmexp (pfi->name,ch,filename);
+            } 
+          else 
+            {
+              getwrd (pfi->name,ch,MAX_NAMELEN);
+            }
+          flgs[5] = 0;
+        }   
       else if (cmpwrd("undef",rec))
-	{
-	  ch = nxtwrd(mrec);
-	  if (ch==NULL)
-	    {
-	      gaprnt (0,"Open Error:  Missing undef value\n");
-	      goto err9;
-	    }
+        {
+          ch = nxtwrd(mrec);
+          if (ch==NULL)
+            {
+              gaprnt (0,"Open Error:  Missing undef value\n");
+              goto err9;
+            }
       
-	  pos = getdbl(ch,&(pfi->undef));
-	  if (pos==NULL)
-	    {
-	      gaprnt (0,"Open Error:  Invalid undef value\n");
-	      goto err9;
-	    } 
+          pos = getdbl(ch,&(pfi->undef));
+          if (pos==NULL)
+            {
+              gaprnt (0,"Open Error:  Invalid undef value\n");
+              goto err9;
+            } 
 
-	  pfi->ulow = fabs(pfi->undef/EPSILON);
-	  pfi->uhi  = pfi->undef + pfi->ulow;
-	  pfi->ulow = pfi->undef - pfi->ulow;
-	  flgs[4] = 0;
-	}
+          pfi->ulow = fabs(pfi->undef/EPSILON);
+          pfi->uhi  = pfi->undef + pfi->ulow;
+          pfi->ulow = pfi->undef - pfi->ulow;
+          flgs[4] = 0;
+        }
       else if (cmpwrd("xdef",rec))
-	{
-	  if (pfi->type == 2) continue;
-	  if ( (ch = nxtwrd(rec)) == NULL) goto err1;
-	  if ( (pos = intprs(ch,&(pfi->dnum[0])))==NULL) goto err1;
-	  if (pfi->dnum[0]<1) 
-	    {
-	      sprintf(pout,"Warning: Invalid XDEF syntax in %s -- Changing size of X axis from %d to 1 \n",
-		      pfi->dnam,pfi->dnum[0]);
-	      gaprnt (1,pout);
-	      pfi->dnum[0] = 1;
-	    }
-	  if (*pos!=' ') goto err1;
-	  if ( (ch = nxtwrd(ch))==NULL) goto err2;
-	  if (cmpwrd("linear",ch)) 
-	    {
-	      rc = deflin(ch, pfi, 0, 0);
-	      if (rc==-1) goto err8; 
-	      if (rc) goto err9;
-	      v2 = *(pfi->grvals[0]);
-	      v1 = *(pfi->grvals[0]+1) + v2;
-	      temp = v1+((gadouble)(pfi->dnum[0]))*v2;
-	      temp=temp-360.0;
-	      if (fabs(temp-v1)<0.01) pfi->wrap = 1;
-	    }
-	  else if (cmpwrd("levels",ch))
-	    {
-	      rc = deflev (ch, rec, pfi, 0);
-	      if (rc==-1)  goto err8; 
-	      if (rc) goto err9;
-	    } else goto err2;
-	  flgs[0] = 0;
-	} 
+        {
+          if (pfi->type == 2) continue;
+          if ( (ch = nxtwrd(rec)) == NULL) goto err1;
+          if ( (pos = intprs(ch,&(pfi->dnum[0])))==NULL) goto err1;
+          if (pfi->dnum[0]<1) 
+            {
+              sprintf(pout,"Warning: Invalid XDEF syntax in %s -- Changing size of X axis from %d to 1 \n",
+                      pfi->dnam,pfi->dnum[0]);
+              gaprnt (1,pout);
+              pfi->dnum[0] = 1;
+            }
+          if (*pos!=' ') goto err1;
+          if ( (ch = nxtwrd(ch))==NULL) goto err2;
+          if (cmpwrd("linear",ch)) 
+            {
+              rc = deflin(ch, pfi, 0, 0);
+              if (rc==-1) goto err8; 
+              if (rc) goto err9;
+              v2 = *(pfi->grvals[0]);
+              v1 = *(pfi->grvals[0]+1) + v2;
+              temp = v1+((gadouble)(pfi->dnum[0]))*v2;
+              temp=temp-360.0;
+              if (fabs(temp-v1)<0.01) pfi->wrap = 1;
+            }
+          else if (cmpwrd("levels",ch))
+            {
+              rc = deflev (ch, rec, pfi, 0);
+              if (rc==-1)  goto err8; 
+              if (rc) goto err9;
+            } else goto err2;
+          flgs[0] = 0;
+        } 
       else if (cmpwrd("ydef",rec))
-	{
-	  if (pfi->type == 2) continue;
-	  if ( (ch = nxtwrd(rec)) == NULL) goto err1;
-	  if ( (pos = intprs(ch,&(pfi->dnum[1])))==NULL) goto err1;
-	  if (pfi->dnum[1]<1)
-	    {
-	      sprintf(pout,"Warning: Invalid YDEF syntax in %s -- Changing size of Y axis from %d to 1 \n",
-		      pfi->dnam,pfi->dnum[1]);
-	      gaprnt (1,pout);
-	      pfi->dnum[1] = 1;
-	    }
-	  if (*pos!=' ') goto err1;
-	  if ( (ch = nxtwrd(ch))==NULL) goto err2;
-	  if (cmpwrd("linear",ch))
-	    {
-	      rc = deflin(ch, pfi, 1, 0);
-	      if (rc==-1) goto err8; 
-	      if (rc) goto err9;
-	    }
-	  else if (cmpwrd("levels",ch))
-	    {
-	      rc = deflev (ch, rec, pfi, 1);
-	      if (rc==-1) goto err8;
-	      if (rc) goto err9;
-	    }
-	  flgs[1] = 0;
-	}
+        {
+          if (pfi->type == 2) continue;
+          if ( (ch = nxtwrd(rec)) == NULL) goto err1;
+          if ( (pos = intprs(ch,&(pfi->dnum[1])))==NULL) goto err1;
+          if (pfi->dnum[1]<1)
+            {
+              sprintf(pout,"Warning: Invalid YDEF syntax in %s -- Changing size of Y axis from %d to 1 \n",
+                      pfi->dnam,pfi->dnum[1]);
+              gaprnt (1,pout);
+              pfi->dnum[1] = 1;
+            }
+          if (*pos!=' ') goto err1;
+          if ( (ch = nxtwrd(ch))==NULL) goto err2;
+          if (cmpwrd("linear",ch))
+            {
+              rc = deflin(ch, pfi, 1, 0);
+              if (rc==-1) goto err8; 
+              if (rc) goto err9;
+            }
+          else if (cmpwrd("levels",ch))
+            {
+              rc = deflev (ch, rec, pfi, 1);
+              if (rc==-1) goto err8;
+              if (rc) goto err9;
+            }
+          flgs[1] = 0;
+        }
       else if (cmpwrd("zdef",rec))
-	{
-	  if (pfi->type == 2) continue;
-	  if ( (ch = nxtwrd(rec)) == NULL) goto err1;
-	  if ( (pos = intprs(ch,&(pfi->dnum[2])))==NULL) goto err1;
-	  if (pfi->dnum[2]<1)
-	    {
-	      sprintf(pout,"Warning: Invalid ZDEF syntax in %s -- Changing size of Z axis from %d to 1 \n",
-		      pfi->dnam,pfi->dnum[2]);
-	      gaprnt (1,pout);
-	      pfi->dnum[2] = 1;
-	    }
-	  if (*pos!=' ') goto err1;
-	  if ( (ch = nxtwrd(ch))==NULL) goto err2;
-	  if (cmpwrd("linear",ch))
-	    {
-	      rc = deflin(ch, pfi, 2, 0);
-	      if (rc==-1) goto err8; 
-	      if (rc) goto err9;
-	    }
-	  else if (cmpwrd("levels",ch))
-	    {
-	      rc = deflev (ch, rec, pfi, 2);
-	      if (rc==-1) goto err8; 
-	      if (rc) goto err9;
-	    } else goto err2;
-	  flgs[2] = 0;
-	}
+        {
+          if (pfi->type == 2) continue;
+          if ( (ch = nxtwrd(rec)) == NULL) goto err1;
+          if ( (pos = intprs(ch,&(pfi->dnum[2])))==NULL) goto err1;
+          if (pfi->dnum[2]<1)
+            {
+              sprintf(pout,"Warning: Invalid ZDEF syntax in %s -- Changing size of Z axis from %d to 1 \n",
+                      pfi->dnam,pfi->dnum[2]);
+              gaprnt (1,pout);
+              pfi->dnum[2] = 1;
+            }
+          if (*pos!=' ') goto err1;
+          if ( (ch = nxtwrd(ch))==NULL) goto err2;
+          if (cmpwrd("linear",ch))
+            {
+              rc = deflin(ch, pfi, 2, 0);
+              if (rc==-1) goto err8; 
+              if (rc) goto err9;
+            }
+          else if (cmpwrd("levels",ch))
+            {
+              rc = deflev (ch, rec, pfi, 2);
+              if (rc==-1) goto err8; 
+              if (rc) goto err9;
+            } else goto err2;
+          flgs[2] = 0;
+        }
       else if (cmpwrd("tdef",rec))
-	{
-	  if ( (ch = nxtwrd(rec)) == NULL) goto err1;
-	  if ( (pos = intprs(ch,&(pfi->dnum[3])))==NULL) goto err1;
-	  if (pfi->dnum[3]<1)
-	    {
-	      sprintf(pout,"Warning: Invalid TDEF syntax in %s -- Changing size of T axis from %d to 1 \n",
-		      pfi->dnam,pfi->dnum[3]);
-	      gaprnt (1,pout);
-	      pfi->dnum[3] = 1;
-	    }
-	  if (*pos!=' ') goto err1;
-	  if ( (ch = nxtwrd(ch))==NULL) goto err2;
-	  if (cmpwrd("linear",ch))
-	    {
-	      if ( (ch = nxtwrd(ch))==NULL) goto err3a_tdef;
-	      tdef.yr = -1000;
-	      tdef.mo = -1000;
-	      tdef.dy = -1000;
-	      if ( (pos = adtprs(ch,&tdef,&dt1))==NULL) goto err3b_tdef;
-	      if (*pos!=' ' || dt1.yr == -1000 || dt1.mo == -1000.0 ||
-		  dt1.dy == -1000) goto err3c_tdef;
-	      if ( (ch = nxtwrd(ch))==NULL) goto err4a_tdef;
-	      if ( (pos = rdtprs(ch,&dt2))==NULL) goto err4b_tdef;
-	      v1 = (dt2.yr * 12) + dt2.mo;
-	      v2 = (dt2.dy * 1440) + (dt2.hr * 60) + dt2.mn;
-	      /* check if 0 dt */
-	      if ( (v1 == 0) && (v2 == 0) ) goto err4c_tdef;  
-	      if ((vals = (gadouble *)galloc(sizeof(gadouble)*8,"tvals5")) == NULL) goto err8; 
-	      *(vals) = dt1.yr;
-	      *(vals+1) = dt1.mo;
-	      *(vals+2) = dt1.dy;
-	      *(vals+3) = dt1.hr;
-	      *(vals+4) = dt1.mn;
-	      *(vals+5) = v1;
-	      *(vals+6) = v2;
-	      *(vals+7) = -999.9;
-	      pfi->grvals[3] = vals;
-	      pfi->abvals[3] = vals;
-	      pfi->linear[3] = 1;
-	    } else goto err2;
-	  flgs[3] = 0;
-	}
+        {
+          if ( (ch = nxtwrd(rec)) == NULL) goto err1;
+          if ( (pos = intprs(ch,&(pfi->dnum[3])))==NULL) goto err1;
+          if (pfi->dnum[3]<1)
+            {
+              sprintf(pout,"Warning: Invalid TDEF syntax in %s -- Changing size of T axis from %d to 1 \n",
+                      pfi->dnam,pfi->dnum[3]);
+              gaprnt (1,pout);
+              pfi->dnum[3] = 1;
+            }
+          if (*pos!=' ') goto err1;
+          if ( (ch = nxtwrd(ch))==NULL) goto err2;
+          if (cmpwrd("linear",ch))
+            {
+              if ( (ch = nxtwrd(ch))==NULL) goto err3a_tdef;
+              tdef.yr = -1000;
+              tdef.mo = -1000;
+              tdef.dy = -1000;
+              if ( (pos = adtprs(ch,&tdef,&dt1))==NULL) goto err3b_tdef;
+              if (*pos!=' ' || dt1.yr == -1000 || dt1.mo == -1000.0 ||
+                  dt1.dy == -1000) goto err3c_tdef;
+              if ( (ch = nxtwrd(ch))==NULL) goto err4a_tdef;
+              if ( (pos = rdtprs(ch,&dt2))==NULL) goto err4b_tdef;
+              v1 = (dt2.yr * 12) + dt2.mo;
+              v2 = (dt2.dy * 1440) + (dt2.hr * 60) + dt2.mn;
+              /* check if 0 dt */
+              if ( (v1 == 0) && (v2 == 0) ) goto err4c_tdef;  
+              if ((vals = (gadouble *)galloc(sizeof(gadouble)*8,"tvals5")) == NULL) goto err8; 
+              *(vals) = dt1.yr;
+              *(vals+1) = dt1.mo;
+              *(vals+2) = dt1.dy;
+              *(vals+3) = dt1.hr;
+              *(vals+4) = dt1.mn;
+              *(vals+5) = v1;
+              *(vals+6) = v2;
+              *(vals+7) = -999.9;
+              pfi->grvals[3] = vals;
+              pfi->abvals[3] = vals;
+              pfi->linear[3] = 1;
+            } else goto err2;
+          flgs[3] = 0;
+        }
       else if (cmpwrd("vars",rec))
-	{
-	  if ( (ch = nxtwrd(rec)) == NULL) goto err5;
-	  if ( (pos = intprs(ch,&(pfi->vnum)))==NULL) goto err5;
-	  size = pfi->vnum * (sizeof(struct gavar) + 7 );
-	  if ((pvar = (struct gavar *)galloc(size,"pvar2")) == NULL) goto err8;
-	  pfi->pvar1 = pvar;
-	  i = 0;
-	  while (i<pfi->vnum)
-	    {
-	      /* initialize variables in the pvar structure */
-	      pvar->offset = 0; 
-	      pvar->recoff = 0;
-	      pvar->ncvid = -999;
-	      pvar->sdvid = -999;
-	      pvar->levels = 0;
-	      pvar->dfrm = 0;
-	      pvar->var_t = 0;
-	      pvar->scale = 1;
-	      pvar->add = 0;  
-	      pvar->undef= -9.99E33; 
-	      pvar->vecpair = -999;
-	      pvar->isu = 0;
-	      pvar->isdvar = 0;
-	      pvar->nvardims = 0; 
+        {
+          if ( (ch = nxtwrd(rec)) == NULL) goto err5;
+          if ( (pos = intprs(ch,&(pfi->vnum)))==NULL) goto err5;
+          size = pfi->vnum * (sizeof(struct gavar) + 7 );
+          if ((pvar = (struct gavar *)galloc(size,"pvar2")) == NULL) goto err8;
+          pfi->pvar1 = pvar;
+          i = 0;
+          while (i<pfi->vnum)
+            {
+              /* initialize variables in the pvar structure */
+              pvar->offset = 0; 
+              pvar->recoff = 0;
+              pvar->ncvid = -999;
+              pvar->sdvid = -999;
+              pvar->levels = 0;
+              pvar->dfrm = 0;
+              pvar->var_t = 0;
+              pvar->scale = 1;
+              pvar->add = 0;  
+              pvar->undef= -9.99E33; 
+              pvar->vecpair = -999;
+              pvar->isu = 0;
+              pvar->isdvar = 0;
+              pvar->nvardims = 0; 
 
-	      /* get the complete variable declaration */
-	      if (fgets(rec,512,descr)==NULL) 
-		{
-		  gaprnt (0,"Open Error:  Unexpected EOF reading variables\n");
-		  sprintf (pout, "Was expecting %i records.  Found %i.\n", pfi->vnum, i);
-		  gaprnt (2,pout);
-		  goto retrn;
-		}
-	      /* remove any leading blanks from rec */
-	      reclen = strlen(rec);
-	      jj = 0;
-	      while (jj<reclen && rec[0]==' ')
-		{
-		  for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
-		  jj++;
-		}
-	      /* replace newline with null at end of record */
-	      for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar)
-		{
-		  if (rec[ichar] == '\n')
-		    {
-		      rec[ichar] = '\0' ;
-		      break ; 
-		    }
-		}
-	      /* Keep mixed case and lower case versions of rec handy */
-	      strcpy (mrec,rec);
-	      lowcas(rec);
-	      /* Allow comments between VARS and ENDVARS */
-	      if (!isalnum(*(mrec)))
-		{
-		  /* Parse comment if it contains attribute metadata  */
-		  /*
-		  if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0)) {
-		    if ((ddfattr(mrec,pfi)) == -1) goto retrn;
-		    else continue;
-		  }
-		  else */continue; 
-		}
-	      if (cmpwrd("endvars",rec))
-		{
-		  gaprnt (0,"Open Error:  Unexpected ENDVARS record\n");
-		  sprintf (pout, "Was expecting %i records.  Found %i.\n", pfi->vnum, i);
-		  gaprnt (2,pout);
-		  goto err9;
-		}
-	
-	      /* get abbrv and full variable name if there */
-	      if ((getvnm(pvar, mrec))!=0) goto err6;
+              /* get the complete variable declaration */
+              if (fgets(rec,512,descr)==NULL) 
+                {
+                  gaprnt (0,"Open Error:  Unexpected EOF reading variables\n");
+                  sprintf (pout, "Was expecting %i records.  Found %i.\n", pfi->vnum, i);
+                  gaprnt (2,pout);
+                  goto retrn;
+                }
+              /* remove any leading blanks from rec */
+              reclen = strlen(rec);
+              jj = 0;
+              while (jj<reclen && rec[0]==' ')
+                {
+                  for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
+                  jj++;
+                }
+              /* replace newline with null at end of record */
+              for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar)
+                {
+                  if (rec[ichar] == '\n')
+                    {
+                      rec[ichar] = '\0' ;
+                      break ; 
+                    }
+                }
+              /* Keep mixed case and lower case versions of rec handy */
+              strcpy (mrec,rec);
+              lowcas(rec);
+              /* Allow comments between VARS and ENDVARS */
+              if (!isalnum(*(mrec)))
+                {
+                  /* Parse comment if it contains attribute metadata  */
+                  /*
+                  if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0)) {
+                    if ((ddfattr(mrec,pfi)) == -1) goto retrn;
+                    else continue;
+                  }
+                  else */continue; 
+                }
+              if (cmpwrd("endvars",rec))
+                {
+                  gaprnt (0,"Open Error:  Unexpected ENDVARS record\n");
+                  sprintf (pout, "Was expecting %i records.  Found %i.\n", pfi->vnum, i);
+                  gaprnt (2,pout);
+                  goto err9;
+                }
+        
+              /* get abbrv and full variable name if there */
+              if ((getvnm(pvar, mrec))!=0) goto err6;
 
-	      /* parse the levels fields */
-	      if ( (ch=nxtwrd(rec))==NULL) goto err6;
-	      /* begin with 8th element of units aray for levels values */
-	      for (j=0;j<16;j++) pvar->units[j] = -999;
-	      j = 8;          
-	      while (1) 
-		{
-		  if (j==8) {
-		    /* first element is num levels */
-		    if ((ch=intprs(ch,&(pvar->levels)))==NULL) goto err6;      
-		  }
-		  else {
-		    /* remaining elements are grib2 level codes */
-		    if ((ch=getdbl(ch,&(pvar->units[j-1])))==NULL) goto err6;  
-		  }
-		  /* advance through comma-delimited list of levels args */
-		  while (*ch==' ') ch++;
-		  if (*ch=='\0' || *ch=='\n') goto err6;
-		  if (*ch!=',') break;
-		  ch++;
-		  while (*ch==',') { ch++; j++;}  /* advance past back to back commas */
-		  while (*ch==' ') ch++;
-		  if (*ch=='\0' || *ch=='\n') goto err6;
-		  j++;
-		  if (j>15) goto err6;
-		}
+              /* parse the levels fields */
+              if ( (ch=nxtwrd(rec))==NULL) goto err6;
+              /* begin with 8th element of units aray for levels values */
+              for (j=0;j<16;j++) pvar->units[j] = -999;
+              j = 8;          
+              while (1) 
+                {
+                  if (j==8) {
+                    /* first element is num levels */
+                    if ((ch=intprs(ch,&(pvar->levels)))==NULL) goto err6;      
+                  }
+                  else {
+                    /* remaining elements are grib2 level codes */
+                    if ((ch=getdbl(ch,&(pvar->units[j-1])))==NULL) goto err6;  
+                  }
+                  /* advance through comma-delimited list of levels args */
+                  while (*ch==' ') ch++;
+                  if (*ch=='\0' || *ch=='\n') goto err6;
+                  if (*ch!=',') break;
+                  ch++;
+                  while (*ch==',') { ch++; j++;}  /* advance past back to back commas */
+                  while (*ch==' ') ch++;
+                  if (*ch=='\0' || *ch=='\n') goto err6;
+                  j++;
+                  if (j>15) goto err6;
+                }
 
-	      /* parse the units fields; begin with 0th element for variable units */
-	      j = 0;
-	      pvar->nvardims=0;
-	      while (1)
-		{
-		  if (*ch=='x'||*ch=='y'||*ch=='z'||*ch=='t'||*ch=='e')
-		    { 
-		      if (*(ch+1)!=',' && *(ch+1)!=' ') goto err6;
-		      if (*ch=='x') { pvar->units[j] = -100; pvar->nvardims++; }
-		      if (*ch=='y') { pvar->units[j] = -101; pvar->nvardims++; }
-		      if (*ch=='z') { pvar->units[j] = -102; pvar->nvardims++; }
-		      if (*ch=='t') { pvar->units[j] = -103; pvar->nvardims++; }
-		      if (*ch=='e') { pvar->units[j] = -104; pvar->nvardims++; }
-		      ch++;
-		    } 
-		  else 
-		    {
-		      if ( (ch=getdbl(ch,&(pvar->units[j])))==NULL ) goto err6;
-		      /* no negative array indices for ncflag files */
-		      if ((pfi->ncflg) && (pvar->units[j] < 0))  goto err6;   
-		    }
-		  while (*ch==' ') ch++;
-		  if (*ch=='\0' || *ch=='\n') goto err6;
-		  if (*ch!=',') break;
-		  ch++;
-		  while (*ch==' ') ch++;
-		  if (*ch=='\0' || *ch=='\n') goto err6;
-		  j++;
-		  if (j>8) goto err6;
-		}
+              /* parse the units fields; begin with 0th element for variable units */
+              j = 0;
+              pvar->nvardims=0;
+              while (1)
+                {
+                  if (*ch=='x'||*ch=='y'||*ch=='z'||*ch=='t'||*ch=='e')
+                    { 
+                      if (*(ch+1)!=',' && *(ch+1)!=' ') goto err6;
+                      if (*ch=='x') { pvar->units[j] = -100; pvar->nvardims++; }
+                      if (*ch=='y') { pvar->units[j] = -101; pvar->nvardims++; }
+                      if (*ch=='z') { pvar->units[j] = -102; pvar->nvardims++; }
+                      if (*ch=='t') { pvar->units[j] = -103; pvar->nvardims++; }
+                      if (*ch=='e') { pvar->units[j] = -104; pvar->nvardims++; }
+                      ch++;
+                    } 
+                  else 
+                    {
+                      if ( (ch=getdbl(ch,&(pvar->units[j])))==NULL ) goto err6;
+                      /* no negative array indices for ncflag files */
+                      if ((pfi->ncflg) && (pvar->units[j] < 0))  goto err6;   
+                    }
+                  while (*ch==' ') ch++;
+                  if (*ch=='\0' || *ch=='\n') goto err6;
+                  if (*ch!=',') break;
+                  ch++;
+                  while (*ch==' ') ch++;
+                  if (*ch=='\0' || *ch=='\n') goto err6;
+                  j++;
+                  if (j>8) goto err6;
+                }
 
-	      /* parse the variable description */
-	      getstr (pvar->varnm,mrec+(ch-rec),127);
+              /* parse the variable description */
+              getstr (pvar->varnm,mrec+(ch-rec),127);
 
 
-	      /* var_t is for data files with dimension sequence: X, Y, Z, T, V */
-	      if (((int)pvar->units[0]==-1) && 
-		  ((int)pvar->units[1]==20)) 
-		pvar->var_t = 1;
+              /* var_t is for data files with dimension sequence: X, Y, Z, T, V */
+              if (((int)pvar->units[0]==-1) && 
+                  ((int)pvar->units[1]==20)) 
+                pvar->var_t = 1;
 
-	      /* non-float data types */
-	      if (((int)pvar->units[0]==-1) && 
-		  ((int)pvar->units[1]==40))
-		{
+              /* non-float data types */
+              if (((int)pvar->units[0]==-1) && 
+                  ((int)pvar->units[1]==40))
+                {
 
-		  if ((int)pvar->units[2]== 1) pvar->dfrm = 1;
-		  if ((int)pvar->units[2]== 2)
-		    {
-		      pvar->dfrm = 2;
-		      if ((int)pvar->units[3]==-1) pvar->dfrm = -2;
-		    }
-		  if ((int)pvar->units[2]== 4) pvar->dfrm = 4;
-		}
+                  if ((int)pvar->units[2]== 1) pvar->dfrm = 1;
+                  if ((int)pvar->units[2]== 2)
+                    {
+                      pvar->dfrm = 2;
+                      if ((int)pvar->units[3]==-1) pvar->dfrm = -2;
+                    }
+                  if ((int)pvar->units[2]== 4) pvar->dfrm = 4;
+                }
 
-	      i++; pvar++;
-	    }
+              i++; pvar++;
+            }
 
-	  /* Get ENDVARS statement and any additional comments */
-	  if (fgets(rec,512,descr)==NULL) {
-	    gaprnt (0,"Open Error:  Missing ENDVARS statement.\n");
-	    goto retrn;
-	  }
-	  /* Remove any leading blanks from rec */
-	  reclen = strlen(rec);
-	  jj = 0;
-	  while (jj<reclen && rec[0]==' ') {
-	    for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
-	    jj++;
-	  }
-	  /* replace newline with null at end of record */
-	  for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar) {
-	    if (rec[ichar] == '\n') {
-	      rec[ichar] = '\0' ;
-	      break ; 
-	    }
-	  }
-	  /* Keep mixed case and lower case versions handy */
-	  strcpy (mrec,rec);
-	  lowcas(rec);
-	  while (!cmpwrd("endvars",rec)) 
-	    {
-	      /* see if it's an attribute comment */
-	      if (!isalnum(*(mrec))) {
-		/*
-		if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0)) {
-		  if ((ddfattr(mrec,pfi)) == -1) goto retrn;
-		}
-		*/
-	      }
-	      else {
-		sprintf(pout,"Open Error:  Looking for \"endvars\", found \"%s\" instead.\n",rec);
-		gaprnt (0,pout);
-		goto err9;
-	      }
-	      /* get a new record */
-	      if (fgets(rec,512,descr)==NULL) {
-		gaprnt (0,"Open Error:  Missing ENDVARS statement.\n");
-		goto retrn;
-	      }
-	      /* Remove any leading blanks from new record */
-	      reclen = strlen(rec);
-	      jj = 0;
-	      while (jj<reclen && rec[0]==' ') {
-		for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
-		jj++;
-	      }
-	      /* replace newline with null at end of record */
-	      for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar) {
-		if (rec[ichar] == '\n') {
-		  rec[ichar] = '\0' ;
-		  break ; 
-		}
-	      }
-	      /* Keep mixed case and lower case versions handy */
-	      strcpy (mrec,rec);
-	      lowcas(rec);
-	    }
-	  /* vars block parsed without error */
-	  flgs[6] = 0;
+          /* Get ENDVARS statement and any additional comments */
+          if (fgets(rec,512,descr)==NULL) {
+            gaprnt (0,"Open Error:  Missing ENDVARS statement.\n");
+            goto retrn;
+          }
+          /* Remove any leading blanks from rec */
+          reclen = strlen(rec);
+          jj = 0;
+          while (jj<reclen && rec[0]==' ') {
+            for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
+            jj++;
+          }
+          /* replace newline with null at end of record */
+          for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar) {
+            if (rec[ichar] == '\n') {
+              rec[ichar] = '\0' ;
+              break ; 
+            }
+          }
+          /* Keep mixed case and lower case versions handy */
+          strcpy (mrec,rec);
+          lowcas(rec);
+          while (!cmpwrd("endvars",rec)) 
+            {
+              /* see if it's an attribute comment */
+              if (!isalnum(*(mrec))) {
+                /*
+                if ((strncmp("*:attr",mrec,6)==0) || (strncmp("@",mrec,1)==0)) {
+                  if ((ddfattr(mrec,pfi)) == -1) goto retrn;
+                }
+                */
+              }
+              else {
+                sprintf(pout,"Open Error:  Looking for \"endvars\", found \"%s\" instead.\n",rec);
+                gaprnt (0,pout);
+                goto err9;
+              }
+              /* get a new record */
+              if (fgets(rec,512,descr)==NULL) {
+                gaprnt (0,"Open Error:  Missing ENDVARS statement.\n");
+                goto retrn;
+              }
+              /* Remove any leading blanks from new record */
+              reclen = strlen(rec);
+              jj = 0;
+              while (jj<reclen && rec[0]==' ') {
+                for (ii=0; ii<reclen; ii++) rec[ii] = rec[ii+1];
+                jj++;
+              }
+              /* replace newline with null at end of record */
+              for (ichar = strlen(rec) - 1 ;  ichar >= 0 ;  --ichar) {
+                if (rec[ichar] == '\n') {
+                  rec[ichar] = '\0' ;
+                  break ; 
+                }
+              }
+              /* Keep mixed case and lower case versions handy */
+              strcpy (mrec,rec);
+              lowcas(rec);
+            }
+          /* vars block parsed without error */
+          flgs[6] = 0;
 
-	} 
+        } 
       else
-	{
-	  /* parse error of .ctl file */
-	  gaprnt (0,"Open Error:  Unknown keyword in description file\n");
-	  goto err9;
-	}
+        {
+          /* parse error of .ctl file */
+          gaprnt (0,"Open Error:  Unknown keyword in description file\n");
+          goto err9;
+        }
     }
 
   /* Done scanning!
@@ -1910,8 +1910,8 @@ int read_gradsdes(char *filename, dsets_t *pfi)
       /* Allocate memory and initialize one ensemble structure */
       ens = (struct gaens *)galloc(sizeof(struct gaens),"ens5");
       if (ens==NULL) {
-	gaprnt(0,"Open Error: memory allocation failed for default ens\n");
-	goto err8;
+        gaprnt(0,"Open Error: memory allocation failed for default ens\n");
+        goto err8;
       }
       pfi->ens1 = ens;
       sprintf(ens->name,"1");
@@ -1926,16 +1926,16 @@ int read_gradsdes(char *filename, dsets_t *pfi)
   for (j=1; j<=pfi->vnum; j++) {
     if ((int)pvar->units[0]==-1 && (int)pvar->units[1]==20) {
       if (pfi->tmplat) {
-	gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions cannot be templated together\n");
-	err=1;
+        gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions cannot be templated together\n");
+        err=1;
       }
       if (hdrb>0) {
-	gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions are incompatible with time headers\n");
-	err=1;
+        gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions are incompatible with time headers\n");
+        err=1;
       }
       if (trlb>0) {
-	gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions are incompatible with TRAILERBYTES\n");
-	err=1;
+        gaprnt(0,"Open Error: Variables with transposed VAR-T dimensions are incompatible with TRAILERBYTES\n");
+        err=1;
       }
     }
     pvar++;
@@ -1953,10 +1953,10 @@ int read_gradsdes(char *filename, dsets_t *pfi)
     /* add the XY header to gsiz */
     if (pfi->xyhdr) {
       if (pvar->dfrm == 1) {
-	pfi->xyhdr = pfi->xyhdr*4/1;          
+        pfi->xyhdr = pfi->xyhdr*4/1;          
       } 
       else if (pvar->dfrm ==  2 || pvar->dfrm == -2 ) {
-	pfi->xyhdr = pfi->xyhdr*4/2;
+        pfi->xyhdr = pfi->xyhdr*4/2;
       }
       else if (pfi->flt64) {
         pfi->xyhdr = pfi->xyhdr*4/8;
@@ -1977,41 +1977,41 @@ int read_gradsdes(char *filename, dsets_t *pfi)
     if (pfi->seqflg) {
       /* pad the grid size with 2 4-byte chunks */
       if (pvar->dfrm == 1) {
-	pfi->gsiz += 8;
+        pfi->gsiz += 8;
       } 
       else if (pvar->dfrm == 2 || pvar->dfrm == -2 ) {
-	pfi->gsiz += 4;
+        pfi->gsiz += 4;
       } 
       else {
-	if (pfi->flt64)
-	  pfi->gsiz += 1;
-	else
-	  pfi->gsiz += 2;             
+        if (pfi->flt64)
+          pfi->gsiz += 1;
+        else
+          pfi->gsiz += 2;             
       }
       /* pad the header with 2 4-byte chunks*/
       if (hdrb>0) {
-	if (pvar->dfrm == 1) {
-	  hdrb = hdrb + 8;
-	} 
-	else if (pvar->dfrm == 2 || pvar->dfrm == -2 ) {
-	  hdrb = hdrb + 4;
-	} 
-	else {
-	  hdrb += 2; 
-	}
+        if (pvar->dfrm == 1) {
+          hdrb = hdrb + 8;
+        } 
+        else if (pvar->dfrm == 2 || pvar->dfrm == -2 ) {
+          hdrb = hdrb + 4;
+        } 
+        else {
+          hdrb += 2; 
+        }
       }
       /* how far we have to go into the file before getting to 1st var */
       if (pvar->dfrm == 1) {
-	pvar->offset = 4+hdrb;
-	acum = 4+hdrb;
+        pvar->offset = 4+hdrb;
+        acum = 4+hdrb;
       } 
       else if (pvar->dfrm == 2 || pvar->dfrm == -2 ) {
-	pvar->offset = 2+hdrb;
-	acum = 2+hdrb;
+        pvar->offset = 2+hdrb;
+        acum = 2+hdrb;
       } 
       else {
-	pvar->offset = 1+hdrb;
-	acum = 1+hdrb;
+        pvar->offset = 1+hdrb;
+        acum = 1+hdrb;
       } 
     }
     else {
@@ -2029,10 +2029,10 @@ int read_gradsdes(char *filename, dsets_t *pfi)
 
     for (i=1; i<pfi->vnum; i++) {
       if (pvar->var_t) {   
-	acum = acum + levs*(pfi->gsiz)*(pfi->dnum[3]); 
+        acum = acum + levs*(pfi->gsiz)*(pfi->dnum[3]); 
       } else {                              
-	acum = acum + (levs*pfi->gsiz);
-	acumstride = acum ;
+        acum = acum + (levs*pfi->gsiz);
+        acumstride = acum ;
       }
       recacm += levs;
       pvar->offset = acum;
@@ -2065,9 +2065,9 @@ int read_gradsdes(char *filename, dsets_t *pfi)
     if (pfi->calendar != /*mfcmn.*/cal365) {
       gaprnt(0,"Attempt to change the global calendar...\n");
       if (/*mfcmn.*/cal365) {
-	gaprnt(0,"The calendar is NOW 365 DAYS and you attempted to open a standard calendar file\n");
+        gaprnt(0,"The calendar is NOW 365 DAYS and you attempted to open a standard calendar file\n");
       } else {
-	gaprnt(0,"The calendar is NOW STANDARD and you attempted to open a 365-day calendar file\n");
+        gaprnt(0,"The calendar is NOW STANDARD and you attempted to open a 365-day calendar file\n");
       }
       goto retrn;
     }
@@ -2080,15 +2080,15 @@ int read_gradsdes(char *filename, dsets_t *pfi)
   if (pfi->tmplat) 
     {
       /* The fnums array is the size of the time axis 
-	 multiplied by the size of the ensemble axis. 
-	 It contains the t index which generates the filename 
-	 that contains the data for each timestep.
-	 If the ensemble has no data file for a given time, 
-	 the fnums value will be -1 */
+         multiplied by the size of the ensemble axis. 
+         It contains the t index which generates the filename 
+         that contains the data for each timestep.
+         If the ensemble has no data file for a given time, 
+         the fnums value will be -1 */
       pfi->fnums = (gaint *)galloc(sizeof(gaint)*pfi->dnum[3]*pfi->dnum[4],"fnums1");   
       if (pfi->fnums==NULL) {
-	gaprnt(0,"Open Error: memory allocation failed for fnums\n");
-	goto err8;
+        gaprnt(0,"Open Error: memory allocation failed for fnums\n");
+        goto err8;
       }
       /* get dt structure for t=1 */
       gr2t(pfi->grvals[3],1.0,&tdefi); 
@@ -2096,85 +2096,85 @@ int read_gradsdes(char *filename, dsets_t *pfi)
       ens=pfi->ens1;
       e=1;
       while (e<=pfi->dnum[4])
-	{
-	  j = -1; 
-	  t=1;
-	  /* set fnums value to -1 for time steps before ensemble initial time */
-	  while (t<ens->gt) {
-	    pfi->fnums[t-1] = j;                                                    
-	    t++;
-	  }
-	  j = ens->gt;
-	  /* get dt structure for ensemble initial time */
-	  gr2t(pfi->grvals[3],ens->gt,&tdefe);
-	  /* get filename for initial time of current ensemble member  */
-	  ch = gafndt(pfi->name,&tdefe,&tdefe,pfi->abvals[3],pfi->pchsub1,pfi->ens1,ens->gt,e,&flag);   
-	  if (ch==NULL) {
-	    sprintf(pout,"Open Error: couldn't determine data file name for e=%d t=%d\n",e,ens->gt);
-	    gaprnt(0,pout);
-	    goto err8;
-	  }
-	  /* set the pfi->tmplat flag to the flag returned by gafndt */
-	  if (flag==0) {
-	    gaprnt(1,"Warning: OPTIONS keyword \"template\" is used, but the \n");
-	    gaprnt(1,"   DSET entry contains no substitution templates.\n");
-	    pfi->tmplat = 1;
-	  } else {
-	    pfi->tmplat = flag; 
-	  }
-	  /* for non-indexed, non-netcdf/hdf, gridded data */
-	  if (pfi->type==1) {                /* gridded data   */
-	    if (pfi->ncflg==0) {             /* not netcdf/hdf */
-	      if (pfi->idxflg==0) {          /* not indexed    */
-		if ((flag==1) && (pfi->dnum[4]>1)) {
-		  gaprnt(0,"Open Error: If the data type is gridded binary, \n");
-		  gaprnt(0,"  and the E dimension size is greater than 1 \n");
-		  gaprnt(0,"  and templating in the T dimension is used,\n");
-		  gaprnt(0,"  then templating in the E dimension must also be used.\n");
-		  goto retrn;
-		}
-	      }
-	      else if (pfi->idxflg==1) {     /* GRIB1 */
-		if ((flag<2) && (pfi->dnum[4]>1)) {
-		  gaprnt(0,"Open Error: If the data type is GRIB1 \n");
-		  gaprnt(0,"  and the E dimension size is greater than 1 \n");
-		  gaprnt(0,"  then templating in the E dimension must be used.\n");
-		  goto retrn;
-		}
-	      }
-	    }
-	  }
-	  pfi->fnums[t-1] = j;                                                    
-	  /* loop over remaining valid times for this ensemble */
-	  for (t=ens->gt+1; t<ens->gt+ens->length; t++) {
-	    /* get filename for time index=t ens=e */
-	    gr2t(pfi->grvals[3],(gadouble)t,&tdef);
-	    pos = gafndt(pfi->name,&tdef,&tdefe,pfi->abvals[3],pfi->pchsub1,pfi->ens1,t,e,&flag);  
-	    if (pos==NULL) {
-	      sprintf(pout,"Open Error: couldn't determine data file name for e=%d t=%d\n",e,t);
-	      gaprnt(0,pout);
-	      goto err8;
-	    }
-	    if (strcmp(ch,pos)!=0) {    /* filename has changed */
-	      j = t;   
-	      gree(ch,"f176");
-	      ch = pos;
-	    }
-	    else {
-	      gree(pos,"f176a");
-	    }
-	    pfi->fnums[+t-1] = j;                                                    
-	  }
-	  gree(ch,"f177");
-	  
-	  /* set fnums value to -1 for time steps after ensemble final time */
-	  j = -1;
-	  while (t<=pfi->dnum[3]) {
-	    pfi->fnums[t-1] = j;                                                    
-	    t++;
-	  }
-	  e++; ens++;
-	}
+        {
+          j = -1; 
+          t=1;
+          /* set fnums value to -1 for time steps before ensemble initial time */
+          while (t<ens->gt) {
+            pfi->fnums[t-1] = j;                                                    
+            t++;
+          }
+          j = ens->gt;
+          /* get dt structure for ensemble initial time */
+          gr2t(pfi->grvals[3],ens->gt,&tdefe);
+          /* get filename for initial time of current ensemble member  */
+          ch = gafndt(pfi->name,&tdefe,&tdefe,pfi->abvals[3],pfi->pchsub1,pfi->ens1,ens->gt,e,&flag);   
+          if (ch==NULL) {
+            sprintf(pout,"Open Error: couldn't determine data file name for e=%d t=%d\n",e,ens->gt);
+            gaprnt(0,pout);
+            goto err8;
+          }
+          /* set the pfi->tmplat flag to the flag returned by gafndt */
+          if (flag==0) {
+            gaprnt(1,"Warning: OPTIONS keyword \"template\" is used, but the \n");
+            gaprnt(1,"   DSET entry contains no substitution templates.\n");
+            pfi->tmplat = 1;
+          } else {
+            pfi->tmplat = flag; 
+          }
+          /* for non-indexed, non-netcdf/hdf, gridded data */
+          if (pfi->type==1) {                /* gridded data   */
+            if (pfi->ncflg==0) {             /* not netcdf/hdf */
+              if (pfi->idxflg==0) {          /* not indexed    */
+                if ((flag==1) && (pfi->dnum[4]>1)) {
+                  gaprnt(0,"Open Error: If the data type is gridded binary, \n");
+                  gaprnt(0,"  and the E dimension size is greater than 1 \n");
+                  gaprnt(0,"  and templating in the T dimension is used,\n");
+                  gaprnt(0,"  then templating in the E dimension must also be used.\n");
+                  goto retrn;
+                }
+              }
+              else if (pfi->idxflg==1) {     /* GRIB1 */
+                if ((flag<2) && (pfi->dnum[4]>1)) {
+                  gaprnt(0,"Open Error: If the data type is GRIB1 \n");
+                  gaprnt(0,"  and the E dimension size is greater than 1 \n");
+                  gaprnt(0,"  then templating in the E dimension must be used.\n");
+                  goto retrn;
+                }
+              }
+            }
+          }
+          pfi->fnums[t-1] = j;                                                    
+          /* loop over remaining valid times for this ensemble */
+          for (t=ens->gt+1; t<ens->gt+ens->length; t++) {
+            /* get filename for time index=t ens=e */
+            gr2t(pfi->grvals[3],(gadouble)t,&tdef);
+            pos = gafndt(pfi->name,&tdef,&tdefe,pfi->abvals[3],pfi->pchsub1,pfi->ens1,t,e,&flag);  
+            if (pos==NULL) {
+              sprintf(pout,"Open Error: couldn't determine data file name for e=%d t=%d\n",e,t);
+              gaprnt(0,pout);
+              goto err8;
+            }
+            if (strcmp(ch,pos)!=0) {    /* filename has changed */
+              j = t;   
+              gree(ch,"f176");
+              ch = pos;
+            }
+            else {
+              gree(pos,"f176a");
+            }
+            pfi->fnums[+t-1] = j;                                                    
+          }
+          gree(ch,"f177");
+          
+          /* set fnums value to -1 for time steps after ensemble final time */
+          j = -1;
+          while (t<=pfi->dnum[3]) {
+            pfi->fnums[t-1] = j;                                                    
+            t++;
+          }
+          e++; ens++;
+        }
       pfi->fnumc = 0;
       pfi->fnume = 0;
     }

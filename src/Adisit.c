@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -178,7 +178,7 @@ void *Adisit(void *argument)
   int nvars, code, gridID, zaxisID;
   int vlistID1, vlistID2;
   int offset;
-  int ngrids, nlevel;
+  int nlevel;
   int i;
   int nmiss;
   int thoID = -1, saoID = -1;
@@ -198,7 +198,7 @@ void *Adisit(void *argument)
 
   operatorID = cdoOperatorID();
 
-  if ( operatorArgc() == 1 ) pin = atof(operatorArgv()[0]);
+  if ( operatorArgc() == 1 ) pin = parameter2double(operatorArgv()[0]);
   
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -238,17 +238,8 @@ void *Adisit(void *argument)
   if ( saoID == -1 ) cdoAbort("Sea water salinity not found!");
   if ( thoID == -1 ) cdoAbort("Potential or Insitu temperature not found!");
 
-  ngrids = vlistNgrids(vlistID1);
   gridID = vlistGrid(vlistID1, 0);
-  gridsize = gridInqSize(gridID);
-
-  /* check gridsize */
-  for ( i = 1; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridsize != gridInqSize(gridID) )
-	cdoAbort("Grids have different size!");
-    }
+  gridsize = vlist_check_gridsize(vlistID1);
 
   zaxisID = vlistInqVarZaxis(vlistID1, saoID);
   nlevel1 = zaxisInqSize(zaxisID);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -113,7 +113,7 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
   if ( lev1 ) free(lev1);
   if ( lev2 ) free(lev2);
 }
-
+/*
 static
 int vlistConstVars(int vlistID)
 {
@@ -124,7 +124,7 @@ int vlistConstVars(int vlistID)
 
   return (1);
 }
-
+*/
 
 void *Merge(void *argument)
 {
@@ -176,6 +176,7 @@ void *Merge(void *argument)
   int *streamIDs = (int*) malloc(nmerge*sizeof(int));
   int *vlistIDs  = (int*) malloc(nmerge*sizeof(int));
   int *numrecs   = (int*) malloc(nmerge*sizeof(int));
+  int *numsteps  = (int*) malloc(nmerge*sizeof(int));
 
   for ( index = 0; index < nmerge; index++ )
     {
@@ -196,6 +197,33 @@ void *Merge(void *argument)
       /* vlistCat(vlistID2, vlistIDs[index]); */
       vlistMerge(vlistID2, vlistIDs[index]);
     }
+
+  for ( index = 0; index < nmerge; index++ ) numsteps[index] = -1;
+
+  int numconst = 0;
+  for ( index = 0; index < nmerge; index++ )
+    {
+      streamID1 = streamIDs[index];
+      vlistID1  = vlistIDs[index];
+      numsteps[index] = vlistNtsteps(vlistID1);
+      if ( numsteps[index] == 0 ) numsteps[index] = 1;
+      if ( numsteps[index] == 1 ) numconst++; 
+    }
+
+  if ( numconst > 0 && numconst < nmerge )
+    for ( index = 0; index < nmerge; index++ )
+      {
+	if ( numsteps[index] == 1 ) 
+	  {
+	    vlistID1  = vlistIDs[index];
+	    int nvars = vlistNvars(vlistID1);
+	    for ( int varID = 0; varID < nvars; ++varID )
+	      {
+		varID2 = vlistMergedVar(vlistID1, varID);
+		vlistDefVarTsteptype(vlistID2, varID2, TSTEP_CONSTANT);
+	      }
+	  }
+      }
 
   if ( cdoVerbose ) 
     {
@@ -233,7 +261,7 @@ void *Merge(void *argument)
       if ( tsID == 1 )
 	{
 	  for ( index = 0; index < nmerge; index++ )
-	    if ( numrecs[index] == 0 && vlistConstVars(vlistIDs[index]) ) vlistIDs[index] = -1;
+	    if ( numrecs[index] == 0 && numsteps[index] == 1 ) vlistIDs[index] = -1;
 	  /*
 	  for ( index = 0; index < nmerge; index++ )
 	    if ( vlistIDs[index] != -1 )
@@ -314,6 +342,7 @@ void *Merge(void *argument)
   if ( streamIDs ) free(streamIDs);
   if ( vlistIDs  ) free(vlistIDs);
   if ( numrecs   ) free(numrecs);
+  if ( numsteps  ) free(numsteps);
  
   if ( ! lcopy )
     if ( array ) free(array);

@@ -155,7 +155,7 @@ in order of vSizes
 
 static void
 varMapGen(int *vSizes, int *sSizes, int *varMapping,
-          int nStreams, int *nodeSizes, int nNodes)
+          unsigned nStreams, int *nodeSizes, int nNodes)
 {
 
   int weightsStreams[nStreams];
@@ -170,9 +170,9 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 
   int buckets[nProcsColl];
 
-  for ( i = 0; i < nStreams; i++ )
+  for (unsigned i = 0; i < nStreams; i++ )
     {
-      nVars += * ( sSizes + i );
+      nVars += sSizes[i];
       weightsStreams[i] = 0;
       for ( j = 0; j < * ( sSizes + i ); j++ )
 	weightsStreams[i] += * ( vSizes + offset++ );
@@ -185,13 +185,13 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
   for ( j = 0; j < nNodes; j++ )
     w[j] = ( double ) * ( nodeSizes + j ) / ( double ) nPEs;
 
-  mapProblems ( weightsStreams, streamMapping, nStreams, nNodes, w );
+  mapProblems(weightsStreams, streamMapping, (int)nStreams, nNodes, w);
   free ( w );
 
   for ( i = 0; i < nNodes; i++ )
     {
       nVarsNode = 0;
-      for ( j = 0; j < nStreams; j++ )
+      for (unsigned j = 0; j < nStreams; j++)
 	if ( * ( streamMapping + j ) == i )
 	  nVarsNode += * ( sSizes + j );
 
@@ -201,12 +201,12 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
       offset = 0;
       offsetN = 0;
 
-      for ( j = 0; j < nStreams; j++ )
-	if ( * ( streamMapping + j ) == i )
+      for (unsigned j = 0; j < nStreams; j++ )
+	if (streamMapping[j] == i)
 	  for ( k = 0; k < * ( sSizes + j ); k ++ )
-	    * ( weightsVarsNode + offsetN++ ) = * ( vSizes + offset++ );
+	    weightsVarsNode[offsetN++] = vSizes[offset++];
 	else
-	  offset += * ( sSizes + j );
+	  offset += sSizes[j];
 
       for ( j = 0; j < * ( nodeSizes + i ); j ++ )
 	w[j] = 1.0 / ( double ) * ( nodeSizes + i );
@@ -217,7 +217,7 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
       offset = 0;
       offsetN = 0;
 
-      for ( j = 0; j < nStreams; j++ )
+      for (unsigned j = 0; j < nStreams; j++)
 	if ( * ( streamMapping + j ) == i )
 	  for ( k = 0; k < * ( sSizes + j ); k ++ )
 	    * ( varMapping + offset ++ ) =
@@ -249,28 +249,28 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 static void
 varsMapNDeco(int nNodes, int *nodeSizes)
 {
-  int nStreams, nVars, * resHs, * streamSizes, * varSizes, * varMapping,
+  int nVars, * resHs, * streamSizes, * varSizes, * varMapping,
     * collectsData;
   int k = 0;
   int nProcsColl = commInqNProcsColl ();
 
   xdebug ( "START, nProcsColl=%d", nProcsColl );
 
-  nStreams = streamSize ();
+  unsigned nStreams = reshCountType(&streamOps);
 
-  resHs       = xmalloc((size_t)nStreams * sizeof (resHs[0]));
-  streamSizes = xmalloc((size_t)nStreams * sizeof (streamSizes[0]));
+  resHs       = xmalloc(nStreams * sizeof (resHs[0]));
+  streamSizes = xmalloc(nStreams * sizeof (streamSizes[0]));
   collectsData = xmalloc((size_t)nProcsColl * sizeof (collectsData[0]));
-  streamGetIndexList ( nStreams, resHs );
+  cdiStreamGetIndexList(nStreams, resHs);
 
-  for (int i = 0; i < nStreams; i++ )
-    streamSizes[i] = streamInqNvars ( * ( resHs + i ));
+  for (unsigned i = 0; i < nStreams; i++ )
+    streamSizes[i] = streamInqNvars(resHs[i]);
 
   nVars = sum_int((size_t)nStreams, streamSizes);
   varSizes   = xcalloc((size_t)nVars, sizeof (varSizes[0]));
   varMapping = xmalloc((size_t)nVars * sizeof (varMapping[0]));
 
-  for (int i = 0; i < nStreams; i++ )
+  for (unsigned i = 0; i < nStreams; i++ )
     {
       int vlistID = streamInqVlist(resHs[i]);
       for (int j = 0; j < streamSizes[i]; j++ )
@@ -283,7 +283,7 @@ varsMapNDeco(int nNodes, int *nodeSizes)
 	      nStreams, nodeSizes, nNodes );
 
   k = 0;
-  for (int i = 0; i < nStreams; i++ )
+  for (unsigned i = 0; i < nStreams; i++ )
     for (int j = 0; j < * ( streamSizes + i ); j++ )
       {
         vlistDefVarIOrank ( streamInqVlist ( * ( resHs + i )), j,
@@ -343,7 +343,7 @@ struct collDesc
 static void
 modelWinDefBufferSizes(void)
 {
-  int collID, nstreams, * streamIndexList, streamNo, nvars, varID;
+  int collID, * streamIndexList, nvars, varID;
   size_t sumWinBufferSize = 0;
   int nProcsColl  = commInqNProcsColl ();
   int rankGlob    = commInqRankGlob ();
@@ -353,11 +353,11 @@ modelWinDefBufferSizes(void)
   xdebug("%s", "START");
   xassert(txWin != NULL);
 
-  nstreams = reshCountType ( &streamOps );
+  unsigned nstreams = reshCountType ( &streamOps );
   streamIndexList = xmalloc((size_t)nstreams * sizeof (streamIndexList[0]));
   collIndex = xcalloc((size_t)nProcsColl, sizeof (collIndex[0]));
   reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
-  for ( streamNo = 0; streamNo < nstreams; streamNo++ )
+  for (unsigned streamNo = 0; streamNo < nstreams; streamNo++ )
     {
       // memory required for data
       int streamID = streamIndexList[streamNo];

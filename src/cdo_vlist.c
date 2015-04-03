@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -316,4 +316,38 @@ int vlistInqNWPV(int vlistID, int varID)
     nwpv = 1;
 
   return (nwpv);
+}
+
+
+int vlist_check_gridsize(int vlistID)
+{
+  int lerror = FALSE;
+  int ngrids = vlistNgrids(vlistID);
+  int gridID = vlistGrid(vlistID, 0);
+  int ngp    = gridInqSize(gridID);
+
+  /* check gridsize */
+  for ( int index = 0; index < ngrids; ++index )
+    {
+      gridID = vlistGrid(vlistID, index);
+      if ( ngp != gridInqSize(gridID) )
+	{
+	  lerror = TRUE;
+	  break;
+	}
+    }
+
+  if ( lerror )
+    {
+      cdoPrint("This operator requires all variables on the same horizontal grid.");
+      cdoPrint("Horizontal grids found:");
+      for ( int index = 0; index < ngrids; ++index )
+	{
+	  gridID = vlistGrid(vlistID, index);
+	  cdoPrint("  grid=%d  type=%s  points=%d", index+1, gridNamePtr(gridInqType(gridID)), gridInqSize(gridID));
+	}
+      cdoAbort("The input stream contains variables on different horizontal grids!");
+    }
+
+  return ngp;
 }

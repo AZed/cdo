@@ -34,12 +34,20 @@
  * along with YAC.  If not, see <http://www.gnu.org/licenses/gpl.txt>.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
 
 #include "utils.h"
 #include "geometry.h"
+
+#if defined(CDO) && !defined(HAVE_SQRTL)
+#define sqrtl(x) (sqrt((double)x))
+#endif
 
 // angle tolerance
 const double angle_tol = 1e-9;

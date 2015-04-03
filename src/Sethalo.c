@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -379,8 +379,8 @@ int genindexgrid(int gridID1, int *lhalo, int *rhalo)
 
   operatorCheckArgc(2);
 
-  *lhalo = atoi(operatorArgv()[0]);
-  *rhalo = atoi(operatorArgv()[1]);
+  *lhalo = parameter2int(operatorArgv()[0]);
+  *rhalo = parameter2int(operatorArgv()[1]);
 
   nlon1 = gridInqXsize(gridID1);
 

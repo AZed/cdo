@@ -66,7 +66,7 @@ void pcdiXMPI(int iret, const char *filename, int line)
           "errorString: \"%s\"\n",
           rank, filename, line,
           errorString[0], errorString[1]);
-  MPI_Abort(MPI_COMM_WORLD, iret);
+  MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
 /*****************************************************************************/

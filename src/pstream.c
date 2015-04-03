@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -44,8 +44,6 @@ int pclose(FILE *stream);
 #include "error.h"
 #include "dmemory.h"
 
-
-extern int timer_read, timer_write;
 
 static int PSTREAM_Debug = 0;
 
@@ -407,7 +405,6 @@ int pstreamOpenRead(const argument_t *argument)
     }
   else
     {
-      extern int cdoDefaultFileType/*, cdoDefaultInstID*/;
       size_t len, i;
       int nfiles = 1, j;
       char *filename = NULL;
@@ -422,8 +419,8 @@ int pstreamOpenRead(const argument_t *argument)
 	{
 	  pch = &argument->args[i+1];
 	  len -= (i+1);
-	  if ( len && ( memcmp(argument->args, "filelist:", 9) == 0 || 
-			memcmp(argument->args, "flist:", 6) == 0 ) )
+	  if ( len && ( strncmp(argument->args, "filelist:", 9) == 0 || 
+			strncmp(argument->args, "flist:", 6) == 0 ) )
 	    {
 	      for ( i = 0; i < len; i++ ) if ( pch[i] == ',' ) nfiles++;
 
@@ -488,7 +485,7 @@ int pstreamOpenRead(const argument_t *argument)
 		    }
 		}
 	    }
-	  else if ( len && memcmp(argument->args, "ls:", 3) == 0 )
+	  else if ( len && strncmp(argument->args, "ls:", 3) == 0 )
 	    {
 	      char line[4096];
 	      char command[4096];
@@ -636,7 +633,7 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
 
   PSTREAM_INIT();
 
-  ispipe = memcmp(argument->args, "(pipe", 5) == 0;
+  ispipe = strncmp(argument->args, "(pipe", 5) == 0;
 
   if ( ispipe )
     {
@@ -654,7 +651,6 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
     }
   else
     {
-      /* extern int cdoDefaultInstID; */
       char *filename = (char*) malloc(strlen(argument->args)+1);
 
       pstreamptr = pstream_new_entry();
@@ -750,7 +746,7 @@ int pstreamOpenAppend(const argument_t *argument)
   int ispipe;
   pstream_t *pstreamptr;
 
-  ispipe = memcmp(argument->args, "(pipe", 5) == 0;
+  ispipe = strncmp(argument->args, "(pipe", 5) == 0;
 
   if ( ispipe )
     {
@@ -942,8 +938,6 @@ int pstreamInqVlist(int pstreamID)
   else
 #endif
     {
-      extern int cdoDefaultTimeType;
-
       if ( processNums() == 1 && ompNumThreads == 1 ) timer_start(timer_read);
 #if defined(HAVE_LIBPTHREAD)
       if ( cdoLockIO ) pthread_mutex_lock(&streamMutex);
@@ -977,7 +971,6 @@ const char *cdoComment(void)
   static char comment[256];
   static int init = 0;
   int size = 0;
-  extern char CDO_Version[];
 
   if ( ! init )
     {
@@ -1359,8 +1352,6 @@ int pstreamInqTimestep(int pstreamID, int tsID)
   else
 #endif
     {
-      extern int cdoDefaultTimeType;
-
       if ( pstreamptr->mfiles ) tsID -= pstreamptr->tsID0;
 
       if ( processNums() == 1 && ompNumThreads == 1 ) timer_start(timer_read);
@@ -1457,7 +1448,6 @@ void pstreamDefTimestep(int pstreamID, int tsID)
   else
 #endif
     {
-      extern int cdoDefaultTimeType;
       if ( tsID == 0 && cdoDefaultTimeType != CDI_UNDEFID )
 	{
 	  int taxisID, vlistID;
@@ -1652,7 +1642,6 @@ void cdoFinish(void)
       int mu[] = {'b', 'k', 'm', 'g', 't'};
       int muindex = 0;
       long memmax;
-      extern int cdoLogOff;
 
       memmax = memTotal();
       while ( memmax > 9999 )

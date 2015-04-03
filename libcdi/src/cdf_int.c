@@ -701,8 +701,7 @@ void cdf_put_att_text(int ncid, int varid, const char *name, size_t len,
   status = nc_put_att_text(ncid, varid, name, len, tp);
 
   if ( CDF_Debug || status != NC_NOERR )
-    Message("ncid = %d varid = %d att = %s text = %s",
-	    ncid, varid, name, tp);
+    Message("ncid = %d varid = %d att = %s text = %.*s", ncid, varid, name, (int)len, tp);
 
   if ( status != NC_NOERR ) Error("%s", nc_strerror(status));
 }

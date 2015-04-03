@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,18 +29,6 @@
 #include "pstream.h"
 #include "list.h"
 
-static
-double arg2val(char *arg)
-{
-  /*
-  if      ( strcmp(arg,"inf") == 0 )
-    return  DBL_MAX;
-  else if ( strcmp(arg,"-inf") == 0 )
-    return -DBL_MAX;
-  else
-  */
-    return atof(arg);
-}
 
 void *Replacevalues(void *argument)
 {
@@ -84,17 +72,17 @@ void *Replacevalues(void *argument)
   else if ( operatorID == SETRTOC )
     {
       operatorCheckArgc(3);
-      rmin   = arg2val(operatorArgv()[0]);
-      rmax   = arg2val(operatorArgv()[1]);
-      newval = arg2val(operatorArgv()[2]);
+      rmin   = parameter2double(operatorArgv()[0]);
+      rmax   = parameter2double(operatorArgv()[1]);
+      newval = parameter2double(operatorArgv()[2]);
     }
   else if ( operatorID == SETRTOC2 )
     {
       operatorCheckArgc(4);
-      rmin    = arg2val(operatorArgv()[0]);
-      rmax    = arg2val(operatorArgv()[1]);
-      newval  = arg2val(operatorArgv()[2]);
-      newval2 = arg2val(operatorArgv()[3]);
+      rmin    = parameter2double(operatorArgv()[0]);
+      rmax    = parameter2double(operatorArgv()[1]);
+      newval  = parameter2double(operatorArgv()[2]);
+      newval2 = parameter2double(operatorArgv()[3]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));

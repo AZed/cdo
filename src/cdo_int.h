@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -34,8 +34,14 @@
 #include "dmemory.h"
 #include "process.h"
 #include "const.h"
+#include "util.h"
+#include "datetime.h"
 
 #define  OPENMP4  201307
+#if defined(_OPENMP) && defined(OPENMP4) && _OPENMP >= OPENMP4
+#define  HAVE_OPENMP4  1
+#endif
+
 
 #ifndef strdupx
 #ifndef strdup
@@ -53,7 +59,9 @@ char *strdup(const char *s);
 */
 #endif
 
-#define strcompare(s1, s2)  (strncmp(s1, s2, strlen(s2)))
+
+#define  cmpstr(s1, s2)          (strncmp(s1, s2, strlen(s2)))
+#define  cmpstrlen(s1, s2, len)  (strncmp(s1, s2, len = strlen(s2)))
 
 
 /* sxxxYYYYMMDDhhmm0 */
@@ -61,6 +69,8 @@ char *strdup(const char *s);
 #define  SET_DATE(dtstr, date, time)      (sprintf(dtstr, "%*d%*d", DATE_LEN-6, date, 6, time))
 #define  DATE_IS_NEQ(dtstr1, dtstr2, len) (memcmp(dtstr1, dtstr2, len) != 0)
 
+enum T_WEIGHT_MODE {WEIGHT_OFF, WEIGHT_ON};
+enum T_EIGEN_MODE  {JACOBI, DANIELSON_LANCZOS};
 
 #if defined(__xlC__) /* performance problems on IBM */
 #ifndef DBL_IS_NAN
@@ -106,11 +116,6 @@ char *strdup(const char *s);
 #define  CDO_EXP_LOCAL   1
 #define  CDO_EXP_REMOTE  2
 
-
-enum {DATE_FIRST, DATE_LAST, DATE_MIDDLE};
-
-void strtolower(char *str);
-
 void print_pthread_info(void);
 
 void cdoProcessTime(double *utime, double *stime);
@@ -135,36 +140,6 @@ void time2str(int time, char *timestr, int maxlen);
 
 const char * tunit2str(int tunits);
 const char * calendar2str(int calendar);
-
-
-typedef struct {
-  int   date;
-  int   time;
-} datetime_t;
-
-typedef struct
-{
-  datetime_t v;
-  datetime_t b[2];
-} dtinfo_t;
-
-typedef struct {
-  int   julday;
-  int   secofday;
-} juldate_t;
-
-
-juldate_t juldate_encode(int calendar, int date, int time);
-void      juldate_decode(int calendar, juldate_t juldate, int *date, int *time);
-juldate_t juldate_sub(juldate_t juldate2, juldate_t juldate1);
-juldate_t juldate_add_seconds(int seconds, juldate_t juldate);
-double    juldate_to_seconds(juldate_t juldate);
-
-void    get_timestat_date(int *tstat_date);
-void    datetime_avg(int dpy, int ndates, datetime_t *datetime);
-void    datetime_avg_dtinfo(int dpy, int ndates, dtinfo_t *dtinfo);
-void    taxisInqDTinfo(int taxisID, dtinfo_t *dtinfo);
-void    taxisDefDTinfo(int taxisID, dtinfo_t dtinfo);
 
 int     days_per_month(int calendar, int year, int month);
 int     days_per_year(int calendar, int year);
@@ -195,5 +170,7 @@ off_t filesize(const char *filename);
 
 char *expand_filename(const char *string);
 
+double parameter2double(const char *string);
+int    parameter2int(const char *string);
 
 #endif  /* _CDO_INT_H */

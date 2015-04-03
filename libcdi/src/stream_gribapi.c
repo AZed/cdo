@@ -2307,7 +2307,11 @@ int gribapiDefDateTimeRel(int editionNumber, grib_handle *gh, int rdate, int rti
 
       // printf(">>>>> tsteptype %d  startStep %ld  endStep %ld\n", tsteptype, startStep, endStep);
 
-      if ( proDefTempNum == 0 ) startStep = endStep;
+      // Product Definition Template Number: defined in GRIB_API file 4.0.table
+      // point in time products:
+      if ( (proDefTempNum >= 0 && proDefTempNum <=  7) || 
+           proDefTempNum == 55 || proDefTempNum == 40055 ) // Tile
+        startStep = endStep;
 
       if ( editionNumber > 1 ) GRIB_CHECK(my_grib_set_long(gh, "forecastTime", startStep), 0);
       GRIB_CHECK(my_grib_set_long(gh, "endStep", endStep), 0);
@@ -2805,8 +2809,6 @@ void grib2DefLevel(grib_handle *gh, int gcinit, long leveltype1, long leveltype2
       GRIB_CHECK(my_grib_set_long(gh, "scaledValueOfSecondFixedSurface", scaled_level), 0);
     }
 }
-
-int zaxisInqLtype2(int zaxisID);
 
 static
 void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID, int levelID, int gcinit)

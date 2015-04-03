@@ -32,6 +32,12 @@ void printFeatures(void)
 #endif
 #if  defined(HAVE_NETCDF4)
   fprintf(stderr, " NC4");
+#if  defined(HAVE_NC4HDF5)
+  fprintf(stderr, "/HDF5");
+#if  defined(HAVE_NC4HDF5_THREADSAFE)
+  fprintf(stderr, "/threadsafe");
+#endif
+#endif
 #endif
 #if  defined(HAVE_LIBNC_DAP)
   fprintf(stderr, " OPeNDAP");

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@ void *Ensval(void *argument)
   else if ( operfunc == BRS )  {
     operatorInputArg("Threshold for Brier score?");
     operatorCheckArgc(1);
-    brs_thresh = atof(operatorArgv()[0]);
+    brs_thresh = parameter2double(operatorArgv()[0]);
     nostreams = 4;
 
     fprintf(stderr,"brs_thres %10.6f\n",brs_thresh);

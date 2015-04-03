@@ -320,7 +320,7 @@ int     streamInqTimestep(int streamID, int tsID);
 int     streamInqCurTimestepID(int streamID);
 
 char   *streamFilename(int streamID);
-char   *streamFilesuffix(int filetype);
+const char *streamFilesuffix(int filetype);
 off_t   streamNvals(int streamID);
 
 int     streamInqNvars ( int streamID );
@@ -601,7 +601,7 @@ int     gridInqMaskGME(int gridID, int *mask_vec);
 void    gridDefMask(int gridID, const int *mask_vec);
 int     gridInqMask(int gridID, int *mask_vec);
 
-void    gridPrint(int gridID, int opt);
+void    gridPrint(int gridID, int index, int opt);
 
 /*      gridCreate: Create a horizontal Grid */
 int     gridCreate(int gridtype, int size);
@@ -815,7 +815,7 @@ int     zaxisDuplicate(int zaxisID);
 
 void    zaxisResize(int zaxisID, int size);
 
-void    zaxisPrint(int zaxisID);
+void    zaxisPrint(int zaxisID, int index);
 
 /*      zaxisDefLevels: Define the levels of a Z-axis */
 void    zaxisDefLevels(int zaxisID, const double *levels_vec);

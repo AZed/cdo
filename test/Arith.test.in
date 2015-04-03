@@ -27,7 +27,7 @@ for STAT in $STATS; do
     CDOTEST="$STAT"
     CDOCOMMAND="$CDO $FORMAT ${STAT} $IFILE $CFILE $OFILE"
 
-    echo "Running test: $NTEST"
+    echo "Running test: $NTEST - $CDOTEST"
     echo "$CDOCOMMAND"
 
     $CDOCOMMAND

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -59,7 +59,7 @@ int seaslist(LIST *ilist)
   if ( isdigit(*operatorArgv()[0]))
     for ( i = 0; i < nsel; i++ )
       {
-	ival = atoi(operatorArgv()[i]);
+	ival = parameter2int(operatorArgv()[i]);
 	if      ( ival == 1 || ival == 13 ) seas[0] = TRUE;
 	else if ( ival == 2 || ival == 14 ) seas[1] = TRUE;
 	else if ( ival == 3 || ival == 15 ) seas[2] = TRUE;
@@ -142,7 +142,7 @@ int datelist(LIST *flist)
 	}
       else if ( strchr(operatorArgv()[i], '-') == NULL )
 	{
-	  fval = atof(operatorArgv()[i]);
+	  fval = parameter2double(operatorArgv()[i]);
 	  listSetFlt(flist, i, fval);
 	}
       else
@@ -271,7 +271,7 @@ void *Seltime(void *argument)
 	    }
 	  else
 	    {
-	      listSetInt(ilist, i, atoi(operatorArgv()[i]));
+	      listSetInt(ilist, i, parameter2int(operatorArgv()[i]));
 	    }
 	}
     }

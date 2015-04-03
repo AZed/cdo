@@ -82,7 +82,6 @@ int recordNewEntry(stream_t *streamptr, int tsID)
 	records[i].used = CDI_UNDEFID;
     }
 
-
   recordInitEntry(&records[recordID]);
 
   records[recordID].used = 1;
@@ -439,7 +438,10 @@ void cdi_create_records(stream_t *streamptr, int tsID)
   unsigned nrecords, maxrecords;
   record_t *records;
 
-  if ( streamptr->tsteps[tsID].records ) return;
+  tsteps_t* sourceTstep = streamptr->tsteps;
+  tsteps_t* destTstep = sourceTstep + tsID;
+
+  if ( destTstep->records ) return;
 
   int vlistID  = streamptr->vlistID;
 
@@ -451,7 +453,9 @@ void cdi_create_records(stream_t *streamptr, int tsID)
 	maxrecords += (unsigned)streamptr->vars[varID].nlevs;
     }
   else
-    maxrecords = (unsigned)streamptr->tsteps[0].recordSize;
+    {
+      maxrecords = (unsigned)sourceTstep->recordSize;
+    }
 
   if ( tsID == 0 )
     {
@@ -460,48 +464,52 @@ void cdi_create_records(stream_t *streamptr, int tsID)
   else if ( tsID == 1 )
     {
       nrecords = 0;
-      maxrecords = (unsigned)streamptr->tsteps[0].recordSize;
-      for (unsigned recID = 0; recID < maxrecords; recID++ )
+      maxrecords = (unsigned)sourceTstep->recordSize;
+      for ( unsigned recID = 0; recID < maxrecords; recID++ )
 	{
-	  int varID = streamptr->tsteps[0].records[recID].varID;
-	  nrecords +=
-            (varID == -1 /* varID = -1 for write mode !!! */
-             || vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT);
+	  int varID = sourceTstep->records[recID].varID;
+	  nrecords += (varID == CDI_UNDEFID /* varID = CDI_UNDEFID for write mode !!! */
+                       || vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT);
+          //    printf("varID nrecords %d %d %d \n", varID, nrecords, vlistInqVarTsteptype(vlistID, varID));
 	}
     }
   else
-    nrecords = (unsigned)streamptr->tsteps[1].nallrecs;
+    {
+      nrecords = (unsigned)streamptr->tsteps[1].nallrecs;
+    }
+  //  printf("tsID, nrecords %d %d\n", tsID, nrecords);
 
   if ( maxrecords > 0 )
     records = (record_t *) malloc(maxrecords * sizeof(record_t));
   else
     records = NULL;
 
-  streamptr->tsteps[tsID].records    = records;
-  streamptr->tsteps[tsID].recordSize = (int)maxrecords;
-  streamptr->tsteps[tsID].nallrecs   = (int)nrecords;
+  destTstep->records    = records;
+  destTstep->recordSize = (int)maxrecords;
+  destTstep->nallrecs   = (int)nrecords;
 
   if ( tsID == 0 )
     {
       for ( unsigned recID = 0; recID < maxrecords; recID++ )
-	recordInitEntry(&streamptr->tsteps[tsID].records[recID]);
+        recordInitEntry(&destTstep->records[recID]);
     }
   else
     {
-      memcpy(streamptr->tsteps[tsID].records,
-	     streamptr->tsteps[0].records,
-	     (size_t)maxrecords * sizeof(record_t));
+      memcpy(destTstep->records, sourceTstep->records, (size_t)maxrecords*sizeof(record_t));
 
       for ( unsigned recID = 0; recID < maxrecords; recID++ )
 	{
-	  int varID = streamptr->tsteps[0].records[recID].varID;
-	  if ( varID != -1 ) /* varID = -1 for write mode !!! */
-	    if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
-	      {
-		streamptr->tsteps[tsID].records[recID].position = CDI_UNDEFID;
-		streamptr->tsteps[tsID].records[recID].size     = 0;
-		streamptr->tsteps[tsID].records[recID].used     = FALSE;
-	      }
+          record_t* curRecord = &sourceTstep->records[recID];
+          destTstep->records[recID].used = curRecord->used;
+          if ( curRecord->used != CDI_UNDEFID && curRecord->varID != -1 ) /* curRecord->varID = -1 for write mode !!! */
+            {
+              if ( vlistInqVarTsteptype(vlistID, curRecord->varID) != TSTEP_CONSTANT )
+                {
+                  destTstep->records[recID].position = CDI_UNDEFID;
+                  destTstep->records[recID].size     = 0;
+                  destTstep->records[recID].used     = FALSE;
+                }
+            }
 	}
     }
 }

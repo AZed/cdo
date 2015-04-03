@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -89,21 +89,16 @@ void print_location_LL(int operfunc, int vlistID, int varID, int levelID, int gr
 
 void *Fldstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
   int gridID2, lastgrid = -1;
-  int index, ngrids;
+  int index;
   int recID, nrecs;
-  int tsID, varID, levelID;
+  int varID, levelID;
   int lim;
   int needWeights = FALSE;
   int nmiss;
   double slon, slat;
   double sglval;
   field_t field;
-  int taxisID1, taxisID2;
   int pn = 0;
 
   cdoInitialize(argument);
@@ -119,13 +114,13 @@ void *Fldstat(void *argument)
   cdoOperatorAdd("fldvar1", func_var1, 0, NULL);
   cdoOperatorAdd("fldpctl", func_pctl, 0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
   if ( operfunc == func_pctl )
     {
       operatorInputArg("percentile number");
-      pn = atoi(operatorArgv()[0]);
+      pn = parameter2int(operatorArgv()[0]);
       
       if ( pn < 1 || pn > 99 )
         cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
@@ -136,13 +131,13 @@ void *Fldstat(void *argument)
        operfunc == func_var1 || operfunc == func_std1 )
     needWeights = TRUE;
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
   slon = 0;
@@ -153,12 +148,12 @@ void *Fldstat(void *argument)
   gridDefXvals(gridID2, &slon);
   gridDefYvals(gridID2, &slat);
 
-  ngrids = vlistNgrids(vlistID1);
+  int ngrids = vlistNgrids(vlistID1);
 
   for ( index = 0; index < ngrids; index++ )
     vlistChangeGridIndex(vlistID2, index, gridID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -170,7 +165,7 @@ void *Fldstat(void *argument)
   if ( needWeights )
     field.weight = (double*) malloc(lim*sizeof(double));
 
-  tsID = 0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       taxisCopyTimestep(taxisID2, taxisID1);

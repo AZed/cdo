@@ -33,7 +33,7 @@ for OPERATOR in write read; do
     fi
     if [ "@ENABLE_GRIB@" = no -a "${FORMAT}" = grb ] ; then
       FILEFORMAT=GRIB
-      ENABLED_TEST=no;
+      ENABLED_TEST=no
     fi
     if [  "@ENABLE_GRIBAPI@" = no -a "${FORMAT}" = grb2 ] ; then
       FILEFORMAT=GRIB_API

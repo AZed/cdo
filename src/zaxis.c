@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -177,65 +177,65 @@ int zaxisFromFile(FILE *gfp, const char *dname)
       pline = line;
       while ( isspace((int) *pline) ) pline++;
       if ( pline[0] == '\0' ) continue;
-      if ( memcmp(pline, "zaxistype", 9) == 0 || 
-	   memcmp(pline, "type", 4) == 0 )
+      if ( cmpstrlen(pline, "zaxistype", len) == 0 || 
+	   cmpstrlen(pline, "type", len) == 0 )
 	{
 	  if ( *pline == 'z' )
 	    pline = skipSeparator(pline + 9);
 	  else
 	    pline = skipSeparator(pline + 4);
 
-	  if ( memcmp(pline, "pressure", 6) == 0 )
+	  if ( cmpstrlen(pline, "pressure", len) == 0 )
 	    zaxis.type = ZAXIS_PRESSURE;
-	  else if ( memcmp(pline, "hybrid_half", 11)  == 0 )
+	  else if ( cmpstrlen(pline, "hybrid_half", len)  == 0 )
 	    zaxis.type = ZAXIS_HYBRID_HALF;
-	  else if ( memcmp(pline, "hybrid", 6)  == 0 )
+	  else if ( cmpstrlen(pline, "hybrid", len)  == 0 )
 	    zaxis.type = ZAXIS_HYBRID;
-	  else if ( memcmp(pline, "height", 6) == 0 )
+	  else if ( cmpstrlen(pline, "height", len) == 0 )
 	    zaxis.type = ZAXIS_HEIGHT;
-	  else if ( memcmp(pline, "depth below sea", 15) == 0 ||
-		    memcmp(pline, "depth_below_sea", 15) == 0 )
+	  else if ( cmpstrlen(pline, "depth below sea", len) == 0 ||
+		    cmpstrlen(pline, "depth_below_sea", len) == 0 )
 	    zaxis.type = ZAXIS_DEPTH_BELOW_SEA;
-	  else if ( memcmp(pline, "depth below land", 16) == 0 ||
-		    memcmp(pline, "depth_below_land", 16) == 0 )
+	  else if ( cmpstrlen(pline, "depth below land", len) == 0 ||
+		    cmpstrlen(pline, "depth_below_land", len) == 0 )
 	    zaxis.type = ZAXIS_DEPTH_BELOW_LAND;
-	  else if ( memcmp(pline, "isentropic", 10)  == 0 )
+	  else if ( cmpstrlen(pline, "isentropic", len)  == 0 )
 	    zaxis.type = ZAXIS_ISENTROPIC;
-	  else if ( memcmp(pline, "surface", 7)  == 0 )
+	  else if ( cmpstrlen(pline, "surface", len)  == 0 )
 	    zaxis.type = ZAXIS_SURFACE;
-	  else if ( memcmp(pline, "generic", 7)  == 0 )
+	  else if ( cmpstrlen(pline, "generic", len)  == 0 )
 	    zaxis.type = ZAXIS_GENERIC;
 	  else
 	    cdoAbort("Invalid zaxisname : %s (zaxis description file: %s)", pline, dname);
 	}
-      else if ( memcmp(pline, "size", 4)  == 0 )
+      else if ( cmpstrlen(pline, "size", len)  == 0 )
 	{
-	  zaxis.size = atol(skipSeparator(pline + 4));
+	  zaxis.size = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "vctsize", 7)  == 0 )
+      else if ( cmpstrlen(pline, "vctsize", len)  == 0 )
 	{
-	  zaxis.vctsize = atol(skipSeparator(pline + 7));
+	  zaxis.vctsize = atol(skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "name", 4)  == 0 )
+      else if ( cmpstrlen(pline, "name", len)  == 0 )
 	{
-	  strcpy(zaxis.name, skipSeparator(pline + 4));
+	  strcpy(zaxis.name, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "longname", 8)  == 0 )
+      else if ( cmpstrlen(pline, "longname", len)  == 0 )
 	{
-	  strcpy(zaxis.longname, skipSeparator(pline + 8));
+	  strcpy(zaxis.longname, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "units", 5)  == 0 )
+      else if ( cmpstrlen(pline, "units", len)  == 0 )
 	{
-	  strcpy(zaxis.units, skipSeparator(pline + 5));
+	  strcpy(zaxis.units, skipSeparator(pline + len));
 	}
-      else if ( memcmp(pline, "levels", 6)  == 0 )
+      else if ( cmpstrlen(pline, "levels", len)  == 0 )
 	{
 	  int i;
 	  double flev;
 
 	  if ( zaxis.size > 0 )
 	    {
-	      pline = skipSeparator(pline + 6);
+	      pline = skipSeparator(pline + len);
 	  
 	      zaxis.vals = (double*) malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
@@ -262,14 +262,14 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	      cdoAbort("size undefined (zaxis description file: %s)!", dname);
 	    }
 	}
-      else if ( memcmp(pline, "vct", 3)  == 0 )
+      else if ( cmpstrlen(pline, "vct", len)  == 0 )
 	{
 	  int i;
 	  double flev;
 
 	  if ( zaxis.vctsize > 0 )
 	    {
-	      pline = skipSeparator(pline + 3);
+	      pline = skipSeparator(pline + len);
 	  
 	      zaxis.vct = (double*) malloc(zaxis.vctsize*sizeof(double));
 	      for ( i = 0; i < zaxis.vctsize; i++ )
@@ -296,14 +296,14 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	      cdoAbort("vctsize undefined (zaxis description file: %s)!", dname);
 	    }
 	}
-      else if ( memcmp(pline, "lbounds", 7)  == 0 )
+      else if ( cmpstrlen(pline, "lbounds", len)  == 0 )
 	{
 	  int i;
 	  double flev;
 
 	  if ( zaxis.size > 0 )
 	    {
-	      pline = skipSeparator(pline + 7);
+	      pline = skipSeparator(pline + len);
 	  
 	      zaxis.lbounds = (double*) malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
@@ -330,14 +330,14 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	      cdoAbort("size undefined (zaxis description file: %s)!", dname);
 	    }
 	}
-      else if ( memcmp(pline, "ubounds", 7)  == 0 )
+      else if ( cmpstrlen(pline, "ubounds", len)  == 0 )
 	{
 	  int i;
 	  double flev;
 
 	  if ( zaxis.size > 0 )
 	    {
-	      pline = skipSeparator(pline + 7);
+	      pline = skipSeparator(pline + len);
 	  
 	      zaxis.ubounds = (double*) malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
@@ -383,7 +383,7 @@ int zaxisFromName(const char *zaxisname)
   zaxisInit(&zaxis);
 
   pline = zaxisname;
-  if ( memcmp(pline, "surface", 7) == 0 ) /* surface */
+  if ( cmpstr(pline, "surface") == 0 ) /* surface */
     {
       zaxis.type = ZAXIS_SURFACE;
       zaxis.size = 1;

@@ -23,8 +23,6 @@ int    cdiNAdditionalGRIBKeys = 0;
 char*  cdiAdditionalGRIBKeys[MAX_OPT_GRIB_ENTRIES];
 #endif
 
-extern void zaxisGetIndexList ( int, int * );
-
 static int VLIST_Debug = 0;
 
 static void vlist_initialize(void);
@@ -445,13 +443,13 @@ int vlist_generate_zaxis(int vlistID, int zaxistype, int nlevels, const double *
 
   if ( ! zaxisdefined )
     {
-      nzaxis = zaxisSize();
+      unsigned nzaxis = cdiZaxisCount();
       if ( nzaxis > 0 )
         {
           int *zaxisIndexList = (int *)xmalloc((size_t)nzaxis * sizeof (int));
           reshLock();
-          zaxisGetIndexList ( nzaxis, zaxisIndexList );
-          for ( int index = 0; index < nzaxis; ++index )
+          cdiZaxisGetIndexList(nzaxis, zaxisIndexList);
+          for (unsigned index = 0; index < nzaxis; ++index)
             {
               zaxisID = zaxisIndexList[index];
               if ( zaxisCompare(zaxisID, zaxistype, nlevels, has_bounds, levels, NULL, NULL, 0) == 0 )
@@ -1176,6 +1174,7 @@ void vlistDefTaxis(int vlistID, int taxisID)
 
   if (vlistptr->taxisID != taxisID)
     {
+      //FIXME: This code seems to leak a taxis_t object if `vlistptr->taxisID` was valid before the call to vlistDefTaxis.
       vlistptr->taxisID = taxisID;
       reshSetStatus(vlistID, &vlistOps, RESH_DESYNC_IN_USE);
     }

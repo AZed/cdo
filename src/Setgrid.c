@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -170,8 +170,8 @@ void *Setgrid(void *argument)
     {
       if ( operatorArgc() >= 1 && operatorArgc() <= 2 )
 	{
-	  number = atoi(operatorArgv()[0]);
-	  if ( operatorArgc() == 2 ) position = atoi(operatorArgv()[1]);
+	  number = parameter2int(operatorArgv()[0]);
+	  if ( operatorArgc() == 2 ) position = parameter2int(operatorArgv()[1]);
 	}
       else
 	{
@@ -283,7 +283,17 @@ void *Setgrid(void *argument)
 	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_CURVILINEAR )
 		{
 		  gridID2 = gridCurvilinearToRegular(gridID1);
-		  if ( gridID2 == -1 ) cdoAbort("No regular grid found!");
+		  if ( gridID2 == -1 ) cdoWarning("Conversion of curvilinear grid to regular grid failed!");
+ 		}
+	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_UNSTRUCTURED )
+		{
+		  gridID2 = -1;
+		  if ( gridID2 == -1 ) cdoWarning("Conversion of unstructured grid to regular grid failed!");
+ 		}
+	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_GENERIC )
+		{
+		  gridID2 = -1;
+		  if ( gridID2 == -1 ) cdoWarning("Conversion of generic grid to regular grid failed!");
  		}
 	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_LONLAT )
 		{

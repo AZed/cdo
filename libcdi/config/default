@@ -57,11 +57,9 @@ case "${HOSTNAME}" in
                     --enable-iso-c-interface \
                     --enable-swig \
                     --enable-python \
-                    --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
-                    --with-netcdf=/opt/local \
-                    --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -Df2cFortran"
+                    --with-grib_api=$HOME/local/gribapi-1.13.0 \
+                    --with-netcdf=$HOME/local \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -Df2cFortran"
 	;;
 # ia64-nec-linux
     ds*)

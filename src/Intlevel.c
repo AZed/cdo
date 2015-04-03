@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -32,8 +32,8 @@
 
 
 static
-void interp_lev(int gridsize, double missval, double *vardata1, double *vardata2,
-		int nlev2, int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
+void vert_interp_lev(int gridsize, double missval, double *vardata1, double *vardata2,
+		     int nlev2, int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
 {
   int i, ilev;
   int idx1, idx2;
@@ -91,12 +91,12 @@ void interp_lev(int gridsize, double missval, double *vardata1, double *vardata2
 }
 
 static
-void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
-		 int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
+void vert_gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
+		      int *lev_idx1, int *lev_idx2, double *lev_wgt1, double *lev_wgt2)
 {
   int i1, i2;
-  double val1, val2 = 0;
   int    idx1 = 0, idx2 = 0;
+  double val1, val2 = 0;
 
   for ( i2 = 0; i2 < nlev2; ++i2 )
     {
@@ -104,7 +104,7 @@ void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
 	{
 	  if ( lev1[i1-1] < lev1[i1] )
 	    {
-	      idx1 = i1 - 1;
+	      idx1 = i1-1;
 	      idx2 = i1;
 	    }
 	  else
@@ -162,16 +162,11 @@ void gen_weights(int expol, int nlev1, double *lev1, int nlev2, double *lev2,
 
 void *Intlevel(void *argument)
 {
-  int INTLEVEL, INTLEVELX;
-  int operatorID;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
   int gridsize;
   int recID, nrecs;
   int i, offset;
   int tsID, varID, levelID;
   int nvars;
-  int nzaxis;
   int nmiss;
   int zaxisID1 = -1, zaxisID2;
   int gridID, zaxisID;
@@ -185,17 +180,16 @@ void *Intlevel(void *argument)
   double *lev1 = NULL, *lev2 = NULL;
   double *single1, *single2;
   double **vardata1 = NULL, **vardata2 = NULL;
-  int taxisID1, taxisID2;
   int *lev_idx1, *lev_idx2;
   double *lev_wgt1, *lev_wgt2;
   LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
 
-  INTLEVEL   = cdoOperatorAdd("intlevel",  0, 0, NULL);
-  INTLEVELX  = cdoOperatorAdd("intlevelx", 0, 0, NULL);
+  int INTLEVEL   = cdoOperatorAdd("intlevel",  0, 0, NULL);
+  int INTLEVELX  = cdoOperatorAdd("intlevelx", 0, 0, NULL);
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
   if ( operatorID == INTLEVELX ) expol = TRUE;
 
@@ -206,16 +200,16 @@ void *Intlevel(void *argument)
 
   if ( cdoVerbose ) for ( i = 0; i < nlev2; ++i ) printf("lev2 %d: %g\n", i, lev2[i]);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  nzaxis  = vlistNzaxis(vlistID1);
+  int nzaxis  = vlistNzaxis(vlistID1);
   for ( i = 0; i < nzaxis; i++ )
     {
       zaxisID = vlistZaxis(vlistID1, i);
@@ -278,7 +272,7 @@ void *Intlevel(void *argument)
   lev_wgt1 = (double*) malloc(nlev2*sizeof(double));
   lev_wgt2 = (double*) malloc(nlev2*sizeof(double));
 
-  gen_weights(expol, nlev1+2, lev1, nlev2, lev2, lev_idx1, lev_idx2, lev_wgt1, lev_wgt2);
+  vert_gen_weights(expol, nlev1+2, lev1, nlev2, lev2, lev_idx1, lev_idx2, lev_wgt1, lev_wgt2);
 
   zaxisID2 = zaxisCreate(zaxisInqType(zaxisID1), nlev2);
   zaxisDefLevels(zaxisID2, lev2);
@@ -301,7 +295,7 @@ void *Intlevel(void *argument)
     if ( zaxisID1 == vlistZaxis(vlistID1, i) )
       vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -369,8 +363,8 @@ void *Intlevel(void *argument)
 	      missval  = vlistInqVarMissval(vlistID1, varID);
 	      gridsize = gridInqSize(gridID);
 
-	      interp_lev(gridsize, missval, vardata1[varID], vardata2[varID],
-			 nlev2, lev_idx1, lev_idx2, lev_wgt1, lev_wgt2);
+	      vert_interp_lev(gridsize, missval, vardata1[varID], vardata2[varID],
+			      nlev2, lev_idx1, lev_idx2, lev_wgt1, lev_wgt2);
 
 	      for ( levelID = 0; levelID < nlev2; levelID++ )
 		{

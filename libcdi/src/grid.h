@@ -2,6 +2,9 @@
 #define _GRID_H
 
 #include "cdi.h"
+#ifndef RESOURCE_HANDLE_H
+#include "resource_handle.h"
+#endif
 
 typedef unsigned char mask_t;
 
@@ -76,7 +79,7 @@ grid_t;
 void grid_init(grid_t *gridptr);
 void grid_free(grid_t *gridptr);
 
-int gridSize(void);
+unsigned cdiGridCount(void);
 
 const double *gridInqXvalsPtr(int gridID);
 const double *gridInqYvalsPtr(int gridID);
@@ -88,12 +91,14 @@ const double *gridInqAreaPtr(int gridID);
 int gridCompare(int gridID, const grid_t *grid);
 int gridGenerate(const grid_t *grid);
 
-void gridGetIndexList( int, int * );
+void cdiGridGetIndexList(unsigned, int * );
 
 void
 gridUnpack(char * unpackBuffer, int unpackBufferSize,
            int * unpackBufferPos, int originNamespace, void *context,
            int force_id);
+
+extern const resOps gridOps;
 
 #endif
 /*

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -126,7 +126,6 @@ void *Distgrid(void *argument)
   int nrecs, ngrids;
   int tsID, recID, levelID;
   int vlistID1;
-  char *rstr;
   char filesuffix[32];
   char filename[8192];
   const char *refname;
@@ -147,13 +146,8 @@ void *Distgrid(void *argument)
   operatorInputArg("nxblocks, [nyblocks]");
   if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
   if ( operatorArgc() > 2 ) cdoAbort("Too many arguments!");
-  nxblocks = (int)strtol(operatorArgv()[0], &rstr, 10);
-  if ( *rstr != 0 ) cdoAbort("Integer parameter string contains invalid characters: %s", operatorArgv()[0]);
-  if ( operatorArgc() == 2 )
-    {
-      nyblocks = (int)strtol(operatorArgv()[1], &rstr, 10);
-      if ( *rstr != 0 ) cdoAbort("Integer parameter string contains invalid characters: %s", operatorArgv()[1]);
-    }
+  nxblocks = parameter2int(operatorArgv()[0]);
+  if ( operatorArgc() == 2 ) nyblocks = parameter2int(operatorArgv()[1]);
 
   if ( nxblocks <= 0 ) cdoAbort("nxblocks has to be greater than 0!");
   if ( nyblocks <= 0 ) cdoAbort("nyblocks has to be greater than 0!");

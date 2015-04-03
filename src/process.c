@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,6 +28,9 @@
 
 #if defined(HAVE_GLOB_H)
 #include <glob.h>
+#endif
+#if defined(HAVE_WORDEXP_H)
+#include <wordexp.h>
 #endif
 
 #include "cdo.h"
@@ -151,9 +154,9 @@ int processSelf(void)
   if ( processID == NumProcess )
     {
       if ( NumProcess > 0 )
-	Error("Internal problem, process not found!");
+        Error("Internal problem, process not found!");
       else
-	processID = 0;
+        processID = 0;
     }
 
   pthread_mutex_unlock(&processMutex);  
@@ -306,7 +309,6 @@ const char *processInqOpername(void)
 void processDefPrompt(char *opername)
 {
   int processID = processSelf();
-  extern char *Progname;
 
   if ( processID == 0 )
     sprintf(Process[processID].prompt, "%s %s", Progname, opername);
@@ -337,34 +339,41 @@ int get_glob_flags(void)
 
   return (glob_flags);
 }
+#endif
 
-/* Convert a wildcard pattern into a list of blank-separated filenames which match the wildcard. */
+#if defined(HAVE_WORDEXP_H)
+/* Convert a shell pattern into a list of filenames. */
 static
-argument_t *glob_pattern(const char *restrict wildcard)
+argument_t *glob_pattern(const char *restrict string)
 {
   size_t cnt, length = 0;
-  int glob_flags = get_glob_flags();
-  glob_t glob_results;
+  int flags = WRDE_UNDEF;
   char **p;
+
+  wordexp_t glob_results;
   argument_t *argument = NULL;
 
-  glob(wildcard, glob_flags, 0, &glob_results);
+  // glob the input argument or do even more shell magic
+  wordexp(string, &glob_results, flags);
 
-  /* How much space do we need?  */
-  for ( p = glob_results.gl_pathv, cnt = glob_results.gl_pathc; cnt; p++, cnt-- )
-    length += strlen(*p) + 1;
-
-  /* Allocate the space and generate the list.  */
-  argument = argument_new(glob_results.gl_pathc, length);
-
-  for ( cnt = 0; cnt < glob_results.gl_pathc; cnt++ )
+  // How much space do we need?
+  for ( p = glob_results.we_wordv, cnt = glob_results.we_wordc; cnt; p++, cnt-- )
     {
-      argument->argv[cnt] = strdupx(glob_results.gl_pathv[cnt]);
-      strcat(argument->args, glob_results.gl_pathv[cnt]);
-      if ( cnt < glob_results.gl_pathc-1 ) strcat(argument->args, " ");
+      length += strlen(*p) + 1;
     }
 
-  globfree(&glob_results);
+  // Allocate the space and generate the list.
+  argument = argument_new(glob_results.we_wordc, length);
+
+  // put all generated filenames into the argument_t data structure
+  for ( cnt = 0; cnt < glob_results.we_wordc; cnt++ )
+    {
+      argument->argv[cnt] = strdupx(glob_results.we_wordv[cnt]);
+      strcat(argument->args, glob_results.we_wordv[cnt]);
+      if ( cnt < glob_results.we_wordc-1 ) strcat(argument->args, " ");
+    }
+
+  wordfree(&glob_results);
 
   return argument;
 }
@@ -411,14 +420,14 @@ char *getOperatorArg(const char *xoperator)
       commapos = strchr(xoperator, ',');
 
       if ( commapos )
-	{
-	  len = strlen(commapos+1);
-	  if ( len )
-	    {
-	      operatorArg = (char*) malloc(len+1);
-	      strcpy(operatorArg, commapos+1);
-	    }
-	}
+        {
+          len = strlen(commapos+1);
+          if ( len )
+            {
+              operatorArg = (char*) malloc(len+1);
+              strcpy(operatorArg, commapos+1);
+            }
+        }
     }
 
   return (operatorArg);
@@ -461,16 +470,16 @@ int skipInputStreams(int argc, char *argv[], int globArgc, int nstreams)
   while ( nstreams > 0 )
     {
       if ( globArgc >= argc )
-	{
-	  cdoAbort("Too few arguments. Check command line!");
-	  break;
-	}
+        {
+          cdoAbort("Too few arguments. Check command line!");
+          break;
+        }
       if ( argv[globArgc][0] == '-' )
-	{
-	  globArgc = getGlobArgc(argc, argv, globArgc);
-	}
+        {
+          globArgc = getGlobArgc(argc, argv, globArgc);
+        }
       else
-	globArgc++;
+        globArgc++;
 
       nstreams--;
     }
@@ -487,11 +496,11 @@ int getStreamCnt(int argc, char *argv[])
   while ( globArgc < argc )
     {
       if ( argv[globArgc][0] == '-' )
-	{
-	  globArgc = getGlobArgc(argc, argv, globArgc);
-	}
+        {
+          globArgc = getGlobArgc(argc, argv, globArgc);
+        }
       else
-	globArgc++;
+        globArgc++;
 
       streamCnt++;
     }
@@ -512,44 +521,44 @@ void setStreamNames(int argc, char *argv[])
   while ( globArgc < argc )
     {
       if ( argv[globArgc][0] == '-' )
-	{
-	  globArgcStart = globArgc;
+        {
+          globArgcStart = globArgc;
 
-	  globArgc = getGlobArgc(argc, argv, globArgc);
-	  len = 0;
-	  for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
-	  streamname = (char*) calloc(1, len);
-	  for ( i = globArgcStart; i < globArgc; i++ )
-	    {
-	      strcat(streamname, argv[i]);
-	      if ( i < globArgc-1 ) strcat(streamname, " ");
-	    }
-	  for ( i = 1; i < len-1; i++ ) if ( streamname[i] == '\0' ) streamname[i] = ' ';
-	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
-	  ac = globArgc - globArgcStart;
-	  //printf("setStreamNames:  ac %d  streamname1: %s\n", ac, streamname);
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
-	  for ( i = 0; i < ac; ++i )
-	    Process[processID].streamNames[Process[processID].streamCnt].argv[i] = argv[i+globArgcStart];
-	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
-	  Process[processID].streamCnt++;
-	  //printf("setStreamNames:  streamname1: %s\n", streamname);
-	}
+          globArgc = getGlobArgc(argc, argv, globArgc);
+          len = 0;
+          for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
+          streamname = (char*) calloc(1, len);
+          for ( i = globArgcStart; i < globArgc; i++ )
+            {
+              strcat(streamname, argv[i]);
+              if ( i < globArgc-1 ) strcat(streamname, " ");
+            }
+          for ( i = 1; i < len-1; i++ ) if ( streamname[i] == '\0' ) streamname[i] = ' ';
+          Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+          ac = globArgc - globArgcStart;
+          //printf("setStreamNames:  ac %d  streamname1: %s\n", ac, streamname);
+          Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+          for ( i = 0; i < ac; ++i )
+            Process[processID].streamNames[Process[processID].streamCnt].argv[i] = argv[i+globArgcStart];
+          Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
+          Process[processID].streamCnt++;
+          //printf("setStreamNames:  streamname1: %s\n", streamname);
+        }
       else
-	{
-	  len = strlen(argv[globArgc]) + 1;
-	  streamname = (char*) malloc(len);
-	  strcpy(streamname, argv[globArgc]);
-	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
-	  ac = 1;
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
-	  Process[processID].streamNames[Process[processID].streamCnt].argv[0] = argv[globArgc];
-	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
-	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
-	  Process[processID].streamCnt++;
-	  //printf("setStreamNames:  streamname2: %s\n", streamname);
-	  globArgc++;
-	}
+        {
+          len = strlen(argv[globArgc]) + 1;
+          streamname = (char*) malloc(len);
+          strcpy(streamname, argv[globArgc]);
+          Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+          ac = 1;
+          Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+          Process[processID].streamNames[Process[processID].streamCnt].argv[0] = argv[globArgc];
+          Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
+          Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
+          Process[processID].streamCnt++;
+          //printf("setStreamNames:  streamname2: %s\n", streamname);
+          globArgc++;
+        }
     }
 }
 
@@ -563,14 +572,14 @@ int find_wildcard(const char *string, size_t len)
       if ( string[0] == '~' ) status = 1;
 
       if ( status == 0 )
-	{
-	  for ( size_t i = 0; i < len; ++i )
-	    if ( string[i] == '?' || string[i] == '*' || string[i] == '[' )
-	      {
-		status = 1;
-		break;
-	      }
-	}
+        {
+          for ( size_t i = 0; i < len; ++i )
+            if ( string[i] == '?' || string[i] == '*' || string[i] == '[' )
+              {
+                status = 1;
+                break;
+              }
+        }
     }
 
   return status;
@@ -603,49 +612,45 @@ int expand_wildcards(int processID, int streamCnt)
 {
   const char *streamname0 = Process[processID].streamNames[0].args;
 
-  if ( find_wildcard(streamname0, strlen(streamname0)) )
+  if ( streamname0[0] == '-' ) return 1;
+
+#if defined(HAVE_WORDEXP_H)
+  argument_t *glob_arg = glob_pattern(streamname0);
+
+  // skip if the input argument starts with an operator (starts with -)
+  // otherwise adapt streams if there are several files (>1)
+  // in case of one filename skip, no adaption needed
+  if ( glob_arg->argc > 1 && glob_arg->argv[0][0] != '-' )
     {
-#if defined(HAVE_GLOB_H)
-      argument_t *glob_arg = glob_pattern(streamname0);
+      int i;
+      streamCnt = streamCnt - 1 + glob_arg->argc;
 
-      if ( strcmp(streamname0, glob_arg->args) != 0 )
-	{
-	  int i;
-	  streamCnt = streamCnt - 1 + glob_arg->argc;
+      free(Process[processID].streamNames[0].argv);
+      free(Process[processID].streamNames[0].args);
 
-	  free(Process[processID].streamNames[0].argv);
-	  free(Process[processID].streamNames[0].args);
+      Process[processID].streamNames = (argument_t*) realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
+          
+      // move output streams to the end
+      for ( i = 1; i < Process[processID].streamCnt; ++i )
+        Process[processID].streamNames[i+glob_arg->argc-1] = Process[processID].streamNames[i];
 
-	  Process[processID].streamNames = (argument_t*) realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
-	      
-	  // move output streams to the end
-	  for ( i = 1; i < Process[processID].streamCnt; ++i )
-	    Process[processID].streamNames[i+glob_arg->argc-1] = Process[processID].streamNames[i];
-
-	  for ( i = 0; i < glob_arg->argc; ++i )
-	    {
-	      // printf("add %d %s\n", i, glob_arg->argv[i]);
-	      Process[processID].streamNames[i].argv    = (char **) malloc(sizeof(char *));
-	      Process[processID].streamNames[i].argc    = 1;
-	      Process[processID].streamNames[i].argv[0] = strdupx(glob_arg->argv[i]);
-	      Process[processID].streamNames[i].args    = strdupx(glob_arg->argv[i]);
-	    }
-	  
-	  Process[processID].streamCnt = streamCnt;
-	  /*
-	  for ( i = 0; i < Process[processID].streamCnt; ++i )
-	    printf("expand_wildcards: ostream %d <%s>\n", i+1, Process[processID].streamNames[i].args);
-	  */
-	}
-
-      free(glob_arg);
-#else
-      cdoAbort("Wildcards support not compiled in!");
-#endif
+      for ( i = 0; i < glob_arg->argc; ++i )
+        {
+          Process[processID].streamNames[i].argv    = (char **) malloc(sizeof(char *));
+          Process[processID].streamNames[i].argc    = 1;
+          Process[processID].streamNames[i].argv[0] = strdupx(glob_arg->argv[i]);
+          Process[processID].streamNames[i].args    = strdupx(glob_arg->argv[i]);
+        }
+      
+      Process[processID].streamCnt = streamCnt;
     }
+
+  free(glob_arg);
+#endif
 
   return 1;
 }
+
 
 static
 int checkStreamCnt(void)
@@ -691,27 +696,26 @@ int checkStreamCnt(void)
 
   if ( Process[processID].streamCnt > streamCnt )
     cdoAbort("Too many streams!"
-	     " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
+             " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
   if ( Process[processID].streamCnt < streamCnt )
     cdoAbort("Too few streams specified!"
-	     " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
-
+             " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
   for ( i = streamInCnt; i < streamCnt; i++ )
     {
       if ( Process[processID].streamNames[i].args[0] == '-' )
-	{
-	  cdoAbort("Output file name %s must not begin with \"-\"!\n",
-		   Process[processID].streamNames[i].args);
-	}
+        {
+          cdoAbort("Output file name %s must not begin with \"-\"!\n",
+                   Process[processID].streamNames[i].args);
+        }
       else if ( !obase )
-	{
-	  for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
-	    if ( strcmp(Process[processID].streamNames[i].args, Process[processID].streamNames[j].args) == 0 )
-	      cdoAbort("Output file name %s is equal to input file name"
-		       " on position %d!\n", Process[processID].streamNames[i].args, j+1);
-	}
+        {
+          for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
+            if ( strcmp(Process[processID].streamNames[i].args, Process[processID].streamNames[j].args) == 0 )
+              cdoAbort("Output file name %s is equal to input file name"
+                       " on position %d!\n", Process[processID].streamNames[i].args, j+1);
+        }
     }
 
   if ( streamInCnt == 1 && streamInCnt0 == -1 )
@@ -779,16 +783,16 @@ void processDefArgument(void *vargument)
 
       commapos = operatorArg;
       while ( (commapos = strchr(commapos, ',')) != NULL )
-	{
-	  *commapos++ = '\0';
-	  if ( strlen(commapos) )
-	    {
-	      if ( oargc >= MAX_OARGC )
-		cdoAbort("Too many parameter (limit=%d)!", MAX_OARGC);
+        {
+          *commapos++ = '\0';
+          if ( strlen(commapos) )
+            {
+              if ( oargc >= MAX_OARGC )
+                cdoAbort("Too many parameter (limit=%d)!", MAX_OARGC);
 
-	      oargv[oargc++] = commapos;
-	    }
-	}
+              oargv[oargc++] = commapos;
+            }
+        }
       Process[processID].oargc = oargc;
     }
 
@@ -899,48 +903,48 @@ void operatorInputArg(const char *enter)
       int lreadline = 1;
 
       if ( enter )
-	{
-	  set_text_color(stderr, BRIGHT, MAGENTA);
-	  fprintf(stderr, "%-16s : ", processInqPrompt());
-	  reset_text_color(stderr);
-	  // set_text_color(stderr, BLINK, BLACK);
-	  fprintf(stderr, "Enter %s > ", enter);
-	  // reset_text_color(stderr);
-	}
+        {
+          set_text_color(stderr, BRIGHT, MAGENTA);
+          fprintf(stderr, "%-16s : ", processInqPrompt());
+          reset_text_color(stderr);
+          // set_text_color(stderr, BLINK, BLACK);
+          fprintf(stderr, "Enter %s > ", enter);
+          // reset_text_color(stderr);
+        }
 
       while ( lreadline )
-	{
-	  readline(stdin, pline, 1024);
+        {
+          readline(stdin, pline, 1024);
 
-	  lreadline = 0;
-	  while ( 1 )
-	    {
-	      pos = 0;
-	      while ( pline[pos] == ' ' || pline[pos] == ',' ) pos++;
-	      pline += pos;
-	      linelen = strlen(pline);
-	      if ( linelen > 0 )
-		{
-		  if ( pline[0] == '\\' )
-		    {
-		      lreadline = 1;
-		      break;
-		    }
-		  len = 0;
-		  while ( pline[len] != ' '  && pline[len] != ',' &&
-			  pline[len] != '\\' && len < linelen ) len++;
+          lreadline = 0;
+          while ( 1 )
+            {
+              pos = 0;
+              while ( pline[pos] == ' ' || pline[pos] == ',' ) pos++;
+              pline += pos;
+              linelen = strlen(pline);
+              if ( linelen > 0 )
+                {
+                  if ( pline[0] == '\\' )
+                    {
+                      lreadline = 1;
+                      break;
+                    }
+                  len = 0;
+                  while ( pline[len] != ' '  && pline[len] != ',' &&
+                          pline[len] != '\\' && len < linelen ) len++;
 
-		  Process[processID].oargv[oargc] = (char*) malloc(len+1);
-		  memcpy(Process[processID].oargv[oargc], pline, len);
-		  Process[processID].oargv[oargc][len] = '\0';
-		  oargc++;
+                  Process[processID].oargv[oargc] = (char*) malloc(len+1);
+                  memcpy(Process[processID].oargv[oargc], pline, len);
+                  Process[processID].oargv[oargc][len] = '\0';
+                  oargc++;
 
-		  pline += len;
-		}
-	      else
-		break;
-	    }
-	}
+                  pline += len;
+                }
+              else
+                break;
+            }
+        }
 
       Process[processID].oargc = oargc;
     }
@@ -978,11 +982,11 @@ int cdoOperatorID(void)
   if ( Process[processID].noper > 0 )
     {
       for ( operID = 0; operID < Process[processID].noper; operID++ )
-	if ( Process[processID].oper[operID].name )
-	  if ( strcmp(Process[processID].operatorName, Process[processID].oper[operID].name) == 0 ) break;
+        if ( Process[processID].oper[operID].name )
+          if ( strcmp(Process[processID].operatorName, Process[processID].oper[operID].name) == 0 ) break;
 
       if ( operID == Process[processID].noper )
-	cdoAbort("Operator not callable by this name!");
+        cdoAbort("Operator not callable by this name!");
     }
   else
     {

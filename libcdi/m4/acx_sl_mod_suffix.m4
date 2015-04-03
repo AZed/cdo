@@ -61,12 +61,11 @@ AC_DEFUN([ACX_SL_FC_MOD_SUFFIX],
    AC_ARG_VAR([FCMODEXT], [file extension of compiled Fortran module files])
    ac_fc_mod_uppercase=no
    AC_LANG_PUSH([Fortran])
-   AC_COMPILE_IFELSE([
-      module conftest
-       implicit none
-       integer :: i
-      end module conftest
-     ])
+   AC_COMPILE_IFELSE(
+[      module conftest
+      implicit none
+      integer :: i
+      end module conftest])
    while :; do
      acx_fc_mod_name=
    m4_foreach([acx_fc_mod_name],dnl

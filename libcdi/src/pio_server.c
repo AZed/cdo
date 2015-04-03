@@ -76,7 +76,7 @@ void serverWinCleanup ()
 static size_t
 collDefBufferSizes()
 {
-  int nstreams, * streamIndexList, streamNo, vlistID, nvars, varID, iorank;
+  int *streamIndexList, vlistID, nvars, varID, iorank;
   int modelID;
   size_t sumGetBufferSizes = 0;
   int rankGlob = commInqRankGlob ();
@@ -85,10 +85,10 @@ collDefBufferSizes()
 
   xassert(rxWin != NULL);
 
-  nstreams = reshCountType ( &streamOps );
+  unsigned nstreams = reshCountType ( &streamOps );
   streamIndexList = xmalloc((size_t)nstreams * sizeof (streamIndexList[0]));
   reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
-  for ( streamNo = 0; streamNo < nstreams; streamNo++ )
+  for (unsigned streamNo = 0; streamNo < nstreams; streamNo++)
     {
       // space required for data
       vlistID = streamInqVlist ( streamIndexList[streamNo] );
@@ -575,18 +575,18 @@ buildStreamMap(struct winHeaderEntry *winDict)
   /* join with list of streams written to in total */
   {
     int *streamIDs, *streamIsWritten;
-    int numTotalStreamIDs = streamSize();
-    streamIDs = (int*) xmalloc(2 * sizeof (streamIDs[0]) * (size_t)numTotalStreamIDs);
-    streamGetIndexList(numTotalStreamIDs, streamIDs);
+    unsigned numTotalStreamIDs = reshCountType(&streamOps);
+    streamIDs = xmalloc(2 * sizeof (streamIDs[0]) * (size_t)numTotalStreamIDs);
+    cdiStreamGetIndexList(numTotalStreamIDs, streamIDs);
     streamIsWritten = streamIDs + numTotalStreamIDs;
-    for (int i = 0; i < numTotalStreamIDs; ++i)
+    for (unsigned i = 0; i < numTotalStreamIDs; ++i)
       streamIsWritten[i] = streamIsInList(streamMap, numStreamIDs,
                                           streamIDs[i]);
     /* Find what streams are written to at all on any process */
-    xmpi(MPI_Allreduce(MPI_IN_PLACE, streamIsWritten, numTotalStreamIDs,
+    xmpi(MPI_Allreduce(MPI_IN_PLACE, streamIsWritten, (int)numTotalStreamIDs,
                        MPI_INT, MPI_BOR, commInqCommColl()));
     /* append streams written to on other tasks to mapping */
-    for (int i = 0; i < numTotalStreamIDs; ++i)
+    for (unsigned i = 0; i < numTotalStreamIDs; ++i)
       if (streamIsWritten[i] && !streamIsInList(streamMap, numStreamIDs,
                                                 streamIDs[i]))
         numStreamIDs = inventorizeStream(streamMap, numStreamIDs,
@@ -1096,13 +1096,13 @@ void cdiPioServer(void (*postCommSetupActions)(void))
           if ( nfinished == nProcsModel )
             {
               {
-                int nStreams = streamSize ();
+                unsigned nStreams = reshCountType(&streamOps);
 
                 if ( nStreams > 0 )
                   {
-                    int * resHs = xmalloc((size_t)nStreams * sizeof (resHs[0]));
-                    streamGetIndexList ( nStreams, resHs );
-                    for (int streamNo = 0; streamNo < nStreams; ++streamNo)
+                    int *resHs = xmalloc(nStreams * sizeof (resHs[0]));
+                    cdiStreamGetIndexList(nStreams, resHs);
+                    for (unsigned streamNo = 0; streamNo < nStreams; ++streamNo)
                       streamClose(resHs[streamNo]);
                     free(resHs);
                   }

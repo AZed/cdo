@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,63 +31,57 @@
 
 void *Yearmonstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
+  int timestat_date = TIMESTAT_MEAN;
   int gridsize;
   int vdate = 0, vtime = 0;
   int vdate0 = 0, vtime0 = 0;
-  int nrecs, nrecords;
+  int nrecs;
   int varID, levelID, recID;
   int tsID;
   int otsID;
-  long nsets;
-  double dsets;
   int i;
   int dpm;
   int year0 = 0, month0 = 0;
   int year, month, day;
-  int calendar;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
-  int nvars, nlevel;
-  int *recVarID, *recLevelID;
+  int nlevel;
+  long nsets;
+  double dsets;
   char vdatestr[32], vtimestr[32];
   field_t **vars1 = NULL, **samp1 = NULL;
   field_t field;
-  int timestat_date = DATE_MIDDLE;
-  dtinfo_t dtinfo[13];
 
   cdoInitialize(argument);
-
-  get_timestat_date(&timestat_date);
 
   cdoOperatorAdd("yearmonmean",  func_mean, 0, NULL);
   cdoOperatorAdd("yearmonavg",   func_avg,  0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  calendar = taxisInqCalendar(taxisID1);
-
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
+
+  int calendar = taxisInqCalendar(taxisID1);
+  dtlist_type *dtlist = dtlist_new();
+  dtlist_set_stat(dtlist, timestat_date);
+  dtlist_set_calendar(dtlist, calendar);
 
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -105,9 +99,9 @@ void *Yearmonstat(void *argument)
       dsets = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
 	{
-	  taxisInqDTinfo(taxisID1, &dtinfo[nsets]);
-	  vdate = dtinfo[nsets].v.date;
-	  vtime = dtinfo[nsets].v.time;
+	  dtlist_taxisInqTimestep(dtlist, taxisID1, nsets);
+	  vdate = dtlist_get_vdate(dtlist, nsets);
+	  vtime = dtlist_get_vtime(dtlist, nsets);
 	  cdiDecodeDate(vdate, &year, &month, &day);
 
 	  if ( nsets == 0 ) year0 = year;
@@ -214,17 +208,7 @@ void *Yearmonstat(void *argument)
 	  cdoPrint("%s %s  nsets = %d", vdatestr, vtimestr, nsets);
 	}
 
-      if      ( timestat_date == DATE_MIDDLE ) datetime_avg_dtinfo(calendar, nsets, dtinfo);
-      else if ( timestat_date == DATE_FIRST  ) dtinfo[nsets].v = dtinfo[0].v;
-      else if ( timestat_date == DATE_LAST   ) dtinfo[nsets].v = dtinfo[nsets-1].v;
-
-      if ( taxisHasBounds(taxisID2) )
-	{
-	  dtinfo[nsets].b[0] = dtinfo[0].b[0];
-	  dtinfo[nsets].b[1] = dtinfo[nsets-1].b[1];
-	}
-
-      taxisDefDTinfo(taxisID2, dtinfo[nsets]);
+      dtlist_stat_taxisDefTimestep(dtlist, taxisID2, nsets);
       streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
@@ -246,13 +230,15 @@ void *Yearmonstat(void *argument)
   field_free(vars1, vlistID1);
   field_free(samp1, vlistID1);
 
-  streamClose(streamID2);
-  streamClose(streamID1);
-
   if ( field.ptr ) free(field.ptr);
 
   if ( recVarID   ) free(recVarID);
   if ( recLevelID ) free(recLevelID);
+
+  dtlist_delete(dtlist);
+
+  streamClose(streamID2);
+  streamClose(streamID1);
 
   cdoFinish();
 

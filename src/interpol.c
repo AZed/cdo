@@ -632,8 +632,8 @@ void intconarr2(double missval, int lon_is_circular,
 	  if ( weight[k] > 0 )
 	    {
 	      if ( cdoVerbose )
-		printf("tgt_grid_add %ld, src_grid_add %ld,  weight[n] %g, tgt_area  %g\n", i, index1,  weight[k], tgt_area);
-	      //printf("tgt_grid_add %ld, n %ld, src_grid_add %ld,  weight[n] %g, tgt_area  %g\n", i, k, index1,  weight[k], tgt_area);
+		printf("tgt_cell_add %ld, src_cell_add %ld,  weight[n] %g, tgt_area  %g\n", i, index1,  weight[k], tgt_area);
+	      //printf("tgt_cell_add %ld, n %ld, src_cell_add %ld,  weight[n] %g, tgt_area  %g\n", i, k, index1,  weight[k], tgt_area);
 	      field[i] += fieldm[index1] * weight[k];
 	    }
 	  /*

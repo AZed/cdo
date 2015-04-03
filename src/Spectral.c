@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -188,7 +188,7 @@ void *Spectral(void *argument)
       if ( gridID1 != -1 )
 	{
 	  if ( !isdigit(operatorArgv()[0][0]) ) cdoAbort("parameter truncation must comprise only digits [0-9]!");
-	  int ntr = atoi(operatorArgv()[0]);
+	  int ntr = parameter2int(operatorArgv()[0]);
 	  int nsp = (ntr+1)*(ntr+2);
 	  gridIDsp = gridCreate(GRID_SPECTRAL, nsp);
 	  gridDefTrunc(gridIDsp, ntr);

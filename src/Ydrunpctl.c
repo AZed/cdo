@@ -37,27 +37,21 @@ void *Ydrunpctl(void *argument)
   int varID;
   int recID;
   int gridID;
-  int nrecs, nrecords;
+  int nrecs;
   int levelID;
   int tsID;
   int otsID;
-  int inp, its, ndates = 0;
-  int streamID1, streamID2, streamID3, streamID4;
-  int vlistID1, vlistID2, vlistID3, vlistID4;
+  int inp, its;
   int nmiss;
-  int nvars, nlevels;
-  int *recVarID, *recLevelID;
+  int nlevels;
   field_t ***vars1 = NULL, **vars2[NDAY];
   datetime_t *datetime;
-  int taxisID1, taxisID2, taxisID3, taxisID4;
-  int calendar, dpy;
   int vdate, vtime;
   int vdates1[NDAY], vtimes1[NDAY];
   int vdates2[NDAY], vtimes2[NDAY];
   int nsets[NDAY];
   int year, month, day, dayoy;
   field_t field;
-  double pn;
   HISTOGRAM_SET *hsets[NDAY];
     
   cdoInitialize(argument);
@@ -65,8 +59,8 @@ void *Ydrunpctl(void *argument)
 
   operatorInputArg("percentile number, number of timesteps");
   operatorCheckArgc(2);
-  pn     = atof(operatorArgv()[0]);
-  ndates = atoi(operatorArgv()[1]);
+  double pn  = parameter2double(operatorArgv()[0]);
+  int ndates = parameter2int(operatorArgv()[1]);
 
   if ( !(pn > 0 && pn < 100) )
     cdoAbort("Illegal argument: percentile number %g is not in the range 0..100!", pn);
@@ -78,39 +72,39 @@ void *Ydrunpctl(void *argument)
       nsets[dayoy] = 0;
     }
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
-  streamID2 = streamOpenRead(cdoStreamName(1));
-  streamID3 = streamOpenRead(cdoStreamName(2));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID2 = streamOpenRead(cdoStreamName(1));
+  int streamID3 = streamOpenRead(cdoStreamName(2));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = streamInqVlist(streamID2);
-  vlistID3 = streamInqVlist(streamID3);
-  vlistID4 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = streamInqVlist(streamID2);
+  int vlistID3 = streamInqVlist(streamID3);
+  int vlistID4 = vlistDuplicate(vlistID1);
 
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
   vlistCompare(vlistID1, vlistID3, CMP_ALL);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = vlistInqTaxis(vlistID2);
-  taxisID3 = vlistInqTaxis(vlistID3);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = vlistInqTaxis(vlistID2);
+  int taxisID3 = vlistInqTaxis(vlistID3);
   /* TODO - check that time axes 2 and 3 are equal */
 
-  taxisID4 = taxisDuplicate(taxisID1);
+  int taxisID4 = taxisDuplicate(taxisID1);
   if ( taxisHasBounds(taxisID4) ) taxisDeleteBounds(taxisID4);
   vlistDefTaxis(vlistID4, taxisID4);
 
-  calendar = taxisInqCalendar(taxisID1);
-  dpy      = calendar_dpy(calendar);
+  int calendar = taxisInqCalendar(taxisID1);
+  int dpy      = calendar_dpy(calendar);
 
-  streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
+  int streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
 
   streamDefVlist(streamID4, vlistID4);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
   field_init(&field);

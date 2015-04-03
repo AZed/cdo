@@ -30,7 +30,7 @@ for SELECT in $SELARGS; do
   CDOCOMMAND="$CDO ${OPERATOR},${SELECT} $IFILE $OFILE"
 
   echo "Running test: $NTEST"
-  #echo "$CDOCOMMAND"
+  echo "$CDOCOMMAND"
 
   $CDOCOMMAND
   test $? -eq 0 || let RSTAT+=1

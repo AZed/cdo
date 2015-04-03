@@ -94,7 +94,7 @@ static int    zaxisGetPackSize ( void * zaxisptr, void *context);
 static void   zaxisPack        ( void * zaxisptr, void * buffer, int size, int *pos, void *context);
 static int    zaxisTxCode      ( void );
 
-static const resOps zaxisOps = {
+const resOps zaxisOps = {
   (int (*)(void *, void *))zaxisCompareP,
   zaxisDestroyP,
   zaxisPrintP,
@@ -172,9 +172,9 @@ void zaxis_copy(zaxis_t *zaxisptr2, zaxis_t *zaxisptr1)
   zaxisptr2->self = zaxisID2;
 }
 
-int zaxisSize(void)
+unsigned cdiZaxisCount(void)
 {
-  return reshCountType ( &zaxisOps );
+  return reshCountType(&zaxisOps);
 }
 
 static int
@@ -1136,25 +1136,23 @@ int zaxisDuplicate(int zaxisID)
 }
 
 
-void zaxisPrintKernel ( zaxis_t * zaxisptr, FILE * fp )
+void zaxisPrintKernel ( zaxis_t * zaxisptr, int index, FILE * fp )
 {
-  int zaxisID;
-  int type;
   unsigned char uuid[CDI_UUID_SIZE];
-  int nlevels, levelID;
-  int nbyte0, nbyte;
+  int levelID;
+  int nbyte;
   double level;
 
   xassert ( zaxisptr );
 
-  zaxisID = zaxisptr->self;
+  int zaxisID = zaxisptr->self;
 
-  type    = zaxisptr->type;
-  nlevels = zaxisptr->size;
+  int type    = zaxisptr->type;
+  int nlevels = zaxisptr->size;
 
-  nbyte0 = 0;
+  int nbyte0 = 0;
   fprintf(fp, "#\n");
-  fprintf(fp, "# zaxisID %d\n", zaxisID);
+  fprintf(fp, "# zaxisID %d\n", index);
   fprintf(fp, "#\n");
   fprintf(fp, "zaxistype = %s\n", zaxisNamePtr(type));
   fprintf(fp, "size      = %d\n", nlevels);
@@ -1249,11 +1247,11 @@ void zaxisPrintKernel ( zaxis_t * zaxisptr, FILE * fp )
 }
 
 
-void zaxisPrint ( int zaxisID )
+void zaxisPrint ( int zaxisID, int index )
 {
   zaxis_t *zaxisptr = reshGetVal(zaxisID, &zaxisOps);
 
-  zaxisPrintKernel ( zaxisptr, stdout );
+  zaxisPrintKernel ( zaxisptr, index, stdout );
 }
 
 
@@ -1264,7 +1262,7 @@ void zaxisPrintP ( void * voidptr, FILE * fp )
 
   xassert ( zaxisptr );
 
-  zaxisPrintKernel(zaxisptr, fp);
+  zaxisPrintKernel(zaxisptr, zaxisptr->self, fp);
 }
 
 
@@ -1638,9 +1636,9 @@ zaxisPack(void * voidP, void * packBuffer, int packBufferSize,
 }
 
 
-void zaxisGetIndexList ( int nzaxis, int * zaxisResHs )
+void cdiZaxisGetIndexList(unsigned nzaxis, int zaxisResHs[nzaxis])
 {
-  reshGetResHListOfType ( nzaxis, zaxisResHs, &zaxisOps );
+  reshGetResHListOfType(nzaxis, zaxisResHs, &zaxisOps);
 }
 
 #undef ZAXIS_STR_SERIALIZE

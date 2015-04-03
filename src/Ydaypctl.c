@@ -60,7 +60,7 @@ void *Ydaypctl(void *argument)
   cdoOperatorAdd("ydaypctl", func_pctl, 0, NULL);
 
   operatorInputArg("percentile number");
-  pn = atof(operatorArgv()[0]);
+  pn = parameter2double(operatorArgv()[0]);
       
   if ( !(pn > 0 && pn < 100) )
     cdoAbort("Illegal argument: percentile number %g is not in the range 0..100!", pn);

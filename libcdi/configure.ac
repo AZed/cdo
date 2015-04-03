@@ -4,13 +4,15 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdi], [1.6.7], [https://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.8], [http://mpimet.mpg.de/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
+dnl forbid acx macro names from remaining unexpanded
+m4_pattern_forbid([^ACX_])
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
@@ -27,6 +29,7 @@ LT_INIT([pic-only])
 AC_CHECK_TOOL([CC],[gcc],[:])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
+AC_C_RESTRICT
 AC_PROG_FC
 AS_IF([test -n "$FC" && test "X$FC" != "Xno"],
   [AC_FC_SRCEXT([f90])
@@ -128,7 +131,23 @@ ACX_OPTIONS
 AM_CONDITIONAL([ENABLE_NETCDF],[test x$ENABLE_NETCDF = xyes])
 #  ----------------------------------------------------------------------
 # Compile with MPI support
-AC_ARG_ENABLE(mpi,AS_HELP_STRING([--enable-mpi],[Compile with MPI compiler [default=no]]),enable_mpi=yes,enable_mpi=no)
+AC_ARG_ENABLE([mpi],
+  AS_HELP_STRING([--enable-mpi],
+    [Compile with MPI compiler @<:@default=no@:>@]),
+    [enable_mpi=yes
+     ACX_C_PACKAGE([MPI],[mpi.h],,,
+       [AC_MSG_FAILURE([Required header mpi.h not found or not compilable.])
+        enable_MPI=no],[MPI_Waitall],[mpi mpich],,,
+       [AC_MSG_FAILURE([Cannot link C MPI programs.])
+        enable_MPI=no])
+     AS_IF([test -n "$FC" && test "X$FC" != "Xno"],
+       [ACX_FORTRAN_PACKAGE([MPI], [mpif.h],,,
+          [AC_MSG_FAILURE([Required include mpif.h not found or not compilable.])
+           enable_MPI=no],[mpi_waitall],
+          [mpi mpi_f90 mpi_f77 mpich],[[-lmpi_f77 -lmpi],[-lmpi]],,
+          [AC_MSG_FAILURE([Cannot link Fortran MPI programs.])
+           enable_MPI=no],[])])],
+    [enable_mpi=no])
 AS_IF([test x"${enable_mpi}" = x"yes"],
       [USE_MPI=yes])
 HAVE_PARALLEL_NC4=0
@@ -217,6 +236,7 @@ AC_SUBST([HAVE_PARALLEL_NC4])
 AM_CONDITIONAL([USE_MPI],[test x"$USE_MPI" = xyes])
 AM_CONDITIONAL([USE_PPM_CORE],[test $enable_ppm = yes])
 AC_SUBST([USE_MPI])
+AC_SUBST([ENABLE_MPI],[`test x"$enable_mpi" = xyes && echo true || echo false`])
 #  ----------------------------------------------------------------------
 #  Create the Fortran Interface via iso_c_binding module (Fortran 2003 Standard)
 AC_ARG_ENABLE([iso-c-interface],
@@ -306,40 +326,20 @@ AM_CONDITIONAL([USE_FC],[test -n "$FC" && test "X$FC" != "Xno" && test x$acx_cv_
 dnl
 AC_SUBST([CPPFLAGS])dnl
 dnl
-AC_ARG_VAR([BUILD_CFLAGS],
-  [append to CFLAGS during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([CFLAGS="$CFLAGS${BUILD_CFLAGS+ $BUILD_CFLAGS}"])dnl
-AM_SUBST_NOTMAKE([BUILD_CFLAGS])dnl
-AC_ARG_VAR([BUILD_FCFLAGS],
-  [append to FCFLAGS during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([FCFLAGS="$FCFLAGS${BUILD_FCFLAGS+ $BUILD_FCFLAGS}"])dnl
-AM_SUBST_NOTMAKE([BUILD_FCFLAGS])dnl
-AC_ARG_VAR([BUILD_LDFLAGS],
-  [append to LDFLAGS during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([LDFLAGS="$LDFLAGS${BUILD_LDFLAGS+ $BUILD_LDFLAGS}"])dnl
-AM_SUBST_NOTMAKE([BUILD_LDFLAGS])dnl
-AC_ARG_VAR([BUILD_LIBS],
-  [append to LIBS during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([LIBS="$LIBS${BUILD_LIBS+ $BUILD_LIBS}"])dnl
-AM_SUBST_NOTMAKE([BUILD_LIBS])dnl
-AC_ARG_VAR([BUILD_CC],
-  [replace CC with expansion of $BUILD_CC during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([CC="${BUILD_CC-$CC}"])dnl
-AM_SUBST_NOTMAKE([BUILD_CC])dnl
-AC_ARG_VAR([BUILD_CXX],
-  [replace CXX with expansion of $BUILD_CXX during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([CXX="${BUILD_CXX-$CXX}"])dnl
-AM_SUBST_NOTMAKE([BUILD_CXX])dnl
-AC_ARG_VAR([BUILD_FC],
-  [replace FC with expansion of $BUILD_FC during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([FC="${BUILD_FC-$FC}"])dnl
-AM_SUBST_NOTMAKE([BUILD_FC])dnl
-AC_ARG_VAR([BUILD_F77],
-  [replace F77 with expansion of $BUILD_F77 during build but not in configure phase])dnl
-AC_CONFIG_COMMANDS_PRE([F77="${BUILD_F77-$F77}"])dnl
-AM_SUBST_NOTMAKE([BUILD_F77])dnl
+m4_foreach([build_flag_var],[[BUILD_CFLAGS],[BUILD_FCFLAGS],[BUILD_LDFLAGS],[BUILD_LIBS],[BUILD_MPI_C_LIB],[BUILD_MPI_FC_LIB],[BUILD_C_INCLUDE],[BUILD_FC_INCLUDE]],
+  [AC_ARG_VAR(build_flag_var,
+     [append to ]m4_bpatsubst(build_flag_var, [BUILD_], [])[ during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE(m4_bpatsubst(build_flag_var, [BUILD_], [])[="$]m4_bpatsubst(build_flag_var, [BUILD_], [])[$]{build_flag_var+ $build_flag_var[}"])dnl
+AM_SUBST_NOTMAKE(build_flag_var)])dnl
 
-
+m4_foreach([build_tool_var],[[BUILD_CC],[BUILD_CXX],[BUILD_FC],[BUILD_F77]],
+  [AC_ARG_VAR(build_tool_var,
+     [replace ]m4_bpatsubst(build_tool_var, [BUILD_], [])[ with expansion of $]build_tool_var[ during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE(m4_bpatsubst(build_tool_var, [BUILD_], [])[="$]{build_tool_var-$[]m4_bpatsubst(build_tool_var, [BUILD_], [])}["])dnl
+AM_SUBST_NOTMAKE(build_tool_var)])dnl
+dnl
+dnl
+dnl
 # Checks for compiler
 COMPILER="$CC $CFLAGS"
 AC_DEFINE_UNQUOTED(COMPILER, ["$COMPILER"], [Compiler])

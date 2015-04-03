@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -46,12 +46,7 @@
 
 void *Selvar(void *argument)
 {
-  int SELPARAM, SELCODE, SELNAME, SELLEVEL, SELLEVIDX, SELGRID, SELZAXIS, SELLTYPE; 
-  int SELTABNUM, DELPARAM, DELCODE, DELNAME, SELSTDNAME;
-  int operatorID;
-  int streamID1, streamID2;
-  int tsID, nrecs;
-  int nvars, nlevs;
+  int nlevs;
   int code, tabnum, param, gridID, zaxisID, levID;
   int grididx, zaxisidx;
   double level;
@@ -66,44 +61,40 @@ void *Selvar(void *argument)
   char gridname[CDI_MAX_NAME];
   char zaxisname[CDI_MAX_NAME];
   char **argnames = NULL;
-  int vlistID1 = -1, vlistID2 = -1;
   int isel;
   int i;
-  int npar;
-  int intlist, byname;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
   double *array = NULL;
-  int taxisID1, taxisID2;
   int ltype;
   LIST *ilist = listNew(INT_LIST);
   LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
 
-  SELPARAM     = cdoOperatorAdd("selparam",     0, 0, "parameters");
-  SELCODE      = cdoOperatorAdd("selcode",      0, 0, "code numbers");
-  SELNAME      = cdoOperatorAdd("selname",      0, 0, "variable names");
-  SELSTDNAME   = cdoOperatorAdd("selstdname",   0, 0, "standard names");
-  SELLEVEL     = cdoOperatorAdd("sellevel",     0, 0, "levels");
-  SELLEVIDX    = cdoOperatorAdd("sellevidx",    0, 0, "index of levels");
-  SELGRID      = cdoOperatorAdd("selgrid",      0, 0, "list of grid names or numbers");
-  SELZAXIS     = cdoOperatorAdd("selzaxis",     0, 0, "list of zaxis names or numbers");
-  SELTABNUM    = cdoOperatorAdd("seltabnum",    0, 0, "table numbers");
-  DELPARAM     = cdoOperatorAdd("delparam",     0, 0, "parameter");
-  DELCODE      = cdoOperatorAdd("delcode",      0, 0, "code numbers");
-  DELNAME      = cdoOperatorAdd("delname",      0, 0, "variable names");
-  SELLTYPE     = cdoOperatorAdd("selltype",     0, 0, "GRIB level types"); 
+  int SELPARAM     = cdoOperatorAdd("selparam",     0, 0, "parameters");
+  int SELCODE      = cdoOperatorAdd("selcode",      0, 0, "code numbers");
+  int SELNAME      = cdoOperatorAdd("selname",      0, 0, "variable names");
+  int SELSTDNAME   = cdoOperatorAdd("selstdname",   0, 0, "standard names");
+  int SELLEVEL     = cdoOperatorAdd("sellevel",     0, 0, "levels");
+  int SELLEVIDX    = cdoOperatorAdd("sellevidx",    0, 0, "index of levels");
+  int SELGRID      = cdoOperatorAdd("selgrid",      0, 0, "list of grid names or numbers");
+  int SELZAXIS     = cdoOperatorAdd("selzaxis",     0, 0, "list of zaxis names or numbers");
+  int SELTABNUM    = cdoOperatorAdd("seltabnum",    0, 0, "table numbers");
+  int DELPARAM     = cdoOperatorAdd("delparam",     0, 0, "parameter");
+  int DELCODE      = cdoOperatorAdd("delcode",      0, 0, "code numbers");
+  int DELNAME      = cdoOperatorAdd("delname",      0, 0, "variable names");
+  int SELLTYPE     = cdoOperatorAdd("selltype",     0, 0, "GRIB level types"); 
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
   operatorInputArg(cdoOperatorEnter(operatorID));
 
-  intlist = FALSE;
-  byname  = TRUE;
+  int intlist = FALSE;
+  int byname  = TRUE;
 
   if ( operatorID == SELPARAM || operatorID == DELPARAM || operatorID == SELNAME || operatorID == DELNAME || 
        operatorID == SELSTDNAME || operatorID == SELGRID || operatorID == SELZAXIS )
@@ -158,12 +149,12 @@ void *Selvar(void *argument)
   if ( nsel == 0 )
     cdoAbort("missing code argument!");
   */
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
+  int vlistID1 = streamInqVlist(streamID1);
 
   vlistClearFlag(vlistID1);
-  nvars = vlistNvars(vlistID1);
+  int nvars = vlistNvars(vlistID1);
   for ( varID = 0; varID < nvars; varID++ )
     {
       vlistInqVarName(vlistID1, varID, varname);
@@ -208,7 +199,7 @@ void *Selvar(void *argument)
 		}
 	      else if ( operatorID == SELNAME )
 		{
-		  if ( strcmp(argnames[isel], varname) == 0 )
+		  if ( wildcardmatch(argnames[isel], varname) == 0 )
 		    {
 		      vlistDefFlag(vlistID1, varID, levID, TRUE);
 		      selfound[isel] = TRUE;
@@ -288,7 +279,7 @@ void *Selvar(void *argument)
 		}
 	      else if ( operatorID == DELNAME )
 		{
-		  if ( strcmp(argnames[isel], varname) == 0 )
+		  if ( wildcardmatch(argnames[isel], varname) == 0 )
 		    {
 		      vlistDefFlag(vlistID1, varID, levID, FALSE);
 		      selfound[isel] = TRUE;
@@ -316,7 +307,7 @@ void *Selvar(void *argument)
 	}
     }
 
-  npar = 0;
+  int npar = 0;
   for ( varID = 0; varID < nvars; varID++ )
     {
       zaxisID = vlistInqVarZaxis(vlistID1, varID);
@@ -385,7 +376,7 @@ void *Selvar(void *argument)
 
   if ( npar == 0 ) cdoAbort("No variables selected!");
 
-  vlistID2 = vlistCreate();
+  int vlistID2 = vlistCreate();
   vlistCopyFlag(vlistID2, vlistID1);
 
   nvars = vlistNvars(vlistID2);
@@ -393,13 +384,13 @@ void *Selvar(void *argument)
     if ( vlistInqVarTsteptype(vlistID2, varID) != TSTEP_CONSTANT ) break;
   if ( varID == nvars ) vlistDefNtsteps(vlistID2, 0);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  nrecs = vlistNrecs(vlistID2);
+  int nrecs = vlistNrecs(vlistID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -410,7 +401,7 @@ void *Selvar(void *argument)
       array = (double*) malloc(gridsize*sizeof(double));
     }
 
-  tsID = 0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       taxisCopyTimestep(taxisID2, taxisID1);

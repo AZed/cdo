@@ -1,4 +1,146 @@
 ## Process this file with automake to produce Makefile.in
+noinst_LTLIBRARIES = libcdo.la
+libcdo_la_SOURCES =            \
+               cdo_int.h       \
+               cdo_pthread.c   \
+               cdo_vlist.c     \
+               cdo_getopt.c    \
+               cdo_getopt.h    \
+               color.c         \
+               color.h         \
+               commandline.c   \
+               const.h         \
+               counter.h       \
+               datetime.c      \
+               datetime.h      \
+               dmemory.h       \
+               dtypes.h        \
+               ecacore.c       \
+               ecacore.h       \
+               ecautil.c       \
+               ecautil.h       \
+               error.h         \
+               etopo.h         \
+               temp.h          \
+               mask.h          \
+               exception.c     \
+               expr.c          \
+               expr.h          \
+               expr_lex.c      \
+               expr_yacc.c     \
+               expr_yacc.h     \
+               features.c      \
+               field.c         \
+               field.h         \
+               field2.c        \
+               fieldc.c        \
+               fieldmem.c      \
+               fieldmer.c      \
+               fieldzon.c      \
+               fouriertrans.c  \
+               functs.h        \
+               gradsdeslib.c   \
+               gradsdeslib.h   \
+               grid.c          \
+               grid.h          \
+               grid_area.c     \
+               grid_gme.c      \
+               grid_lcc.c      \
+               grid_rot.c      \
+               gridreference.c \
+               griddes.c       \
+               griddes.h       \
+               griddes_h5.c    \
+               griddes_nc.c    \
+               hetaeta.c       \
+               hetaeta.h       \
+               history.c       \
+               institution.c   \
+               interpol.c      \
+               interpol.h      \
+               job.c           \
+               juldate.c       \
+               kvlist.c        \
+               kvlist.h        \
+               legendre.c      \
+               list.c          \
+               list.h          \
+	       merge_sort2.c   \
+	       merge_sort2.h   \
+               modules.c       \
+               modules.h       \
+               namelist.c      \
+               namelist.h      \
+               normal.c        \
+               nth_element.c   \
+               nth_element.h   \
+               operator_help.h \
+               par_io.c        \
+               par_io.h        \
+               percentiles.c   \
+               percentiles.h   \
+               pipe.c          \
+               pipe.h          \
+               pragma_omp_atomic_update.h \
+               printinfo.h     \
+               process.c       \
+               process.h       \
+               pstream.c       \
+               pstream.h       \
+               pstream_int.h   \
+               pthread_debug.c \
+               pthread_debug.h \
+               readline.c      \
+               realtime.c      \
+               remap.h         \
+               remaplib.c      \
+               remapsort.c     \
+               remap_scrip_io.c \
+               remap_search_reg2d.c \
+               remap_search_latbins.c \
+               remap_store_link.c \
+               remap_store_link.h \
+               remap_store_link_cnsrv.c \
+               remap_store_link_cnsrv.h \
+               remap_conserv.c \
+               remap_conserv_scrip.c \
+               remap_distwgt_scrip.c \
+               remap_bicubic_scrip.c \
+               remap_bilinear_scrip.c \
+               stdnametable.c  \
+               stdnametable.h  \
+               specspace.c     \
+               specspace.h     \
+               statistic.c     \
+               statistic.h     \
+               table.c         \
+               text.c          \
+               text.h          \
+               timebase.h      \
+               timer.c         \
+               userlog.c       \
+               util.c          \
+               util.h          \
+               vinterp.c       \
+               vinterp.h       \
+               zaxis.c
+libcdo_la_SOURCES +=           \
+               clipping/clipping.c           \
+               clipping/clipping.h           \
+               clipping/area.c               \
+               clipping/area.h               \
+               clipping/ensure_array_size.c  \
+               clipping/ensure_array_size.h  \
+               clipping/geometry_tools.c     \
+               clipping/geometry.h           \
+               clipping/grid.h               \
+               clipping/points.h             \
+               clipping/dep_list.h           \
+               clipping/grid_cell.c          \
+               clipping/grid_cell.h          \
+               clipping/intersection.c       \
+               clipping/utils.c              \
+               clipping/utils.h 
 #
 bin_PROGRAMS = cdo
 #
@@ -158,7 +300,8 @@ cdo_SOURCES += Adisit.c        \
                Vardup.c        \
                Vargen.c        \
                Varrms.c        \
-               Vertint.c       \
+               Vertintml.c     \
+               Vertintap.c     \
                Vertstat.c      \
                Vertwind.c      \
                Wct.c           \
@@ -180,143 +323,8 @@ cdo_SOURCES += Adisit.c        \
                Yseaspctl.c     \
                Yseasstat.c     \
                Zonstat.c       \
-               cdo.h           \
-               cdo_int.h       \
-               cdo_pthread.c   \
-               cdo_vlist.c     \
-               cdo_getopt.c    \
-               cdo_getopt.h    \
-               color.c         \
-               color.h         \
-               commandline.c   \
-               const.h         \
-               counter.h       \
-               dmemory.h       \
-               dtypes.h        \
-               ecacore.c       \
-               ecacore.h       \
-               ecautil.c       \
-               ecautil.h       \
-               error.h         \
-               etopo.h         \
-               temp.h          \
-               mask.h          \
-               exception.c     \
-               expr.c          \
-               expr.h          \
-               expr_lex.c      \
-               expr_yacc.c     \
-               expr_yacc.h     \
-               features.c      \
-               field.c         \
-               field.h         \
-               field2.c        \
-               fieldc.c        \
-               fieldmem.c      \
-               fieldmer.c      \
-               fieldzon.c      \
-               fouriertrans.c  \
-               functs.h        \
-               gradsdeslib.c   \
-               gradsdeslib.h   \
-               grid.c          \
-               grid.h          \
-               grid_area.c     \
-               grid_gme.c      \
-               grid_lcc.c      \
-               grid_rot.c      \
-               gridreference.c \
-               griddes.c       \
-               griddes.h       \
-               griddes_h5.c    \
-               griddes_nc.c    \
-               hetaeta.c       \
-               hetaeta.h       \
-               history.c       \
-               institution.c   \
-               interpol.c      \
-               interpol.h      \
-               job.c           \
-               juldate.c       \
-               kvlist.c        \
-               kvlist.h        \
-               legendre.c      \
-               list.c          \
-               list.h          \
-	       merge_sort2.c   \
-	       merge_sort2.h   \
-               modules.c       \
-               modules.h       \
-               namelist.c      \
-               namelist.h      \
-               normal.c        \
-               nth_element.c   \
-               nth_element.h   \
-               operator_help.h \
-               par_io.c        \
-               par_io.h        \
-               percentiles.c   \
-               percentiles.h   \
-               pipe.c          \
-               pipe.h          \
-               pragma_omp_atomic_update.h \
-               printinfo.h     \
-               process.c       \
-               process.h       \
-               pstream.c       \
-               pstream.h       \
-               pstream_int.h   \
-               pthread_debug.c \
-               pthread_debug.h \
-               readline.c      \
-               realtime.c      \
-               remap.h         \
-               remaplib.c      \
-               remapsort.c     \
-               remap_scrip_io.c \
-               remap_search_reg2d.c \
-               remap_search_latbins.c \
-               remap_store_link.c \
-               remap_store_link.h \
-               remap_conserv.c \
-               remap_conserv_scrip.c \
-               remap_distwgt_scrip.c \
-               remap_bicubic_scrip.c \
-               remap_bilinear_scrip.c \
-               stdnametable.c  \
-               stdnametable.h  \
-               specspace.c     \
-               specspace.h     \
-               statistic.c     \
-               statistic.h     \
-               table.c         \
-               text.c          \
-               text.h          \
-               timebase.h      \
-               timer.c         \
-               userlog.c       \
-               util.c          \
-               util.h          \
-               vinterp.c       \
-               vinterp.h       \
-               zaxis.c
+               cdo.h
 
-cdo_SOURCES += clipping/clipping.c           \
-               clipping/clipping.h           \
-               clipping/area.c               \
-               clipping/area.h               \
-               clipping/ensure_array_size.c  \
-               clipping/ensure_array_size.h  \
-               clipping/geometry_tools.c     \
-               clipping/geometry.h           \
-               clipping/grid.h               \
-               clipping/points.h             \
-               clipping/dep_list.h           \
-               clipping/grid_cell.c          \
-               clipping/grid_cell.h          \
-               clipping/intersection.c       \
-               clipping/utils.c              \
-               clipping/utils.h 
 
 if ENABLE_MAGICS
 cdo_SOURCES += Magplot.c       \
@@ -335,13 +343,14 @@ cdo_SOURCES += Magplot.c       \
 endif
 
 cdo_CPPFLAGS = -I$(top_srcdir)/libcdi/src
-cdo_LDADD    = $(top_builddir)/libcdi/src/libcdi.la
+cdo_LDADD    = libcdo.la $(top_builddir)/libcdi/src/libcdi.la
 cdo_LDFLAGS  =
 
 if ENABLE_ALL_STATIC
 cdo_LDFLAGS  += -all-static
 endif
 
+libcdo_la_CPPFLAGS = $(cdo_CPPFLAGS)
 noinst_PROGRAMS  = cdotest
 cdotest_SOURCES  = cdo_int.h	\
 	           cdotest.c

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,7 @@ void *Duplicate(void *argument)
   cdoInitialize(argument);
 
   if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
-  else if ( operatorArgc() == 1 ) ndup = atoi(operatorArgv()[0]);
+  else if ( operatorArgc() == 1 ) ndup = parameter2int(operatorArgv()[0]);
 
   if ( cdoVerbose ) cdoPrint("ndup = %d\n", ndup);
 
