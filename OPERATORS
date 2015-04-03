@@ -473,6 +473,7 @@ Operator catalog:
    Output        outputint       Integer output
    Output        outputsrv       SERVICE ASCII output
    Output        outputext       EXTRA ASCII output
+   Outputtab     outputtab       Table output
 -------------------------------------------------------------
    Miscellaneous
 -------------------------------------------------------------

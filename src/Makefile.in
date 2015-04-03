@@ -159,10 +159,11 @@ am__cdo_SOURCES_DIST = cdo.c Adisit.c Arith.c Arithc.c Arithdays.c \
 	kvlist.c kvlist.h legendre.c list.c list.h merge_sort2.c \
 	merge_sort2.h modules.c modules.h namelist.c namelist.h \
 	normal.c nth_element.c nth_element.h operator_help.h par_io.c \
-	par_io.h percentiles.c percentiles.h pipe.c pipe.h printinfo.h \
-	process.c process.h pstream.c pstream.h pstream_int.h \
-	pthread_debug.c pthread_debug.h readline.c realtime.c remap.h \
-	remaplib.c remapsort.c remap_scrip_io.c remap_search_reg2d.c \
+	par_io.h percentiles.c percentiles.h pipe.c pipe.h \
+	pragma_omp_atomic_update.h printinfo.h process.c process.h \
+	pstream.c pstream.h pstream_int.h pthread_debug.c \
+	pthread_debug.h readline.c realtime.c remap.h remaplib.c \
+	remapsort.c remap_scrip_io.c remap_search_reg2d.c \
 	remap_search_latbins.c remap_store_link.c remap_store_link.h \
 	remap_conserv.c remap_conserv_scrip.c remap_distwgt_scrip.c \
 	remap_bicubic_scrip.c remap_bilinear_scrip.c stdnametable.c \
@@ -605,10 +606,11 @@ cdo_SOURCES = cdo.c Adisit.c Arith.c Arithc.c Arithdays.c Arithlat.c \
 	kvlist.c kvlist.h legendre.c list.c list.h merge_sort2.c \
 	merge_sort2.h modules.c modules.h namelist.c namelist.h \
 	normal.c nth_element.c nth_element.h operator_help.h par_io.c \
-	par_io.h percentiles.c percentiles.h pipe.c pipe.h printinfo.h \
-	process.c process.h pstream.c pstream.h pstream_int.h \
-	pthread_debug.c pthread_debug.h readline.c realtime.c remap.h \
-	remaplib.c remapsort.c remap_scrip_io.c remap_search_reg2d.c \
+	par_io.h percentiles.c percentiles.h pipe.c pipe.h \
+	pragma_omp_atomic_update.h printinfo.h process.c process.h \
+	pstream.c pstream.h pstream_int.h pthread_debug.c \
+	pthread_debug.h readline.c realtime.c remap.h remaplib.c \
+	remapsort.c remap_scrip_io.c remap_search_reg2d.c \
 	remap_search_latbins.c remap_store_link.c remap_store_link.h \
 	remap_conserv.c remap_conserv_scrip.c remap_distwgt_scrip.c \
 	remap_bicubic_scrip.c remap_bilinear_scrip.c stdnametable.c \

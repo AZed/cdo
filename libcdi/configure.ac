@@ -4,7 +4,7 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdi], [1.6.5], [http://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.6], [http://code.zmaw.de/projects/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
@@ -64,12 +64,20 @@ AC_CHECK_LIB(malloc, malloc)
 AC_CHECK_MEMBERS([struct stat.st_blksize])
 #  ----------------------------------------------------------------------
 # Checks for header files
-AC_CHECK_HEADERS(malloc.h)
-AC_CHECK_HEADERS(execinfo.h)
+AC_CHECK_HEADERS([malloc.h execinfo.h uuid.h uuid/uuid.h])
 #  ----------------------------------------------------------------------
 # Checks for the availability of functions
 AC_CHECK_FUNCS([mallinfo])
 AC_CHECK_FUNCS([getline])
+AC_CHECK_LIB([uuid],[uuid_generate],
+  [AC_CHECK_DECLS([uuid_generate],
+  [UUID_C_LIB=-luuid],,[AC_INCLUDES_DEFAULT
+@%:@include <uuid/uuid.h>])],
+  [AC_CHECK_FUNCS([uuid_create],
+     [AC_CHECK_DECLS([uuid_create],
+        [UUID_C_LIB=""],,[AC_INCLUDES_DEFAULT
+@%:@include <uuid.h>])])])
+AC_SUBST([UUID_C_LIB])
 #  ----------------------------------------------------------------------
 # Checks for the availability of ANSI-C99 functions
 AC_CHECK_DECLS([isnan],,,[AC_INCLUDES_DEFAULT
@@ -116,6 +124,7 @@ AC_CHECK_LIB(m, floor)
 #  ----------------------------------------------------------------------
 # Add basic configure options
 ACX_OPTIONS
+AM_CONDITIONAL([ENABLE_NETCDF],[test x$ENABLE_NETCDF = xyes])
 #  ----------------------------------------------------------------------
 # Compile with MPI support
 AC_ARG_ENABLE(mpi,AS_HELP_STRING([--enable-mpi],[Compile with MPI compiler [default=no]]),enable_mpi=yes,enable_mpi=no)
@@ -351,6 +360,7 @@ AC_CONFIG_FILES([tests/test_cksum_grib \
                  tests/pio_cksum_writer \
                  tests/pio_cksum_cdf \
                  tests/test_resource_copy_mpi_run \
+                 tests/test_cdf_transformation \
                  tables/gen_tableheaderfile \
                  util/serialrun],[chmod a+x "$ac_file"])
 

@@ -26,7 +26,7 @@ static double *Vct = NULL;
 
 static int numberOfVerticalLevels = 0;
 static int numberOfVerticalGrid = 0;
-static char uuidVGrid[17];
+static unsigned char uuidVGrid[CDI_UUID_SIZE];
 
 typedef struct
 {
@@ -52,7 +52,7 @@ typedef struct
   int           level_sf;
   int           level_unit;
   int           zaxisID;
-  int           nlevels;
+  unsigned      nlevels;
   int           levelTableSize;
   leveltable_t *levelTable;
   int           instID;
@@ -242,7 +242,7 @@ int levelNewEntry(int varID, int level1, int level2)
   levelTable[levelID].level2   = level2;
   levelTable[levelID].lindex   = levelID;
 
-  vartable[varID].nlevels = levelID+1;
+  vartable[varID].nlevels = (unsigned)levelID+1;
   vartable[varID].levelTableSize = levelTableSize;
   vartable[varID].levelTable = levelTable;
 
@@ -445,9 +445,9 @@ int cmpparam(const void* s1, const void* s2)
 
 void cdi_generate_vars(stream_t *streamptr)
 {
-  int varID, gridID, zaxisID, levelID;
+  int varID, gridID, zaxisID;
   int instID, modelID, tableID;
-  int param, nlevels, zaxistype, ltype1, ltype2, lindex;
+  int param, zaxistype, ltype1, ltype2, lindex;
   int prec;
   int tsteptype;
   int timave, timaccu;
@@ -494,7 +494,7 @@ void cdi_generate_vars(stream_t *streamptr)
 
       gridID     = vartable[varid].gridID;
       param      = vartable[varid].param;
-      nlevels    = vartable[varid].nlevels;
+      unsigned nlevels = vartable[varid].nlevels;
       ltype1     = vartable[varid].ltype1;
       ltype2     = vartable[varid].ltype2;
       zaxistype = vartable[varid].zaxistype;
@@ -522,17 +522,17 @@ void cdi_generate_vars(stream_t *streamptr)
       dlevels = (double *) malloc(nlevels*sizeof(double));
 
       if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
-	for ( levelID = 0; levelID < nlevels; levelID++ )
+	for (unsigned levelID = 0; levelID < nlevels; levelID++ )
 	  dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
 	                      level_sf*vartable[varid].levelTable[levelID].level2)/2;
       else
-	for ( levelID = 0; levelID < nlevels; levelID++ )
+	for (unsigned levelID = 0; levelID < nlevels; levelID++ )
 	  dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
 
       if ( nlevels > 1 )
 	{
           bool linc = true, ldec = true, lsort = false;
-          for ( levelID = 1; levelID < nlevels; levelID++ )
+          for (unsigned levelID = 1; levelID < nlevels; levelID++ )
             {
               /* check increasing of levels */
               linc &= (dlevels[levelID] > dlevels[levelID-1]);
@@ -546,7 +546,7 @@ void cdi_generate_vars(stream_t *streamptr)
            */
           if ( !ldec && zaxistype == ZAXIS_PRESSURE )
             {
-              qsort(vartable[varid].levelTable, (size_t)nlevels, sizeof(leveltable_t), cmpLevelTableInv);
+              qsort(vartable[varid].levelTable, nlevels, sizeof(leveltable_t), cmpLevelTableInv);
               lsort = true;
             }
           /*
@@ -558,18 +558,18 @@ void cdi_generate_vars(stream_t *streamptr)
                     zaxistype == ZAXIS_HYBRID ||
                     zaxistype == ZAXIS_DEPTH_BELOW_LAND )
             {
-              qsort(vartable[varid].levelTable, (size_t)nlevels, sizeof(leveltable_t), cmpLevelTable);
+              qsort(vartable[varid].levelTable, nlevels, sizeof(leveltable_t), cmpLevelTable);
               lsort = true;
             }
 
           if ( lsort )
             {
               if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
-                for ( levelID = 0; levelID < nlevels; levelID++ )
+                for (unsigned levelID = 0; levelID < nlevels; levelID++ )
                   dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
                                       level_sf*vartable[varid].levelTable[levelID].level2)/2.;
               else
-                for ( levelID = 0; levelID < nlevels; levelID++ )
+                for (unsigned levelID = 0; levelID < nlevels; levelID++ )
                   dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
             }
 	}
@@ -577,15 +577,15 @@ void cdi_generate_vars(stream_t *streamptr)
       if ( lbounds )
 	{
 	  dlevels1 = (double *) malloc(nlevels*sizeof(double));
-	  for ( levelID = 0; levelID < nlevels; levelID++ )
+	  for (unsigned levelID = 0; levelID < nlevels; levelID++)
 	    dlevels1[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
 	  dlevels2 = (double *) malloc(nlevels*sizeof(double));
-	  for ( levelID = 0; levelID < nlevels; levelID++ )
+	  for (unsigned levelID = 0; levelID < nlevels; levelID++)
 	    dlevels2[levelID] = level_sf*vartable[varid].levelTable[levelID].level2;
         }
 
       char *unitptr = cdiUnitNamePtr(vartable[varid].level_unit);
-      zaxisID = varDefZaxis(vlistID, zaxistype, nlevels, dlevels, lbounds, dlevels1, dlevels2,
+      zaxisID = varDefZaxis(vlistID, zaxistype, (int)nlevels, dlevels, lbounds, dlevels1, dlevels2,
                             (int)Vctsize, Vct, NULL, NULL, unitptr, 0, 0, ltype1);
 
       if ( ltype1 != ltype2 && ltype2 != -1 )
@@ -597,7 +597,7 @@ void cdi_generate_vars(stream_t *streamptr)
         {
           if ( numberOfVerticalLevels > 0 ) zaxisDefNlevRef(zaxisID, numberOfVerticalLevels);
           if ( numberOfVerticalGrid > 0 ) zaxisDefNumber(zaxisID, numberOfVerticalGrid);
-          if ( uuidVGrid[0] != 0 ) zaxisDefUUID(zaxisID, uuidVGrid);
+          if ( !cdiUUIDIsNull(uuidVGrid) ) zaxisDefUUID(zaxisID, uuidVGrid);
         }
 
       if ( lbounds ) free(dlevels1);
@@ -697,7 +697,7 @@ void cdi_generate_vars(stream_t *streamptr)
       varID     = index;
       varid     = varids[index];
 
-      nlevels   = vartable[varid].nlevels;
+      unsigned nlevels = vartable[varid].nlevels;
       /*
       for ( levelID = 0; levelID < nlevels; levelID++ )
 	{
@@ -708,16 +708,17 @@ void cdi_generate_vars(stream_t *streamptr)
 		 vartable[varid].levelTable[levelID].level1);
 	}
       */
-      for ( levelID = 0; levelID < nlevels; levelID++ )
+      for (unsigned levelID = 0; levelID < nlevels; levelID++)
 	{
 	  streamptr->vars[varID].level[levelID] = vartable[varid].levelTable[levelID].recID;
-	  for ( lindex = 0; lindex < nlevels; lindex++ )
-	    if ( levelID == vartable[varid].levelTable[lindex].lindex ) break;
+          unsigned lindex;
+	  for (lindex = 0; lindex < nlevels; lindex++ )
+	    if ( levelID == (unsigned)vartable[varid].levelTable[lindex].lindex ) break;
 
 	  if ( lindex == nlevels )
 	    Error("Internal problem! lindex not found.");
 
-	  streamptr->vars[varID].lindex[levelID] = lindex;
+	  streamptr->vars[varID].lindex[levelID] = (int)lindex;
 	}
     }
 
@@ -738,15 +739,15 @@ void varDefVCT(size_t vctsize, double *vctptr)
 }
 
 
-void varDefZAxisReference(int nhlev, int nvgrid, char *uuid)
+void varDefZAxisReference(int nhlev, int nvgrid, unsigned char uuid[CDI_UUID_SIZE])
 {
   numberOfVerticalLevels = nhlev;
   numberOfVerticalGrid = nvgrid;
-  memcpy(uuidVGrid, uuid, 16);
+  memcpy(uuidVGrid, uuid, CDI_UUID_SIZE);
 }
 
 
-int varDefGrid(int vlistID, grid_t grid, int mode)
+int varDefGrid(int vlistID, const grid_t *grid, int mode)
 {
   /*
     mode: 0 search in vlist and grid table
@@ -755,7 +756,7 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
   int gridglobdefined = FALSE;
   int griddefined;
   int ngrids;
-  int gridID = UNDEFID;
+  int gridID = CDI_UNDEFID;
   int index;
   vlist_t *vlistptr;
   int * gridIndexList, i;
@@ -784,7 +785,7 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
       ngrids = gridSize();
       if ( ngrids > 0 )
         {
-          gridIndexList = (int*) malloc(ngrids*sizeof(int));
+          gridIndexList = (int*)xmalloc((size_t)ngrids * sizeof(int));
           gridGetIndexList ( ngrids, gridIndexList );
           for ( i = 0; i < ngrids; i++ )
             {
@@ -820,7 +821,7 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
 }
 
 
-int zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, double *levels, char *longname, char *units, int ltype1)
+int zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, const double *levels, char *longname, char *units, int ltype1)
 {
   int differ = 1;
   int levelID;
@@ -906,7 +907,7 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
       if ( nzaxis > 0 )
         {
           int *zaxisIndexList;
-          zaxisIndexList = (int *) malloc ( nzaxis * sizeof ( int ));
+          zaxisIndexList = (int *)xmalloc((size_t)nzaxis * sizeof (int));
           zaxisGetIndexList ( nzaxis, zaxisIndexList );
           for ( i = 0; i < nzaxis; i++ )
             {
@@ -1047,38 +1048,38 @@ void varDefProductDefinitionTemplate(int varID, int productDefinitionTemplate)
 }
 
 
+#if  defined  (HAVE_LIBGRIB_API)
 void varDefOptGribInt(int varID, long lval, const char *keyword)
 {
-#if  defined  (HAVE_LIBGRIB_API)
   int idx = vartable[varID].opt_grib_int_nentries;
   vartable[varID].opt_grib_int_nentries++;
   if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/integer value pairs!");
   vartable[varID].opt_grib_int_val[idx] = (int) lval;
   vartable[varID].opt_grib_int_keyword[idx] = strdupx(keyword);
-#endif
 }
+#endif
 
 
+#if  defined  (HAVE_LIBGRIB_API)
 void varDefOptGribDbl(int varID, double dval, const char *keyword)
 {
-#if  defined  (HAVE_LIBGRIB_API)
   int idx = vartable[varID].opt_grib_dbl_nentries;
   vartable[varID].opt_grib_dbl_nentries++;
   if ( idx >= MAX_OPT_GRIB_ENTRIES ) Error("Too many optional keyword/double value pairs!");
   vartable[varID].opt_grib_dbl_val[idx] = dval;
   vartable[varID].opt_grib_dbl_keyword[idx] = strdupx(keyword);
-#endif
 }
+#endif
 
 
+#if  defined  (HAVE_LIBGRIB_API)
 int varOptGribNentries(int varID)
 {
   int nentries = 0;
-#if  defined  (HAVE_LIBGRIB_API)
   nentries = vartable[varID].opt_grib_int_nentries + vartable[varID].opt_grib_dbl_nentries;
-#endif
   return (nentries);
 }
+#endif
 
 /*
  * Local Variables:

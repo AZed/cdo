@@ -12,8 +12,8 @@
 struct cksum_table *
 cksum_stream(const char *fname, size_t *table_len)
 {
-  int taxisID, vlistID, streamID, tsID;
-  int vdate, vtime, nvars, ngrids, nzaxis;
+  int taxisID, vlistID, streamID;
+  int nvars, ngrids, nzaxis;
   int i;
   uint32_t *checksum_state = NULL;
   struct
@@ -103,19 +103,18 @@ cksum_stream(const char *fname, size_t *table_len)
     // Get the Time axis from the variable list
     taxisID = vlistInqTaxis(vlistID);
 
-    tsID = 0;
+    int tsID = 0;
     // Inquire the time step
     while (streamInqTimestep(streamID, tsID))
       {
         // Get the verification date and time
-        vdate = taxisInqVdate(taxisID);
-        vtime = taxisInqVtime(taxisID);
-
+        int vdatetime[2] = { taxisInqVtime(taxisID), taxisInqVdate(taxisID) };
         // Read var1 and var2
         for (i = 0; i < nvars; ++i)
           {
             int nmiss;
             streamReadVar(streamID, i, buf, &nmiss);
+            memcrc_r(checksum_state + i, (const unsigned char *)vdatetime, sizeof (vdatetime));
             memcrc_r(checksum_state + i, (const unsigned char *)buf,
                      varSize[i].chars);
           }
@@ -126,8 +125,9 @@ cksum_stream(const char *fname, size_t *table_len)
     for (i = 0; i < nvars; ++i)
       {
         file_vars[i].code = vlistInqVarCode(vlistID, i);
-        file_vars[i].cksum = memcrc_finish(checksum_state + i,
-                                           (off_t)varSize[i].chars * tsID);
+        file_vars[i].cksum
+          = memcrc_finish(checksum_state + i,
+                          (off_t)((varSize[i].chars + sizeof (int) * 2) * (size_t)tsID));
       }
     // Close the input stream
     streamClose(streamID);

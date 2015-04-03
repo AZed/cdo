@@ -45,8 +45,7 @@ void *Selrec(void *argument)
 
   cdoInitialize(argument);
 
-  if ( processSelf() != 0 && *(char *)argument == '-' )
-    cdoAbort("This operator does not work with pipes!");
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
 
   operatorInputArg("records");
 
@@ -64,7 +63,7 @@ void *Selrec(void *argument)
 
   filetype = streamInqFiletype(streamID1);
 
-  if ( filetype == FILETYPE_NC || filetype == FILETYPE_NC2 )
+  if ( filetype == FILETYPE_NC || filetype == FILETYPE_NC2 || filetype == FILETYPE_NC4 || filetype == FILETYPE_NC4C )
     cdoAbort("This operator does not work on netCDF data!");
 
   vlistID1 = streamInqVlist(streamID1);
@@ -90,12 +89,14 @@ void *Selrec(void *argument)
 	{
 	  recordID++;
 	  streamInqRecord(streamID1, &varID, &levelID);
+
 	  for ( i = 0; i < nsel; i++ )
 	    {
 	      if ( recordID == intarr[i] )
 		{
 		  streamDefRecord(streamID2, varID, levelID);
 		  streamCopyRecord(streamID2, streamID1);
+
 		  break;
 		}
 	    }

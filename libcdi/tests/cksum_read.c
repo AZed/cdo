@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     size_t num_ref_entries;
     struct cksum_table *ref_var_table
       = read_table(table_fname, &num_ref_entries);
-    if (num_ref_entries == -1)
+    if (num_ref_entries == (size_t)-1)
       exit(EXIT_FAILURE);
     retcode
       = compare_checksums(file_vars, nvars, "file",

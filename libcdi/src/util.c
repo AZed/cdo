@@ -7,6 +7,7 @@
 #include <float.h>
 #include <sys/types.h>
 
+#include "cdi.h"
 #include "cdi_int.h"
 #include "dmemory.h"
 #include "binary.h"
@@ -53,48 +54,41 @@ void cdiPrintDatatypes(void)
     fprintf (stderr, "\n  byte ordering is LITTLEENDIAN\n\n");
 }
 
+static char uuidFmt[] = "%02hhx%02hhx%02hhx%02hhx-"
+  "%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-"
+  "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx";
 
-void uuid2str(const char *uuid, char *uuidstr)
+enum {
+  uuidNumHexChars = 36,
+};
+
+void uuid2str(const unsigned char *uuid, char *uuidstr)
 {
-  int iret;
-  unsigned int ui[16];
 
-  if ( uuid == NULL ) return;
-  if ( uuidstr == NULL ) return;
+  if ( uuid == NULL || uuidstr == NULL ) return;
 
-  uuidstr[0] = 0;
+  int iret = sprintf(uuidstr, uuidFmt,
+                     uuid[0], uuid[1], uuid[2], uuid[3],
+                     uuid[4], uuid[5], uuid[6], uuid[7],
+                     uuid[8], uuid[9], uuid[10], uuid[11],
+                     uuid[12], uuid[13], uuid[14], uuid[15]);
 
-  for ( int i = 0; i < 16; ++i ) ui[i] = (unsigned char) uuid[i];
-
-  iret = sprintf(uuidstr, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		 ui[0], ui[1], ui[2], ui[3], ui[4], ui[5], ui[6], ui[7],
-		 ui[8], ui[9], ui[10], ui[11], ui[12], ui[13], ui[14], ui[15]);
-
-  if ( iret != 36 ) uuidstr[0] = 0;
+  if ( iret != uuidNumHexChars ) uuidstr[0] = 0;
 }
 
 
-void str2uuid(const char *uuidstr, char *uuid)
+int str2uuid(const char *uuidstr, unsigned char *uuid)
 {
-  int iret;
-  unsigned int ui[16];
+  if ( uuid == NULL || uuidstr == NULL || strlen(uuidstr) != uuidNumHexChars)
+    return -1;
 
-  if ( uuid == NULL ) return;
-  if ( uuidstr == NULL ) return;
-
-  uuid[0] = 0;
-
-  if ( strlen(uuidstr) != 36 ) return;
-
-  iret = sscanf(uuidstr, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		&ui[0], &ui[1], &ui[2], &ui[3], &ui[4], &ui[5], &ui[6], &ui[7],
-		&ui[8], &ui[9], &ui[10], &ui[11], &ui[12], &ui[13], &ui[14], &ui[15]);
-
-  if ( iret != 16 ) return;
-
-  for ( int i = 0; i < 16; ++i ) uuid[i] = ui[i];
-
-  uuid[16] = 0;
+  int iret = sscanf(uuidstr, uuidFmt,
+                    &uuid[0], &uuid[1], &uuid[2], &uuid[3],
+                    &uuid[4], &uuid[5], &uuid[6], &uuid[7],
+                    &uuid[8], &uuid[9], &uuid[10], &uuid[11],
+                    &uuid[12], &uuid[13], &uuid[14], &uuid[15]);
+  if ( iret != CDI_UUID_SIZE ) return -1;
+  return iret;
 }
 
 /*

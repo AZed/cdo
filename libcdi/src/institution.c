@@ -227,7 +227,7 @@ int institutInqSubcenter(int instID)
 }
 
 
-char *institutInqNamePtr(int instID)
+const char *institutInqNamePtr(int instID)
 {
   institute_t * instituteptr = NULL;
 
@@ -251,6 +251,7 @@ char *institutInqLongnamePtr(int instID)
 static enum cdiApplyRet
 activeInstitutes(int id, void *res, void *data)
 {
+  (void)id;
   if (res && ((institute_t *)res)->used)
     ++(*(int *)data);
   return CDI_APPLY_GO_ON;

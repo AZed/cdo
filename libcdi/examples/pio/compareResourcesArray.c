@@ -206,7 +206,7 @@ static void modelRun ( MPI_Comm comm )
 
   reshPackBufferCreate(&sendBuffer, &bufferSize, &comm);
   xmpi ( MPI_Send ( sendBuffer, bufferSize, MPI_PACKED, 0, 0, comm ));
-  recvBuffer = xmalloc ( bufferSize * sizeof ( char ));
+  recvBuffer = xmalloc((size_t)bufferSize);
   xmpi ( MPI_Recv ( recvBuffer, bufferSize, MPI_PACKED, 0,
 		    0, comm, &status ));
 

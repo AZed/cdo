@@ -37,7 +37,6 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
   int gridID1, gridID2;
   int zaxisID1, zaxisID2;
   int varID1, varID2;
-  int nvars1, nvars2;
   int param1, param2;
   int ztype1, ztype2;
   int gtype1, gtype2;
@@ -46,8 +45,8 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
   int mlev1 = 0, mlev2 = 0;
   double *lev1 = NULL, *lev2 = NULL;
 
-  nvars1 = vlistNvars(vlistID1);
-  nvars2 = vlistNvars(vlistID2);
+  int nvars1 = vlistNvars(vlistID1);
+  int nvars2 = vlistNvars(vlistID2);
 
   for ( varID1 = 0; varID1 < nvars1; ++varID1 )
     {
@@ -115,31 +114,38 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
   if ( lev2 ) free(lev2);
 }
 
+static
+int vlistConstVars(int vlistID)
+{
+  int nvars = vlistNvars(vlistID);
+
+  for ( int varID = 0; varID < nvars; ++varID )
+    if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT ) return (0);
+
+  return (1);
+}
+
 
 void *Merge(void *argument)
 {
   int streamID1 = -1, streamID2 = -1;
   int varID, varID2;
   int nrecs = 0;
-  int tsID, recID, levelID, levelID2;
+  int recID, levelID, levelID2;
   int index;
-  int streamCnt;
-  int *streamIDs;
-  int *vlistIDs;
   int vlistID1 = -1, vlistID2;
-  int recID2;
-  int nmerge;
-  int idum = -4711;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
   int taxisID1, taxisID2;
-  int skip_same_var = FALSE;
-  const char *ofilename;
+  //int skip_same_var = FALSE;
   double *array = NULL;
 
   cdoInitialize(argument);
 
+  if ( UNCHANGED_RECORD ) lcopy = TRUE;
+
+  /*
   {
     char *envstr;
     envstr = getenv("SKIP_SAME_VAR");
@@ -155,30 +161,27 @@ void *Merge(void *argument)
 	  }
       }
   }
+  */
 
-  if ( UNCHANGED_RECORD ) lcopy = TRUE;
+  int streamCnt = cdoStreamCnt();
+  int nmerge    = streamCnt - 1;
 
-  streamCnt = cdoStreamCnt();
-  nmerge    = streamCnt - 1;
-
-  ofilename = cdoStreamName(streamCnt-1)->args;
+  const char *ofilename = cdoStreamName(streamCnt-1)->args;
 
   if ( !cdoSilentMode && !cdoOverwriteMode )
     if ( fileExists(ofilename) )
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  streamIDs = (int*) malloc(nmerge*sizeof(int));
-  vlistIDs  = (int*) malloc(nmerge*sizeof(int));
+  int *streamIDs = (int*) malloc(nmerge*sizeof(int));
+  int *vlistIDs  = (int*) malloc(nmerge*sizeof(int));
+  int *numrecs   = (int*) malloc(nmerge*sizeof(int));
 
   for ( index = 0; index < nmerge; index++ )
     {
       streamID1 = streamOpenRead(cdoStreamName(index));
-
       streamIDs[index] = streamID1;
-
-      vlistID1 = streamInqVlist(streamID1);
-      vlistIDs[index] = vlistID1;
+      vlistIDs[index]  = streamInqVlist(streamID1);
     }
 
   vlistID1 = vlistIDs[0];
@@ -211,37 +214,68 @@ void *Merge(void *argument)
       array = (double*) malloc(gridsize*sizeof(double));
     }
 
-  tsID = 0;
+  int firstindex = 0;
+  int tsID = 0;
   while ( tsID >= 0 )
     {
-      recID2 = 0;
       for ( index = 0; index < nmerge; index++ )
 	{
 	  streamID1 = streamIDs[index];
 	  vlistID1  = vlistIDs[index];
+	  if ( vlistID1 == -1 ) continue;
 
-	  if ( vlistID1 == idum ) continue;
+	  numrecs[index] = streamInqTimestep(streamID1, tsID);
+	}
 
-	  nrecs = streamInqTimestep(streamID1, tsID);
+      for ( index = 0; index < nmerge; index++ ) if ( numrecs[index] != 0 ) break;
+      if ( index == nmerge ) break; // EOF on all input streams
+      
+      if ( tsID == 1 )
+	{
+	  for ( index = 0; index < nmerge; index++ )
+	    if ( numrecs[index] == 0 && vlistConstVars(vlistIDs[index]) ) vlistIDs[index] = -1;
+	  /*
+	  for ( index = 0; index < nmerge; index++ )
+	    if ( vlistIDs[index] != -1 )
+	      {
+		firstindex = index;
+		break;
+	      }
+	  */
+	}
+      /*
+      for ( index = 0; index < nmerge; index++ )
+	printf("tsID %d   %d sID %d vID %d nrecs %d\n", tsID, index, streamIDs[index], vlistIDs[index], numrecs[index]);
+      */
+      if ( numrecs[firstindex] == 0 )
+	{
+	  for ( index = 1; index < nmerge; index++ )
+	    if ( vlistIDs[index] != -1 && numrecs[index] != 0 )
+	      cdoWarning("Input stream %d has %d timestep%s. Stream %d has more timesteps, skipped!", firstindex+1, tsID, tsID==1?"":"s", index+1);
+	  break;
+	}
+      else
+	{
+	  for ( index = 1; index < nmerge; index++ )
+	    if ( vlistIDs[index] != -1 && numrecs[index] == 0 )
+	      {
+		cdoWarning("Input stream %d has %d timestep%s. Stream %d has more timesteps, skipped!", index+1, tsID, tsID==1?"":"s", firstindex+1);
+		break;
+	      }
+	  if ( index < nmerge ) break;
+	}
 
-	  if ( nrecs == 0 )
-	    {
-	      if ( tsID == 1 )
-		{
-		  vlistIDs[index] = idum;
-		  continue;
-		}
-	      else
-		{
-		  tsID = idum;
-		  break;
-		}
-	    }
+      for ( index = 0; index < nmerge; index++ )
+	{
+	  streamID1 = streamIDs[index];
+	  vlistID1  = vlistIDs[index];
+	  nrecs = numrecs[index];
 
-	  if ( index == 0 )
+	  if ( vlistID1 == -1 ) continue;
+
+	  if ( index == firstindex )
 	    {
 	      taxisCopyTimestep(taxisID2, taxisID1);
-
 	      streamDefTimestep(streamID2, tsID);
 	    }
 
@@ -264,17 +298,11 @@ void *Merge(void *argument)
 		  streamReadRecord(streamID1, array, &nmiss);
 		  streamWriteRecord(streamID2, array, nmiss);
 		}
-
-	      recID2++;
 	    }
 	}
+
       tsID++;
-
-      for ( index = 0; index < nmerge; index++ )
-	if ( vlistIDs[index] != idum ) break;
-
-      if ( index == nmerge ) tsID = idum;
-    }
+   }
 
   for ( index = 0; index < nmerge; index++ )
     streamClose(streamIDs[index]);
@@ -285,6 +313,7 @@ void *Merge(void *argument)
 
   if ( streamIDs ) free(streamIDs);
   if ( vlistIDs  ) free(vlistIDs);
+  if ( numrecs   ) free(numrecs);
  
   if ( ! lcopy )
     if ( array ) free(array);

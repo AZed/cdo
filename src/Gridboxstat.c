@@ -578,7 +578,7 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
       if ( ompthID != 0 ) lprogress = 0;
 #endif
 #if defined(_OPENMP)
-#pragma omp atomic
+#include "pragma_omp_atomic_update.h"
 #endif
       findex++;
       if ( lprogress ) progressStatus(0, 1, findex/nlat2*nlon2);

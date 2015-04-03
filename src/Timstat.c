@@ -255,10 +255,12 @@ void *Timstat(void *argument)
 	      taxisInqVdateBounds(taxisID1, &date_lb, &date_ub);
 	      taxisInqVtimeBounds(taxisID1, &time_lb, &time_ub);
 	      if ( nsets == 0 )
-		{
-		  vdate_lb = date_lb;
-		  vtime_lb = time_lb;
-		}
+		{ vdate_lb = date_lb; vtime_lb = time_lb; }
+	    }
+	  else
+	    {
+	      if ( nsets == 0 )
+		{ vdate_lb = vdate; vtime_lb = vtime; }
 	    }
 
 	  if ( nsets == 0 ) SET_DATE(indate2, vdate, vtime);
@@ -267,10 +269,9 @@ void *Timstat(void *argument)
 	  if ( DATE_IS_NEQ(indate1, indate2, cmplen) ) break;
 
 	  if ( taxis_has_bounds )
-	    {
-	      vdate_ub = date_ub;
-	      vtime_ub = time_ub;
-	    }
+	    { vdate_ub = date_ub; vtime_ub = time_ub; }
+	  else
+	    { vdate_ub = vdate; vtime_ub = vtime; }
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -430,22 +431,16 @@ void *Timstat(void *argument)
 
       taxisDefVdate(taxisID2, vdate0);
       taxisDefVtime(taxisID2, vtime0);
-      if ( taxis_has_bounds )
-	{
-	  taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
-	  taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
-	}
+      taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
+      taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
       streamDefTimestep(streamID2, otsID);
 
       if ( cdoDiag )
 	{
 	  taxisDefVdate(taxisID3, vdate0);
 	  taxisDefVtime(taxisID3, vtime0);
-	  if ( taxis_has_bounds )
-	    {
-	      taxisDefVdateBounds(taxisID3, vdate_lb, vdate_ub);
-	      taxisDefVtimeBounds(taxisID3, vtime_lb, vtime_ub);
-	    }
+	  taxisDefVdateBounds(taxisID3, vdate_lb, vdate_ub);
+	  taxisDefVtimeBounds(taxisID3, vtime_lb, vtime_ub);
 	  streamDefTimestep(streamID3, otsID);
 	}
 

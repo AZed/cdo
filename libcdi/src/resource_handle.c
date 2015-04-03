@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #if defined (HAVE_EXECINFO_H)
 #include <execinfo.h>
@@ -23,8 +24,11 @@ void show_stackframe()
   char **messages = backtrace_symbols(trace, trace_size);
 
   fprintf(stderr, "[bt] Execution path:\n");
-  for ( i = 0; i < trace_size; ++i ) fprintf(stderr, "[bt] %s\n", messages[i]);
-  if ( messages ) free(messages);
+  if ( messages ) {
+    for ( i = 0; i < trace_size; ++i )
+      fprintf(stderr, "[bt] %s\n", messages[i]);
+    free(messages);
+  }
 #endif
 }
 
@@ -149,7 +153,7 @@ reshListCreate(int namespaceID)
   LIST_LOCK();
   if (resHListSize <= namespaceID)
     {
-      resHList = (struct resHList_t *)xrealloc(resHList, (namespaceID + 1) * sizeof (resHList[0]));
+      resHList = (struct resHList_t *)xrealloc(resHList, (size_t)(namespaceID + 1) * sizeof (resHList[0]));
       for (int i = resHListSize; i <= namespaceID; ++i)
         reshListClearEntry(i);
       resHListSize = namespaceID + 1;
@@ -373,7 +377,7 @@ void reshReplace(cdiResH resH, void *p, const resOps *ops)
 
 
 static listElem_t *
-reshGetElem(const char *caller, cdiResH resH, const resOps *ops)
+reshGetElem(const char *caller, const char* expressionString, cdiResH resH, const resOps *ops)
 {
   listElem_t *listElem;
   int nsp;
@@ -387,9 +391,9 @@ reshGetElem(const char *caller, cdiResH resH, const resOps *ops)
   nsp = namespaceGetActive ();
 
   nspT = namespaceResHDecode ( resH );
+  assert(nspT.idx >= 0);
 
   if (nspT.nsp == nsp &&
-      nspT.idx >= 0 &&
       nspT.idx < resHList[nsp].size)
     {
       listElem = resHList[nsp].resources + nspT.idx;
@@ -399,23 +403,31 @@ reshGetElem(const char *caller, cdiResH resH, const resOps *ops)
     {
       LIST_UNLOCK();
       show_stackframe();
-      xabortC(caller, "Invalid namespace %d or index %d for resource handle %d when using namespace %d of size %d!",
-              nspT.nsp, nspT.idx, (int)resH, nsp, resHList[nsp].size);
+
+      if ( resH == CDI_UNDEFID )
+        {
+          xabortC(caller, "Error while trying to resolve the ID \"%s\" in `%s()`: the value is CDI_UNDEFID (= %d).\n\tThis is most likely the result of a failed earlier call. Please check the IDs returned by CDI.", expressionString, caller, resH);
+        }
+      else
+        {
+          xabortC(caller, "Error while trying to resolve the ID \"%s\" in `%s()`: the value is garbage (= %d, which resolves to namespace = %d, index = %d).\n\tThis is either the result of using an uninitialized variable,\n\tof using a value as an ID that is not an ID,\n\tor of using an ID after it has been invalidated.", expressionString, caller, resH, nspT.nsp, nspT.idx);
+        }
     }
 
   if ( !(listElem && listElem->res.v.ops == ops) )
     {
       show_stackframe();
-      xabortC(caller, "Invalid resource handle %d, list element not found!", (int)resH);
+
+      xabortC(caller, "Error while trying to resolve the ID \"%s\" in `%s()`: list element not found. The failed ID is %d", expressionString, caller, (int)resH);
     }
 
   return listElem;
 }
 
 
-void *reshGetValue(const char * caller, cdiResH resH, const resOps * ops)
+void *reshGetValue(const char * caller, const char* expressionString, cdiResH resH, const resOps * ops)
 {
-  return reshGetElem(caller, resH, ops)->res.v.val;
+  return reshGetElem(caller, expressionString, resH, ops)->res.v.val;
 }
 
 /**************************************************************/
@@ -513,17 +525,17 @@ int reshCountType ( const resOps * ops )
 /**************************************************************/
 
 int
-reshResourceGetPackSize(int resH, const resOps *ops, void *context)
+reshResourceGetPackSize_intern(int resH, const resOps *ops, void *context, const char* caller, const char* expressionString)
 {
-  listElem_t *curr = reshGetElem(__func__, resH, ops);
+  listElem_t *curr = reshGetElem(caller, expressionString, resH, ops);
   return curr->res.v.ops->valGetPackSize(curr->res.v.val, context);
 }
 
 void
-reshPackResource(int resH, const resOps *ops,
-                 void *buf, int buf_size, int *position, void *context)
+reshPackResource_intern(int resH, const resOps *ops, void *buf, int buf_size, int *position, void *context,
+                        const char* caller, const char* expressionString)
 {
-  listElem_t *curr = reshGetElem(__func__, resH, ops);
+  listElem_t *curr = reshGetElem(caller, expressionString, resH, ops);
   curr->res.v.ops->valPack(curr->res.v.val, buf, buf_size, position, context);
 }
 

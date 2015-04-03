@@ -99,14 +99,13 @@ compareNamesBP(void *v1, void *v2)
 /***************************************************************/
 
 static void
-writeP(bFiledataP *bfd, long amount)
+writeP(bFiledataP *bfd, size_t amount)
 {
-  long written;
+  size_t written;
 
   xdebug ( "filename=%s, amount=%ld, in", bfd->name, amount );
 
-  if (( written = fwrite ( bfd->fb->buffer, 1, amount,
-			   bfd->fp )) != amount )
+  if ((written = fwrite(bfd->fb->buffer, 1, amount, bfd->fp )) != amount)
     xabort("did not succeed writing buffer in %s", bfd->name);
 
   xdebug ( "filename=%s, written=%ld, amount=%ld, return",
@@ -142,7 +141,7 @@ pioWriterStdIO(void)
   xdebug ( "ncollectors=%d on this node", nProcsCollNode );
 
   bibBFiledataP = listSetNew(destroyBFiledataP, compareNamesBP);
-  sentFinalize = xmalloc ( nProcsCollNode * sizeof ( sentFinalize ));
+  sentFinalize = xmalloc((size_t)nProcsCollNode * sizeof (sentFinalize[0]));
   
   for ( ;; )
     {  
@@ -166,7 +165,8 @@ pioWriterStdIO(void)
 	{
       	case IO_Open_file:
 
-	  messageBuffer = xmalloc ( messagesize  * sizeof ( messageBuffer[0] ));
+	  messageBuffer
+            = xmalloc((size_t)messagesize * sizeof (messageBuffer[0]));
     	  pMB = messageBuffer;
 
 	  xmpi ( MPI_Recv ( messageBuffer, messagesize, MPI_CHAR, source, 
@@ -177,7 +177,7 @@ pioWriterStdIO(void)
 	  filename = strtok ( pMB, token );
 	  pMB += ( strlen ( filename ) + 1 );
 	  temp =  strtok ( pMB, token );
-          buffersize =  strtol ( temp, NULL, 16 );
+          buffersize = (size_t)strtol(temp, NULL, 16);
 	  pMB += ( strlen ( temp ) + 1 );
 	  amount = (size_t)(messageBuffer + messagesize - pMB);
 	  
@@ -214,20 +214,19 @@ pioWriterStdIO(void)
                                (void *)(intptr_t)rtag.id)))
             xabort("fileID=%d is not in set", rtag.id );
 
-	  amount = messagesize;
+	  amount = (size_t)messagesize;
 
 	  xdebug("COMMAND %s, ID=%d, NAME=%s", command2charP[rtag.command],
                  rtag.id, bfd->name);
-	  
-	  xmpi ( MPI_Recv (  bfd->fb->buffer, amount, MPI_CHAR, source, tag, 
-                             commNode, &status ));
 
-	  writeP ( bfd, amount );
-	  
+	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_CHAR, source, tag,
+                        commNode, &status));
+
+	  writeP(bfd, amount);
 	  break;
 
 	case IO_Close_file:
-	  
+
 	  xdebug("COMMAND %s,  FILE%d, SOURCE%d",
                  command2charP[rtag.command], rtag.id, source);
 
@@ -235,13 +234,13 @@ pioWriterStdIO(void)
                                (void *)(intptr_t)rtag.id)))
             xabort("fileID=%d is not in set", rtag.id);
 
-          amount = messagesize;
+          amount = (size_t)messagesize;
 
 	  xdebug("COMMAND %s, ID=%d, NAME=%s, AMOUNT=%zu",
                  command2charP[rtag.command], rtag.id, bfd->name, amount);
-	  
-	  xmpi(MPI_Recv(bfd->fb->buffer, amount, MPI_CHAR, source, tag,
-                        commNode, &status ));
+
+	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_CHAR, source, tag,
+                        commNode, &status));
 
 	  writeP ( bfd, amount );
 

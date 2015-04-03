@@ -1,6 +1,11 @@
 #ifndef _GRIBAPI_H
 #define _GRIBAPI_H
 
+#ifdef HAVE_LIBGRIBAPI
+#  include "error.h"
+#  include <grib_api.h>
+#endif
+
 #define  GRIBAPI_MISSVAL  -9.E33
 
 /* GRIB2 Level Types */
@@ -45,8 +50,24 @@
 const char *gribapiLibraryVersionString(void);
 void gribContainersNew(stream_t * streamptr);
 void gribContainersDelete(stream_t * streamptr);
-void *gribHandleNew(int editionNumber);
-void gribHandleDelete(void *gh);
+#ifdef HAVE_LIBGRIBAPI
+static inline void *gribHandleNew(int editionNumber)
+{
+  void *gh =
+    (void *)grib_handle_new_from_samples(NULL, (editionNumber == 1) ? "GRIB1" : "GRIB2");
+
+  if ( gh == NULL ) Error("grib_handle_new_from_samples failed!");
+  return gh;
+}
+
+static inline void gribHandleDelete(void *gh)
+{
+  grib_handle_delete(gh);
+}
+#else
+#define gribHandleNew(editionNumber) (NULL)
+#define gribHandleDelete(gh)
+#endif
 
 typedef struct {
   int init;

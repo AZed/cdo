@@ -1,10 +1,10 @@
 ! This file was automatically generated, don't edit!
 !
-! Fortran interface for CDI library version 1.6.4
+! Fortran interface for CDI library version 1.6.6
 !
 ! Author:
 ! -------
-! Uwe Schulzweida, MPI-MET, Hamburg,   September 2014
+! Uwe Schulzweida, MPI-MET, Hamburg,   November 2014
 !
 
       INTEGER    CDI_MAX_NAME          
@@ -370,6 +370,11 @@
       INTEGER    CALENDAR_NONE         
       PARAMETER (CALENDAR_NONE          =  5)
 !
+!  number of unsigned char needed to store UUID
+!
+      INTEGER    CDI_UUID_SIZE         
+      PARAMETER (CDI_UUID_SIZE          = 16)
+!
 !  CDI control routines
 !
 !                     cdiReset
@@ -476,6 +481,11 @@
 !
 !  STREAM control routines
 !
+      INTEGER         cdiGetFiletype
+!                                    (CHARACTER*(*)   path,
+!                                     INTEGER         byteorder)
+      EXTERNAL        cdiGetFiletype
+
       INTEGER         streamOpenRead
 !                                    (CHARACTER*(*)   path)
       EXTERNAL        streamOpenRead
@@ -565,10 +575,6 @@
       CHARACTER(80)   streamFilesuffix
 !                                    (INTEGER         filetype)
       EXTERNAL        streamFilesuffix
-
-      INTEGER         streamNtsteps
-!                                    (INTEGER         streamID)
-      EXTERNAL        streamNtsteps
 
       INTEGER         streamInqNvars
 !                                    (INTEGER         streamID)
@@ -1656,12 +1662,12 @@
 
 !                     gridDefUUID
 !                                    (INTEGER         gridID,
-!                                     CHARACTER*(*)   uuid_cbuf)
+!                                     INTEGER*1(16)   uuid)
       EXTERNAL        gridDefUUID
 
 !                     gridInqUUID
 !                                    (INTEGER         gridID,
-!                                     CHARACTER*(*)   uuid_cbuf)
+!                                     INTEGER*1(16)   uuid)
       EXTERNAL        gridInqUUID
 
 !
@@ -1878,12 +1884,12 @@
 
 !                     zaxisDefUUID
 !                                    (INTEGER         zaxisID,
-!                                     CHARACTER*(*)   uuid_cbuf)
+!                                     INTEGER*1(16)   uuid)
       EXTERNAL        zaxisDefUUID
 
 !                     zaxisInqUUID
 !                                    (INTEGER         zaxisID,
-!                                     CHARACTER*(*)   uuid_cbuf)
+!                                     INTEGER*1(16)   uuid)
       EXTERNAL        zaxisInqUUID
 
 !                     zaxisDefName

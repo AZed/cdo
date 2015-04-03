@@ -1281,8 +1281,7 @@ void *Gradsdes(void *argument)
 
   taxisID = vlistInqTaxis(vlistID);
 
-  int calendar = taxisInqCalendar(taxisID);
-  if ( calendar == CALENDAR_365DAYS ) cal365day = 1;
+  if ( taxisInqCalendar(taxisID) == CALENDAR_365DAYS ) cal365day = 1;
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID, tsID)) )

@@ -542,7 +542,7 @@ int pstreamOpenRead(const argument_t *argument)
 	pthread_mutex_lock(&streamOpenReadMutex);
 #endif
       fileID = streamOpenRead(filename);
-      if ( fileID < 0 ) cdiError(fileID, "Open failed on >%s<", filename);
+      if ( fileID < 0 ) cdiOpenError(fileID, "Open failed on >%s<", filename);
 
       if ( cdoDefaultFileType == CDI_UNDEFID )
 	cdoDefaultFileType = streamInqFiletype(fileID);
@@ -563,7 +563,7 @@ int pstreamOpenRead(const argument_t *argument)
       pstreamptr->fileID = fileID;
     }
 
-  if ( pstreamID < 0 ) cdiError(pstreamID, "Open failed on %s", argument->args);
+  if ( pstreamID < 0 ) cdiOpenError(pstreamID, "Open failed on >%s<", argument->args);
   
   return (pstreamID);
 }
@@ -691,7 +691,7 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
 	pthread_mutex_unlock(&streamOpenWriteMutex);
 #endif
       if ( processNums() == 1 && ompNumThreads == 1 ) timer_stop(timer_write);
-      if ( fileID < 0 ) cdiError(fileID, "Open failed on %s", argument->args);
+      if ( fileID < 0 ) cdiOpenError(fileID, "Open failed on >%s<", argument->args);
 
       cdoDefHistory(fileID, commandLine());
 
@@ -783,7 +783,7 @@ int pstreamOpenAppend(const argument_t *argument)
 	pthread_mutex_unlock(&streamOpenReadMutex);
 #endif
       if ( processNums() == 1 && ompNumThreads == 1 ) timer_stop(timer_write);
-      if ( fileID < 0 ) cdiError(fileID, "Open failed on %s", argument->args);
+      if ( fileID < 0 ) cdiOpenError(fileID, "Open failed on >%s<", argument->args);
       /*
       cdoInqHistory(fileID);
       cdoDefHistory(fileID, commandLine());
@@ -971,7 +971,7 @@ int pstreamInqVlist(int pstreamID)
   return (vlistID);
 }
 
-
+static
 const char *cdoComment(void)
 {
   static char comment[256];
@@ -986,6 +986,7 @@ const char *cdoComment(void)
       size = strlen(CDO_Version);
 
       strncat(comment, CDO_Version, size);
+      comment[size] = 0;
     }
 
   return (comment);
@@ -1412,7 +1413,7 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 	  else
 	    pthread_mutex_unlock(&streamOpenReadMutex);
 #endif
-	  if ( fileID < 0 ) cdiError(fileID, "Open failed on >%s<", filename);
+	  if ( fileID < 0 ) cdiOpenError(fileID, "Open failed on >%s<", filename);
 
 	  free(pstreamptr->name);
 
@@ -1489,6 +1490,10 @@ void pstreamCopyRecord(int pstreamIDdest, int pstreamIDsrc)
 
   pstreamptr_dest = pstream_to_pointer(pstreamIDdest);
   pstreamptr_src  = pstream_to_pointer(pstreamIDsrc);
+
+  if ( pstreamptr_dest->ispipe || pstreamptr_src->ispipe )
+    cdoAbort("This operator can't be combined with other operators!");
+
   /*
 #if defined(HAVE_LIBPTHREAD)
   if ( pstreamptr_dest->ispipe || pstreamptr_src->ispipe )

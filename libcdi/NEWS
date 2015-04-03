@@ -1,6 +1,17 @@
 CDI NEWS
 --------
 
+Version 1.6.6 (27 November 2014):
+
+   New features:
+     * IEG: added support for coordinate scale factor
+   Fixed bugs:
+     * table::decodeForm1: missing longname results in Abort trap
+     * transpose2dArrayXX: wrong result
+     * cgribexScanTimestep1: set flag to 0 in call to cgribexVarCompare()
+     * netCDF: call set_validrangeDP() in cdfReadVar()
+     * netCDF: call cdfDoInputDataTransformation() if have missvals
+
 Version 1.6.5 (23 October 2014):
 
    New features:

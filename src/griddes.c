@@ -507,7 +507,7 @@ int gridDefine(griddes_t grid)
       }
     }
 
-  if ( *grid.uuid ) gridDefUUID(gridID, grid.uuid);
+  if ( grid.uuid[0] )      gridDefUUID(gridID, grid.uuid);
 
   if ( grid.xname[0]     ) gridDefXname(gridID, grid.xname);
   if ( grid.xlongname[0] ) gridDefXlongname(gridID, grid.xlongname);
@@ -670,7 +670,7 @@ double readflt(const char *filename, const char *name, const char *pline)
   return (val);
 }
 
-void str2uuid(const char *uuidstr, char *uuid);
+void str2uuid(const char *uuidstr, unsigned char *uuid);
 
 int gridFromFile(FILE *gfp, const char *dname)
 {

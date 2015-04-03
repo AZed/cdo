@@ -118,7 +118,8 @@ sendP(remoteFileBuf *afd, int id)
 
   if ( ddebug ) accumWait +=  ( MPI_Wtime () - startTime );
 
-  xmpi(MPI_Issend(afd->db->buffer, amount, MPI_CHAR, commInqSpecialRankNode(),
+  /* FIXME: amount > INT_MAX unhandled */
+  xmpi(MPI_Issend(afd->db->buffer, (int)amount, MPI_CHAR, commInqSpecialRankNode(),
                   tag, commInqCommNode(), &( afd->request )));
 
   /* change outputBuffer */
@@ -244,7 +245,10 @@ pioSendOpen(const char *filename)
 {
   remoteFileBuf *afd;
   static long buffersize = 0;
-  int root = 0, id, iret, messageLength = 32;
+  int root = 0, id, iret;
+  enum {
+    messageLength = 32,
+  };
   char message[messageLength];
   MPI_Comm commCollectors = commInqCommColl();
 
@@ -264,7 +268,7 @@ pioSendOpen(const char *filename)
     }
 
   /* init and add remoteFileBuf */
-  afd = initRemoteFileBuf(filename, buffersize);
+  afd = initRemoteFileBuf(filename, (size_t)buffersize);
   if ((id = listSetAdd(bibRemoteFileBuf, afd)) < 0)
     xabort("filename %s is not unique", afd->name);
   afd->fileID = id;

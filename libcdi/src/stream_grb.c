@@ -206,9 +206,14 @@ int grbDecode(int filetype, unsigned char *gribbuffer, int gribsize, double *dat
     }
   else
 #endif
+#ifdef HAVE_LIBGRIB_API
+    status = gribapiDecode(gribbuffer, gribsize, data, gridsize, unreduced, nmiss, missval, vlistID, varID);
+#else
     {
-      status = gribapiDecode(gribbuffer, gribsize, data, gridsize, unreduced, nmiss, missval, vlistID, varID);
+      (void)vlistID; (void)varID;
+      Error("GRIB_API support not compiled in!");
     }
+#endif
 
   return (status);
 }
@@ -324,7 +329,7 @@ int grbScanTimestep1(stream_t * streamptr)
 static
 int grbScanTimestep2(stream_t * streamptr)
 {
-  int status;
+  int status = 0;
   int filetype;
 
   filetype  = streamptr->filetype;
@@ -334,11 +339,13 @@ int grbScanTimestep2(stream_t * streamptr)
     {
       status = cgribexScanTimestep2(streamptr);
     }
+#endif
+#if defined(HAVE_LIBCGRIBEX) && defined (HAVE_LIBGRIB_API)
   else
 #endif
-    {
-      status = gribapiScanTimestep2(streamptr);
-    }
+#ifdef HAVE_LIBGRIB_API
+    status = gribapiScanTimestep2(streamptr);
+#endif
 
   return (status);
 }
@@ -346,7 +353,7 @@ int grbScanTimestep2(stream_t * streamptr)
 static
 int grbScanTimestep(stream_t * streamptr)
 {
-  int status;
+  int status = CDI_EUFTYPE;
   int filetype;
 
   filetype  = streamptr->filetype;
@@ -358,9 +365,11 @@ int grbScanTimestep(stream_t * streamptr)
     }
   else
 #endif
-    {
-      status = gribapiScanTimestep(streamptr);
-    }
+#ifdef HAVE_LIBGRIB_API
+    status = gribapiScanTimestep(streamptr);
+#else
+    Error("Sufficient GRIB support unavailable!");
+#endif
 
   return (status);
 }
@@ -511,7 +520,7 @@ size_t grbEncode(int filetype, int memtype, int varID, int levelID, int vlistID,
 		 size_t datasize, const double *data, int nmiss, unsigned char **gribbuffer,
 		 int comptype, void *gribContainer)
 {
-  size_t nbytes;
+  size_t nbytes = 0;
 
 #if  defined  (HAVE_LIBCGRIBEX)
   if ( filetype == FILETYPE_GRB )
@@ -525,6 +534,7 @@ size_t grbEncode(int filetype, int memtype, int varID, int levelID, int vlistID,
     }
   else
 #endif
+#ifdef HAVE_LIBGRIB_API
     {
       if ( memtype == MEMTYPE_FLOAT ) Error("gribapiEncode() not implemented for memtype float!");
 
@@ -534,6 +544,11 @@ size_t grbEncode(int filetype, int memtype, int varID, int levelID, int vlistID,
 			     (long)datasize, data, nmiss, gribbuffer, &gribbuffersize,
 			     comptype, gribContainer);
     }
+#else
+    Error("GRIB_API support not compiled in!");
+    (void)gribContainer;
+#endif
+
 
   return (nbytes);
 }

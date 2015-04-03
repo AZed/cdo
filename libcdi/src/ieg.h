@@ -51,6 +51,7 @@
 #define  IEG_G_ScanFlag(x)    (x[13])
 #define  IEG_G_LatSP(x)       (x[16])  /*  Latitude of the southern pole of rotation    */
 #define  IEG_G_LonSP(x)       (x[17])  /*  Longitude of the southern pole of rotation   */
+#define  IEG_G_ResFac(x)      (x[18])  /*  Resolution factor                            */
 
 
 typedef struct {

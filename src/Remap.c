@@ -217,7 +217,7 @@ int remap_genweights = TRUE;
 int lextrapolate = FALSE;
 int max_remaps = -1;
 int sort_mode = HEAP_SORT;
-double remap_area_min = 0;
+double remap_frac_min = 0;
 
 
 static
@@ -344,9 +344,9 @@ void get_remap_env(void)
       fval = atof(envstr);
       if ( fval > 0 )
 	{
-	  remap_area_min = fval;
+	  remap_frac_min = fval;
 	  if ( cdoVerbose )
-	    cdoPrint("Set REMAP_AREA_MIN to %g", remap_area_min);
+	    cdoPrint("Set REMAP_AREA_MIN to %g", remap_frac_min);
 	}
     }
 
@@ -569,31 +569,24 @@ int set_max_remaps(int vlistID)
 }
 
 static
-int get_norm_opt()
+int get_norm_opt(void)
 {
   int norm_opt = NORM_OPT_FRACAREA;
   char *envstr = getenv("CDO_REMAP_NORMALIZE_OPT");
 
   if ( envstr && *envstr )
     {
-      if      ( memcmp(envstr, "frac", 4) == 0 )
-	norm_opt = NORM_OPT_FRACAREA;
-      else if ( memcmp(envstr, "dest", 4) == 0 )
-	norm_opt = NORM_OPT_DESTAREA;
-      else if ( memcmp(envstr, "none", 4) == 0 )
-	norm_opt = NORM_OPT_NONE;
-      else
-	cdoWarning("CDO_REMAP_NORMALIZE_OPT=%s unsupported!", envstr);
+      if      ( memcmp(envstr, "frac", 4) == 0 ) norm_opt = NORM_OPT_FRACAREA;
+      else if ( memcmp(envstr, "dest", 4) == 0 ) norm_opt = NORM_OPT_DESTAREA;
+      else if ( memcmp(envstr, "none", 4) == 0 ) norm_opt = NORM_OPT_NONE;
+      else cdoWarning("CDO_REMAP_NORMALIZE_OPT=%s unsupported!", envstr);
     }
 
   if ( cdoVerbose )
     {
-      if ( norm_opt == NORM_OPT_FRACAREA )
-	cdoPrint("Normalization option: frac");
-      else if ( norm_opt == NORM_OPT_DESTAREA )
-	cdoPrint("Normalization option: dest");
-      else
-	cdoPrint("Normalization option: none");
+      if      ( norm_opt == NORM_OPT_FRACAREA ) cdoPrint("Normalization option: frac");
+      else if ( norm_opt == NORM_OPT_DESTAREA ) cdoPrint("Normalization option: dest");
+      else                                      cdoPrint("Normalization option: none");
     }
 
   return (norm_opt);
@@ -602,6 +595,7 @@ int get_norm_opt()
 static
 void remap_normalize(int norm_opt, int gridsize, double *array, double missval, remapgrid_t *tgt_grid)
 {
+  /* used only to check the result of remapcon */
   int i;
   double grid_err;
 
@@ -612,8 +606,9 @@ void remap_normalize(int norm_opt, int gridsize, double *array, double missval, 
 	  if ( !DBL_IS_EQUAL(array[i], missval) )
 	    {
 	      grid_err = tgt_grid->cell_frac[i]*tgt_grid->cell_area[i];
+
 	      if ( fabs(grid_err) > 0 )
-		array[i] = array[i]/grid_err;
+		array[i] /= grid_err;
 	      else
 		array[i] = missval;
 	    }
@@ -626,19 +621,23 @@ void remap_normalize(int norm_opt, int gridsize, double *array, double missval, 
 	  if ( !DBL_IS_EQUAL(array[i], missval) )
 	    {
 	      if ( fabs(tgt_grid->cell_frac[i]) > 0 )
-		array[i] = array[i]/tgt_grid->cell_frac[i];
+		array[i] /= tgt_grid->cell_frac[i];
 	      else
 		array[i] = missval;
 	    }
 	}
     }
+}
 
-  if ( remap_area_min > 0 )
+static
+void remap_set_frac_min(int gridsize, double *array, double missval, remapgrid_t *tgt_grid)
+{
+  if ( remap_frac_min > 0 )
     {
-      for ( i = 0; i < gridsize; i++ )
+      for ( int i = 0; i < gridsize; i++ )
 	{
 	  //printf("%d %g %g\n", i, remaps[r].tgt_grid.cell_frac[i], remaps[r].tgt_grid.cell_area[i]);
-	  if ( tgt_grid->cell_frac[i] < remap_area_min ) array[i] = missval;
+	  if ( tgt_grid->cell_frac[i] < remap_frac_min ) array[i] = missval;
 	}
     }
 }
@@ -1123,9 +1122,13 @@ void *Remap(void *argument)
 
 	  gridsize2 = gridInqSize(gridID2);
 
-	  /* used only to check the result of remapcon */
 	  if ( operfunc == REMAPCON || operfunc == REMAPCON2 || operfunc == REMAPYCON )
-	    remap_normalize(remaps[r].vars.norm_opt, gridsize2, array2, missval, &remaps[r].tgt_grid);
+	    {
+	      /* used only to check the result of remapcon */
+	      if ( 0 ) remap_normalize(remaps[r].vars.norm_opt, gridsize2, array2, missval, &remaps[r].tgt_grid);
+
+	      remap_set_frac_min(gridsize2, array2, missval, &remaps[r].tgt_grid);
+	    }
 
 	  if ( operfunc == REMAPSUM )
 	    {
@@ -1183,7 +1186,7 @@ void *Remap(void *argument)
 
   streamClose(streamID2);
 
-  WRITE_REMAP:
+ WRITE_REMAP:
  
   if ( lwrite_remap ) 
     write_remap_scrip(cdoStreamName(1)->args, map_type, submap_type, num_neighbors, remap_order,

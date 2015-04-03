@@ -237,7 +237,7 @@ int modelInqGribID(int modelID)
 }
 
 
-char *modelInqNamePtr(int modelID)
+const char *modelInqNamePtr(int modelID)
 {
   model_t *modelptr = NULL;
 

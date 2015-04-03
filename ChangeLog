@@ -1,3 +1,57 @@
+2014-11-27  Uwe Schulzweida
+
+	* using CDI library version 1.6.6
+	* Version 1.6.6 released
+
+2014-11-25  Uwe Schulzweida
+
+	* merge: check number of timesteps [Bug #5338]
+
+2014-11-24  Uwe Schulzweida
+
+	* Seasstat: added support for time bounds
+	* Timstat: added time bounds
+
+2014-11-21  Uwe Schulzweida
+
+	* outputtab: added key nohead and docu
+
+2014-11-20  Uwe Schulzweida
+
+	* outputtab: added key timestep
+	* selrec: abort if used in combination with other operators
+
+2014-11-19  Uwe Schulzweida
+
+	* remapycon: fix omp Race Condition
+
+2014-11-12  Uwe Schulzweida
+
+	* using CDI library version 1.6.5.2
+	* Version 1.6.5.2 released
+
+2014-11-11  Uwe Schulzweida
+
+	* histcount: doesn't recognize missing values (bug fix)
+	* filesdes: doesn't work for GRIB2 files [Bug #5307]
+
+2014-10-31  Uwe Schulzweida
+
+	* using CDI library version 1.6.5.1
+	* Version 1.6.5.1 released
+
+2014-10-30  Uwe Schulzweida
+
+	* remapcon: reactivate normalize option destarea
+
+2014-10-29  Uwe Schulzweida
+
+	* remapcon: deactivate call to remap_normalize() (bug fix)
+
+2014-10-26  Uwe Schulzweida
+
+	* replace >#pragma omp atomic update< by >#include "pragma_omp_atomic_update.h"<
+
 2014-10-23  Uwe Schulzweida
 
 	* using CDI library version 1.6.5

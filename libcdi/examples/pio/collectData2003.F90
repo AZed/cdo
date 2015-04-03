@@ -1,7 +1,8 @@
 PROGRAM collectdata2003
 #ifdef USE_MPI
   USE yaxt, ONLY: xt_initialize, xt_finalize, xt_idxlist, xt_idxstripes_new, &
-       xt_idxlist_delete, xt_int_kind, xt_stripe
+       xt_idxlist_delete, xi => xt_int_kind, xt_stripe
+  USE iso_c_binding, ONLY: c_int
 #endif
 
   IMPLICIT NONE
@@ -25,16 +26,17 @@ PROGRAM collectdata2003
   ! INTEGER, PARAMETER :: IOMode       = PIO_ASYNCH
   INTEGER, PARAMETER :: IOMode       = PIO_FPGUARD
 
-  INTEGER ::commGlob, commModel, error, pio_namespace
+  INTEGER :: commModel
 #ifdef USE_MPI
   LOGICAL :: run_model
+  INTEGER :: commGlob, ierror, pio_namespace
 #else
   LOGICAL, PARAMETER :: run_model = .TRUE.
 #endif
 
   ! Start parallel environment
 #ifdef USE_MPI
-  CALL MPI_INIT ( error )
+  CALL MPI_INIT ( ierror )
   commGlob = MPI_COMM_WORLD
   CALL xt_initialize(commGlob)
 
@@ -44,6 +46,8 @@ PROGRAM collectdata2003
        cdiPioNoPostCommSetup)
   run_model = commModel /= MPI_COMM_NULL
   IF (run_model) CALL namespaceSetActive(pio_namespace)
+#else
+  commModel = 0
 #endif
 
   IF (run_model) CALL modelrun ( commModel )
@@ -53,7 +57,7 @@ PROGRAM collectdata2003
   ! Cleanup environment.
   IF (run_model) CALL pioFinalize ()
   CALL xt_finalize
-  CALL MPI_FINALIZE ( error )
+  CALL MPI_FINALIZE ( ierror )
 #endif
 
 CONTAINS
@@ -76,9 +80,9 @@ CONTAINS
     DOUBLE PRECISION :: lons ( nlon ), lats ( nlat ), levs ( nlev )
     DOUBLE PRECISION :: var1 ( nlon * nlat ), var2 ( nlon * nlat * nlev )
     CHARACTER(len=256) :: varname
-    INTEGER :: last, start, chunk
+    INTEGER :: last, start
 #ifdef USE_MPI
-    INTEGER :: rank, comm_size, ierror
+    INTEGER :: rank, comm_size, ierror, chunk
     TYPE var1ddeco
       INTEGER :: start, chunksize
       TYPE(xt_idxlist) :: partdesc
@@ -122,12 +126,14 @@ CONTAINS
     chunk = uniform_partition_start((/ 1, SIZE(var1) /), comm_size, rank + 2) &
          - start
     vardeco1 = var1ddeco(start, chunk, &
-         xt_idxstripes_new(xt_stripe(start - 1, chunk, 1)))
+         xt_idxstripes_new(xt_stripe(INT(start, xi) - 1_xi, 1_xi, &
+         INT(chunk, c_int))))
     start = uniform_partition_start((/ 1, SIZE(var2) /), comm_size, rank + 1)
     chunk = uniform_partition_start((/ 1, SIZE(var2) /), comm_size, rank + 2) &
          - start
     vardeco2 = var1ddeco(start, chunk, &
-         xt_idxstripes_new(xt_stripe(start - 1, chunk, 1)))
+         xt_idxstripes_new(xt_stripe(INT(start, xi) - 1_xi, 1_xi, &
+         INT(chunk, c_int))))
 #endif
     !     Define the variable names
     varname = 'varname1'
@@ -228,6 +234,8 @@ CONTAINS
     CALL zaxisDestroy(zaxisID2)
     CALL gridDestroy(gridID)
 #ifdef USE_MPI
+    CALL xt_idxlist_delete(vardeco1%partdesc)
+    CALL xt_idxlist_delete(vardeco2%partdesc)
     CALL mpi_barrier(commModel, ierror)
     IF (ierror /= mpi_success) STOP 1
 #endif

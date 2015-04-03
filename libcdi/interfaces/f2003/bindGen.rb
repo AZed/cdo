@@ -145,7 +145,7 @@ def isBadFunction(returnType, returnPointer, paramList)
       CFTypeInfo[ctype].nil? or                        # derived data type
       param == '*' or                                  # unnamed pointer
       param[0,2] == '**' or                            # pointer2pointer
-      (param[0,1] == '*' and /\w\[\d*\]/.match(param)) # array of pointers
+      (param[0,1] == '*' and /\w\[\w*\]/.match(param)) # array of pointers
     )
   }
   return false
@@ -173,10 +173,10 @@ def setFortranParams(paramswithtypes,fFuncname)
       # remove '*' from funcnames and paramnames
       param.sub!('*','')
     end
-    if ( md = /\w\[(\d*)\]/.match(param); not md.nil? )
+    if ( md = /\w\[(\w*)\]/.match(param); not md.nil? )
       isArray   = true
       arraySize = md[1] == '' ? '*' : md[1]
-      param.tr!("[#{md[1]}]",'')
+      param[md.begin(1)-1,md.end(1)-1] = ''
     end
 
     # change param name if it equals the funcname

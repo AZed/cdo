@@ -343,7 +343,7 @@ int memListChangeEntry(void *ptrold, void *ptr, size_t size,
 		       const char *caller, const char *file, int line)
 {
   int item = UNDEFID;
-  int memID = 0;
+  size_t memID = 0;
   size_t sizeold;
 
   while( memID < memTableSize )

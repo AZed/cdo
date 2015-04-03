@@ -43,6 +43,7 @@ modelRegionCompute(double region[], int nlev, int nlat, int nlon,
                    int tsID, const double lons[], const double lats[],
                    double mscale, double mrscale)
 {
+  (void)nlev;
   unsigned is = (unsigned)chunkStart[0],
     js = (unsigned)chunkStart[1],
     ks = (unsigned)chunkStart[2],
@@ -131,7 +132,7 @@ modelRun(struct model_config setup, MPI_Comm comm)
       rank_coord[0] = rank % npart[0],
         rank_coord[1] = rank / npart[0];
     }
-  blk_displ = xmalloc(setup.max_nlev * sizeof (blk_displ[0]) * 2);
+  blk_displ = xmalloc((size_t)setup.max_nlev * sizeof (blk_displ[0]) * 2);
   blk_lens = blk_displ + setup.max_nlev;
 #endif
 
@@ -174,7 +175,7 @@ modelRun(struct model_config setup, MPI_Comm comm)
         }
       ++varLevs;
       varDesc[varIdx].nlev = varLevs;
-      for (size_t i = 0; i < varIdx; ++i)
+      for (size_t i = 0; i < (size_t)varIdx; ++i)
         if (varDesc[i].nlev == varLevs)
           {
             varDesc[varIdx].zaxisID = varDesc[i].zaxisID;
@@ -224,14 +225,14 @@ modelRun(struct model_config setup, MPI_Comm comm)
               {
                 gather_idxlist
                   = xt_idxstripes_new(&(struct Xt_stripe){.start = 0,
-                        .stride = 1, .nstrides = varDesc[varIdx].size }, 1);
+                        .stride = 1, .nstrides = (int)varDesc[varIdx].size }, 1);
               }
             else
               gather_idxlist = xt_idxempty_new();
             Xt_xmap xmap4gather
               = xt_xmap_all2all_new(part_idxlist, gather_idxlist, comm);
             xt_idxlist_delete(gather_idxlist);
-            struct Xt_offset_ext *src_blocks = xmalloc(varLevs
+            struct Xt_offset_ext *src_blocks = xmalloc((size_t)varLevs
                                                        * sizeof (*src_blocks));
             struct Xt_offset_ext dst_block = { .start = 0,
                                                .size = nlon * nlat * varLevs,
@@ -241,7 +242,7 @@ modelRun(struct model_config setup, MPI_Comm comm)
                  / nproma) * nproma;
             for (size_t i = 0; i < (size_t)varLevs; ++i)
               src_blocks[i] = (struct Xt_offset_ext)
-                { .start = (int)i * levStride,
+                { .start = (int)(i * levStride),
                   .size = chunkSize[0] * chunkSize[1],
                   .stride = 1 };
             varDesc[varIdx].redist4gather
@@ -288,9 +289,10 @@ modelRun(struct model_config setup, MPI_Comm comm)
       current_time = cditime2time_t(vdate, vtime);
       for ( tsID = 0; tsID < setup.nts; tsID++ )
 	{
-          time_t2cditime(current_time, &vdate, &vtime);
-	  taxisDefVdate ( taxisID, vdate );
-	  taxisDefVtime ( taxisID, vtime );
+          int vdatetime[2];
+          time_t2cditime(current_time, &vdatetime[1], &vdatetime[0]);
+	  taxisDefVdate(taxisID, vdatetime[1]);
+	  taxisDefVtime(taxisID, vdatetime[0]);
 	  streamDefTimestep ( streamID, tsID );
 	  for (int varID = 0; varID < nVars; ++varID)
 	    {
@@ -326,8 +328,8 @@ modelRun(struct model_config setup, MPI_Comm comm)
                   size_t nblk = (layerSize + nproma - 1)/nproma - 1;
                   for (size_t k = 0; k < varLevs; ++k)
                     {
-                      blk_displ[k] = k * (nblk + 1) * nproma;
-                      blk_lens[k] = layerSize;
+                      blk_displ[k] = (int)(k * (nblk + 1) * nproma);
+                      blk_lens[k] = (int)layerSize;
                     }
 #else
                   size_t layerSize = (size_t)(chunk[0] * chunk[1]);
@@ -347,6 +349,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 }
               if (rank == 0 && setup.compute_checksum)
                 {
+                  memcrc_r(&varDesc[varID].checksum_state,
+                           (const unsigned char *)vdatetime,
+                           sizeof (vdatetime));
                   memcrc_r(&varDesc[varID].checksum_state,
                            (const unsigned char *)var,
                            varDesc[varID].size * sizeof (var[0]));
@@ -381,8 +386,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 uint32_t cksum;
                 int code;
                 cksum = memcrc_finish(&varDesc[i].checksum_state,
-                                      (off_t)(varDesc[i].size
-                                              * sizeof (var[0])
+                                      (off_t)((varDesc[i].size
+                                               * sizeof (var[0])
+                                               + sizeof (int) * 2)
                                               * (size_t)setup.nts));
                 code = vlistInqVarCode(vlistID, varDesc[i].id);
                 if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum,
@@ -444,26 +450,26 @@ findPartition2D(int npart[2], int num_parts)
   npart[0] = num_parts, npart[1] = 1;
   uint_fast32_t npart_attempt[2];
   uint64_t bestRatio = (uint64_t)num_parts * rscale,
-    bestDiff = llabs((long long)(bestRatio - optimumRatio));
+    bestDiff = (uint64_t)llabs((long long)(bestRatio - optimumRatio));
   /* test all assignments of factors to dimensions, starting with
    * only one assigned to x dim (omitting 0 because that would
    * always give npart[1] > npart[0] */
   for (int assign2X = 1; assign2X <= numFactors; ++assign2X)
     {
-      uint_fast32_t pattern = (1 << assign2X) - 1,
+      uint_fast32_t pattern = (UINT32_C(1) << assign2X) - 1,
         lastPattern = pattern << (numFactors - assign2X);
       do {
         npart_attempt[0] = 1;
         npart_attempt[1] = 1;
         /* loop over all factors */
-        for (uint_fast32_t i = 0; i < numFactors; ++i)
+        for (uint_fast32_t i = 0; i < (uint_fast32_t)numFactors; ++i)
           {
             uint_fast32_t dim_idx = (pattern >> i) & 1;
             npart_attempt[dim_idx] *= factors[i];
           }
         uint64_t ratio = ((uint64_t)npart_attempt[0] * rscale)
           / (uint64_t)npart_attempt[1];
-        uint64_t diff = llabs(ratio - optimumRatio);
+        uint64_t diff = (uint64_t)llabs((long long)(ratio - optimumRatio));
         if (diff < bestDiff)
           {
             npart[0] = (int)npart_attempt[0];
@@ -476,7 +482,7 @@ findPartition2D(int npart[2], int num_parts)
 #if HAVE_DECL___BUILTIN_CTZ
           t = pattern | (pattern - 1);
           pattern = (t + 1)
-            | (((~t & -~t) - 1) >> (__builtin_ctz(pattern) + 1));
+            | (((~t & -~t) - 1) >> (__builtin_ctz((unsigned)pattern) + 1));
 #else
           t = (pattern | (pattern - 1)) + 1;
           pattern = t | ((((t & -t) / (pattern & -pattern)) >> 1) - 1);

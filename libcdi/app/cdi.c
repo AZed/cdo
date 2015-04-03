@@ -33,6 +33,13 @@ int      vlistInqVarMissvalUsed(int vlistID, int varID);
 #endif
 
 
+static inline int
+cdiUUIDIsNull(const unsigned char uuid[CDI_UUID_SIZE])
+{
+  static unsigned char uuid_nil[CDI_UUID_SIZE];
+  return !memcmp(uuid, uuid_nil, CDI_UUID_SIZE);
+}
+
 #include "printinfo.h"
 
 void cdiDefTableID(int tableID);
@@ -161,7 +168,7 @@ void usage(void)
 
 
 static
-void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
+void printInfo(int vdate, int vtime, char *varname, double level,
 	       int datasize, int number, int nmiss, double missval, const double *data, int vardis)
 {
   static int rec = 0;
@@ -190,13 +197,6 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
 
   fprintf(stdout, "%7d :", nmiss);
 
-  /*
-  if ( gridtype == GRID_SPECTRAL )
-    {
-      fprintf(stdout, "            %#12.5g\n", data[0]);
-    }
-  else
-  */
   if ( number == CDI_REAL )
     {
       if ( nmiss > 0 )
@@ -325,7 +325,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
   int tsteptype, taxisID;
   char tmpname[CDI_MAX_NAME];
   char varname[CDI_MAX_NAME];
-  char *modelptr, *instptr;
+  const char *modelptr, *instptr;
   int datatype;
   int year, month, day, hour, minute, second;
   char pstr[4];
@@ -374,6 +374,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  else if ( tsteptype == TSTEP_INSTANT3 ) fprintf(stdout, "%-8s ", "instant");
 	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s ", "min");
 	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s ", "max");
+	  else if ( tsteptype == TSTEP_AVG      ) fprintf(stdout, "%-8s ", "avg");
 	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s ", "accum");
 	  else if ( tsteptype == TSTEP_RANGE    ) fprintf(stdout, "%-8s ", "range");
 	  else if ( tsteptype == TSTEP_DIFF     ) fprintf(stdout, "%-8s ", "diff");
@@ -417,10 +418,11 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
-	  if ( vardis ) vlistInqVarName(vlistID, varID, varname);
-
-          if ( vardis )
-	    fprintf(stdout, "%-11s", varname);
+	  if (vardis)
+            {
+              vlistInqVarName(vlistID, varID, varname);
+              fprintf(stdout, "%-11s", varname);
+            }
 	  else
 	    fprintf(stdout, "%-11s", paramstr);
 
@@ -827,7 +829,6 @@ int main(int argc, char *argv[])
       int tsID;
       int ntsteps = 0;
       int taxisID1, taxisID2 = CDI_UNDEFID;
-      int gridtype;
       int vlistID1, vlistID2 = CDI_UNDEFID;
 
       streamID1 = streamOpenRead(fname1);
@@ -850,8 +851,9 @@ int main(int argc, char *argv[])
       taxisID1 = vlistInqTaxis(vlistID1);
       ntsteps = vlistNtsteps(vlistID1);
 
-      if ( Debug ) fprintf(stderr, "nvars   = %d\n", nvars);
-      if ( Debug ) fprintf(stderr, "ntsteps = %d\n", ntsteps);
+      if (Debug)
+        fprintf(stderr, "nvars   = %d\n"
+                "ntsteps = %d\n", nvars, ntsteps);
 
       if ( fname2 )
         {
@@ -904,11 +906,10 @@ int main(int argc, char *argv[])
       /*
 	nts = cdiInqTimeSize(streamID1);
       */
-      if ( Debug )
-	printf("nts = %d\n", nts);
-
-      if ( Debug )
-	printf("streamID1 = %d, streamID2 = %d\n", streamID1, streamID2);
+      if (Debug)
+	printf("nts = %d\n"
+               "streamID1 = %d, streamID2 = %d\n",
+               nts, streamID1, streamID2);
 
       if ( Shortinfo )
 	{
@@ -951,13 +952,12 @@ int main(int argc, char *argv[])
 		  printf("varID=%d, param=%d, gridID=%d, zaxisID=%d levelID=%d\n",
 			 varID, param, gridID, zaxisID, levelID);
 		  */
-		  gridtype = gridInqType(gridID);
 		  gridsize = gridInqSize(gridID);
 		  level    = zaxisInqLevel(zaxisID, levelID);
 		  missval  = vlistInqVarMissval(vlistID1, varID);
 
 		  if ( Info )
-		    printInfo(gridtype, vdate, vtime, varname, level, gridsize, number, nmiss, missval, data, Vardis);
+		    printInfo(vdate, vtime, varname, level, gridsize, number, nmiss, missval, data, Vardis);
 
 		  if ( fname2 )
 		    {
@@ -989,7 +989,6 @@ int main(int argc, char *argv[])
 		    fprintf(stdout, "varID = %d param = %d gridID = %d zaxisID = %d\n",
 			    varID, param, gridID, zaxisID);
 
-		  gridtype = gridInqType(gridID);
 		  gridsize = gridInqSize(gridID);
 		  missval  = vlistInqVarMissval(vlistID1, varID);
 
@@ -1000,7 +999,7 @@ int main(int argc, char *argv[])
 		      streamReadVarSlice(streamID1, varID, levelID, data, &nmiss);
 
 		      if ( Info )
-			printInfo(gridtype, vdate, vtime, varname, level, gridsize, number, nmiss, missval, data, Vardis);
+			printInfo(vdate, vtime, varname, level, gridsize, number, nmiss, missval, data, Vardis);
 
 		      if ( fname2 )
 			streamWriteVarSlice(streamID2, varID, levelID, data, nmiss);

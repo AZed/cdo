@@ -256,7 +256,7 @@ int gribapiGetTsteptype(grib_handle *gh)
 	  else if ( strncmp("ratio",   stepType, len) == 0 ) tsteptype = TSTEP_RATIO;
 	  else if ( lprint )
 	    {
-	      Message("stepType %s unsupported, set to instant!", stepType);
+	      Message("Time stepType %s unsupported, set to instant!", stepType);
 	      lprint = FALSE;
 	    }
 
@@ -340,30 +340,33 @@ int gribapiGetValidityDateTime(grib_handle *gh, int *vdate, int *vtime)
 	cdiDecodeDate(rdate, &ryear, &rmonth, &rday);
 	cdiDecodeTime(rtime, &rhour, &rminute, &rsecond);
 
-	encode_caldaysec(grib_calendar, ryear, rmonth, rday, rhour, rminute, rsecond, &julday, &secofday);
+        if ( rday > 0 )
+          {
+            encode_caldaysec(grib_calendar, ryear, rmonth, rday, rhour, rminute, rsecond, &julday, &secofday);
 
-	addsec = 0;
-	switch ( timeUnits )
-	  {
-	  case TUNIT_SECOND:  addsec =         time_period; break;
-	  case TUNIT_MINUTE:  addsec =    60 * time_period; break;
-	  case TUNIT_HOUR:    addsec =  3600 * time_period; break;
-	  case TUNIT_3HOURS:  addsec = 10800 * time_period; break;
-	  case TUNIT_6HOURS:  addsec = 21600 * time_period; break;
-	  case TUNIT_12HOURS: addsec = 43200 * time_period; break;
-	  case TUNIT_DAY:     addsec = 86400 * time_period; break;
-	  default:
-	    if ( lprint )
-	      {
-	        Warning("Time unit %d unsupported", timeUnits);
-		lprint = FALSE;
-	      }
-	    break;
-	  }
+            addsec = 0;
+            switch ( timeUnits )
+              {
+              case TUNIT_SECOND:  addsec =         time_period; break;
+              case TUNIT_MINUTE:  addsec =    60 * time_period; break;
+              case TUNIT_HOUR:    addsec =  3600 * time_period; break;
+              case TUNIT_3HOURS:  addsec = 10800 * time_period; break;
+              case TUNIT_6HOURS:  addsec = 21600 * time_period; break;
+              case TUNIT_12HOURS: addsec = 43200 * time_period; break;
+              case TUNIT_DAY:     addsec = 86400 * time_period; break;
+              default:
+                if ( lprint )
+                  {
+                    Warning("Time unit %d unsupported", timeUnits);
+                    lprint = FALSE;
+                  }
+                break;
+              }
 
-	julday_add_seconds(addsec, &julday, &secofday);
+            julday_add_seconds(addsec, &julday, &secofday);
 
-	decode_caldaysec(grib_calendar, julday, secofday, &ryear, &rmonth, &rday, &rhour, &rminute, &rsecond);
+            decode_caldaysec(grib_calendar, julday, secofday, &ryear, &rmonth, &rday, &rhour, &rminute, &rsecond);
+          }
 
 	*vdate = cdiEncodeDate(ryear, rmonth, rday);
 	*vtime = cdiEncodeTime(rhour, rminute, rsecond);
@@ -616,10 +619,12 @@ void gribapiGetGrid(grib_handle *gh, grid_t *grid)
       }
     case GRID_UNSTRUCTURED:
       {
-        char uuid[17];
-    	char reference_link[8192];
+        unsigned char uuid[CDI_UUID_SIZE];
+    	/*
+        char reference_link[8192];
         size_t len = sizeof(reference_link);
         reference_link[0] = 0;
+         */
 
         /* FIXME: assert(numberOfPoints <= INT_MAX && numberOfPoints >= INT_MIN) */
     	grid->size  = (int)numberOfPoints;
@@ -638,10 +643,10 @@ void gribapiGetGrid(grib_handle *gh, grid_t *grid)
                   grid->reference = strdupx(reference_link);
               }
             */
-            len = (size_t) 16;
-            if ( grib_get_bytes(gh, "uuidOfHGrid", (unsigned char *) uuid, &len) == 0)
+            size_t len = (size_t)CDI_UUID_SIZE;
+            if ( grib_get_bytes(gh, "uuidOfHGrid", uuid, &len) == 0)
               {
-                memcpy(grid->uuid, uuid, 16);
+                memcpy(grid->uuid, uuid, CDI_UUID_SIZE);
               }
           }
 	break;
@@ -892,7 +897,7 @@ void gribapiAddRecord(stream_t * streamptr, int param, grib_handle *gh,
 
   gribapiGetGrid(gh, &grid);
 
-  gridID = varDefGrid(vlistID, grid, 0);
+  gridID = varDefGrid(vlistID, &grid, 0);
 
   zaxistype = gribapiGetZaxisType(editionNumber, leveltype1);
 
@@ -921,7 +926,7 @@ void gribapiAddRecord(stream_t * streamptr, int param, grib_handle *gh,
     case ZAXIS_REFERENCE:
       {
         size_t len;
-        char uuid[17];
+        unsigned char uuid[CDI_UUID_SIZE];
         long ltmp;
         long nhlev, nvgrid;
 
@@ -934,9 +939,9 @@ void gribapiAddRecord(stream_t * streamptr, int param, grib_handle *gh,
         nhlev = ltmp;
         GRIB_CHECK(grib_get_long(gh, "numberOfVGridUsed", &ltmp), 0);
         nvgrid = ltmp;
-        len = (size_t) 16;
-        uuid[16] = 0;
-        GRIB_CHECK(grib_get_bytes(gh, "uuidOfVGrid", (unsigned char *) uuid, &len), 0);
+        len = (size_t)CDI_UUID_SIZE;
+        memset(uuid, 0, CDI_UUID_SIZE);
+        GRIB_CHECK(grib_get_bytes(gh, "uuidOfVGrid", uuid, &len), 0);
         varDefZAxisReference((int) nhlev, (int) nvgrid, uuid);
         break;
       }
@@ -1223,16 +1228,6 @@ int gribapiScanTimestep1(stream_t * streamptr)
       lieee = FALSE;
 
       comptype = COMPRESS_NONE;
-      if ( gribGetZip((long)recsize, gribbuffer, &unzipsize) > 0 )
-	{
-	  comptype = COMPRESS_SZIP;
-	  unzipsize += 100;
-	  if ( buffersize < (size_t)unzipsize )
-	    {
-	      buffersize = (size_t)unzipsize;
-	      gribbuffer = (unsigned char *) realloc(gribbuffer, buffersize);
-	    }
-	}
 
       nrecs_scanned++;
       gh = grib_handle_new_from_message(NULL, (void *) gribbuffer, recsize);
@@ -1242,6 +1237,17 @@ int gribapiScanTimestep1(stream_t * streamptr)
 
       if ( editionNumber <= 1 )
 	{
+          if ( gribGetZip((long)recsize, gribbuffer, &unzipsize) > 0 )
+            {
+              comptype = COMPRESS_SZIP;
+              unzipsize += 100;
+              if ( buffersize < (size_t)unzipsize )
+                {
+                  buffersize = (size_t)unzipsize;
+                  gribbuffer = (unsigned char *) realloc(gribbuffer, buffersize);
+                }
+            }
+
 	  GRIB_CHECK(grib_get_long(gh, "table2Version", &lpar), 0);
 	  rtabnum = (int) lpar;
 	  GRIB_CHECK(grib_get_long(gh, "indicatorOfParameter", &lpar), 0);
@@ -1262,8 +1268,9 @@ int gribapiScanTimestep1(stream_t * streamptr)
 	  if ( status == 0 )
 	    {
 	      // fprintf(stderr, "packingType %d %s\n", len, typeOfPacking);
-	      if      ( strncmp(typeOfPacking, "grid_jpeg", len) == 0 ) comptype = COMPRESS_JPEG;
-	      else if ( strncmp(typeOfPacking, "grid_ieee", len) == 0 ) lieee = TRUE;
+	      if      ( strncmp(typeOfPacking, "grid_jpeg", len)  == 0 ) comptype = COMPRESS_JPEG;
+	      else if ( strncmp(typeOfPacking, "grid_ccsds", len) == 0 ) comptype = COMPRESS_SZIP;
+	      else if ( strncmp(typeOfPacking, "grid_ieee", len)  == 0 ) lieee = TRUE;
 	    }
 
 	  param = gribapiGetParam(gh);
@@ -1450,6 +1457,7 @@ int gribapiScanTimestep1(stream_t * streamptr)
 	}
     }
 #else
+  (void)streamptr;
   Error("GRIB_API support not compiled in!");
 #endif
 
@@ -1457,10 +1465,10 @@ int gribapiScanTimestep1(stream_t * streamptr)
 }
 
 
+#ifdef HAVE_LIBGRIB_API
 int gribapiScanTimestep2(stream_t * streamptr)
 {
   int rstatus = 0;
-#if  defined  (HAVE_LIBGRIB_API)
   off_t recpos = 0;
   unsigned char *gribbuffer = NULL;
   size_t buffersize = 0;
@@ -1721,16 +1729,16 @@ int gribapiScanTimestep2(stream_t * streamptr)
 
   streamptr->record->buffer     = gribbuffer;
   streamptr->record->buffersize = buffersize;
-#endif
 
   return (rstatus);
 }
+#endif
 
 
+#if  defined  (HAVE_LIBGRIB_API)
 int gribapiScanTimestep(stream_t * streamptr)
 {
   int rstatus = 0;
-#if  defined  (HAVE_LIBGRIB_API)
   size_t recsize = 0;
   off_t recpos = 0;
   unsigned char *gribbuffer;
@@ -2007,22 +2015,19 @@ int gribapiScanTimestep(stream_t * streamptr)
     }
 
   rstatus = (int)streamptr->ntsteps;
-#else
-  Error("GRIB_API support not compiled in!");
-#endif
-
   return (rstatus);
 }
+#endif
 
 #ifdef gribWarning
 #undef gribWarning
 #endif
 
+#ifdef HAVE_LIBGRIB_API
 int gribapiDecode(unsigned char *gribbuffer, int gribsize, double *data, int gridsize,
 		  int unreduced, int *nmiss, double missval, int vlistID, int varID)
 {
   int status = 0;
-#if  defined  (HAVE_LIBGRIB_API)
   long lpar;
   long editionNumber, numberOfPoints;
   size_t datasize, dummy, recsize;
@@ -2073,12 +2078,10 @@ int gribapiDecode(unsigned char *gribbuffer, int gribsize, double *data, int gri
 
   grib_handle_delete(gh);
 
-#else
-  Error("GRIB_API support not compiled in!");
-#endif
-
   return (status);
 }
+#endif
+
 
 #if  defined  (HAVE_LIBGRIB_API)
 static
@@ -2412,15 +2415,12 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
       gridtype = GRID_LONLAT;
     }
 
-
   if ( gridtype == GRID_LONLAT || gridtype == GRID_GAUSSIAN )
     {
       if ( editionNumber != 2 || lieee ) { comptype = 0; }
 
       if ( comptype )
         {
-          //if ( nmiss > 0 ) comptype = 0;
-
           if ( comptype == COMPRESS_JPEG )
             {
               mesg = "grid_jpeg"; len = strlen(mesg);
@@ -2428,7 +2428,7 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
             }
           else if ( comptype == COMPRESS_SZIP )
             {
-              mesg = "grid_szip"; len = strlen(mesg);
+              mesg = "grid_ccsds"; len = strlen(mesg);
               GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
             }
           else
@@ -2596,10 +2596,8 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
 	    else
 	      GRIB_CHECK(my_grib_set_long(gh, "precision", 1), 0);
           }
-        else if ( comptype )
+        else
 	  {
-            //if ( nmiss > 0 ) comptype = 0;
-
             if ( comptype == COMPRESS_JPEG )
               {
                 mesg = "grid_jpeg"; len = strlen(mesg);
@@ -2607,7 +2605,7 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
               }
             else if ( comptype == COMPRESS_SZIP )
               {
-                mesg = "grid_szip"; len = strlen(mesg);
+                mesg = "grid_ccsds"; len = strlen(mesg);
                 GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
               }
             else
@@ -2615,11 +2613,6 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
                 mesg = "grid_simple"; len = strlen(mesg);
                 GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
               }
-	  }
-	else
-	  {
-	    mesg = "grid_simple"; len = strlen(mesg);
-	    GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
 	  }
 
 	break;
@@ -2713,11 +2706,18 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
 	GRIB_CHECK(my_grib_set_long(gh, "numberOfDataPoints", gridInqSize(gridID)), 0);
 	GRIB_CHECK(my_grib_set_long(gh, "totalNumberOfGridPoints", gridInqSize(gridID)), 0);
 
+        if ( comptype == COMPRESS_SZIP )
+          {
+            mesg = "grid_ccsds"; len = strlen(mesg);
+            GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
+          }
+
 	break;
       }
     case GRID_UNSTRUCTURED:
       {
 	static int warning = 1;
+
 	status = my_grib_set_long(gh, "gridDefinitionTemplateNumber", GRIB2_GTYPE_UNSTRUCTURED);
 	if ( status != 0 && warning )
 	  {
@@ -2728,18 +2728,24 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int comptype
 	  }
 	else
 	  {
-            char uuid[17];
+            unsigned char uuid[CDI_UUID_SIZE];
             int position = gridInqPosition(gridID);
             int number = gridInqNumber(gridID);
             if ( position < 0 ) position = 0;
             if ( number < 0 ) number = 0;
 	    GRIB_CHECK(my_grib_set_long(gh, "numberOfGridUsed", number), 0);
 	    GRIB_CHECK(my_grib_set_long(gh, "numberOfGridInReference", position), 0);
-            len = 16;
+            len = CDI_UUID_SIZE;
             gridInqUUID(gridID, uuid);
-	    if (grib_set_bytes(gh, "uuidOfHGrid", (unsigned char *) uuid, &len) != 0)
+	    if (grib_set_bytes(gh, "uuidOfHGrid", uuid, &len) != 0)
 	      Warning("Can't write UUID!");
 	  }
+
+        if ( comptype == COMPRESS_SZIP )
+          {
+            mesg = "grid_ccsds"; len = strlen(mesg);
+            GRIB_CHECK(my_grib_set_string(gh, "packingType", mesg, &len), 0);
+          }
 
 	break;
       }
@@ -3014,8 +3020,7 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
       }
     case ZAXIS_REFERENCE:
       {
-        char uuid[16];
-        int number;
+        unsigned char uuid[CDI_UUID_SIZE];
 
         if ( !gcinit )
           {
@@ -3028,15 +3033,15 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
               ; // not available
             else
               {
-                number = zaxisInqNumber(zaxisID);
+                int number = zaxisInqNumber(zaxisID);
                 gribapiDefLevelType(gh, gcinit, "typeOfFirstFixedSurface", GRIB2_LTYPE_REFERENCE);
                 gribapiDefLevelType(gh, gcinit, "typeOfSecondFixedSurface", GRIB2_LTYPE_REFERENCE);
                 GRIB_CHECK(my_grib_set_long(gh, "NV", 6), 0);
                 GRIB_CHECK(my_grib_set_long(gh, "nlev", zaxisInqNlevRef(zaxisID)), 0);
                 GRIB_CHECK(my_grib_set_long(gh, "numberOfVGridUsed", number), 0);
-                size_t len = 16;
+                size_t len = CDI_UUID_SIZE;
                 zaxisInqUUID(zaxisID, uuid);
-                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) uuid, &len) != 0)
+                if (grib_set_bytes(gh, "uuidOfVGrid", uuid, &len) != 0)
                   Warning("Can't write UUID!");
                 GRIB_CHECK(my_grib_set_long(gh, "topLevel", (long) dlevel1), 0);
                 GRIB_CHECK(my_grib_set_long(gh, "bottomLevel", (long) dlevel2), 0);
@@ -3048,14 +3053,14 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
               ; // not available
             else
               {
-                number = zaxisInqNumber(zaxisID);
+                int number = zaxisInqNumber(zaxisID);
                 gribapiDefLevelType(gh, gcinit, "typeOfFirstFixedSurface", GRIB2_LTYPE_REFERENCE);
                 GRIB_CHECK(my_grib_set_long(gh, "NV", 6), 0);
                 GRIB_CHECK(my_grib_set_long(gh, "nlev", zaxisInqNlevRef(zaxisID)), 0);
                 GRIB_CHECK(my_grib_set_long(gh, "numberOfVGridUsed", number), 0);
-                size_t len = 16;
+                size_t len = CDI_UUID_SIZE;
                 zaxisInqUUID(zaxisID, uuid);
-                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) uuid, &len) != 0)
+                if (grib_set_bytes(gh, "uuidOfVGrid", uuid, &len) != 0)
                   Warning("Can't write UUID!");
                 GRIB_CHECK(my_grib_set_double(gh, "level", level), 0);
               }
@@ -3083,39 +3088,15 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
 }
 #endif
 
-void *gribHandleNew(int editionNumber)
-{
-  void *gh = NULL;
-
-#if  defined  (HAVE_LIBGRIB_API)
-  if ( editionNumber == 1 )
-    gh = (void *) grib_handle_new_from_samples(NULL, "GRIB1");
-  else
-    gh = (void *) grib_handle_new_from_samples(NULL, "GRIB2");
-
-  if ( gh == NULL ) Error("grib_handle_new_from_samples failed!");
-#endif
-
-  return (gh);
-}
-
-
-void gribHandleDelete(void *gh)
-{
-#if  defined  (HAVE_LIBGRIB_API)
-  grib_handle_delete(gh);
-#endif
-}
-
 /* #define GRIBAPIENCODETEST 1 */
 
+#ifdef HAVE_LIBGRIB_API
 size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisID,
 		     int vdate, int vtime, int tsteptype, int numavg, 
 		     long datasize, const double *data, int nmiss, unsigned char **gribbuffer, size_t *gribbuffersize,
 		     int comptype, void *gribContainer)
 {
   size_t nbytes = 0;
-#if  defined  (HAVE_LIBGRIB_API)
   size_t recsize = 0;
   void *dummy = NULL;
   int datatype;
@@ -3246,12 +3227,10 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
   gc->init = TRUE;
 
   nbytes = recsize;
-#else
-  Error("GRIB_API support not compiled in!");
-#endif
 
   return (nbytes);
 }
+#endif
 
 /*
  * Local Variables:

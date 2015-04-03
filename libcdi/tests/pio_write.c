@@ -47,6 +47,21 @@ static const struct {
   { "PIO_ASYNCH", PIO_ASYNCH },
   { "PIO_WRITER", PIO_WRITER }
 };
+
+static inline int
+search_iomode_str(const char *modestr)
+{
+  int retval = -1;
+  for (size_t i = 0;
+       i < sizeof (mode_map) / sizeof (mode_map[0]);
+       ++i)
+    if (!strcmp(modestr, mode_map[i].text))
+      {
+        retval = (int)i;
+        break;
+      }
+  return retval;
+}
 #endif
 
 static const struct {
@@ -80,24 +95,7 @@ parse_intarg(const char msg[])
   return (int)temp;
 }
 
-#ifdef USE_MPI
-static inline int
-search_iomode_str(const char *modestr)
-{
-  int i, retval = -1;
-  for (i = 0;
-       i < sizeof (mode_map) / sizeof (mode_map[0]);
-       ++i)
-    if (!strcmp(modestr, mode_map[i].text))
-      {
-        retval = i;
-        break;
-      }
-  return retval;
-}
-#endif
-
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   struct model_config setup = default_setup;
 
@@ -138,13 +136,21 @@ int main (int argc, char *argv[])
         }
         break;
       case 'w':
-        nProcsIO = strtol(optarg, NULL, 0);
+        {
+          long temp = strtol(optarg, NULL, 0);
+          if (temp < 0 || temp > INT_MAX/2)
+            {
+              fprintf(stderr, "Unsupported number of I/O servers: %ld\n", temp);
+              exit(EXIT_FAILURE);
+            }
+          nProcsIO = (int)temp;
+        }
         break;
 #endif
       case 'f':
         {
-          int i, found = 0;
-          for (i = 0;
+          int found = 0;
+          for (size_t i = 0;
                i < sizeof (suffix2type) / sizeof (suffix2type[0]);
                ++i)
             if (!strcmp(optarg, suffix2type[i].suffix))
