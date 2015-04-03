@@ -24,7 +24,9 @@
       Ydrunstat    ydrunmean         Multi-year daily running mean
       Ydrunstat    ydrunavg          Multi-year daily running average
       Ydrunstat    ydrunvar          Multi-year daily running variance
+      Ydrunstat    ydrunvar1         Multi-year daily running variance [Divisor is (n-1)]
       Ydrunstat    ydrunstd          Multi-year daily running standard deviation
+      Ydrunstat    ydrunstd1         Multi-year daily running standard deviation [Divisor is (n-1)]
 */
 
 #include <cdi.h>
@@ -37,20 +39,18 @@
 
 
 typedef struct {
-  int     vdate[NDAY];
-  int     vtime[NDAY];  
+  int       vdate[NDAY];
+  int       vtime[NDAY];  
   field_t **vars1[NDAY]; 
   field_t **vars2[NDAY];
-  int     nsets[NDAY];
-  int     vlist;
+  int       nsets[NDAY];
+  int       vlist;
 }
 YDAY_STATS;
 
 
 static YDAY_STATS *ydstatCreate(int vlistID);
 static void ydstatDestroy(YDAY_STATS *stats);
-static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy);
-static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy);
 static void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
   field_t **vars1, field_t **vars2, int nsets, int operfunc);
 static void ydstatFinalize(YDAY_STATS *stats, int operfunc);
@@ -74,7 +74,9 @@ void *Ydrunstat(void *argument)
   int nmiss;
   int nvars, nlevels;
   int *recVarID, *recLevelID;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
   double missval;
+  double divisor;
   field_t ***vars1 = NULL, ***vars2 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
@@ -91,13 +93,20 @@ void *Ydrunstat(void *argument)
   cdoOperatorAdd("ydrunmean", func_mean, 0, NULL);
   cdoOperatorAdd("ydrunavg",  func_avg,  0, NULL);
   cdoOperatorAdd("ydrunvar",  func_var,  0, NULL);
+  cdoOperatorAdd("ydrunvar1", func_var1, 0, NULL);
   cdoOperatorAdd("ydrunstd",  func_std,  0, NULL);
+  cdoOperatorAdd("ydrunstd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
   operatorInputArg("number of timesteps");
   ndates = atoi(operatorArgv()[0]);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
   
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -126,41 +135,14 @@ void *Ydrunstat(void *argument)
   
   stats = ydstatCreate(vlistID1);
   vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
-  if ( operfunc == func_std || operfunc == func_var )
+  if ( lvarstd )
     vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-      if ( operfunc == func_std || operfunc == func_var )
-	vars2[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  gridsize = gridInqSize(gridID);
-	  nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-
-	  vars1[its][varID] = (field_t *) malloc(nlevels*sizeof(field_t));
-	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[its][varID] = (field_t *) malloc(nlevels*sizeof(field_t));
-
-	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    {
-	      vars1[its][varID][levelID].grid    = gridID;
-	      vars1[its][varID][levelID].nmiss   = 0;
-	      vars1[its][varID][levelID].missval = missval;
-	      vars1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	      if ( operfunc == func_std || operfunc == func_var )
-		{
-		  vars2[its][varID][levelID].grid    = gridID;
-		  vars2[its][varID][levelID].nmiss   = 0;
-		  vars2[its][varID][levelID].missval = missval;
-		  vars2[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
-	    }
-	}
+      vars1[its] = field_malloc(vlistID1, FIELD_PTR);
+      if ( lvarstd )
+	vars2[its] = field_malloc(vlistID1, FIELD_PTR);
     }
   
   for ( tsID = 0; tsID < ndates; tsID++ )
@@ -185,7 +167,7 @@ void *Ydrunstat(void *argument)
 	  streamReadRecord(streamID1, vars1[tsID][varID][levelID].ptr, &nmiss);
 	  vars1[tsID][varID][levelID].nmiss = nmiss;
 
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    {
 	      farmoq(&vars2[tsID][varID][levelID], vars1[tsID][varID][levelID]);
 	      for ( inp = 0; inp < tsID; inp++ )
@@ -211,21 +193,21 @@ void *Ydrunstat(void *argument)
       vdate = datetime[ndates].date;
       vtime = datetime[ndates].time;
       
-      if ( operfunc == func_std || operfunc == func_var )   
+      if ( lvarstd )   
         ydstatUpdate(stats, vdate, vtime, vars1[0], vars2[0], ndates, operfunc);
       else
         ydstatUpdate(stats, vdate, vtime, vars1[0], NULL, ndates, operfunc);
         
       datetime[ndates] = datetime[0];
       vars1[ndates] = vars1[0];
-      if ( operfunc == func_std || operfunc == func_var )
+      if ( lvarstd )
         vars2[ndates] = vars2[0];
 
       for ( inp = 0; inp < ndates; inp++ )
 	{
 	  datetime[inp] = datetime[inp+1];
 	  vars1[inp] = vars1[inp+1];
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    vars2[inp] = vars2[inp+1];
 	}
 
@@ -242,7 +224,7 @@ void *Ydrunstat(void *argument)
 	  streamReadRecord(streamID1, vars1[ndates-1][varID][levelID].ptr, &nmiss);
 	  vars1[ndates-1][varID][levelID].nmiss = nmiss;
 
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    {
 	      for ( inp = 0; inp < ndates-1; inp++ )
 		{
@@ -290,25 +272,13 @@ void *Ydrunstat(void *argument)
   
   for ( its = 0; its < ndates; its++ )
     {
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    {
-	      free(vars1[its][varID][levelID].ptr);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID][levelID].ptr);
-	    }
-
-	  free(vars1[its][varID]);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID]);
-	}
-	free(vars1[its]);
-	if ( operfunc == func_std || operfunc == func_var ) free(vars2[its]);
+      field_free(vars1[its], vlistID1);
+      if ( lvarstd ) field_free(vars2[its], vlistID1);
     }
   
   ydstatDestroy(stats);
   free(vars1);
-  if ( operfunc == func_std || operfunc == func_var ) free(vars2);
+  if ( lvarstd ) free(vars2);
 
   if ( datetime ) free(datetime);
 
@@ -382,72 +352,15 @@ void ydstatDestroy(YDAY_STATS *stats)
 }
 
 static
-void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
-{
-  int varID, levelID, nvars, nlevels;
-  int gridID, gridsize;
-  double missval;
-
-  nvars = vlistNvars(stats->vlist);
-  
-  stats->vars1[dayoy] = (field_t **) malloc(nvars * sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(stats->vlist, varID);
-      gridsize = gridInqSize(gridID);
-      nlevels  = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
-      missval  = vlistInqVarMissval(stats->vlist, varID);
-
-      stats->vars1[dayoy][varID] = (field_t *) malloc(nlevels * sizeof(field_t));
-	      
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-        {
-	  stats->vars1[dayoy][varID][levelID].grid    = gridID;
-	  stats->vars1[dayoy][varID][levelID].nmiss   = 0;
-	  stats->vars1[dayoy][varID][levelID].missval = missval;
-	  stats->vars1[dayoy][varID][levelID].ptr     = (double *) malloc(gridsize * sizeof(double));
-        }
-    }
-}
-
-static
-void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
-{
-  int varID, levelID, nvars, nlevels;
-  int gridID, gridsize;
-  double missval;
-
-  nvars = vlistNvars(stats->vlist);
-  
-  stats->vars2[dayoy] = (field_t **) malloc(nvars * sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(stats->vlist, varID);
-      gridsize = gridInqSize(gridID);
-      nlevels  = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
-      missval  = vlistInqVarMissval(stats->vlist, varID);
-
-      stats->vars2[dayoy][varID] = (field_t *) malloc(nlevels * sizeof(field_t));
-	      
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-        {
-	  stats->vars2[dayoy][varID][levelID].grid    = gridID;
-	  stats->vars2[dayoy][varID][levelID].nmiss   = 0;
-	  stats->vars2[dayoy][varID][levelID].missval = missval;
-	  stats->vars2[dayoy][varID][levelID].ptr     = (double *) malloc(gridsize * sizeof(double));
-        }
-    }
-}
-
-static
 void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
 		  field_t **vars1, field_t **vars2, int nsets, int operfunc)
 {
   int varID, levelID, nvars, nlevels;
   int gridsize;
   int year, month, day, dayoy;
+  int lvarstd;
+
+  lvarstd = vars2 != NULL;
 
   nvars = vlistNvars(stats->vlist);
   
@@ -468,9 +381,9 @@ void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
 
   if ( stats->vars1[dayoy] == NULL )
     {
-      ydstatCreateVars1(stats, dayoy);
-      if ( operfunc == func_std || operfunc == func_var )
-	ydstatCreateVars2(stats, dayoy);
+      stats->vars1[dayoy] = field_malloc(stats->vlist, FIELD_PTR);
+      if ( lvarstd )
+	stats->vars2[dayoy] = field_malloc(stats->vlist, FIELD_PTR);
     }
 
   for ( varID = 0; varID  < nvars; varID++ )
@@ -487,7 +400,7 @@ void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
 	      memcpy(stats->vars1[dayoy][varID][levelID].ptr, vars1[varID][levelID].ptr, gridsize * sizeof(double));
 	      stats->vars1[dayoy][varID][levelID].nmiss = vars1[varID][levelID].nmiss;
 	       
-	      if ( operfunc == func_std || operfunc == func_var )
+	      if ( lvarstd )
 	        {
 	          memcpy(stats->vars2[dayoy][varID][levelID].ptr, vars2[varID][levelID].ptr, gridsize * sizeof(double));
 	          stats->vars2[dayoy][varID][levelID].nmiss = vars2[varID][levelID].nmiss;
@@ -495,7 +408,7 @@ void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
 	    }
 	  else
 	    {
-	      if ( operfunc == func_std || operfunc == func_var )
+	      if ( lvarstd )
 	        {
 		  farsum(&stats->vars1[dayoy][varID][levelID], vars1[varID][levelID]);
 		  farsum(&stats->vars2[dayoy][varID][levelID], vars2[varID][levelID]);
@@ -516,7 +429,10 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 {
   int varID, levelID, nvars, nlevels;
   int dayoy;
-  
+  double divisor;
+
+  divisor = operfunc == func_std1 || operfunc == func_var1;
+
   nvars = vlistNvars(stats->vlist);
   
   for ( dayoy = 0; dayoy < NDAY; dayoy++ )
@@ -524,7 +440,8 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
       {
       	switch ( operfunc )
       	  {
-	    case func_avg: case func_mean:
+	    case func_avg:
+	    case func_mean:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
 	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
@@ -535,24 +452,26 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 	      break;
 	      
 	    case func_std:
+	    case func_std1:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
 	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
 	          nlevels = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
 	          for ( levelID = 0; levelID < nlevels; levelID++ )
-		    farcstd(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],
-		      1.0 / stats->nsets[dayoy]);
+		    farcstdx(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],
+			     stats->nsets[dayoy], divisor);
 	        }
 	      break;
 	      
 	    case func_var:
+	    case func_var1:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
 	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
 	          nlevels = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
 	          for ( levelID = 0; levelID < nlevels; levelID++ )
-		    farcvar(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],
-		      1.0 / stats->nsets[dayoy]);
+		    farcvarx(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],
+			    stats->nsets[dayoy], divisor);
 	        }
 	      break;
       	  }

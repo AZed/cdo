@@ -6,7 +6,7 @@
 #  include "dmemory.h"
 #endif
 
-#if defined (SX)
+#if defined(SX)
 #  define  NFFT  1024
 #else
 #  define  NFFT  64
@@ -63,13 +63,13 @@ void fft_set(double *trigs, long *ifax, long n)
 
   ifax[0] = nfax;
 
-#if defined (CRAY)
+#if defined(CRAY)
 #pragma _CRI novector
 #endif
-#if defined (SX)
+#if defined(SX)
 #pragma vdir novector
 #endif
-#if defined (__uxp__)
+#if defined(__uxp__)
 #pragma loop scalar
 #endif
   for ( k = 0; k < nfax / 2; k++ )
@@ -157,7 +157,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -189,7 +189,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -219,7 +219,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -239,7 +239,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -273,7 +273,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -312,7 +312,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -352,7 +352,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -376,7 +376,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -415,7 +415,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -459,7 +459,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -508,7 +508,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -534,7 +534,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -574,7 +574,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -631,7 +631,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -695,7 +695,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -730,7 +730,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -779,7 +779,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -838,7 +838,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -898,21 +898,21 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
 		  {
-		    c[ja + j] = a[ib + i] + (a[ia + i] + a[ic + i]);
-		    c[jd + j] = b[ib + i] - (b[ia + i] + b[ic + i]);
-		    c[jb + j] = (S60 * (a[ia + i] - a[ic + i])) -
-		                (0.5 * (b[ia + i] + b[ic + i]) + b[ib + i]);
-		    c[jf + j] =-(S60 * (a[ia + i] - a[ic + i])) -
-		                (0.5 * (b[ia + i] + b[ic + i]) + b[ib + i]);
-		    c[jc + j] =  S60 * (b[ic + i] - b[ia + i]) +
-		                (0.5 * (a[ia + i] + a[ic + i]) - a[ib + i]);
-		    c[je + j] =  S60 * (b[ic + i] - b[ia + i]) -
-		                (0.5 * (a[ia + i] + a[ic + i]) - a[ib + i]);
+		    c[ja + j] =  a[ib + i] + (a[ia + i] + a[ic + i]);
+		    c[jd + j] =  b[ib + i] - (b[ia + i] + b[ic + i]);
+		    c[jb + j] =  (S60 * (a[ia + i] - a[ic + i])) -
+		                 (0.5 * (b[ia + i] + b[ic + i]) + b[ib + i]);
+		    c[jf + j] = -(S60 * (a[ia + i] - a[ic + i])) -
+		                 (0.5 * (b[ia + i] + b[ic + i]) + b[ib + i]);
+		    c[jc + j] =   S60 * (b[ic + i] - b[ia + i]) +
+		                 (0.5 * (a[ia + i] + a[ic + i]) - a[ib + i]);
+		    c[je + j] =   S60 * (b[ic + i] - b[ia + i]) -
+		                 (0.5 * (a[ia + i] + a[ic + i]) - a[ib + i]);
 		    i += inc3;
 		    j += inc4;
 		  }
@@ -926,7 +926,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -985,7 +985,7 @@ int rpassc(double *a, double *b, double *c, double *d, double *trigs,
 	  {
 	    i = ibase;
 	    j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 	    for (ijk = 0; ijk < lot; ++ijk)
@@ -1088,7 +1088,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1119,7 +1119,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -1146,7 +1146,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1167,7 +1167,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1200,7 +1200,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1236,7 +1236,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -1277,7 +1277,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1301,7 +1301,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1338,7 +1338,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1383,7 +1383,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -1430,7 +1430,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1453,7 +1453,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1497,7 +1497,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1551,7 +1551,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -1619,7 +1619,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1656,7 +1656,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1714,7 +1714,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1774,7 +1774,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 		      {
 			i = ibase;
 			j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 			for (ijk = 0; ijk < lot; ++ijk)
@@ -1844,7 +1844,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1875,7 +1875,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	      {
 		i = ibase;
 		j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 		for (ijk = 0; ijk < lot; ++ijk)
@@ -1935,7 +1935,7 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 	  {
 	    i = ibase;
 	    j = jbase;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 	    for (ijk = 0; ijk < lot; ++ijk)
@@ -2006,13 +2006,13 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
   lot  = nlev * nlat;
 
   wfc = (double *) malloc(lot*jump*sizeof(double));
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   wgp = (double *) malloc(lot*jump*sizeof(double));
 #endif
 
   for ( lev = 0; lev < nlev; ++lev )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(lat, fou, wix, rix)
 #endif
       for ( lat = 0; lat < nlat; ++lat )
@@ -2043,12 +2043,12 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
       nvex = NFFT;
     }
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(istart, nvex, ix, ii, jj, i, j, k, ia, la, ifac, ibase, jbase, wgp)
 #endif
   for ( nb = 0; nb < nblox; nb++ )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       wgp = (double *) malloc(lot*jump*sizeof(double));
 #endif
       istart = istartv[nb];
@@ -2056,7 +2056,7 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
       else           nvex = NFFT;
 
       i = istart;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
       for ( j = 0; j < nvex; j++ )
@@ -2113,7 +2113,7 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
       /* Fill in zeros at end */
 
       ix = istart + nlon;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
       for ( j = 0; j < nvex; j++ )
@@ -2123,14 +2123,14 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
           ix = ix + jump;
 	}
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       free(wgp);
 #endif
     }
 
   wpt = wfc;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(j, lon)
 #endif
   for ( j = 0; j < lot; ++j )
@@ -2138,7 +2138,7 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
       gp[lon + j*nlon] = wpt[lon + j*jump];
 
   free(istartv);
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   free(wgp);
 #endif
   free(wfc);
@@ -2235,7 +2235,7 @@ void gp2fc(double *trig, long *ifax, double *gp, double *fc, long nlat, long nlo
       /* Shift a(0) & fill in zero imag parts */
 
       ix = istart;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
       for ( j = 0; j < nvex; j++ )

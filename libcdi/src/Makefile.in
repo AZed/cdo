@@ -54,6 +54,7 @@ build_triplet = @build@
 host_triplet = @host@
 @ENABLE_CDI_LIB_TRUE@am__append_1 = pkgconfig/cdi.pc
 @CREATE_ISOC_TRUE@am__append_2 = mo_cdi.o mo_cdi.$(FCMODEXT)
+#CLEANFILES += cdilib.c
 @CREATE_ISOC_TRUE@am__append_3 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.o
 @ENABLE_CDI_LIB_TRUE@am__append_4 = pkgconfig/cdi.pc
 subdir = src
@@ -107,18 +108,24 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
-libcdi_la_LIBADD =
+am__DEPENDENCIES_1 =
+libcdi_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libcdi_la_OBJECTS = basetime.lo binary.lo calendar.lo cdf.lo \
 	cdf_int.lo cdi_error.lo cdi_util.lo cdiFortran.lo \
 	cgribexlib.lo dmemory.lo error.lo extralib.lo file.lo \
 	gaussgrid.lo gribapi.lo grid.lo ieglib.lo institution.lo \
-	model.lo namespace.lo pio_util.lo servicelib.lo stream_cdf.lo \
-	stream_cgribex.lo stream_ext.lo stream_grb.lo \
-	stream_gribapi.lo stream_history.lo stream_ieg.lo \
-	stream_int.lo stream_record.lo stream_srv.lo stream_var.lo \
-	table.lo taxis.lo timebase.lo tsteps.lo util.lo varscan.lo \
-	version.lo vlist.lo vlist_att.lo vlist_var.lo zaxis.lo \
-	stream.lo swap.lo
+	model.lo namespace.lo serialize.lo pio.lo pio_comm.lo \
+	pio_dbuffer.lo pio_interface.lo pio_mpinonb.lo \
+	pio_record_send.lo pio_posixasynch.lo \
+	pio_posixfpguardsendrecv.lo pio_posixnonb.lo pio_list_set.lo \
+	resource_unpack.lo pio_client.lo pio_server.lo pio_util.lo \
+	pio_serialize.lo pio_cdf_int.lo resource_handle.lo \
+	servicelib.lo stream_cdf.lo stream_cgribex.lo stream_ext.lo \
+	stream_grb.lo stream_gribapi.lo stream_history.lo \
+	stream_ieg.lo cdi_int.lo stream_record.lo stream_srv.lo \
+	stream_var.lo table.lo taxis.lo timebase.lo tsteps.lo util.lo \
+	varscan.lo version.lo vlist.lo vlist_att.lo vlist_var.lo \
+	zaxis.lo stream.lo swap.lo
 libcdi_la_OBJECTS = $(am_libcdi_la_OBJECTS)
 @ENABLE_CDI_LIB_FALSE@am_libcdi_la_rpath =
 @ENABLE_CDI_LIB_TRUE@am_libcdi_la_rpath = -rpath $(libdir)
@@ -155,6 +162,13 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CC = @BUILD_CC@
+BUILD_CFLAGS = @BUILD_CFLAGS@
+BUILD_CXX = @BUILD_CXX@
+BUILD_F77 = @BUILD_F77@
+BUILD_FC = @BUILD_FC@
+BUILD_FCFLAGS = @BUILD_FCFLAGS@
+BUILD_LDFLAGS = @BUILD_LDFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDI_F90_INTERFACE_FCFLAGS = @CDI_F90_INTERFACE_FCFLAGS@
@@ -180,6 +194,9 @@ ENABLE_CGRIBEX = @ENABLE_CGRIBEX@
 ENABLE_EXTRA = @ENABLE_EXTRA@
 ENABLE_GRIB = @ENABLE_GRIB@
 ENABLE_IEG = @ENABLE_IEG@
+ENABLE_NC2 = @ENABLE_NC2@
+ENABLE_NC4 = @ENABLE_NC4@
+ENABLE_NETCDF = @ENABLE_NETCDF@
 ENABLE_PYTHON = @ENABLE_PYTHON@
 ENABLE_RUBY = @ENABLE_RUBY@
 ENABLE_SERVICE = @ENABLE_SERVICE@
@@ -200,6 +217,7 @@ FPP_INCOPT = @FPP_INCOPT@
 GREP = @GREP@
 GRIB_API_INCLUDE = @GRIB_API_INCLUDE@
 GRIB_API_LIBS = @GRIB_API_LIBS@
+HAVE_PARALLEL_NC4 = @HAVE_PARALLEL_NC4@
 HDF5_INCLUDE = @HDF5_INCLUDE@
 HDF5_LIBS = @HDF5_LIBS@
 HDF5_ROOT = @HDF5_ROOT@
@@ -223,6 +241,7 @@ MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MPI_LAUNCH = @MPI_LAUNCH@
 NC_CONFIG = @NC_CONFIG@
 NETCDF_INCLUDE = @NETCDF_INCLUDE@
 NETCDF_LIBS = @NETCDF_LIBS@
@@ -242,6 +261,11 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PPM_CORE_CFLAGS = @PPM_CORE_CFLAGS@
+PPM_CORE_LIBS = @PPM_CORE_LIBS@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_LIBS = @PTHREAD_LIBS@
@@ -259,7 +283,10 @@ SZLIB_LIBS = @SZLIB_LIBS@
 THREADS_INCLUDE = @THREADS_INCLUDE@
 THREADS_LIBS = @THREADS_LIBS@
 USER_NAME = @USER_NAME@
+USE_MPI = @USE_MPI@
 VERSION = @VERSION@
+YAXT_CFLAGS = @YAXT_CFLAGS@
+YAXT_LIBS = @YAXT_LIBS@
 ZLIB_INCLUDE = @ZLIB_INCLUDE@
 ZLIB_LIBS = @ZLIB_LIBS@
 abs_builddir = @abs_builddir@
@@ -321,10 +348,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 #
-EXTRA_DIST = make_cdilib mo_cdi.f90
+EXTRA_DIST = cdilib.c mo_cdi.f90
 @ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la
 @ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc
 @ENABLE_CDI_LIB_FALSE@noinst_LTLIBRARIES = libcdi.la
+AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
 libcdi_la_SOURCES = \
 	basetime.c     	 \
 	basetime.h	 \
@@ -341,6 +369,7 @@ libcdi_la_SOURCES = \
 	cdi_limits.h	 \
 	cdi_util.c       \
 	cdiFortran.c     \
+	cdiFortran.h     \
 	cfortran.h       \
 	cgribex.h	 \
 	cgribexlib.c  	 \
@@ -363,11 +392,42 @@ libcdi_la_SOURCES = \
 	ieg.h	 	 \
 	ieglib.c         \
 	institution.c  	 \
+	institution.h  	 \
 	model.c        	 \
-        namespace.c      \
-        namespace.h      \
-        pio_util.c       \
-        pio_util.h       \
+	model.h        	 \
+	namespace.c      \
+	namespace.h      \
+	serialize.h	\
+	serialize.c	\
+	pio.c            \
+	pio.h            \
+	pio_comm.c       \
+	pio_comm.h       \
+	pio_dbuffer.c    \
+	pio_impl.h 	 \
+	pio_interface.c  \
+	pio_interface.h	 \
+	pio_mpinonb.c    \
+	pio_record_send.c\
+	pio_posixasynch.c\
+	pio_posixfpguardsendrecv.c \
+	pio_posixnonb.c  \
+	pio_list_set.c	 \
+	resource_unpack.h \
+	resource_unpack.c \
+	pio_rpc.h        \
+	pio_client.c	\
+	pio_client.h	\
+	pio_server.c     \
+	pio_server.h     \
+	pio_util.c       \
+	pio_util.h       \
+	pio_serialize.h	\
+	pio_serialize.c	\
+	pio_cdf_int.c	\
+	pio_cdf_int.h	\
+	resource_handle.c\
+	resource_handle.h\
 	service.h	 \
 	servicelib.c     \
 	stream_cdf.c     \
@@ -383,8 +443,8 @@ libcdi_la_SOURCES = \
 	stream_history.c \
 	stream_ieg.c     \
 	stream_ieg.h	 \
-	stream_int.c     \
-	stream_int.h	 \
+	cdi_int.c        \
+	cdi_int.h	 \
 	stream_record.c  \
 	stream_srv.c     \
 	stream_srv.h	 \
@@ -405,14 +465,26 @@ libcdi_la_SOURCES = \
 	vlist.c 	 \
 	vlist.h	         \
 	vlist_att.c 	 \
+	vlist_att.h 	 \
 	vlist_var.c 	 \
+	vlist_var.h	 \
 	zaxis.c		 \
+	zaxis.h		 \
         stream.c         \
         swap.c
 
+
+#libcdi_la_CPPFLAGS  = @CPPFLAGS@
+libcdi_la_LIBADD = $(PPM_CORE_LIBS) $(YAXT_LIBS)
+#
+#cdilib.c:
+#	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src
+#
+#cdilib.o: cdilib.c
+#	$(COMPILE) -c $<
 LOCALTARGETS = $(am__append_1) $(am__append_2)
 #
-CLEANFILES = `ls *~` cdilib.c $(am__append_3) $(am__append_4)
+CLEANFILES = `ls *~` $(am__append_3) $(am__append_4)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -520,6 +592,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdf_int.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdiFortran.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_error.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_int.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgribexlib.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dmemory.Plo@am__quote@
@@ -533,7 +606,24 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/institution.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/model.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/namespace.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_cdf_int.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_client.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_comm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_dbuffer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_interface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_list_set.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_mpinonb.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_posixasynch.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_posixfpguardsendrecv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_posixnonb.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_record_send.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_serialize.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_server.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pio_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resource_handle.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resource_unpack.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serialize.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/servicelib.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_cdf.Plo@am__quote@
@@ -543,7 +633,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_gribapi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_history.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_ieg.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_int.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_record.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_srv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stream_var.Plo@am__quote@
@@ -824,18 +913,9 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 	uninstall-am uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 	uninstall-local
 
-
-#libcdi_la_CPPFLAGS  = @CPPFLAGS@
-#libcdi_la_LIBADD    = @LDFLAGS@
 #
-cdilib.c:
-	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src
-#
-cdilib.o: cdilib.c
-	$(COMPILE) -c $<
-#
-mo_cdi.f90:
-	ruby $(top_srcdir)/interfaces/f2003/bindGen.rb cdi.h $@
+mo_cdi.f90: $(top_srcdir)/src/cdi.h
+	ruby $(top_srcdir)/interfaces/f2003/bindGen.rb $(top_srcdir)/src/cdi.h $@
 #
 mo_cdi.o: mo_cdi.f90
 	$(FC) $(FCFLAGS) -c $(FCFLAGS_f90) $<

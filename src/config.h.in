@@ -6,8 +6,21 @@
 /* Compiler version */
 #undef COMP_VERSION
 
+/* Define to 1 for DATA support */
+#undef ENABLE_DATA
+
+/* Define to 1 if you have the <curl/curl.h> header file. */
+#undef HAVE_CURL_CURL_H
+
+/* Define to 1 if you have the declaration of `isnan', and to 0 if you don't.
+   */
+#undef HAVE_DECL_ISNAN
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the <fftw3.h> header file. */
+#undef HAVE_FFTW3_H
 
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
@@ -18,6 +31,9 @@
 /* Define to 1 if you have the `getrlimit' function. */
 #undef HAVE_GETRLIMIT
 
+/* Define to 1 if you have the <glob.h> header file. */
+#undef HAVE_GLOB_H
+
 /* Define to 1 if you have the <grib_api.h> header file. */
 #undef HAVE_GRIB_API_H
 
@@ -27,17 +43,20 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `isnan' function. */
-#undef HAVE_ISNAN
-
 /* Define to 1 if you have the <jasper.h> header file. */
 #undef HAVE_JASPER_H
 
 /* Define to 1 for GRIB1 decoding/encoding with cgribex */
 #undef HAVE_LIBCGRIBEX
 
+/* Define to 1 for CURL support */
+#undef HAVE_LIBCURL
+
 /* Define to 1 for EXTRA interface */
 #undef HAVE_LIBEXTRA
+
+/* FFTW3 library is present if defined to 1 */
+#undef HAVE_LIBFFTW3
 
 /* Define to 1 for GRIB support */
 #undef HAVE_LIBGRIB
@@ -81,6 +100,18 @@
 /* Define to 1 for SZIP support */
 #undef HAVE_LIBSZ
 
+/* Define to 1 for UDUNITS2 support */
+#undef HAVE_LIBUDUNITS2
+
+/* Define to 1 for XML2 support */
+#undef HAVE_LIBXML2
+
+/* Define to 1 if you have the <libxml/parser.h> header file. */
+#undef HAVE_LIBXML_PARSER_H
+
+/* Define to 1 if you have the <libxml/tree.h> header file. */
+#undef HAVE_LIBXML_TREE_H
+
 /* Define 1 for ZLIB support */
 #undef HAVE_LIBZ
 
@@ -108,8 +139,8 @@
 /* Define to 1 if you have the <netcdf.h> header file. */
 #undef HAVE_NETCDF_H
 
-/* Define to 1 if you have the <projects.h> header file. */
-#undef HAVE_PROJECTS_H
+/* Define to 1 if you have the <proj_api.h> header file. */
+#undef HAVE_PROJ_API_H
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
@@ -149,6 +180,12 @@
 
 /* Define to 1 if you have the <szlib.h> header file. */
 #undef HAVE_SZLIB_H
+
+/* Define to 1 if you have the <udunits2.h> header file. */
+#undef HAVE_UDUNITS2_H
+
+/* Define to 1 if you have the <udunits2/udunits2.h> header file. */
+#undef HAVE_UDUNITS2_UDUNITS2_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
@@ -202,11 +239,6 @@
 
 /* Version number of package */
 #undef VERSION
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
-#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS

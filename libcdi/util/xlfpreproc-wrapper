@@ -1,0 +1,59 @@
+#! /bin/sh
+#
+# xlfpreproc-wrapper --- wrapper to produce IBM xlf style front-end
+#                        preprocessor output on stdout
+#
+# Copyright  (C)  2010  Thomas Jahns <jahns@dkrz.de>
+#
+# Version: 1.0
+# Keywords:
+# Author: Thomas Jahns <jahns@dkrz.de>
+# Maintainer: Thomas Jahns <jahns@dkrz.de>
+# URL: http://
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+# Commentary:
+#
+#
+#
+# Code:
+#
+if [ "${DEBUG+set}" = set ]; then
+  set -x
+  outputRedir=">&2"
+else
+  outputRedir=">/dev/null 2>&1"
+fi
+while echo "$1" | grep '^-' >/dev/null 2>&1; do
+  FPPFLAGS="${FPPFLAGS+${FPPFLAGS} }$1"
+  shift
+done
+set -e
+for srcfile in "$@" ; do
+  set +e
+  eval \$FC \$FCFLAGS \$FPPFLAGS -d -qnoobject \"\$srcfile\" $outputRedir
+  set -e
+  FPPOUTNAME=`echo $srcfile | sed -e 's:\(.*/\)*\([^/]*\)\.[^./]*$:F\2.f:'`
+  test -r "$FPPOUTNAME" || FPPOUTNAME="${FPPOUTNAME}90"
+  cat "$FPPOUTNAME" 2>/dev/null
+  test "${DEBUG+set}" = set && cat "$FPPOUTNAME" >&2
+  rm "$FPPOUTNAME"
+done
+#
+# Local Variables:
+# license-project-url: "https://www.dkrz.de/redmine/projects/show/scales-ppm"
+# license-default: "bsd"
+# End:

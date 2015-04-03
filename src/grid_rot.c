@@ -1,17 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#ifndef M_PI
-#define M_PI		3.14159265358979323846	/* pi */
-#endif
-
-#ifndef  rad2deg
-#define  rad2deg  (180./M_PI)   /* conversion for rad to deg */
-#endif
-
-#ifndef  deg2rad
-#define  deg2rad  (M_PI/180.)   /* conversion for deg to rad */
-#endif
+#include "grid.h"
 
 
 double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam, double polgam)
@@ -35,17 +25,17 @@ double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam,
   double zphirot, zlamrot, zarg1, zarg2;
   double zgam;
 
-  zsinpol = sin(deg2rad*polphi);
-  zcospol = cos(deg2rad*polphi);
+  zsinpol = sin(DEG2RAD*polphi);
+  zcospol = cos(DEG2RAD*polphi);
 
-  zlampol = deg2rad*pollam;
-  zphirot = deg2rad*phirot;
+  zlampol = DEG2RAD*pollam;
+  zphirot = DEG2RAD*phirot;
   if ( lamrot > 180.0 ) lamrot -= 360.0;
-  zlamrot = deg2rad*lamrot;
+  zlamrot = DEG2RAD*lamrot;
 
   if ( polgam > 0 )
     {
-      zgam  = deg2rad*polgam;
+      zgam  = DEG2RAD*polgam;
       zarg1 = sin(zlampol) *                                               
  	    (- zsinpol*cos(zphirot) * (cos(zlamrot)*cos(zgam) - sin(zlamrot)*sin(zgam)) 
  	     + zcospol*sin(zphirot))                                              
@@ -68,7 +58,7 @@ double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam,
 
   if ( fabs(zarg2) < 1.0e-20 ) zarg2 = 1.0e-20;
 
-  return (rad2deg*atan2(zarg1, zarg2));
+  return (RAD2DEG*atan2(zarg1, zarg2));
 }
 
 
@@ -93,23 +83,23 @@ double phirot_to_phi(double phirot, double lamrot, double polphi, double polgam)
   double zphirot, zlamrot, zarg;
   double zgam;
 
-  zsinpol = sin(deg2rad*polphi);
-  zcospol = cos(deg2rad*polphi);
+  zsinpol = sin(DEG2RAD*polphi);
+  zcospol = cos(DEG2RAD*polphi);
 
-  zphirot   = deg2rad*phirot;
+  zphirot   = DEG2RAD*phirot;
   if ( lamrot > 180.0 ) lamrot -= 360.0;
-  zlamrot   = deg2rad*lamrot;
+  zlamrot   = DEG2RAD*lamrot;
 
   if ( polgam > 0 )
     {
-      zgam = deg2rad*polgam;
+      zgam = DEG2RAD*polgam;
       zarg = zsinpol*sin(zphirot) +
              zcospol*cos(zphirot)*(cos(zlamrot)*cos(zgam) - sin(zgam)*sin(zlamrot));
     }
   else
     zarg   = zcospol*cos(zphirot)*cos(zlamrot) + zsinpol*sin(zphirot);
 
-  return (rad2deg*asin(zarg));
+  return (RAD2DEG*asin(zarg));
 }
 
 static
@@ -128,21 +118,21 @@ double rl_to_rls(double phi, double rla, double polphi, double pollam)
   double zsinpol, zcospol, zlampol;
   double zphi, zrla, zarg1, zarg2;
 
-  zsinpol = sin(deg2rad*polphi);
-  zcospol = cos(deg2rad*polphi);
-  zlampol =     deg2rad*pollam;
+  zsinpol = sin(DEG2RAD*polphi);
+  zcospol = cos(DEG2RAD*polphi);
+  zlampol =     DEG2RAD*pollam;
 
   if ( rla > 180.0 ) rla -= 360.0;
 
-  zrla = deg2rad*rla;
-  zphi = deg2rad*phi;
+  zrla = DEG2RAD*rla;
+  zphi = DEG2RAD*phi;
 
   zarg1  = - sin(zrla-zlampol)*cos(zphi);
   zarg2  = - zsinpol*cos(zphi)*cos(zrla-zlampol)+zcospol*sin(zphi);
 
   if ( fabs(zarg2) < 1.0e-20 ) zarg2 = 1.0e-20;
 
-  return (rad2deg*atan2(zarg1,zarg2));
+  return (RAD2DEG*atan2(zarg1,zarg2));
 }
 
 static
@@ -161,17 +151,17 @@ double ph_to_phs(double phi, double rla, double polphi, double pollam)
   double zsinpol, zcospol, zlampol;
   double zphi, zrla, zarg;
 
-  zsinpol = sin(deg2rad*polphi);
-  zcospol = cos(deg2rad*polphi);
-  zlampol =     deg2rad*pollam;
+  zsinpol = sin(DEG2RAD*polphi);
+  zcospol = cos(DEG2RAD*polphi);
+  zlampol =     DEG2RAD*pollam;
 
-  zphi = deg2rad*phi;
+  zphi = DEG2RAD*phi;
   if ( rla > 180.0 ) rla -= 360.0;
-  zrla = deg2rad*rla;
+  zrla = DEG2RAD*rla;
 
   zarg = zcospol*cos(zphi)*cos(zrla-zlampol) + zsinpol*sin(zphi);
 
-  return (rad2deg*asin(zarg));
+  return (RAD2DEG*asin(zarg));
 }
 
 
@@ -195,15 +185,15 @@ void usvs_to_uv(double us, double vs, double phi, double rla,
   double zpolphi, zpollam, zrla, zphi, pollamd, zrlas, zarg, zbeta;
 
   /* umrechnung von grad in bogenmass */
-  zpolphi = polphi*deg2rad;
-  zpollam = pollam*deg2rad;
-  zrla    = rla   *deg2rad;
-  zphi    = phi   *deg2rad;
+  zpolphi = polphi*DEG2RAD;
+  zpollam = pollam*DEG2RAD;
+  zrla    = rla   *DEG2RAD;
+  zphi    = phi   *DEG2RAD;
   pollamd = pollam;
   if ( pollamd < 0.0 ) pollamd += 360.0;
 
   /* laenge im rotierten system berechnen */
-  zrlas = rl_to_rls(phi, rla, polphi, pollam)*deg2rad;
+  zrlas = rl_to_rls(phi, rla, polphi, pollam)*DEG2RAD;
 
   /* winkel zbeta berechen (schnittwinkel der breitenkreise) */
   zarg = - sin(zpolphi)*sin(zrla-zpollam)*sin(zrlas) - cos(zrla-zpollam)*cos(zrlas);

@@ -15,13 +15,14 @@ case "${HOSTNAME}" in
     bailung*)
 	./configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
+                    --enable-iso-c-interface \
                     --enable-swig \
                     --enable-python \
                     --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
+                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
                     --with-netcdf=$HOME/local \
                     --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -Df2cFortran" LIBS="-L/opt/local/lib -lopenjpeg"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -Df2cFortran"
 	;;
     cinglung*|feilung*|wanglung*)
 	./configure --prefix=$HOME/local \
@@ -41,13 +42,14 @@ case "${HOSTNAME}" in
     hama*)
 	./configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
+                    --enable-iso-c-interface \
                     --enable-swig \
                     --enable-python \
                     --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.8 \
+                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
                     --with-netcdf=/opt/local \
                     --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -Df2cFortran"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -Df2cFortran"
 	;;
 # ia64-nec-linux
     ds*)
@@ -73,13 +75,12 @@ case "${HOSTNAME}" in
 	;;
     thingol)
       ./configure --prefix=`pwd`/build \
-	            --with-netcdf=$HOME/local/libs4cdo-0.0.8 \
-	              --with-hdf5=$HOME/local/libs4cdo-0.0.8 \
-                     --with-szlib=$HOME/local/libs4cdo-0.0.8 \
-                      --with-proj=$HOME/local/libs4cdo-0.0.8 \
-                  --with-grib_api=$HOME/local/libs4cdo-0.0.8 \
-                    --with-jasper=$HOME/local/libs4cdo-0.0.8 \
-                      --with-pic \
+	            --with-netcdf=$HOME/builds/libs4cdo \
+	              --with-hdf5=$HOME/builds/libs4cdo \
+                     --with-szlib=$HOME/builds/libs4cdo \
+                  --with-grib_api=$HOME/builds/libs4cdo \
+                    --with-jasper=$HOME/builds/libs4cdo \
+                      --with-pic --enable-swig --enable-ruby --enable-python \
                       CC=gcc CFLAGS="-g -O2 -Wall" LIBS=-lopenjpeg
 	;;
 # sparc-sun-solaris2.9
@@ -130,7 +131,7 @@ case "${HOSTNAME}" in
                     --with-zlib=/sw/aix61/zlib-1.2.6 \
                     --with-szlib=/sw/aix61/szip-2.1-threadsafe \
                     AR="ar -X 64" LDFLAGS="-brtl" FC=xlf2003_r CC=xlc_r \
-                    CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=pwr6 -qtune=balanced -qlistfmt=html=transforms -DHAVE_MMAP -Dextname" \
+                    CFLAGS="-g -O3 -qhot -q64 -qarch=auto -qtune=auto -qlistfmt=html=transforms -DHAVE_MMAP -Dextname" \
                     FCFLAGS="-qsuffix=cpp=f90" \
                     SHELL=/bin/bash
         ;;

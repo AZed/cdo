@@ -58,7 +58,7 @@ AC_DEFUN([ACX_SL_FC_CHECK_MOD_PATH_FLAG],dnl
    AC_REQUIRE([AC_PROG_FC])
    AS_VAR_PUSHDEF([mod_flag],[acx_sl_cv_fc_mod_path_flag_]_AC_LANG_ABBREV)dnl
    ASX_VAR_UNSET([mod_flag])
-   AC_CACHE_CHECK([for flag to alter module search path],[mod_flag],dnl
+   AC_CACHE_CHECK([for flag to alter module search path],[mod_flag],
      [mkdir conftestdir
       cd conftestdir
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([      module cnftst

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,11 @@
                                  the standard atmosphere
 */
 
+
+#if defined(HAVE_CONFIG_H)
+#  include "config.h" // ENABLE_DATA
+#endif
+
 #include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
@@ -31,14 +36,7 @@
 #include "list.h"
 
 
-#if defined (__GNUC__)
-#if __GNUC__ > 2
-#  define WITH_DATA 1
-#endif
-#endif
-
-
-#if defined(WITH_DATA)
+#if defined(ENABLE_DATA)
   static double etopo_scale  = 3;
   static double etopo_offset = 11000;
   static const unsigned short etopo[] = {
@@ -89,11 +87,11 @@ std_atm_pressure(double height)
 
 void *Vargen(void *argument)
 {
-  int RANDOM, CONST, FOR, TOPO, TEMP, MASK, STDATM;
+  int RANDOM, SINCOS, CONST, FOR, TOPO, TEMP, MASK, STDATM;
   int operatorID;
   int streamID;
-  int nrecs,nvars, ntimesteps, nlevels = 1;
-  int tsID, recID, varID, varID2 = -1, levelID;
+  int nvars, ntimesteps, nlevels = 1;
+  int tsID, varID, varID2 = -1, levelID;
   int gridsize, i;
   int vlistID;
   int gridID = -1, zaxisID, taxisID;
@@ -102,11 +100,11 @@ void *Vargen(void *argument)
   double rval, rstart = 0, rstop = 0, rinc = 0;
   double rconst = 0;
   double *array, *levels = NULL;
-  LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
 
   RANDOM = cdoOperatorAdd("random", 0, 0, "grid description file or name, <seed>");
+  SINCOS = cdoOperatorAdd("sincos", 0, 0, "grid description file or name");
   CONST  = cdoOperatorAdd("const",  0, 0, "constant value, grid description file or name");
   FOR    = cdoOperatorAdd("for",    0, 0, "start, end, <increment>");
   TOPO   = cdoOperatorAdd("topo",   0, 0, NULL);
@@ -132,6 +130,13 @@ void *Vargen(void *argument)
             seed = idum;
         }
       srand(seed);
+    }
+  else if ( operatorID == SINCOS )
+    {
+      operatorInputArg(cdoOperatorEnter(operatorID));
+      operatorCheckArgc(1);
+      gridfile = operatorArgv()[0];
+      gridID   = cdoDefineGrid(gridfile);
     }
   else if ( operatorID == CONST )
     {
@@ -182,10 +187,12 @@ void *Vargen(void *argument)
   else if ( operatorID == STDATM )
     {
       double lon = 0, lat = 0;
+      LIST *flist = listNew(FLT_LIST);
 
       operatorInputArg("levels");
       nlevels = args2fltlist(operatorArgc(), operatorArgv(), flist);
       levels  = (double *) listArrayPtr(flist);
+      //listDelete(flist);
 
       if ( cdoVerbose ) for ( i = 0; i < nlevels; ++i ) printf("levels %d: %g\n", i, levels[i]);
 
@@ -227,24 +234,32 @@ void *Vargen(void *argument)
   if ( operatorID == MASK )
     vlistDefVarDatatype(vlistID, varID, DATATYPE_INT8);
 
-  if ( operatorID != STDATM )
-    vlistDefVarName(vlistID, varID, cdoOperatorName(operatorID));
-  else
+  if ( operatorID == STDATM )
     {
       vlistDefVarName(vlistID    , varID , "P");
+      vlistDefVarCode(vlistID    , varID , 1);
       vlistDefVarStdname(vlistID , varID , "air_pressure");
       vlistDefVarLongname(vlistID, varID , "pressure");
       vlistDefVarUnits(vlistID   , varID , "hPa");
       vlistDefVarName(vlistID    , varID2, "T");
+      vlistDefVarCode(vlistID    , varID2, 130);
       vlistDefVarStdname(vlistID , varID2, "air_temperature");
       vlistDefVarLongname(vlistID, varID2, "temperature");
       vlistDefVarUnits(vlistID   , varID2, "K");
+    }
+  else
+    {
+      vlistDefVarName(vlistID, varID, cdoOperatorName(operatorID));
+      if ( operatorID == TOPO )
+	vlistDefVarUnits(vlistID, varID , "m");	
+      if ( operatorID == TEMP )
+	vlistDefVarUnits(vlistID, varID , "K");	
     }
 
   taxisID = taxisCreate(TAXIS_RELATIVE);
   vlistDefTaxis(vlistID, taxisID);
 
-  if ( operatorID == RANDOM || operatorID == CONST || operatorID == TOPO ||
+  if ( operatorID == RANDOM || operatorID == SINCOS || operatorID == CONST || operatorID == TOPO ||
        operatorID == TEMP || operatorID == MASK || operatorID == STDATM )
     vlistDefNtsteps(vlistID, 1);
 
@@ -258,12 +273,14 @@ void *Vargen(void *argument)
   if ( operatorID == FOR )
     ntimesteps = 1.001 + ((rstop-rstart)/rinc);
   else
-    ntimesteps = 1;
+    {
+      vlistDefNtsteps(vlistID, 0);
+      ntimesteps = 1;
+    }
 
   julday = date_to_julday(CALENDAR_PROLEPTIC, 10101);
 
   nvars = vlistNvars(vlistID);
-  nrecs = vlistNrecs(vlistID);
 
   for ( tsID = 0; tsID < ntimesteps; tsID++ )
     {
@@ -286,6 +303,23 @@ void *Vargen(void *argument)
                   for ( i = 0; i < gridsize; i++ )
                     array[i] = rand()/(RAND_MAX+1.0);
                 }
+              else if ( operatorID == SINCOS )
+                {
+		  int nlon = gridInqXsize(gridID);
+		  int nlat = gridInqYsize(gridID);
+		  double dlon = 360./nlon;
+		  double dlat = 180./nlat;
+		  double lon0 = 0;
+		  double lat0 = -90 + dlat/2;
+
+                  for ( i = 0; i < gridsize; i++ )
+		    {
+		      int ilat = (i%gridsize)/ nlon;
+		      int ilon = i%nlon;
+		      array[i] = cos(2.0 * M_PI * (lon0 + ilon*dlon)/360)
+		   	       * sin(2.0 * M_PI * (lat0 + ilat*dlat)/180);
+		    }
+		}
               else if ( operatorID == CONST )
                 {
                   for ( i = 0; i < gridsize; i++ )
@@ -293,7 +327,7 @@ void *Vargen(void *argument)
                 }
               else if ( operatorID == TOPO )
                 {
-#if defined(WITH_DATA)
+#if defined(ENABLE_DATA)
                   for ( i = 0; i < gridsize; i++ )
                     array[i] = etopo[i]/etopo_scale - etopo_offset;
 #else
@@ -302,7 +336,7 @@ void *Vargen(void *argument)
                 }
               else if ( operatorID == TEMP )
                 {
-#if defined(WITH_DATA)
+#if defined(ENABLE_DATA)
                   for ( i = 0; i < gridsize; i++ )
                     array[i] = temp[i]/temp_scale - temp_offset;
 #else
@@ -311,7 +345,7 @@ void *Vargen(void *argument)
                 }
               else if ( operatorID == MASK )
                 {
-#if defined(WITH_DATA)
+#if defined(ENABLE_DATA)
                   for ( i = 0; i < gridsize; i++ )
                     array[i] = mask[i]/mask_scale - mask_offset;
 #else

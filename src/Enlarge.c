@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@ void *Enlarge(void *argument)
   int xsize1, ysize1, xsize2, ysize2;
   int ix, iy;
   int linfo = TRUE;
+  double missval;
   double *array1, *array2;
 
   cdoInitialize(argument);
@@ -91,8 +92,7 @@ void *Enlarge(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  streamReadRecord(streamID1, array1, &nmiss);
 
-	  if ( nmiss > 0 ) cdoAbort("Missing values unsupported for this operator!");
-
+	  missval = vlistInqVarMissval(vlistID1, varID);
 	  gridID1 = vlistInqVarGrid(vlistID1, varID);
 	  xsize1 = gridInqXsize(gridID1);
 	  ysize1 = gridInqYsize(gridID1);
@@ -113,6 +113,8 @@ void *Enlarge(void *argument)
 	      for ( iy = 0; iy < ysize2; iy++ )
 		for ( ix = 0; ix < xsize2; ix++ )
 		  array2[ix+iy*xsize2] = array1[iy];
+
+	      if ( nmiss ) nmiss *= xsize2;
 	    }
 	  else if ( ysize1 == 1 && xsize1 == xsize2 && xsize1*ysize1 == gridsize1 )
 	    {
@@ -125,6 +127,8 @@ void *Enlarge(void *argument)
 	      for ( iy = 0; iy < ysize2; iy++ )
 		for ( ix = 0; ix < xsize2; ix++ )
 		  array2[ix+iy*xsize2] = array1[ix];
+
+	      if ( nmiss ) nmiss *= ysize2;
 	    }
 	  else
 	    {
@@ -133,11 +137,14 @@ void *Enlarge(void *argument)
 		{
 		  array2[i] = array1[gridsize1-1];
 		}
+
+	      if ( nmiss && DBL_IS_EQUAL(array1[gridsize1-1], missval) ) nmiss += (gridsize2 - gridsize1);
 	    }
 	    
 	  streamDefRecord(streamID2, varID,  levelID);
 	  streamWriteRecord(streamID2, array2, nmiss);
 	}
+
       tsID++;
     }
 

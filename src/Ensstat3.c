@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
    Ensstat3       ensroccurve      Ensamble Receiver Operating Characteristics
 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
@@ -60,14 +60,14 @@ void *Ensstat3(void *argument)
   int nvars,nbins, nrecs = 0, nrecs0, nmiss, nens, nfiles;;
   int cum;
   int chksum;                  // for check of histogram population 
-  int levelID, varID, recID, tsID, binID = 0, ensID;
+  int levelID, varID, recID, tsID, binID = 0;
   int gridsize = 0;
   int gridID, gridID2;
   int have_miss = 0;
   int streamID = 0, streamID2 = 0;
   int vlistID, vlistID1, vlistID2;
   int taxisID1, taxisID2;
-  int zaxisID,zaxisID2;
+  int zaxisID2;
   int ompthID;
   int *varID2;
   int time_mode;
@@ -114,12 +114,12 @@ void *Ensstat3(void *argument)
   if ( cdoVerbose )
     cdoPrint("Ensemble over %d files.", nfiles);
 
-  ofilename = cdoStreamName(nfiles);
+  ofilename = cdoStreamName(nfiles)->args;
 
   if ( !cdoSilentMode && !cdoOverwriteMode )
-    if ( fileExist(ofilename) )
+    if ( fileExists(ofilename) )
       if ( !userFileOverwrite(ofilename) )
-	cdoAbort("Outputfile %s already exist!", ofilename);
+	cdoAbort("Outputfile %s already exists!", ofilename);
 
   ef = (ens_file_t *) malloc(nfiles*sizeof(ens_file_t));
 
@@ -128,7 +128,7 @@ void *Ensstat3(void *argument)
   /* ("first touch strategy")                            */
   /* --> #pragma omp parallel for ...                    */
   /* *************************************************** */
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   field = (field_t *) malloc(omp_get_max_threads()*sizeof(field_t));
   for ( i = 0; i < omp_get_max_threads(); i++ )
 #else
@@ -136,6 +136,7 @@ void *Ensstat3(void *argument)
   for ( i = 0; i < 1; i++ )
 #endif
     {
+      field_init(&field[i]);
       field[i].size   = nfiles;
       field[i].ptr    = (double *) malloc(nfiles*sizeof(double));
       field[i].weight = (double *) malloc(nfiles*sizeof(double));
@@ -160,9 +161,9 @@ void *Ensstat3(void *argument)
   vlistID1 = ef[0].vlistID;
   vlistID2 = vlistCreate();
   nvars = vlistNvars(vlistID1);
-  varID2 = (int *) malloc( nvars*sizeof(int));
+  varID2 = (int *) malloc(nvars*sizeof(int));
 
-  levs = (double*) calloc ( nfiles, sizeof(double) );
+  levs = (double*) calloc (nfiles, sizeof(double) );
   zaxisID2 = zaxisCreate(ZAXIS_GENERIC, nfiles);
   for ( i=0; i<nfiles; i++ )
     levs[i] = i;
@@ -206,11 +207,12 @@ void *Ensstat3(void *argument)
     }
   } 
 
-  if ( operfunc != func_roc ) {
-    streamID2 = streamOpenWrite(ofilename, cdoFiletype());
+  if ( operfunc != func_roc )
+    {
+      streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
 
-    streamDefVlist(streamID2, vlistID2);
-  }
+      streamDefVlist(streamID2, vlistID2);
+    }
 
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -258,21 +260,28 @@ void *Ensstat3(void *argument)
 	  streamID = ef[fileID].streamID;
 	  nrecs = streamInqTimestep(streamID, tsID);
 	  if ( nrecs != nrecs0 )
-	    cdoAbort("Number of records changed from %d to %d", nrecs0, nrecs);
+	    {
+	      if ( nrecs == 0 )
+		cdoAbort("Inconsistent ensemble file, too few time steps in %s!", cdoStreamName(fileID)->args);
+	      else
+		cdoAbort("Inconsistent ensemble file, number of records at time step %d of %s and %s differ!",
+			   tsID+1, cdoStreamName(0)->args, cdoStreamName(fileID)->args);
+	    }
 	}
 
-      if ( operfunc == func_rank && ( datafunc == TIME || tsID == 0 ) ) {
-	taxisCopyTimestep(taxisID2, taxisID1);
-	if ( nrecs0 > 0 ) streamDefTimestep(streamID2, tsID);
-      }
+      if ( operfunc == func_rank && ( datafunc == TIME || tsID == 0 ) )
+	{
+	  taxisCopyTimestep(taxisID2, taxisID1);
+	  if ( nrecs0 > 0 ) streamDefTimestep(streamID2, tsID);
+	}
 
       //      fprintf(stderr,"TIMESTEP %i varID %i rec %i\n",tsID,varID,recID);
       
       for ( recID = 0; recID < nrecs0; recID++ )
 	{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(fileID, streamID, nmiss) \
-  lastprivate(binID, varID, levelID)
+                                     lastprivate(varID, levelID)
 #endif
 	  for ( fileID = 0; fileID < nfiles; fileID++ )
 	    {
@@ -289,12 +298,13 @@ void *Ensstat3(void *argument)
 	  if ( datafunc == TIME && operfunc == func_rank) 
 	    for ( binID=0;binID<nfiles;binID++ )
 	      array2[binID][0] = 0;
-#if defined (_OPENMP)
-#pragma omp parallel for default(shared) private(i, ompthID, fileID)
+
+#if defined(_OPENMP)
+#pragma omp parallel for default(shared) private(i, binID, ompthID, fileID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	      ompthID = omp_get_thread_num();
 #else
 	      ompthID = 0;
@@ -322,10 +332,13 @@ void *Ensstat3(void *argument)
 		      /* ****************/
 		      /* RANK HISTOGRAM */
 		      /* ************** */
-		      //		      for ( j=0; j<nfiles; j++ )
-		      //			fprintf(stderr,"%5.2g ",field[ompthID].ptr[j]);
-		      //		      binID = (int) fldfun(field[ompthID], operfunc);
-		      //		      fprintf(stderr,"-->%i\n",binID);
+		      // for ( j=0; j<nfiles; j++ )
+		      //   fprintf(stderr,"%5.2g ",field[ompthID].ptr[j]);
+#if defined(_OPENMP)
+#pragma omp critical
+#endif
+		      binID = (int) fldfun(field[ompthID], operfunc);
+		      // fprintf(stderr,"-->%i\n",binID);
 		      
 		      if ( datafunc == SPACE && ! have_miss) 
 			array2[binID][i]++;
@@ -398,7 +411,7 @@ void *Ensstat3(void *argument)
 		streamDefRecord(streamID2, varID2[varID], binID);
 		streamWriteRecord(streamID2,&val, nmiss);
 	      }
-	      fprintf(stderr,"\n");
+	      //fprintf(stderr,"\n");
 	    }
 	  else if ( operfunc == func_roc ) 
 	    {
@@ -433,12 +446,23 @@ void *Ensstat3(void *argument)
 
 
   if ( operfunc == func_rank )
-    for ( binID=0; binID<nfiles; binID++ ) {
-      double *tmpdoub = (double *)malloc (gridsize*sizeof(double));
-      for(i=0; i<gridsize; i++ )
-	tmpdoub[i] = (double) array2[binID][i];
-      streamDefRecord(streamID2,varID2[varID],binID);
-      streamWriteRecord(streamID2,tmpdoub,nmiss);
+    {
+      double *tmpdoub;
+      int osize = gridsize;
+
+      if ( datafunc == TIME ) osize = 1;
+      tmpdoub = (double *) malloc(osize*sizeof(double));
+
+      for ( binID = 0; binID < nfiles; binID++ )
+	{
+	  for ( i = 0; i < osize; i++ )
+	    tmpdoub[i] = (double) array2[binID][i];
+
+	  streamDefRecord(streamID2, varID2[varID], binID);
+	  streamWriteRecord(streamID2, tmpdoub, nmiss);
+	}
+
+      free(tmpdoub);
     }
   else if ( operfunc == func_roc ) {
     fprintf(stdout, "#             :     TP     FP     FN     TN         TPR        FPR\n");

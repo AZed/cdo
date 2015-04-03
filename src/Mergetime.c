@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -43,7 +43,7 @@ void *Mergetime(void *argument)
   int last_vdate = -1, last_vtime = -1;
   int next_fileID;
   int skip_same_time = FALSE;
-  char *envstr;
+  int process_timestep;
   const char *ofilename;
   double *array = NULL;
   typedef struct
@@ -60,18 +60,21 @@ void *Mergetime(void *argument)
 
   cdoInitialize(argument);
 
-  envstr = getenv("SKIP_SAME_TIME");
-  if ( envstr )
-    {
-      int ival;
-      ival = atoi(envstr);
-      if ( ival == 1 )
-	{
-	  skip_same_time = TRUE;
-	  if ( cdoVerbose )
-	    cdoPrint("Set SKIP_SAME_TIME to %d", ival);
-	}
-    }
+  {
+    char *envstr;
+    envstr = getenv("SKIP_SAME_TIME");
+    if ( envstr )
+      {
+	int ival;
+	ival = atoi(envstr);
+	if ( ival == 1 )
+	  {
+	    skip_same_time = TRUE;
+	    if ( cdoVerbose )
+	      cdoPrint("Set SKIP_SAME_TIME to %d", ival);
+	  }
+      }
+  }
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -81,6 +84,8 @@ void *Mergetime(void *argument)
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
+      if ( cdoVerbose ) cdoPrint("process: %s", cdoStreamName(fileID)->args);
+
       streamID1 = streamOpenRead(cdoStreamName(fileID));
 
       vlistID1 = streamInqVlist(streamID1);
@@ -113,14 +118,14 @@ void *Mergetime(void *argument)
 	}
     }
 
-  ofilename = cdoStreamName(nfiles);
+  ofilename = cdoStreamName(nfiles)->args;
 
   if ( !cdoSilentMode && !cdoOverwriteMode )
-    if ( fileExist(ofilename) )
+    if ( fileExists(ofilename) )
       if ( !userFileOverwrite(ofilename) )
-	cdoAbort("Outputfile %s already exist!", ofilename);
+	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  streamID2 = streamOpenWrite(ofilename, cdoFiletype());
+  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
 
   if ( ! lcopy )
     {
@@ -130,6 +135,8 @@ void *Mergetime(void *argument)
 
   while ( TRUE )
     {
+      process_timestep = TRUE;
+
       next_fileID = -1;
       vdate = 0;
       vtime = 0;
@@ -158,47 +165,49 @@ void *Mergetime(void *argument)
 	    char vdatestr[32], vtimestr[32];
 	    date2str(vdate, vdatestr, sizeof(vdatestr));
 	    time2str(vtime, vtimestr, sizeof(vtimestr));
-	    cdoPrint("Timestep %4d in stream %d (%s %s) already exist, skipped!", sf[fileID].tsID+1, sf[fileID].streamID, vdatestr, vtimestr);
-	    goto SKIP_TIMESTEP;
+	    cdoPrint("Timestep %4d in stream %d (%s %s) already exists, skipped!",
+		     sf[fileID].tsID+1, sf[fileID].streamID, vdatestr, vtimestr);
+	    process_timestep = FALSE;
 	  }
 
-      if ( tsID2 == 0 )
+      if ( process_timestep )
 	{
-	  vlistID1 = sf[0].vlistID;
-	  vlistID2 = vlistDuplicate(vlistID1);
-	  taxisID1 = vlistInqTaxis(vlistID1);
-	  taxisID2 = taxisDuplicate(taxisID1);
-	  vlistDefTaxis(vlistID2, taxisID2);
+	  if ( tsID2 == 0 )
+	    {
+	      vlistID1 = sf[0].vlistID;
+	      vlistID2 = vlistDuplicate(vlistID1);
+	      taxisID1 = vlistInqTaxis(vlistID1);
+	      taxisID2 = taxisDuplicate(taxisID1);
+	      vlistDefTaxis(vlistID2, taxisID2);
 	      
-	  streamDefVlist(streamID2, vlistID2);
-	}
+	      streamDefVlist(streamID2, vlistID2);
+	    }
 
-      last_vdate = vdate;
-      last_vtime = vtime;
+	  last_vdate = vdate;
+	  last_vtime = vtime;
 
-      taxisCopyTimestep(taxisID2, sf[fileID].taxisID);
+	  taxisCopyTimestep(taxisID2, sf[fileID].taxisID);
 
-      streamDefTimestep(streamID2, tsID2);
+	  streamDefTimestep(streamID2, tsID2);
 	       
-      for ( recID = 0; recID < sf[fileID].nrecs; recID++ )
-	{
-	  streamInqRecord(sf[fileID].streamID, &varID, &levelID);
-	  streamDefRecord(streamID2,  varID,  levelID);
+	  for ( recID = 0; recID < sf[fileID].nrecs; recID++ )
+	    {
+	      streamInqRecord(sf[fileID].streamID, &varID, &levelID);
+	      streamDefRecord(streamID2,  varID,  levelID);
 	  
-	  if ( lcopy )
-	    {
-	      streamCopyRecord(streamID2, sf[fileID].streamID); 
+	      if ( lcopy )
+		{
+		  streamCopyRecord(streamID2, sf[fileID].streamID); 
+		}
+	      else
+		{
+		  streamReadRecord(sf[fileID].streamID, array, &nmiss);
+		  streamWriteRecord(streamID2, array, nmiss);
+		}
 	    }
-	  else
-	    {
-	      streamReadRecord(sf[fileID].streamID, array, &nmiss);
-	      streamWriteRecord(streamID2, array, nmiss);
-	    }
+
+	  tsID2++;
 	}
-
-      tsID2++;
-
-    SKIP_TIMESTEP:
 
       sf[fileID].nrecs = streamInqTimestep(sf[fileID].streamID, ++sf[fileID].tsID);
       if ( sf[fileID].nrecs == 0 )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@
       Yhourstat   yhourmean        Multi-year hourly mean
       Yhourstat   yhouravg         Multi-year hourly average
       Yhourstat   yhourvar         Multi-year hourly variance
+      Yhourstat   yhourvar1        Multi-year hourly variance [Divisor is (n-1)]
       Yhourstat   yhourstd         Multi-year hourly standard deviation
+      Yhourstat   yhourstd1        Multi-year hourly standard deviation [Divisor is (n-1)]
 */
 
 #include <cdi.h>
@@ -69,7 +71,6 @@ void *Yhourstat(void *argument)
   int i;
   int varID;
   int recID;
-  int gridID;
   int vdate, vtime;
   int houroy;
   int nrecs, nrecords;
@@ -83,7 +84,8 @@ void *Yhourstat(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   int vdates[MAX_HOUR], vtimes[MAX_HOUR];
-  double missval;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
+  double divisor;
   field_t **vars1[MAX_HOUR], **vars2[MAX_HOUR], **samp1[MAX_HOUR];
   field_t field;
 
@@ -95,10 +97,17 @@ void *Yhourstat(void *argument)
   cdoOperatorAdd("yhourmean", func_mean, 0, NULL);
   cdoOperatorAdd("yhouravg",  func_avg,  0, NULL);
   cdoOperatorAdd("yhourvar",  func_var,  0, NULL);
+  cdoOperatorAdd("yhourvar1", func_var1, 0, NULL);
   cdoOperatorAdd("yhourstd",  func_std,  0, NULL);
+  cdoOperatorAdd("yhourstd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   for ( houroy = 0; houroy < MAX_HOUR; ++houroy )
     {
@@ -129,6 +138,7 @@ void *Yhourstat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
@@ -147,42 +157,10 @@ void *Yhourstat(void *argument)
 
       if ( vars1[houroy] == NULL )
 	{
-	  vars1[houroy] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  samp1[houroy] = (field_t **) malloc(nvars*sizeof(field_t *));
-	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[houroy] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
-	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
-
-	      vars1[houroy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      samp1[houroy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      if ( operfunc == func_std || operfunc == func_var )
-		vars2[houroy][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	      
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  vars1[houroy][varID][levelID].grid    = gridID;
-		  vars1[houroy][varID][levelID].nmiss   = 0;
-		  vars1[houroy][varID][levelID].missval = missval;
-		  vars1[houroy][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		  samp1[houroy][varID][levelID].grid    = gridID;
-		  samp1[houroy][varID][levelID].nmiss   = 0;
-		  samp1[houroy][varID][levelID].missval = missval;
-		  samp1[houroy][varID][levelID].ptr     = NULL;
-		  if ( operfunc == func_std || operfunc == func_var )
-		    {
-		      vars2[houroy][varID][levelID].grid    = gridID;
-		      vars2[houroy][varID][levelID].nmiss   = 0;
-		      vars2[houroy][varID][levelID].missval = missval;
-		      vars2[houroy][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		    }
-		}
-	    }
+	  vars1[houroy] = field_malloc(vlistID1, FIELD_PTR);
+	  samp1[houroy] = field_malloc(vlistID1, FIELD_NONE);
+	  if ( lvarstd )
+	    vars2[houroy] = field_malloc(vlistID1, FIELD_PTR);
 	}
 
       for ( recID = 0; recID < nrecs; recID++ )
@@ -235,7 +213,7 @@ void *Yhourstat(void *argument)
 		      samp1[houroy][varID][levelID].ptr[i]++;
 		}
 
-	      if ( operfunc == func_std || operfunc == func_var )
+	      if ( lvarstd )
 		{
 		  farsumq(&vars2[houroy][varID][levelID], field);
 		  farsum(&vars1[houroy][varID][levelID], field);
@@ -247,7 +225,7 @@ void *Yhourstat(void *argument)
 	    }
 	}
 
-      if ( nsets[houroy] == 0 && (operfunc == func_std || operfunc == func_var) )
+      if ( nsets[houroy] == 0 && lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -264,7 +242,7 @@ void *Yhourstat(void *argument)
   for ( houroy = 0; houroy < MAX_HOUR; ++houroy )
     if ( nsets[houroy] )
       {
-	if ( operfunc == func_mean || operfunc == func_avg )
+	if ( lmean )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -277,7 +255,7 @@ void *Yhourstat(void *argument)
 		    fardiv(&vars1[houroy][varID][levelID], samp1[houroy][varID][levelID]);
 		}
 	    }
-	else if ( operfunc == func_std || operfunc == func_var )
+	else if ( lvarstd )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -286,18 +264,17 @@ void *Yhourstat(void *argument)
 		{
 		  if ( samp1[houroy][varID][levelID].ptr == NULL )
 		    {
-		      if ( operfunc == func_std )
-			farcstd(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], 1.0/nsets[houroy]);
+		      if ( lstd )
+			farcstdx(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], nsets[houroy], divisor);
 		      else
-			farcvar(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], 1.0/nsets[houroy]);
+			farcvarx(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], nsets[houroy], divisor);
 		    }
 		  else
 		    {
-		      farinv(&samp1[houroy][varID][levelID]);
-		      if ( operfunc == func_std )
-			farstd(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], samp1[houroy][varID][levelID]);
+		      if ( lstd )
+			farstdx(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], samp1[houroy][varID][levelID], divisor);
 		      else
-			farvar(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], samp1[houroy][varID][levelID]);
+			farvarx(&vars1[houroy][varID][levelID], vars2[houroy][varID][levelID], samp1[houroy][varID][levelID], divisor);
 		    }
 		}
 	    }
@@ -325,24 +302,9 @@ void *Yhourstat(void *argument)
     {
       if ( vars1[houroy] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevel; levelID++ )
-		{
-		  free(vars1[houroy][varID][levelID].ptr);
-		  if ( samp1[houroy][varID][levelID].ptr ) free(samp1[houroy][varID][levelID].ptr);
-		  if ( operfunc == func_std || operfunc == func_var ) free(vars2[houroy][varID][levelID].ptr);
-		}
-	      
-	      free(vars1[houroy][varID]);
-	      free(samp1[houroy][varID]);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[houroy][varID]);
-	    }
-
-	  free(samp1[houroy]);
-	  free(vars1[houroy]);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[houroy]);
+	  field_free(samp1[houroy], vlistID1);
+	  field_free(vars1[houroy], vlistID1);
+	  if ( lvarstd ) field_free(vars2[houroy], vlistID1);
 	}
     }
 

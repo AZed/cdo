@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -69,15 +69,21 @@ off_t filesize(const char *filename)
   FILE *fp;
   off_t pos = 0;
 
-  fp = fopen(filename, "r");
-  if ( fp == NULL )
+  if ( filename[0] == '(' && filename[1] == 'p' )
     {
-      fprintf(stderr, "Open failed on %s\n", filename);
     }
   else
     {
-      fseek(fp, 0L, SEEK_END);
-      pos = ftello(fp);
+      fp = fopen(filename, "r");
+      if ( fp == NULL )
+	{
+	  fprintf(stderr, "Open failed on %s\n", filename);
+	}
+      else
+	{
+	  fseek(fp, 0L, SEEK_END);
+	  pos = ftello(fp);
+	}
     }
   
   return pos;
@@ -86,15 +92,25 @@ off_t filesize(const char *filename)
 static
 void print_stat(const char *sinfo, int memtype, int datatype, int filetype, off_t nvalues, double data_size, double file_size, double tw)
 {
+  double rout;
+
   nvalues /= 1000000;
   data_size /= 1024.*1024.*1024.;
+
+  rout = 0;
+  if ( tw > 0 ) rout = nvalues/tw;
+
   if ( memtype == MEMTYPE_FLOAT )
-    cdoPrint("%s Wrote %.1f GB of 32 bit floats to %s %s, %.1f MVal/s", sinfo, data_size, datatypestr(datatype), filetypestr(filetype), nvalues/tw);
+    cdoPrint("%s Wrote %.1f GB of 32 bit floats to %s %s, %.1f MVal/s", sinfo, data_size, datatypestr(datatype), filetypestr(filetype), rout);
   else
-    cdoPrint("%s Wrote %.1f GB of 64 bit floats to %s %s, %.1f MVal/s", sinfo, data_size, datatypestr(datatype), filetypestr(filetype), nvalues/tw);
+    cdoPrint("%s Wrote %.1f GB of 64 bit floats to %s %s, %.1f MVal/s", sinfo, data_size, datatypestr(datatype), filetypestr(filetype), rout);
 
   file_size /= 1024.*1024.*1024.;
-  cdoPrint("%s Wrote %.1f GB in %.1f seconds, total %.1f MB/s", sinfo, file_size, tw, 1024*file_size/tw);
+
+  rout = 0;
+  if ( tw > 0 ) rout = 1024*file_size/tw;
+
+  cdoPrint("%s Wrote %.1f GB in %.1f seconds, total %.1f MB/s", sinfo, file_size, tw, rout);
 }
 
 
@@ -106,7 +122,6 @@ void *CDIwrite(void *argument)
   int streamID;
   int tsID, varID, levelID;
   int gridsize, i;
-  int rval, rstart, rinc;
   int vlistID;
   int gridID = -1, zaxisID, taxisID;
   int vdate, vtime, julday;
@@ -119,7 +134,6 @@ void *CDIwrite(void *argument)
   off_t nvalues = 0;
   double file_size = 0, data_size = 0;
   double tw, tw0, t0, twsum = 0;
-  double *levels = NULL;
   double ***vars = NULL;
   float *farray = NULL;
   extern int timer_write;
@@ -136,38 +150,47 @@ void *CDIwrite(void *argument)
       else if ( strcmp(envstr, "double") == 0 ) memtype = MEMTYPE_DOUBLE;
     }
 
-  if ( cdoVerbose ) cdoPrint("parameter: <grid, <nlevs, <ntimesteps, <nvars>>>>");
-  // operatorInputArg("<grid, <nlevs, <ntimesteps, <nvars>>>>");
+  if ( cdoVerbose ) cdoPrint("parameter: <nruns, <grid, <nlevs, <ntimesteps, <nvars>>>>>");
 
   if ( operatorArgc() > 5 ) cdoAbort("Too many arguments!");
 
   gridfile = defaultgrid;
   if ( operatorArgc() >= 1 ) nruns = atol(operatorArgv()[0]);
-  if ( operatorArgc() >= 2 ) gridfile = operatorArgv()[0];
-  if ( operatorArgc() >= 3 ) nlevs = atol(operatorArgv()[1]);
-  if ( operatorArgc() >= 4 ) ntimesteps = atol(operatorArgv()[2]);
-  if ( operatorArgc() >= 5 ) nvars = atol(operatorArgv()[3]);
+  if ( operatorArgc() >= 2 ) gridfile = operatorArgv()[1];
+  if ( operatorArgc() >= 3 ) nlevs = atol(operatorArgv()[2]);
+  if ( operatorArgc() >= 4 ) ntimesteps = atol(operatorArgv()[3]);
+  if ( operatorArgc() >= 5 ) nvars = atol(operatorArgv()[4]);
 
   if ( nruns <  0 ) nruns = 0;
   if ( nruns > 99 ) nruns = 99;
 
+
+  if ( nlevs <= 0  ) nlevs = 1;
+  if ( nlevs > 255 ) nlevs = 255;
+  if ( ntimesteps <= 0 ) ntimesteps = 1;
+  if ( nvars <= 0 ) nvars = 1;
+
   gridID   = cdoDefineGrid(gridfile);
   gridsize = gridInqSize(gridID);
 
-  zaxisID  = zaxisCreate(ZAXIS_SURFACE, 1);
+  if ( nlevs == 1 )
+    zaxisID  = zaxisCreate(ZAXIS_SURFACE, 1);
+  else
+    {
+      double levels[nlevs];
+      for ( i = 0; i < nlevs; ++i ) levels[i] = 100*i; 
+      zaxisID  = zaxisCreate(ZAXIS_HEIGHT, nlevs);
+      zaxisDefLevels(zaxisID, levels);
+    }
 
   if ( cdoVerbose )
     {
       cdoPrint("nruns      : %d", nruns);
-      cdoPrint("gridsize   : %d", gridInqSize);
+      cdoPrint("gridsize   : %d", gridsize);
       cdoPrint("nlevs      : %d", nlevs);
       cdoPrint("ntimesteps : %d", ntimesteps);
       cdoPrint("nvars      : %d", nvars);
     } 
-
-  if ( nlevs <= 0 ) nlevs = 1;
-  if ( ntimesteps <= 0 ) ntimesteps = 1;
-  if ( nvars <= 0 ) nvars = 1;
 
   vars = (double ***) malloc(nvars*sizeof(double **));
   for ( varID = 0; varID < nvars; varID++ )
@@ -216,7 +239,6 @@ void *CDIwrite(void *argument)
 
       for ( tsID = 0; tsID < ntimesteps; tsID++ )
 	{
-	  rval  = rstart + rinc*tsID;
 	  vdate = julday_to_date(CALENDAR_PROLEPTIC, julday + tsID);
 	  vtime = 0;
 	  taxisDefVdate(taxisID, vdate);
@@ -257,7 +279,7 @@ void *CDIwrite(void *argument)
       tw = timer_val(timer_write) - tw0;
       twsum += tw;
 
-      file_size = (double ) filesize(cdoStreamName(0));
+      file_size = (double ) filesize(cdoStreamName(0)->args);
 
       if ( nruns > 1 ) sprintf(sinfo, "(run %d)", irun+1);
 

@@ -6,7 +6,7 @@ int StringSplitWithSeperator(  char *source_string, char *seperator, char*** ptr
 
 {
 	char *duplicate_src = NULL, **temp_list = NULL , *temp_str = NULL, *saveptr;
-	int n = 0, nn, i;
+	int n = 0, i;
 	int str_len = 0, sep_count = 0;	
 
 	str_len = strlen( source_string );
@@ -30,7 +30,7 @@ int StringSplitWithSeperator(  char *source_string, char *seperator, char*** ptr
 	if( DBG )
 	  fprintf(stderr, "Input str %s , seperator %s  sep count %d\n", duplicate_src, seperator, sep_count );
 	
-	while( temp_str = strtok_r( duplicate_src, seperator, &saveptr ) )
+	while( ( temp_str = strtok_r( duplicate_src, seperator, &saveptr ) ) )
           {
 	    temp_list[n] = temp_str;
             n++;
@@ -79,3 +79,32 @@ void StrToLowerCase ( char *sPtr )
       ++sPtr;
     }
 }
+
+/* To replace a single char with another single char in a given string */
+
+void StrReplaceChar( char *str_in, char orig_char, char rep_char )
+
+{
+  
+  char *ref = NULL;
+  
+  ref = str_in; 
+  
+  if( strchr( str_in, orig_char) == NULL )
+    return;
+  
+  if( DBG )  
+    fprintf( stderr,"Before %s\n", ref );        
+  
+  while( *str_in != '\0' )
+    {
+      if( *str_in == orig_char )
+	  *str_in = rep_char;
+      str_in++;
+    } 
+  if( DBG )  
+    fprintf( stderr,"After %s\n", ref );      
+  
+  return  ;     
+}
+

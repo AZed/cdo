@@ -59,7 +59,6 @@ void eca1(const ECA_REQUEST_1 *request)
   cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID = streamOpenRead(cdoStreamName(0));
-  if ( istreamID < 0 ) cdiError(istreamID, "Open failed on %s", cdoStreamName(0));
 
   ivlistID = streamInqVlist(istreamID);
   ovlistID = vlistCreate();
@@ -105,7 +104,6 @@ void eca1(const ECA_REQUEST_1 *request)
   vlistDefTaxis(ovlistID, otaxisID);
 
   ostreamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( ostreamID < 0 ) cdiError(ostreamID, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(ostreamID, ovlistID);
 
@@ -114,6 +112,9 @@ void eca1(const ECA_REQUEST_1 *request)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = gridInqSize(gridID);
+
+  field_init(&field1);
+  field_init(&field2);
 
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   if ( IS_SET(request->var2.h2) || IS_SET(request->var2.h3) ) 
@@ -136,16 +137,19 @@ void eca1(const ECA_REQUEST_1 *request)
       
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
+      field_init(&var12[levelID]);
       var12[levelID].grid    = gridID;
       var12[levelID].nmiss   = 0;
       var12[levelID].missval = missval;
       var12[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+      field_init(&samp1[levelID]);
       samp1[levelID].grid    = gridID;
       samp1[levelID].nmiss   = 0;
       samp1[levelID].missval = missval;
       samp1[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+      field_init(&samp2[levelID]);
       samp2[levelID].grid    = gridID;
       samp2[levelID].nmiss   = 0;
       samp2[levelID].missval = missval;
@@ -153,6 +157,7 @@ void eca1(const ECA_REQUEST_1 *request)
 
       if ( IS_SET(request->var1.f3) )
         {
+	  field_init(&var13[levelID]);
           var13[levelID].grid    = gridID;
           var13[levelID].nmiss   = 0;
           var13[levelID].missval = missval;
@@ -160,6 +165,7 @@ void eca1(const ECA_REQUEST_1 *request)
         }
       if ( IS_SET(request->var2.h2) )
         {
+	  field_init(&var21[levelID]);
           var21[levelID].grid    = gridID;
           var21[levelID].nmiss   = 0;
           var21[levelID].missval = missval;
@@ -167,6 +173,7 @@ void eca1(const ECA_REQUEST_1 *request)
         }
       if ( IS_SET(request->var2.h3) )
         {
+	  field_init(&var23[levelID]);
           var23[levelID].grid    = gridID;
           var23[levelID].nmiss   = 0;
           var23[levelID].missval = missval;
@@ -324,12 +331,13 @@ void eca1(const ECA_REQUEST_1 *request)
 	    var = &var13[levelID];
 	  else 
 	    var = &var12[levelID];
-              
+
 	  farsel(var, samp1[levelID]);
 
 	  streamDefRecord(ostreamID, varID, levelID);
 	  streamWriteRecord(ostreamID, var->ptr, var->nmiss);
 	}
+
       if ( IS_SET(request->var2.h2) || IS_SET(request->var2.h3) )
 	{
 	  varID = 1;
@@ -417,9 +425,7 @@ void eca2(const ECA_REQUEST_2 *request)
   cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
-  if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
   istreamID2 = streamOpenRead(cdoStreamName(1));
-  if ( istreamID2 < 0 ) cdiError(istreamID2, "Open failed on %s", cdoStreamName(1));
 
   ivlistID1 = streamInqVlist(istreamID1);
   ivlistID2 = streamInqVlist(istreamID2);
@@ -470,7 +476,6 @@ void eca2(const ECA_REQUEST_2 *request)
   vlistDefTaxis(ovlistID, otaxisID);
 
   ostreamID = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( ostreamID < 0 ) cdiError(ostreamID, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(ostreamID, ovlistID);
 
@@ -480,6 +485,8 @@ void eca2(const ECA_REQUEST_2 *request)
 
   gridsize = gridInqSize(gridID);
 
+  field_init(&field1);
+  field_init(&field2);
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
 
@@ -499,21 +506,25 @@ void eca2(const ECA_REQUEST_2 *request)
       
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
+      field_init(&var14[levelID]);
       var14[levelID].grid    = gridID;
       var14[levelID].nmiss   = 0;
       var14[levelID].missval = missval1;
       var14[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
       
+      field_init(&samp1[levelID]);
       samp1[levelID].grid    = gridID;
       samp1[levelID].nmiss   = 0;
       samp1[levelID].missval = missval1;
       samp1[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+      field_init(&samp2[levelID]);
       samp2[levelID].grid    = gridID;
       samp2[levelID].nmiss   = 0;
       samp2[levelID].missval = missval1;
       samp2[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+      field_init(&samp3[levelID]);
       samp3[levelID].grid    = gridID;
       samp3[levelID].nmiss   = 0;
       samp3[levelID].missval = missval1;
@@ -521,6 +532,7 @@ void eca2(const ECA_REQUEST_2 *request)
       
       if ( request->var1.epilog == PERCENT_OF_TOTAL_AMOUNT )
         {
+	  field_init(&total[levelID]);
           total[levelID].grid    = gridID;
           total[levelID].nmiss   = 0;
           total[levelID].missval = missval1;
@@ -528,6 +540,7 @@ void eca2(const ECA_REQUEST_2 *request)
         }
       if ( IS_SET(request->var1.f5) )
         {
+	  field_init(&var15[levelID]);
           var15[levelID].grid    = gridID;
           var15[levelID].nmiss   = 0;
           var15[levelID].missval = missval1;
@@ -535,6 +548,7 @@ void eca2(const ECA_REQUEST_2 *request)
         }
       if ( IS_SET(request->var2.h2) )
         {
+	  field_init(&var22[levelID]);
           var22[levelID].grid    = gridID;
           var22[levelID].nmiss   = 0;
           var22[levelID].missval = missval1;
@@ -800,9 +814,7 @@ void eca3(const ECA_REQUEST_3 *request)
   cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
-  if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
   istreamID2 = streamOpenRead(cdoStreamName(1));
-  if ( istreamID2 < 0 ) cdiError(istreamID2, "Open failed on %s", cdoStreamName(1));
 
   ivlistID1 = streamInqVlist(istreamID1);
   ivlistID2 = streamInqVlist(istreamID2);
@@ -838,7 +850,6 @@ void eca3(const ECA_REQUEST_3 *request)
   vlistDefTaxis(ovlistID, otaxisID);
 
   ostreamID = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( ostreamID < 0 ) cdiError(ostreamID, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(ostreamID, ovlistID);
 
@@ -848,6 +859,8 @@ void eca3(const ECA_REQUEST_3 *request)
 
   gridsize = gridInqSize(gridID);
 
+  field_init(&field1);
+  field_init(&field2);
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
 
@@ -858,11 +871,13 @@ void eca3(const ECA_REQUEST_3 *request)
         
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
+      field_init(&var1[levelID]);
       var1[levelID].grid    = gridID;
       var1[levelID].nmiss   = 0;
       var1[levelID].missval = missval;
       var1[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
             
+      field_init(&var2[levelID]);
       var2[levelID].grid    = gridID;
       var2[levelID].nmiss   = 0;
       var2[levelID].missval = missval;
@@ -882,12 +897,12 @@ void eca3(const ECA_REQUEST_3 *request)
           ivdate1 = taxisInqVdate(itaxisID1);
           ivdate2 = taxisInqVdate(itaxisID2);
           if ( ivdate1 != ivdate2 )
-            cdoAbort("Input streams have different verification dates for time step %d!", itsID+1);
+            cdoAbort("Input streams have different verification dates at time step %d!", itsID+1);
             
           ivtime1 = taxisInqVtime(itaxisID1);
           ivtime2 = taxisInqVtime(itaxisID2);
           if ( ivtime1 != ivtime2 )
-            cdoAbort("Input streams have different verification times for time step %d!", itsID+1);
+            cdoAbort("Input streams have different verification times at time step %d!", itsID+1);
    
 	  if ( nsets == 0 ) SET_DATE(indate2, ivdate1, ivtime1);
 	  SET_DATE(indate1, ivdate1, ivtime1);
@@ -1009,9 +1024,7 @@ void eca4(const ECA_REQUEST_4 *request)
   cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
-  if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
   istreamID2 = streamOpenRead(cdoStreamName(1));
-  if ( istreamID2 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(1));
 
   ivlistID1 = streamInqVlist(istreamID1);
   ivlistID2 = streamInqVlist(istreamID2);
@@ -1057,7 +1070,6 @@ void eca4(const ECA_REQUEST_4 *request)
   vlistDefTaxis(ovlistID, otaxisID);
 
   ostreamID = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( ostreamID < 0 ) cdiError(ostreamID, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(ostreamID, ovlistID);
 
@@ -1080,10 +1092,13 @@ void eca4(const ECA_REQUEST_4 *request)
 
   /* Two fields are needed because of the definition of gsl for northern and
   * southern hemisphere                                                      */
+  field_init(&fieldGt);
+  field_init(&fieldLt);
   fieldGt.ptr = (double *) malloc(gridsize*sizeof(double));
   fieldLt.ptr = (double *) malloc(gridsize*sizeof(double));
 
   /* field for the land-water-distribution */
+  field_init(&mask);
   mask.ptr    = (double *) malloc(gridsize*sizeof(double));
 
   nlevels     = zaxisInqSize(zaxisID);
@@ -1104,24 +1119,30 @@ void eca4(const ECA_REQUEST_4 *request)
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
   {
+    field_init(&startCount[levelID]);
     startCount[levelID].grid     = gridID;
     startCount[levelID].size     = gridsize;
     startCount[levelID].nmiss    = 0;
     startCount[levelID].missval  = missval;
     startCount[levelID].ptr      = (double *) malloc(gridsize*sizeof(double));
+    memset(startCount[levelID].ptr, 0, gridsize*sizeof(double));
 
+    field_init(&endCount[levelID]);
     endCount[levelID].grid       = gridID;
     endCount[levelID].size       = gridsize;
     endCount[levelID].nmiss      = 0;
     endCount[levelID].missval    = missval;
     endCount[levelID].ptr        = (double *) malloc(gridsize*sizeof(double));
+    memset(endCount[levelID].ptr, 0, gridsize*sizeof(double));
 
+    field_init(&gslDuration[levelID]);
     gslDuration[levelID].grid    = gridID;
     gslDuration[levelID].size    = gridsize;
     gslDuration[levelID].nmiss   = 0;
     gslDuration[levelID].missval = missval;
     gslDuration[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+    field_init(&gslFirstDay[levelID]);
     gslFirstDay[levelID].grid    = gridID;
     gslFirstDay[levelID].size    = gridsize;
     gslFirstDay[levelID].nmiss   = 0;
@@ -1130,12 +1151,14 @@ void eca4(const ECA_REQUEST_4 *request)
 
     for ( int h = 0; h < 2; h++ )
     {
+      field_init(&startDateWithHist[h][levelID]);
       startDateWithHist[h][levelID].grid    = gridID;
       startDateWithHist[h][levelID].size    = gridsize;
       startDateWithHist[h][levelID].nmiss   = 0;
       startDateWithHist[h][levelID].missval = missval;
       startDateWithHist[h][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
+      field_init(&endDateWithHist[h][levelID]);
       endDateWithHist[h][levelID].grid      = gridID;
       endDateWithHist[h][levelID].size      = gridsize;
       endDateWithHist[h][levelID].nmiss     = 0;
@@ -1199,8 +1222,8 @@ void eca4(const ECA_REQUEST_4 *request)
                       startDateWithHist[0][levelID].ptr[i] = missval;
                       endDateWithHist[0][levelID].ptr[i]   = missval;
                     }
-                  gslDuration[levelID].nmiss          = missval;
-                  gslFirstDay[levelID].nmiss          = missval;
+                  gslDuration[levelID].nmiss          = 0;
+                  gslFirstDay[levelID].nmiss          = 0;
                   /* reinitialize the current year */
                   startDateWithHist[0][levelID].nmiss = gridsize;
                   endDateWithHist[0][levelID].nmiss   = gridsize;
@@ -1254,11 +1277,11 @@ void eca4(const ECA_REQUEST_4 *request)
               }
               if ( 7 == month && !resetAtJul )
               {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp sections
 #endif
                 {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp section
 #endif
                   {
@@ -1275,7 +1298,7 @@ void eca4(const ECA_REQUEST_4 *request)
                           }
                       }
                   }
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp section
 #endif
                   {
@@ -1297,11 +1320,11 @@ void eca4(const ECA_REQUEST_4 *request)
               }
 
               /* count the day with temperature larger/smaller than the given limit */
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp sections
 #endif
               {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp section
 #endif
                 {
@@ -1309,7 +1332,7 @@ void eca4(const ECA_REQUEST_4 *request)
                   request->s1(&fieldGt        , request->s1arg);
                   farnum2(&startCount[levelID], fieldGt);
                 }
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp section
 #endif
                 {
@@ -1450,12 +1473,12 @@ void eca4(const ECA_REQUEST_4 *request)
               }
             isFirstYear = FALSE;
           }
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp sections
 #endif
           {
             updateHist(startDateWithHist, nlevels, gridsize, yvals, FALSE);
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp section
 #endif
             updateHist(endDateWithHist,   nlevels, gridsize, yvals, TRUE);

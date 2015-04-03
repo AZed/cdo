@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,11 @@
       Filter    bandpass
 */
 
-#if defined ( _USE_FFTW3 ) 
+#if defined(HAVE_CONFIG_H)
+#  include "config.h"
+#endif
+
+#if defined( HAVE_LIBFFTW3 ) 
 #include <fftw3.h>
 #endif
 
@@ -46,7 +50,7 @@ void fft2(double *real, double *imag, int n, int isign)
   int nn, mmax, m, j, istep, i;
   double wtemp, wr, wpr, wpi, wi, theta, tempr, tempi, tmp;   
   
-  if ( n < 2 || n&(n-1) ) printf("n must be power of 2\n");
+  if ( n < 2 || (n&(n-1)) ) printf("n must be power of 2\n");
   nn = n << 1;
   j = 1;
   
@@ -133,10 +137,10 @@ void create_fmasc(int nts, double fdata, double fmin, double fmax, int *fmasc)
 }
 
 
-#if defined ( _USE_FFTW3 ) 
+#if defined( HAVE_LIBFFTW3 ) 
 static
 void filter_fftw(int nts, const int *fmasc, 
-	    fftw_complex *fft_in, fftw_complex *fft_out, fftw_plan *p_T2S, fftw_plan *p_S2T)
+                 fftw_complex *fft_in, fftw_complex *fft_out, fftw_plan *p_T2S, fftw_plan *p_S2T)
 {  
   //  fprintf(stderr,"using fftw filter\n");
 
@@ -194,13 +198,12 @@ void *Filter(void *argument)
   int tunit;
   int incperiod0, incunit0, incunit, dpy, calendar;
   int year0, month0, day0;
-  double missval;
-  double *array1, *array2;
+  double *array1 = NULL, *array2 = NULL;
   double fdata = 0;
   field_t ***vars = NULL;
   double fmin = 0, fmax = 0;
   int *fmasc;
-#if defined ( _USE_FFTW3 ) 
+#if defined( HAVE_LIBFFTW3 ) 
   fftw_plan p_T2S, p_S2T;
   fftw_complex *out_fft;
   fftw_complex *in_fft;
@@ -246,24 +249,8 @@ void *Filter(void *argument)
                        
       taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
    
-      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
-      
-      for ( varID = 0; varID < nvars; varID++ )
-        {
-          gridID   = vlistInqVarGrid(vlistID1, varID);
-          missval  = vlistInqVarMissval(vlistID1, varID);
-          nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-          
-          vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-          
-          for ( levelID = 0; levelID < nlevel; levelID++ )
-            {
-              vars[tsID][varID][levelID].grid    = gridID;
-              vars[tsID][varID][levelID].missval = missval;
-              vars[tsID][varID][levelID].ptr     = NULL;
-            }
-        }
-      
+      vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
+           
       for ( recID = 0; recID < nrecs; recID++ )
         {
           streamInqRecord(streamID1, &varID, &levelID);
@@ -322,7 +309,7 @@ void *Filter(void *argument)
   nts = tsID;
   /*  round up nts to next power of two for (better) performance 
    ** of fast fourier transformation */
-#if defined ( _USE_FFTW3 ) 
+#if defined( HAVE_LIBFFTW3 ) 
   nts2 = nts;
 
   out_fft = (fftw_complex *) malloc ( nts * sizeof(fftw_complex) );
@@ -379,17 +366,16 @@ void *Filter(void *argument)
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridID   = vlistInqVarGrid(vlistID1, varID);
-      missval  = vlistInqVarMissval(vlistID1, varID);
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
-#if defined ( _USE_FFTW3 ) 
+#if defined( HAVE_LIBFFTW3 ) 
       fprintf(stderr," using fftw lib\n");
 #endif
       
       for ( levelID = 0; levelID < nlevel; levelID++ )
         { 
-#if defined ( _USE_FFTW3 ) 
+#if defined( HAVE_LIBFFTW3 ) 
           for ( i = 0; i < gridsize-1; i++ )
             {
               for ( tsID = 0; tsID < nts; tsID++ )                              
@@ -449,11 +435,12 @@ void *Filter(void *argument)
 		  streamDefRecord(streamID2, varID, levelID);
                   streamWriteRecord(streamID2, vars[tsID][varID][levelID].ptr, nmiss);
                   free(vars[tsID][varID][levelID].ptr);
+		  vars[tsID][varID][levelID].ptr = NULL;
                 }
             }
-          free(vars[tsID][varID]);
         }
-      free(vars[tsID]);
+
+      field_free(vars[tsID], vlistID1);
     }
 
   if ( vars   ) free(vars);

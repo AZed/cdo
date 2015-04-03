@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -30,8 +30,9 @@
 
 void *Diff(void *argument)
 {
-  int DIFF, DIFF2, DIFFP, DIFFN, DIFFC, SDIFF;
+  int DIFF, DIFF2, DIFFP, DIFFN, DIFFC;
   int operatorID;
+  int lhead = TRUE;
   int i;
   int indg;
   int varID1, varID2, recID;
@@ -50,7 +51,7 @@ void *Diff(void *argument)
   int ndrec = 0, nd2rec = 0, ngrec = 0;
   char varname[CDI_MAX_NAME];
   char paramstr[32];
-  char vdatestr[32], vtimestr[32];	  
+  char vdatestr[32], vtimestr[32];
   double *array1, *array2;
   double absm, relm;
   double missval1, missval2;
@@ -62,7 +63,6 @@ void *Diff(void *argument)
   DIFFP = cdoOperatorAdd("diffp", 0, 0, NULL);
   DIFFN = cdoOperatorAdd("diffn", 0, 0, NULL);
   DIFFC = cdoOperatorAdd("diffc", 0, 0, NULL);
-  SDIFF = cdoOperatorAdd("sdiff", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -78,20 +78,6 @@ void *Diff(void *argument)
 
   array1 = (double *) malloc(gridsize*sizeof(double));
   array2 = (double *) malloc(gridsize*sizeof(double));
-
-  if ( ! cdoSilentMode )
-    {
-      if ( operatorID == DIFFN )
-	fprintf(stdout, "               Date  Time    Name         Level    Size    Miss ");
-      else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
-	fprintf(stdout, "               Date  Time    Param        Level    Size    Miss ");
-      else if ( operatorID == DIFFC )
-	fprintf(stdout, "               Date  Time    Code  Level    Size    Miss ");
-
-      if ( operatorID == DIFF2 ) fprintf(stdout, "   Diff ");
-
-      fprintf(stdout, ": S Z  Max_Absdiff Max_Reldiff\n");
-    }
 
   indg = 0;
   tsID = 0;
@@ -129,21 +115,6 @@ void *Diff(void *argument)
 
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
-	  if ( ! cdoSilentMode )
-	    if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP || operatorID == DIFFN || operatorID == DIFFC )
-	      {
-		if ( operatorID == DIFFN ) vlistInqVarName(vlistID1, varID1, varname);
-		
-		if ( operatorID == DIFFN )
-		  fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, varname);
-		else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
-		  fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, paramstr);
-		else if ( operatorID == DIFFC )
-		  fprintf(stdout, "%6d :%s %s %3d ", indg, vdatestr, vtimestr, code);
-
-		fprintf(stdout, "%7g ", zaxisInqLevel(zaxisID, levelID));
-	      }
-
 	  streamReadRecord(streamID1, array1, &nmiss1);
 	  streamReadRecord(streamID2, array2, &nmiss2);
 
@@ -176,16 +147,53 @@ void *Diff(void *argument)
 		}
 	    }
 
-	  if ( ! cdoSilentMode )
-	    if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP || operatorID == DIFFN || operatorID == DIFFC )
-	      {
-		fprintf(stdout, "%7d %7d ", gridsize, MAX(nmiss1, nmiss2));
+	  if ( ! cdoSilentMode || cdoVerbose )
+	    {
+	      if ( absm > 0 || relm > 0 || cdoVerbose )
+		{
+		  if ( lhead )
+		    {
+		      lhead = FALSE;
 
-		if ( operatorID == DIFF2 )  fprintf(stdout, "%7d ", ndiff);
+		      fprintf(stdout, "               Date     Time   Level Gridsize    Miss ");
+			
+		      if ( operatorID == DIFF2 ) fprintf(stdout, "   Diff ");
+
+		      fprintf(stdout, ": S Z  Max_Absdiff Max_Reldiff");
+
+		      if ( operatorID == DIFFN )
+			fprintf(stdout, " : Parameter name");
+		      else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
+			fprintf(stdout, " : Parameter ID");
+		      else if ( operatorID == DIFFC )
+			fprintf(stdout, " : Code number");
+
+		      fprintf(stdout, "\n");
+		    }
+
+		  if ( operatorID == DIFFN ) vlistInqVarName(vlistID1, varID1, varname);
 		
-		fprintf(stdout, ": %c %c ", dsgn ? 'T' : 'F', zero ? 'T' : 'F');
-		fprintf(stdout, "%#12.5g%#12.5g\n", absm, relm);
-	      }
+		  fprintf(stdout, "%6d :%s %s ", indg, vdatestr, vtimestr);
+
+		  fprintf(stdout, "%7g ", zaxisInqLevel(zaxisID, levelID));
+
+		  fprintf(stdout, "%8d %7d ", gridsize, MAX(nmiss1, nmiss2));
+
+		  if ( operatorID == DIFF2 )  fprintf(stdout, "%7d ", ndiff);
+		
+		  fprintf(stdout, ": %c %c ", dsgn ? 'T' : 'F', zero ? 'T' : 'F');
+		  fprintf(stdout, "%#12.5g%#12.5g", absm, relm);
+
+		  if ( operatorID == DIFFN )
+		    fprintf(stdout, " : %-11s", varname);
+		  else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
+		    fprintf(stdout, " : %-11s", paramstr);
+		  else if ( operatorID == DIFFC )
+		    fprintf(stdout, " : %4d", code);
+		      
+		  fprintf(stdout, "\n");
+		}
+	    }
 
 	  ngrec++;
 	  if ( absm > 0     || relm > 0     ) ndrec++;
@@ -194,10 +202,14 @@ void *Diff(void *argument)
       tsID++;
     }
 
-  fprintf(stdout, "  %d of %d records differ\n", ndrec, ngrec);
-  if ( ndrec != nd2rec )
-    fprintf(stdout, "  %d of %d records differ more than 0.001\n", nd2rec, ngrec);
-  /*  fprintf(stdout, "  %d of %d records differ more then one thousandth\n", nprec, ngrec); */
+  if ( ndrec > 0 )
+    {
+      fprintf(stdout, "  %d of %d records differ\n", ndrec, ngrec);
+      if ( ndrec != nd2rec )
+	fprintf(stdout, "  %d of %d records differ more than 0.001\n", nd2rec, ngrec);
+      /*  fprintf(stdout, "  %d of %d records differ more then one thousandth\n", nprec, ngrec); */
+    }
+
   if ( nrecs == 0 && nrecs2 > 0 )
     cdoWarning("stream2 has more time steps than stream1!");
   if ( nrecs > 0 && nrecs2 == 0 )

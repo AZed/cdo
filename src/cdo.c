@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
   GNU General Public License for more details.
 */
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -25,15 +25,15 @@
 #include <stdlib.h>
 #include <ctype.h>
 /*#include <malloc.h>*/ /* mallopt and malloc_stats */
-#if  defined (HAVE_GETRLIMIT)
-#if  defined (HAVE_SYS_RESOURCE_H)
+#if defined(HAVE_GETRLIMIT)
+#if defined(HAVE_SYS_RESOURCE_H)
 #include <sys/time.h>       /* getrlimit */
 #include <sys/resource.h>   /* getrlimit */
 #endif
 #endif
 #include <unistd.h>         /* sysconf, gethostname */
 
-#if defined (SX)
+#if defined(SX)
 #define RLIM_T  long long
 #else
 #define RLIM_T  rlim_t
@@ -45,19 +45,20 @@
 #include "cdo_int.h"
 
 
-#if  defined  (HAVE_LIBPTHREAD)
+#if defined(HAVE_LIBPTHREAD)
 #include "pstream_int.h"
 #include "pthread_debug.h"
 #endif
 
 #include "modules.h"
 #include "util.h"
+#include "error.h"
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
-#if ! defined (VERSION)
+#if ! defined(VERSION)
 #  define  VERSION  "0.0.1"
 #endif
 
@@ -68,18 +69,21 @@ char *Progname;
 
 int ompNumThreads = 1;
 
+char *cdoGridSearchDir   = NULL;
 int cdoDefaultFileType   = CDI_UNDEFID;
 int cdoDefaultDataType   = CDI_UNDEFID;
 int cdoDefaultTimeType   = CDI_UNDEFID;
 int cdoDefaultByteorder  = CDI_UNDEFID;
 int cdoDefaultTableID    = CDI_UNDEFID;
 
+int cdoLockIO            = FALSE;
 int cdoCheckDatarange    = FALSE;
 
 int cdoDiag              = FALSE;
 int cdoDisableHistory    = FALSE;
 int cdoCompType          = COMPRESS_NONE;  // compression type
 int cdoCompLevel         = 0;              // compression level
+int cdoChunkType         = CDI_UNDEFID;
 int cdoLogOff            = FALSE;
 int cdoSilentMode        = FALSE;
 int cdoOverwriteMode     = FALSE;
@@ -92,7 +96,19 @@ int cdoInteractive       = FALSE;
 int cdoParIO             = FALSE;
 int cdoRegulargrid       = FALSE;
 
+#define MAX_NUM_VARNAMES 256
+int cdoNumVarnames       = 0;
+char **cdoVarnames       = NULL;
+
 char cdo_file_suffix[32];
+
+
+static int Debug = 0;
+static int Version = 0;
+static int Help = 0;
+static int DebugLevel = 0;
+static int numThreads = 0;
+
 
 int cdoExpMode           = -1;
 char *cdoExpName         = NULL;
@@ -123,55 +139,35 @@ int timer_total, timer_read, timer_write;
       }
 
 
+void printFeatures(void);
+void printLibraries(void);
+
 static
 void cdo_version(void)
 {
+  int   filetypes[] = {FILETYPE_SRV, FILETYPE_EXT, FILETYPE_IEG, FILETYPE_GRB, FILETYPE_GRB2, FILETYPE_NC, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_NC4C};
+  char *typenames[] = {        "srv",        "ext",        "ieg",        "grb",        "grb2",        "nc",        "nc2",        "nc4",        "nc4c"};
+
   fprintf(stderr, "%s\n", CDO_Version);
-#if defined (COMPILER)
+#if defined(COMPILER)
   fprintf(stderr, "Compiler: %s\n", COMPILER);
 #endif
-#if defined (COMP_VERSION)
+#if defined(COMP_VERSION)
   fprintf(stderr, " version: %s\n", COMP_VERSION);
 #endif
-  fprintf(stderr, "    with:");
-#if defined (HAVE_LIBPTHREAD)
-  fprintf(stderr, " PTHREADS");
-#endif
-#if defined (_OPENMP)
-  fprintf(stderr, " OpenMP");
-#endif
-#if  defined  (HAVE_NETCDF4)
-  fprintf(stderr, " NC4");
-#endif
-#if  defined  (HAVE_LIBNC_DAP)
-  fprintf(stderr, " OPeNDAP");
-#endif
-#if defined (HAVE_LIBSZ)
-  fprintf(stderr, " SZ");
-#endif
-#if defined (HAVE_LIBZ)
-  fprintf(stderr, " Z");
-#endif
-#if defined (HAVE_LIBJASPER)
-  fprintf(stderr, " JASPER");
-#endif
-#if defined (HAVE_LIBPROJ)
-  fprintf(stderr, " PROJ.4");
-#endif
-#if defined (HAVE_LIBMAGICS)
-  fprintf(stderr, " MAGICS");
-#endif
-#if defined (HAVE_LIBDRMAA)
-  fprintf(stderr, " DRMAA");
-#endif
-#if defined (HAVE_LIBCURL)
-  fprintf(stderr, " CURL");
-#endif
-  fprintf(stderr, "\n");
-#if defined (USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
+#if defined(USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
   fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
 	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
 #endif
+
+  printFeatures();
+  printLibraries();
+
+  fprintf(stderr, "Filetypes: ");
+  for ( size_t i = 0; i < sizeof(filetypes)/sizeof(int); ++i )
+    if ( cdiHaveFiletype(filetypes[i]) ) fprintf(stderr, "%s ", typenames[i]);
+  fprintf(stderr, "\n");
+
   cdiPrintVersion();
   fprintf(stderr, "\n");
 }
@@ -193,7 +189,7 @@ void usage(void)
   fprintf(stderr, "                   Add L or B to set the byteorder to Little or Big endian\n");
   fprintf(stderr, "    -f <format>    Format of the output file. (grb/grb2/nc/nc2/nc4/nc4c/srv/ext/ieg)\n");
   fprintf(stderr, "    -g <grid>      Set default grid name or file. Available grids: \n");
-  fprintf(stderr, "                   n<N>, t<RES>, tl<RES>, r<NX>x<NY>, g<NX>x<NY>, gme<NI>, lon=<LON>/lat=<LAT>\n");
+  fprintf(stderr, "                   n<N>, t<RES>, tl<RES>, global_<DXY>, r<NX>x<NY>, g<NX>x<NY>, gme<NI>, lon=<LON>/lat=<LAT>\n");
   fprintf(stderr, "    -h             Help information for the operators\n");
   /*
   fprintf(stderr, "    -i <inst>      Institution name/file\n");
@@ -204,10 +200,12 @@ void usage(void)
   fprintf(stderr, "\n");
   */
   /* fprintf(stderr, "    -l <level>     Level file\n"); */
+  fprintf(stderr, "    -k <chunktype> NetCDF4 chunk type: auto, grid or lines\n");
+  fprintf(stderr, "    -L             Lock IO (sequential access)\n");
   fprintf(stderr, "    -M             Switch to indicate that the I/O streams have missing values\n");
   fprintf(stderr, "    -m <missval>   Set the default missing value (default: %g)\n", cdiInqMissval());
   fprintf(stderr, "    -O             Overwrite existing output file, if checked\n");
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   fprintf(stderr, "    -P <nthreads>  Set number of OpenMP threads\n");
 #endif
   fprintf(stderr, "    -Q             Alphanumeric sorting of netCDF parameter names\n");
@@ -225,16 +223,17 @@ void usage(void)
 
   fprintf(stderr, "    -V             Print the version number\n");
   fprintf(stderr, "    -v             Print extra details for some operators\n");
+  fprintf(stderr, "    -W             Print extra warning messages\n");
   fprintf(stderr, "    -z szip        SZIP compression of GRIB1 records\n");
   fprintf(stderr, "       jpeg        JPEG compression of GRIB2 records\n");
-  fprintf(stderr, "        zip        Deflate compression of netCDF4 variables\n");
+  fprintf(stderr, "        zip[_1-9]  Deflate compression of netCDF4 variables\n");
   fprintf(stderr, "\n");
 
   fprintf(stderr, "  Operators:\n");
   operatorPrintAll();
 
   fprintf(stderr, "\n");
-  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2012 Uwe Schulzweida\n", VERSION);
+  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2013 Uwe Schulzweida\n", VERSION);
   //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
   fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
@@ -263,9 +262,9 @@ void cdoPrintHelp(char *phelp[]/*, char *xoperator*/)
 }
 
 
-void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID)
+void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID, const char *refname)
 {
-  if ( strncmp(cdo_file_suffix, "NULL", 4) )
+  if ( strncmp(cdo_file_suffix, "NULL", 4) != 0 )
     {
       if ( cdo_file_suffix[0] != 0 )
 	{
@@ -273,10 +272,52 @@ void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID
 	}
       else
 	{
-	  strncat(filesuffix, streamFilesuffix(filetype), maxlen-1);
-	  if ( cdoDefaultFileType == FILETYPE_GRB )
-	    if ( vlistIsSzipped(vlistID) || cdoCompType == COMPRESS_SZIP )
-	      strncat(filesuffix, ".sz", maxlen-1);
+	  int lready = FALSE;
+	  int lcompsz = FALSE;
+	  
+	  if ( filetype == cdoDefaultFileType && cdoDefaultDataType == -1 && cdoDefaultByteorder == -1 )
+	    {
+	      size_t len = 0;
+	      if ( refname != NULL && *refname != 0 && *refname != '-' && *refname != '.' ) len = strlen(refname);
+
+	      if ( len > 2 )
+		{
+		  char *result = strrchr(refname, '.');
+		  if ( result != NULL && result[1] != 0 )
+		    {
+		      int firstchar = tolower(result[1]);
+		      switch (firstchar)
+			{
+			case 'g':
+			  if ( cdoDefaultFileType == FILETYPE_GRB || cdoDefaultFileType == FILETYPE_GRB2 ) lready = TRUE;
+			  break;
+			case 'n':
+			  if ( cdoDefaultFileType == FILETYPE_NC || cdoDefaultFileType == FILETYPE_NC2 ||
+			       cdoDefaultFileType == FILETYPE_NC4 || cdoDefaultFileType == FILETYPE_NC4C ) lready = TRUE;
+			  break;
+			case 's':
+			  if ( cdoDefaultFileType == FILETYPE_SRV ) lready = TRUE;
+			  break;
+			case 'e':
+			  if ( cdoDefaultFileType == FILETYPE_EXT ) lready = TRUE;
+			  break;
+			case 'i':
+			  if ( cdoDefaultFileType == FILETYPE_IEG ) lready = TRUE;
+			  break;
+			}
+		    }
+		  if ( lready )  strncat(filesuffix, result, maxlen-1);
+		}
+	    }
+
+	  if ( !lready )
+	    {
+	      strncat(filesuffix, streamFilesuffix(cdoDefaultFileType), maxlen-1);
+	      if ( cdoDefaultFileType == FILETYPE_GRB && vlistIsSzipped(vlistID) ) lcompsz = TRUE;
+	    }
+
+	  if ( cdoDefaultFileType == FILETYPE_GRB && cdoCompType == COMPRESS_SZIP ) lcompsz = TRUE;
+	  if ( lcompsz ) strncat(filesuffix, ".sz", maxlen-1);
 	}
     }
 }
@@ -298,11 +339,11 @@ void cdoSetDebug(int level)
    */
   cdiDebug(level);
 
-  if ( level == 1 || level &  32 ) cdoDebug = 1;
-  if ( level == 1 || level &  64 ) pstreamDebug(1);
-#if  defined  (HAVE_LIBPTHREAD)
-  if ( level == 1 || level & 128 ) pipeDebug(1);
-  if ( level == 1 || level & 256 ) Pthread_debug(1);
+  if ( level == 1 || (level &  32) ) cdoDebug = 1;
+  if ( level == 1 || (level &  64) ) pstreamDebug(1);
+#if defined(HAVE_LIBPTHREAD)
+  if ( level == 1 || (level & 128) ) pipeDebug(1);
+  if ( level == 1 || (level & 256) ) Pthread_debug(1);
 #endif
 }
 
@@ -428,17 +469,17 @@ void setDefaultDataType(char *datatypestr)
 		  exit(EXIT_FAILURE);
 		}
 	    }
-	  /*
 	  else if ( dtype == D_UINT )
 	    {
 	      if      ( nbits ==  8 ) cdoDefaultDataType = DATATYPE_UINT8;
+	      else if ( nbits == 16 ) cdoDefaultDataType = DATATYPE_UINT16;
+	      else if ( nbits == 32 ) cdoDefaultDataType = DATATYPE_UINT32;
 	      else
 		{
 		  fprintf(stderr, "Unsupported number of bits = %d for datatype UINT!\n", nbits);
 		  exit(EXIT_FAILURE);
 		}
 	    }
-	  */
 	  else if ( dtype == D_FLT )
 	    {
 	      if      ( nbits == 32 ) cdoDefaultDataType = DATATYPE_FLT32;
@@ -577,6 +618,45 @@ void setDefaultFileType(char *filetypestr, int labort)
     }
 }
 
+#if defined(malloc)
+#undef malloc
+#undef free
+#endif
+
+#define NTESTS 11
+#include <inttypes.h>
+static
+int getMemAlignment(void)
+{
+  int ma = -1;
+  int i, k;
+  double *ptr[NTESTS];
+  int64_t iptr;
+  size_t tsize[NTESTS] = {1, 3, 5, 9, 17, 33, 69, 121, 251, 510, 1025};
+  size_t ma_check[4] = {8, 16, 32, 64};
+  int ma_result[4] = {1, 1, 1, 1};
+
+  for ( i = 0; i < NTESTS; ++i )
+    {
+      ptr[i] = malloc(tsize[i]);
+      iptr = (int64_t) ptr[i];
+      for ( k = 0; k < 4; ++k ) if ( iptr%ma_check[k] ) ma_result[k] = 0; 
+    }
+  for ( i = 0; i < NTESTS; ++i ) free(ptr[i]);
+
+  for ( i = NTESTS-1; i >= 0; i-- )
+    {
+      ptr[i] = malloc(tsize[i]+5);
+      iptr = (int64_t) ptr[i];
+      for ( k = 0; k < 4; ++k ) if ( iptr%ma_check[k] ) ma_result[k] = 0; 
+    }
+  for ( i = 0; i < NTESTS; ++i ) free(ptr[i]);
+
+  for ( k = 0; k < 4; ++k ) if ( ma_result[k] ) ma = ma_check[k];
+
+  return (ma);
+}
+
 
 int cdoFiletype(void)
 {
@@ -610,19 +690,94 @@ void defineCompress(const char *arg)
       cdoCompType  = COMPRESS_GZIP;
       cdoCompLevel = 6;
     }
-  else if ( memcmp(arg, "zip", len) == 0 )
+  else if ( memcmp(arg, "zip", 3) == 0 )
     {
       cdoCompType  = COMPRESS_ZIP;
-      cdoCompLevel = 1;
+      if ( len == 5 && arg[3] == '_' && isdigit(arg[4]) )
+	cdoCompLevel = atoi(&arg[4]);
+      else
+	cdoCompLevel = 1;
     }
   else
-    fprintf(stderr, "%s compression unsupported!\n", arg);
+    {
+      fprintf(stderr, "Compression type '%s' unsupported!\n", arg);
+      exit(EXIT_FAILURE);
+    }
+}
+
+static
+void defineChunktype(const char *arg)
+{
+  if      ( strcmp("auto",  arg)   == 0 ) cdoChunkType = CHUNK_AUTO;
+  else if ( strcmp("grid",  arg)   == 0 ) cdoChunkType = CHUNK_GRID;
+  else if ( strcmp("lines", arg)   == 0 ) cdoChunkType = CHUNK_LINES;
+  else
+    {
+      fprintf(stderr, "Chunk type '%s' unsupported!\n", arg);
+      exit(EXIT_FAILURE);
+    }
+}
+
+static
+void defineVarnames(const char *arg)
+{
+  size_t len = strlen(arg);
+  size_t istart = 0;
+  char *pbuf;
+
+  while ( istart < len && (arg[istart] == ' ' || arg[istart] == ',') ) istart++;
+
+  len -= istart;
+
+  if ( len )
+    {
+      char *commapos;
+      
+      cdoVarnames = (char **) malloc(MAX_NUM_VARNAMES*sizeof(char *));
+
+      pbuf = strdup(arg+istart);
+      cdoVarnames[cdoNumVarnames++] = pbuf;    
+
+      commapos = pbuf;
+      while ( (commapos = strchr(commapos, ',')) != NULL )
+	{
+	  *commapos++ = '\0';
+	  if ( strlen(commapos) )
+	    {
+	      if ( cdoNumVarnames >= MAX_NUM_VARNAMES )
+		cdoAbort("Too many variable names (limit=%d)!", MAX_NUM_VARNAMES);
+
+	      cdoVarnames[cdoNumVarnames++] = commapos;
+	    }
+	}
+      /*
+      for ( int i = 0; i < cdoNumVarnames; ++i )
+	printf("varname %d: %s\n", i+1, cdoVarnames[i]);
+      */
+    }
 }
 
 static
 void get_env_vars(void)
 {
   char *envstr;
+
+  envstr = getenv("CDO_GRID_SEARCH_DIR");
+  if ( envstr )
+    {
+      size_t len = strlen(envstr);
+      if ( len > 0 )
+	{
+	  len += 2;
+	  cdoGridSearchDir = (char *) malloc(len);
+	  memcpy(cdoGridSearchDir, envstr, len-1);
+	  if ( cdoGridSearchDir[len-3] != '/' )
+	    {
+	      cdoGridSearchDir[len-2] = '/';
+	      cdoGridSearchDir[len-1] = 0;
+	    }
+	}
+    }
 
   envstr = getenv("CDO_LOG_OFF");
   if ( envstr )
@@ -682,42 +837,177 @@ void get_env_vars(void)
     }
 }
 
+static
+void print_system_info()
+{
+  char *envstr;
 
-int main(int argc, char *argv[])
+  if ( DebugLevel == 0 ) DebugLevel = 1;
+  cdoSetDebug(DebugLevel);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "cdoDefaultFileType  = %d\n", cdoDefaultFileType);
+  fprintf(stderr, "cdoDefaultDataType  = %d\n", cdoDefaultDataType);
+  fprintf(stderr, "cdoDefaultByteorder = %d\n", cdoDefaultByteorder);
+  fprintf(stderr, "cdoDefaultTableID   = %d\n", cdoDefaultTableID);
+  fprintf(stderr, "\n");
+
+  envstr = getenv("HOSTTYPE");
+  if ( envstr ) fprintf(stderr, "HOSTTYPE            = %s\n", envstr);
+  envstr = getenv("VENDOR");
+  if ( envstr ) fprintf(stderr, "VENDOR              = %s\n", envstr);
+  envstr = getenv("OSTYPE");
+  if ( envstr ) fprintf(stderr, "OSTYPE              = %s\n", envstr);
+  envstr = getenv("MACHTYPE");
+  if ( envstr ) fprintf(stderr, "MACHTYPE            = %s\n", envstr);
+  fprintf(stderr, "\n");
+
+#if defined(_ARCH_PWR6)
+  fprintf(stderr, "Predefined: _ARCH_PWR6\n");
+#endif 
+#if defined(_ARCH_PWR7)
+  fprintf(stderr, "Predefined: _ARCH_PWR7\n");
+#endif 
+#if defined(__SSE2__)
+  fprintf(stderr, "Predefined: __SSE2__\n");
+#endif 
+#if defined(__SSE3__)
+  fprintf(stderr, "Predefined: __SSE3__\n");
+#endif 
+#if defined(__SSE4_1__)
+  fprintf(stderr, "Predefined: __SSE4_1__\n");
+#endif 
+#if defined(__SSE4_2__)
+  fprintf(stderr, "Predefined: __SSE4_2__\n");
+#endif 
+#if defined(__AVX__)
+  fprintf(stderr, "Predefined: __AVX__\n");
+#endif 
+  fprintf(stderr, "\n");
+
+  fprintf(stderr, "mem alignment       = %d\n\n", getMemAlignment());
+
+#if defined(HAVE_MMAP)
+  fprintf(stderr, "HAVE_MMAP\n");
+#endif
+#if defined(HAVE_MEMORY_H)
+  fprintf(stderr, "HAVE_MEMORY_H\n");
+#endif
+  fprintf(stderr, "\n");
+      
+#if defined(_OPENACC)
+  fprintf(stderr, "OPENACC VERSION     = %d\n", _OPENACC);
+#endif
+#if defined(_OPENMP)
+  fprintf(stderr, "OPENMP VERSION      = %d\n", _OPENMP);
+#endif
+#if defined(__GNUC__)
+  fprintf(stderr, "GNUC VERSION        = %d\n", __GNUC__);
+#endif
+#if defined(__GNUC_MINOR__)
+  fprintf(stderr, "GNUC MINOR          = %d\n", __GNUC_MINOR__);
+#endif
+#if defined(__ICC)
+  fprintf(stderr, "ICC VERSION         = %d\n", __ICC);
+#endif
+#if defined(__STDC__)
+  fprintf(stderr, "STD ANSI C          = %d\n", __STDC__);
+#endif
+#if defined(__STD_VERSION__)
+  fprintf(stderr, "STD VERSION         = %ld\n", __STD_VERSION__);
+#endif
+#if defined(__STDC_VERSION__)
+  fprintf(stderr, "STDC VERSION        = %ld\n", __STDC_VERSION__);
+#endif
+#if defined(__STD_HOSTED__)
+  fprintf(stderr, "STD HOSTED          = %d\n", __STD_HOSTED__);
+#endif
+#if defined(FLT_EVAL_METHOD)
+  fprintf(stderr, "FLT_EVAL_METHOD     = %d\n", FLT_EVAL_METHOD);
+#endif
+#if defined(FP_FAST_FMA)
+  fprintf(stderr, "FP_FAST_FMA         = defined\n");
+#endif
+  fprintf(stderr, "\n");
+
+#if defined(_SC_VERSION)
+  fprintf(stderr, "POSIX.1 VERSION     = %ld\n", sysconf(_SC_VERSION));
+#endif
+#if defined(_SC_ARG_MAX)
+  fprintf(stderr, "POSIX.1 ARG_MAX     = %ld\n", sysconf(_SC_ARG_MAX));
+#endif
+#if defined(_SC_CHILD_MAX)
+  fprintf(stderr, "POSIX.1 CHILD_MAX   = %ld\n", sysconf(_SC_CHILD_MAX));
+#endif
+#if defined(_SC_STREAM_MAX)
+  fprintf(stderr, "POSIX.1 STREAM_MAX  = %ld\n", sysconf(_SC_STREAM_MAX));
+#endif
+#if defined(_SC_OPEN_MAX)
+  fprintf(stderr, "POSIX.1 OPEN_MAX    = %ld\n", sysconf(_SC_OPEN_MAX));
+#endif
+#if defined(_SC_PAGESIZE)
+  fprintf(stderr, "POSIX.1 PAGESIZE    = %ld\n", sysconf(_SC_PAGESIZE));
+#endif
+
+  fprintf(stderr, "\n");
+
+#if defined(HAVE_GETRLIMIT)
+#if defined(RLIMIT_FSIZE)
+  PRINT_RLIMIT(RLIMIT_FSIZE);
+#endif
+#if defined(RLIMIT_NOFILE)
+  PRINT_RLIMIT(RLIMIT_NOFILE);
+#endif
+#if defined(RLIMIT_STACK)
+  PRINT_RLIMIT(RLIMIT_STACK);
+#endif
+#endif
+  fprintf(stderr, "\n");
+}
+
+static
+void check_stacksize()
+{
+#if defined(HAVE_GETRLIMIT)
+#if defined(RLIMIT_STACK)
+  {
+#define  MIN_STACK_SIZE  67108864L  /* 64MB */
+    int status;
+    struct rlimit rlim;
+    RLIM_T min_stack_size = MIN_STACK_SIZE;
+
+    status = getrlimit(RLIMIT_STACK, &rlim);
+
+    if ( status == 0 )
+      {
+	if ( min_stack_size > rlim.rlim_max ) min_stack_size = rlim.rlim_max;
+	if ( rlim.rlim_cur < min_stack_size )
+	  {
+	    rlim.rlim_cur = min_stack_size;
+
+	    status = setrlimit(RLIMIT_STACK, &rlim);
+	    if ( Debug )
+	      {
+		if ( status == 0 )
+		  {
+		    fprintf(stderr, "Set stack size to %ld\n", (long) min_stack_size);
+		    PRINT_RLIMIT(RLIMIT_STACK);
+		  }
+		else
+		  fprintf(stderr, "Set stack size to %ld failed!\n", (long) min_stack_size);
+	      }
+	  }
+      }
+  }
+#endif
+#endif
+}
+
+static
+void parse_options(int argc, char *argv[])
 {
   int c;
-  int Debug = 0;
-  int Version = 0;
-  int Help = 0;
-  int DebugLevel = 0;
-  int lstop = FALSE;
-  int noff = 0;
-  int status = 0;
-  int numThreads = 0;
-  char *operatorName = NULL;
-  char *operatorArg = NULL;
-  char *argument = NULL;
-  extern int dmemory_ExitOnError;
 
-  init_is_tty();
-
-  dmemory_ExitOnError = 1;
-
-  /* mallopt(M_MMAP_MAX, 0); */
- 
-  setCommandLine(argc, argv);
-
-  Progname = getProgname(argv[0]);
-
-  if ( memcmp(Progname, "cdo", 3) == 0 && strlen(Progname) > 3 ) noff = 3;
-
-  /* old versions !!!! */
-  if ( memcmp(Progname, "gdo", 3) == 0 && strlen(Progname) > 3 ) noff = 3;
-  if ( memcmp(Progname, "gm",  2) == 0 && strlen(Progname) > 2 ) noff = 2;
-
-  if ( noff ) setDefaultFileType(Progname+noff, 0);
-
-  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:l:m:t:D:z:aBcdhMOQRrsSTuVvXZ")) != -1 )
+  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:k:l:m:n:t:D:z:aBcdhLMOQRrsSTuVvWXZ")) != -1 )
     {
       switch (c)
 	{
@@ -742,7 +1032,7 @@ int main(int argc, char *argv[])
 	  break;
 	case 'e':
 	  {
-#if defined (HAVE_GETHOSTNAME)
+#if defined(HAVE_GETHOSTNAME)
 	  char host[1024];
 	  gethostname(host, sizeof(host));
 	  cdoExpName = cdoOptarg;
@@ -769,6 +1059,12 @@ int main(int argc, char *argv[])
 	case 'i':
 	  defineInstitution(cdoOptarg);
 	  break;
+	case 'k':
+	  defineChunktype(cdoOptarg);
+	  break;
+	case 'L':	
+	  cdoLockIO = TRUE;
+	  break;
 	case 'l':
 	  defineZaxis(cdoOptarg);
 	  break;
@@ -777,6 +1073,9 @@ int main(int argc, char *argv[])
 	  break;
 	case 'M':
 	  cdiDefGlobal("HAVE_MISSVAL", TRUE);
+	  break;
+	case 'n':
+	  defineVarnames(cdoOptarg);
 	  break;
 	case 'O':
 	  cdoOverwriteMode = TRUE;
@@ -824,6 +1123,9 @@ int main(int argc, char *argv[])
 	case 'v':
 	  cdoVerbose = TRUE;
 	  break;
+	case 'W': /* Warning messages */
+	  _Verbose = 1;
+	  break;
 	case 'X': /* multi threaded I/O */
 	  cdoParIO = TRUE;
 	  break;
@@ -839,166 +1141,48 @@ int main(int argc, char *argv[])
 	  break;
 	}
     }
+}
+
+
+int main(int argc, char *argv[])
+{
+  int lstop = FALSE;
+  int noff = 0;
+  int status = 0;
+  char *operatorName = NULL;
+  char *operatorArg = NULL;
+  extern int dmemory_ExitOnError;
+  argument_t *argument = NULL;
+
+  init_is_tty();
+
+  dmemory_ExitOnError = 1;
+
+  _Verbose = 0;
+
+  /* mallopt(M_MMAP_MAX, 0); */
+ 
+  setCommandLine(argc, argv);
+
+  Progname = getProgname(argv[0]);
+
+  if ( memcmp(Progname, "cdo", 3) == 0 && strlen(Progname) > 3 ) noff = 3;
+
+  if ( noff ) setDefaultFileType(Progname+noff, 0);
+
+  parse_options(argc, argv);
 
   get_env_vars();
 
   if ( Debug || Version ) cdo_version();
 
-  if ( Debug )
-    {
-      char *envstr;
+  if ( Debug ) print_system_info();
 
-      if ( DebugLevel == 0 ) DebugLevel = 1;
-      cdoSetDebug(DebugLevel);
-      fprintf(stderr, "\n");
-      fprintf(stderr, "cdoDefaultFileType  = %d\n", cdoDefaultFileType);
-      fprintf(stderr, "cdoDefaultDataType  = %d\n", cdoDefaultDataType);
-      fprintf(stderr, "cdoDefaultByteorder = %d\n", cdoDefaultByteorder);
-      fprintf(stderr, "cdoDefaultTableID   = %d\n", cdoDefaultTableID);
-      fprintf(stderr, "\n");
+  check_stacksize();
 
-      envstr = getenv("HOSTTYPE");
-      if ( envstr ) fprintf(stderr, "HOSTTYPE            = %s\n", envstr);
-      envstr = getenv("VENDOR");
-      if ( envstr ) fprintf(stderr, "VENDOR              = %s\n", envstr);
-      envstr = getenv("OSTYPE");
-      if ( envstr ) fprintf(stderr, "OSTYPE              = %s\n", envstr);
-      envstr = getenv("MACHTYPE");
-      if ( envstr ) fprintf(stderr, "MACHTYPE            = %s\n", envstr);
-      fprintf(stderr, "\n");
+  if ( Debug ) print_pthread_info();
 
-#if defined (__SSE2__)
-      fprintf(stderr, "Predefined: __SSE2__\n");
-#endif 
-#if defined (__SSE3__)
-      fprintf(stderr, "Predefined: __SSE3__\n");
-#endif 
-#if defined (__SSE4_1__)
-      fprintf(stderr, "Predefined: __SSE4_1__\n");
-#endif 
-#if defined (__SSE4_2__)
-      fprintf(stderr, "Predefined: __SSE4_2__\n");
-#endif 
-#if defined (__AVX__)
-      fprintf(stderr, "Predefined: __AVX__\n");
-#endif 
-      fprintf(stderr, "\n");
-
-#if defined (HAVE_MMAP)
-      fprintf(stderr, "HAVE_MMAP\n");
-#endif
-#if defined (HAVE_MEMORY_H)
-      fprintf(stderr, "HAVE_MEMORY_H\n");
-#endif
-      fprintf(stderr, "\n");
-
-#if defined (_OPENACC)
-      fprintf(stderr, "OPENACC VERSION     = %d\n", _OPENACC);
-#endif
-#if defined (_OPENMP)
-      fprintf(stderr, "OPENMP VERSION      = %d\n", _OPENMP);
-#endif
-#if defined (__GNUC__)
-      fprintf(stderr, "GNUC VERSION        = %d\n", __GNUC__);
-#endif
-#if defined (__ICC)
-      fprintf(stderr, "ICC VERSION         = %d\n", __ICC);
-#endif
-#if defined (__STDC__)
-      fprintf(stderr, "STD ANSI C          = %d\n", __STDC__);
-#endif
-#if defined (__STD_VERSION__)
-      fprintf(stderr, "STD VERSION         = %ld\n", __STD_VERSION__);
-#endif
-#if defined (__STDC_VERSION__)
-      fprintf(stderr, "STDC VERSION        = %ld\n", __STDC_VERSION__);
-#endif
-#if defined (__STD_HOSTED__)
-      fprintf(stderr, "STD HOSTED          = %d\n", __STD_HOSTED__);
-#endif
-#if defined (FLT_EVAL_METHOD)
-      fprintf(stderr, "FLT_EVAL_METHOD     = %d\n", FLT_EVAL_METHOD);
-#endif
-#if defined (FP_FAST_FMA)
-      fprintf(stderr, "FP_FAST_FMA         = defined\n");
-#endif
-      fprintf(stderr, "\n");
-
-#if defined (_SC_VERSION)
-      fprintf(stderr, "POSIX.1 VERSION     = %ld\n", sysconf(_SC_VERSION));
-#endif
-#if defined (_SC_ARG_MAX)
-      fprintf(stderr, "POSIX.1 ARG_MAX     = %ld\n", sysconf(_SC_ARG_MAX));
-#endif
-#if defined (_SC_CHILD_MAX)
-      fprintf(stderr, "POSIX.1 CHILD_MAX   = %ld\n", sysconf(_SC_CHILD_MAX));
-#endif
-#if defined (_SC_STREAM_MAX)
-      fprintf(stderr, "POSIX.1 STREAM_MAX  = %ld\n", sysconf(_SC_STREAM_MAX));
-#endif
-#if defined (_SC_OPEN_MAX)
-      fprintf(stderr, "POSIX.1 OPEN_MAX    = %ld\n", sysconf(_SC_OPEN_MAX));
-#endif
-#if defined (_SC_PAGESIZE)
-      fprintf(stderr, "POSIX.1 PAGESIZE    = %ld\n", sysconf(_SC_PAGESIZE));
-#endif
-
-      fprintf(stderr, "\n");
-
-#if defined (HAVE_GETRLIMIT)
-#if defined (RLIMIT_FSIZE)
-      PRINT_RLIMIT(RLIMIT_FSIZE);
-#endif
-#if defined (RLIMIT_NOFILE)
-      PRINT_RLIMIT(RLIMIT_NOFILE);
-#endif
-#if defined (RLIMIT_STACK)
-      PRINT_RLIMIT(RLIMIT_STACK);
-#endif
-#endif
-      fprintf(stderr, "\n");
-    }
-
-#if defined (HAVE_GETRLIMIT)
-#if defined (RLIMIT_STACK)
-  {
-#define  MIN_STACK_SIZE  67108864L  /* 64MB */
-    int status;
-    struct rlimit rlim;
-    RLIM_T min_stack_size = MIN_STACK_SIZE;
-
-    status = getrlimit(RLIMIT_STACK, &rlim);
-
-    if ( status == 0 )
-      {
-	if ( min_stack_size > rlim.rlim_max ) min_stack_size = rlim.rlim_max;
-	if ( rlim.rlim_cur < min_stack_size )
-	  {
-	    rlim.rlim_cur = min_stack_size;
-
-	    status = setrlimit(RLIMIT_STACK, &rlim);
-	    if ( Debug )
-	      {
-		if ( status == 0 )
-		  {
-		    fprintf(stderr, "Set stack size to %ld\n", (long) min_stack_size);
-		    PRINT_RLIMIT(RLIMIT_STACK);
-		  }
-		else
-		  fprintf(stderr, "Set stack size to %ld failed!\n", (long) min_stack_size);
-	      }
-	  }
-      }
-  }
-#endif
-#endif
-
-  if ( Debug )
-    {
-      print_pthread_info();
-    }
-
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   if ( numThreads <= 0 ) numThreads = 1;
   omp_set_num_threads(numThreads);
   ompNumThreads = omp_get_max_threads();
@@ -1020,13 +1204,14 @@ int main(int argc, char *argv[])
   if ( cdoOptind < argc )
     {
       operatorArg = argv[cdoOptind];
-      argument = makeArgument(argc-cdoOptind, &argv[cdoOptind]);
+      argument = argument_new(argc-cdoOptind, 0);
+      argument_fill(argument, argc-cdoOptind, &argv[cdoOptind]);
     }
   else
     {
       if ( ! Version && ! Help )
 	{
-	  fprintf(stderr, "\nno operator given\n\n");
+	  fprintf(stderr, "\nNo operator given!\n\n");
 	  usage();
 	  status = 1;
 	}
@@ -1064,10 +1249,19 @@ int main(int argc, char *argv[])
       if ( cdoTimer ) timer_report();
     }
 
-  if ( argument ) free(argument);
+  if ( argument ) argument_free(argument);
+
+  if ( cdoVarnames )
+    {
+      if ( cdoNumVarnames ) free(cdoVarnames[0]);
+      free(cdoVarnames);
+    }
+
   /* problems with alias!!! if ( operatorName ) free(operatorName); */ 
 
   /* malloc_stats(); */
+
+  if ( cdoGridSearchDir ) free(cdoGridSearchDir);
 
   return (status);
 }

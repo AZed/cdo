@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>		/* for floor() */
 
 #include "cdi.h"
-
+#include "timebase.h"
 
 /* convert Julian date into year, months, day */
 void decode_julday(int calendar,
@@ -136,9 +137,9 @@ int sec_to_time(int secofday)
 }
 
 static
-void adjust_seconds(int *julday, int *secofday)
+void adjust_seconds(int *julday, int64_t *secofday)
 {
-  int secperday = 86400;
+  int64_t secperday = 86400;
 
   while ( *secofday >= secperday ) 
     { 
@@ -154,52 +155,66 @@ void adjust_seconds(int *julday, int *secofday)
 }
 
 
-void julday_add_seconds(int seconds, int *julday, int *secofday)
+void julday_add_seconds(int64_t seconds, int *julday, int *secofday)
 {
-  *secofday += seconds;
+  int64_t sec_of_day = *secofday;
 
-  adjust_seconds(julday, secofday);
+  sec_of_day += seconds;
+
+  adjust_seconds(julday, &sec_of_day);
+
+  *secofday = (int) sec_of_day;
 }
 
 /* add days and secs to julday/secofday */
 void julday_add(int days, int secs, int *julday, int *secofday)
 {
-  *julday   += days;
-  *secofday += secs;
+  int64_t sec_of_day = *secofday;
 
-  adjust_seconds(julday, secofday);
+  sec_of_day += secs;
+  *julday    += days;
+
+  adjust_seconds(julday, &sec_of_day);
+
+  *secofday = (int) sec_of_day;
 }
 
 /* subtract julday1/secofday1 from julday2/secofday2 and returns the result in seconds */
 double julday_sub(int julday1, int secofday1, int julday2, int secofday2, int *days, int *secs)
 {
-  int seconds;
+  int64_t sec_of_day;
+  int64_t seconds;
 
   *days = julday2 - julday1;
   *secs = secofday2 - secofday1;
 
-  adjust_seconds(days, secs);
+  sec_of_day = *secs;
 
-  seconds = *days*86400. + *secs;
+  adjust_seconds(days, &sec_of_day);
+
+  *secs = (int) sec_of_day;
+
+  seconds = *days*86400. + sec_of_day;
 
   return (seconds);
 }
 
 
-void encode_juldaysec(int calendar, int year, int month, int day, int hour, int minute, int *julday, int *secofday)
+void encode_juldaysec(int calendar, int year, int month, int day, int hour, int minute, int second, int *julday, int *secofday)
 {
   *julday = encode_julday(calendar, year, month, day);
 
-  *secofday = (hour*60 + minute)*60;
+  *secofday = (hour*60 + minute)*60 + second;
 }
 
 
-void decode_juldaysec(int calendar, int julday, int secofday, int *year, int *month, int *day, int *hour, int *minute)
+void decode_juldaysec(int calendar, int julday, int secofday, int *year, int *month, int *day, int *hour, int *minute, int *second)
 {
   decode_julday(calendar, julday, year, month, day);
 
   *hour   = secofday/3600;
   *minute = secofday/60 - *hour*60;
+  *second = secofday - *hour*3600 - *minute*60;
 }
 
 
@@ -213,6 +228,7 @@ int main(void)
   int i, j = 0;
   int year, mon, day, hour, minute, second;
   int julday, secofday;
+  int calendar = CALENDAR_STANDARD;
 
   /* 1 - Check valid range of years */
 
@@ -302,36 +318,28 @@ int main(void)
 {
   int i;
   int julday, secofday;
-  int year, month, day, hour, minute;
+  int year, month, day, hour, minute, second;
   int value = 30;
   int factor = 86400;
+  int calendar = CALENDAR_STANDARD;
 
-  year=1979; month=1; day=15; hour=12; minute=30;
+  year=1979; month=1; day=15; hour=12; minute=30, second=17;
 
-  printf("%d/%02d/%02d %02d:%02d\n", year, month, day, hour, minute);
+  printf("%d/%02d/%02d %02d:%02d:%02d\n", year, month, day, hour, minute, second);
 
-  encode_juldaysec(calendar, year, month, day, hour, minute, &julday, &secofday);
+  encode_juldaysec(calendar, year, month, day, hour, minute, second, &julday, &secofday);
 
-  decode_juldaysec(calendar, julday, secofday, &year, &month, &day, &hour, &minute);
-  printf("%d/%02d/%02d %02d:%02d   %d %d\n", year, month, day, hour, minute, julday, secofday);
+  decode_juldaysec(calendar, julday, secofday, &year, &month, &day, &hour, &minute, &second);
+  printf("%d/%02d/%02d %02d:%02d:%02d   %d %d\n", year, month, day, hour, minute, second, julday, secofday);
 
   for ( i = 0; i < 420; i++ )
     {
 
-      decode_juldaysec(calendar, julday, secofday, &year, &month, &day, &hour, &minute);
-      printf("%2d %d/%02d/%02d %02d:%02d\n", i, year, month, day, hour, minute);
+      decode_juldaysec(calendar, julday, secofday, &year, &month, &day, &hour, &minute, &second);
+      printf("%2d %d/%02d/%02d %02d:%02d:%02d\n", i, year, month, day, hour, minute, second);
       julday_add_seconds(value*factor, &julday, &secofday);
     }
 
   return (0);
 }
 #endif
-/*
- * Local Variables:
- * c-file-style: "Java"
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * show-trailing-whitespace: t
- * require-trailing-newline: t
- * End:
- */

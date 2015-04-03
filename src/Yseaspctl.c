@@ -50,7 +50,6 @@ void *Yseaspctl(void *argument)
   int *recVarID, *recLevelID;
   int vdates1[NSEAS], vtimes1[NSEAS];
   int vdates2[NSEAS], vtimes2[NSEAS];
-  double missval;
   field_t **vars1[NSEAS];
   field_t field;
   double pn;
@@ -106,19 +105,20 @@ void *Yseaspctl(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID2, tsID)) )
     {
       if ( nrecs != streamInqTimestep(streamID3, tsID) )
-        cdoAbort("Number of records in time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Number of records at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
       
       vdate = taxisInqVdate(taxisID2);
       vtime = taxisInqVtime(taxisID2);
       
       if ( vdate != taxisInqVdate(taxisID3) || vtime != taxisInqVtime(taxisID3) )
-        cdoAbort("Verification dates for time step %d of %s and %s are different!", tsID+1, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("Verification dates at time step %d of %s and %s differ!", tsID+1, cdoStreamName(1)->args, cdoStreamName(2)->args);
         
       if ( cdoVerbose ) cdoPrint("process timestep: %d %d %d", tsID+1, vdate, vtime);
 
@@ -149,26 +149,15 @@ void *Yseaspctl(void *argument)
 
       if ( vars1[seas] == NULL )
 	{
-	  vars1[seas] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  vars1[seas] = field_malloc(vlistID1, FIELD_PTR);
           hsets[seas] = hsetCreate(nvars);
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridID   = vlistInqVarGrid(vlistID1, varID);
-	      gridsize = gridInqSize(gridID);
 	      nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      missval  = vlistInqVarMissval(vlistID1, varID);
 
-	      vars1[seas][varID] = (field_t *)  malloc(nlevels*sizeof(field_t));
               hsetCreateVarLevels(hsets[seas], varID, nlevels, gridID);
-	      
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		{
-		  vars1[seas][varID][levelID].grid    = gridID;
-		  vars1[seas][varID][levelID].nmiss   = 0;
-		  vars1[seas][varID][levelID].missval = missval;
-		  vars1[seas][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
 	    }
 	}
       
@@ -213,7 +202,7 @@ void *Yseaspctl(void *argument)
       vtimes1[seas] = vtime;
 
       if ( vars1[seas] == NULL )
-        cdoAbort("No data for season %d in %s and %s", seas, cdoStreamName(1), cdoStreamName(2));
+        cdoAbort("No data for season %d in %s and %s", seas, cdoStreamName(1)->args, cdoStreamName(2)->args);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -240,9 +229,9 @@ void *Yseaspctl(void *argument)
     if ( nsets[seas] )
       {
         if ( vdates1[seas] != vdates2[seas] )
-          cdoAbort("Verification dates for season %d of %s, %s and %s are different!", seas, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification dates for season %d of %s, %s and %s are different!", seas, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
         if ( vtimes1[seas] != vtimes2[seas] )
-          cdoAbort("Verification times for season %d of %s, %s and %s are different!", seas, cdoStreamName(1), cdoStreamName(2), cdoStreamName(3));
+          cdoAbort("Verification times for season %d of %s, %s and %s are different!", seas, cdoStreamName(1)->args, cdoStreamName(2)->args, cdoStreamName(3)->args);
 
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
@@ -275,14 +264,7 @@ void *Yseaspctl(void *argument)
     {
       if ( vars1[seas] != NULL )
 	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	      for ( levelID = 0; levelID < nlevels; levelID++ )
-		free(vars1[seas][varID][levelID].ptr);
-	      free(vars1[seas][varID]);
-	    }
-	  free(vars1[seas]); 
+	  field_free(vars1[seas], vlistID1); 
 	  hsetDestroy(hsets[seas]);
 	}
     }

@@ -4,6 +4,15 @@
 #  include "config.h"
 #endif
 
+#if USE_MPI
+#  include <mpi.h>
+#  include <yaxt.h>
+#else
+#define MPI_Comm int
+#define MPI_Comm_f2c(c) (c)
+#define MPI_Comm_c2f(c) (c)
+#endif
+
 #if ! defined (_CDI_H)
 #  include "cdi.h"
 #endif
@@ -12,6 +21,10 @@
 
 #if ! defined (__CFORTRAN_LOADED)
 #  include "cfortran.h"
+#endif
+
+#if ! defined (_CDIFORTRAN_H)
+#  include "cdiFortran.h"
 #endif
 
 
@@ -31,6 +44,9 @@
 
 
 /*  internal data types  */
+
+
+/*  Chunks  */
 
 
 /*  GRID types  */
@@ -54,12 +70,39 @@
 /*  CALENDAR types  */
 
 
+/*  parallel IO IOMode  */
+
+
+/*  parallel IO routines  */
+
+#ifdef MPI_VERSION /* make_fint keep */
+FCALLSCSUB0 (pioEndDef, PIOENDDEF, pioenddef)
+FCALLSCSUB0 (pioEndTimestepping, PIOENDTIMESTEPPING, pioendtimestepping)
+FCALLSCSUB0 (pioFinalize, PIOFINALIZE, piofinalize)
+static int pioInit_fwrap(int commSuper, int nProcsIO, int IOMode, int * pioNamespace, float partInflate)
+{
+  MPI_Comm v;
+  v = pioInit(MPI_Comm_f2c(commSuper),  nProcsIO,  IOMode,  pioNamespace,  partInflate);
+  return MPI_Comm_c2f(v);
+}
+FCALLSCFUN5 (INT, pioInit_fwrap, PIOINIT, pioinit, INT, INT, INT, PINT, FLOAT)
+FCALLSCSUB0 (pioWriteTimestep, PIOWRITETIMESTEP, piowritetimestep)
+static void streamWriteVarPart_fwrap(int streamID, int varID, const void * data, int nmiss, void * partDesc)
+{
+  streamWriteVarPart( streamID,  varID,  data,  nmiss, (*(Xt_idxlist *)partDesc));
+}
+FCALLSCSUB5 (streamWriteVarPart_fwrap, STREAMWRITEVARPART, streamwritevarpart, INT, INT, PVOID, INT, PVOID)
+#endif /* make_fint keep */
+FCALLSCSUB1 (pioNamespaceSetActive, PIONAMESPACESETACTIVE, pionamespacesetactive, INT)
+
 /*  CDI control routines  */
 
+FCALLSCSUB0 (cdiReset, CDIRESET, cdireset)
 FCALLSCFUN1 (STRING, cdiStringError, CDISTRINGERROR, cdistringerror, INT)
 FCALLSCSUB1 (cdiDebug, CDIDEBUG, cdidebug, INT)
 FCALLSCFUN0 (STRING, cdiLibraryVersion, CDILIBRARYVERSION, cdilibraryversion)
 FCALLSCSUB0 (cdiPrintVersion, CDIPRINTVERSION, cdiprintversion)
+FCALLSCFUN1 (INT, cdiHaveFiletype, CDIHAVEFILETYPE, cdihavefiletype, INT)
 FCALLSCSUB1 (cdiDefMissval, CDIDEFMISSVAL, cdidefmissval, DOUBLE)
 FCALLSCFUN0 (DOUBLE, cdiInqMissval, CDIINQMISSVAL, cdiinqmissval)
 FCALLSCSUB2 (cdiDefGlobal, CDIDEFGLOBAL, cdidefglobal, STRING, INT)
@@ -72,6 +115,12 @@ FCALLSCSUB2 (cdiDefGlobal, CDIDEFGLOBAL, cdidefglobal, STRING, INT)
 FCALLSCSUB3 (cdiParamToString, CDIPARAMTOSTRING, cdiparamtostring, INT, PSTRING, INT)
 FCALLSCSUB4 (cdiDecodeParam, CDIDECODEPARAM, cdidecodeparam, INT, PINT, PINT, PINT)
 FCALLSCFUN3 (INT, cdiEncodeParam, CDIENCODEPARAM, cdiencodeparam, INT, INT, INT)
+
+/*  date format:  YYYYMMDD  */
+
+
+/*  time format:    hhmmss  */
+
 FCALLSCSUB4 (cdiDecodeDate, CDIDECODEDATE, cdidecodedate, INT, PINT, PINT, PINT)
 FCALLSCFUN3 (INT, cdiEncodeDate, CDIENCODEDATE, cdiencodedate, INT, INT, INT)
 FCALLSCSUB4 (cdiDecodeTime, CDIDECODETIME, cdidecodetime, INT, PINT, PINT, PINT)
@@ -86,6 +135,7 @@ FCALLSCSUB1 (streamClose, STREAMCLOSE, streamclose, INT)
 FCALLSCSUB1 (streamSync, STREAMSYNC, streamsync, INT)
 FCALLSCSUB2 (streamDefVlist, STREAMDEFVLIST, streamdefvlist, INT, INT)
 FCALLSCFUN1 (INT, streamInqVlist, STREAMINQVLIST, streaminqvlist, INT)
+FCALLSCFUN1 (INT, streamInqVlistIDorig, STREAMINQVLISTIDORIG, streaminqvlistidorig, INT)
 FCALLSCFUN1 (INT, streamInqFiletype, STREAMINQFILETYPE, streaminqfiletype, INT)
 FCALLSCSUB2 (streamDefByteorder, STREAMDEFBYTEORDER, streamdefbyteorder, INT, INT)
 FCALLSCFUN1 (INT, streamInqByteorder, STREAMINQBYTEORDER, streaminqbyteorder, INT)
@@ -98,6 +148,7 @@ FCALLSCFUN2 (INT, streamInqTimestep, STREAMINQTIMESTEP, streaminqtimestep, INT, 
 FCALLSCFUN1 (STRING, streamFilename, STREAMFILENAME, streamfilename, INT)
 FCALLSCFUN1 (STRING, streamFilesuffix, STREAMFILESUFFIX, streamfilesuffix, INT)
 FCALLSCFUN1 (INT, streamNtsteps, STREAMNTSTEPS, streamntsteps, INT)
+FCALLSCFUN1 (INT, streamInqNvars, STREAMINQNVARS, streaminqnvars, INT)
 
 /*  STREAM var I/O routines  */
 
@@ -107,6 +158,7 @@ FCALLSCSUB4 (streamWriteVarF, STREAMWRITEVARF, streamwritevarf, INT, INT, PFLOAT
 FCALLSCSUB5 (streamReadVarSlice, STREAMREADVARSLICE, streamreadvarslice, INT, INT, INT, PDOUBLE, PINT)
 FCALLSCSUB5 (streamWriteVarSlice, STREAMWRITEVARSLICE, streamwritevarslice, INT, INT, INT, PDOUBLE, INT)
 FCALLSCSUB5 (streamWriteVarSliceF, STREAMWRITEVARSLICEF, streamwritevarslicef, INT, INT, INT, PFLOAT, INT)
+FCALLSCSUB5 (streamWriteVarChunk, STREAMWRITEVARCHUNK, streamwritevarchunk, INT, INT, INTVV, PDOUBLE, INT)
 
 /*  STREAM record I/O routines  */
 
@@ -178,6 +230,8 @@ FCALLSCSUB3 (vlistDefVarCode, VLISTDEFVARCODE, vlistdefvarcode, INT, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarCode, VLISTINQVARCODE, vlistinqvarcode, INT, INT)
 FCALLSCSUB3 (vlistDefVarDatatype, VLISTDEFVARDATATYPE, vlistdefvardatatype, INT, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarDatatype, VLISTINQVARDATATYPE, vlistinqvardatatype, INT, INT)
+FCALLSCSUB3 (vlistDefVarChunkType, VLISTDEFVARCHUNKTYPE, vlistdefvarchunktype, INT, INT, INT)
+FCALLSCFUN2 (INT, vlistInqVarChunkType, VLISTINQVARCHUNKTYPE, vlistinqvarchunktype, INT, INT)
 FCALLSCSUB3 (vlistDefVarXYZ, VLISTDEFVARXYZ, vlistdefvarxyz, INT, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarXYZ, VLISTINQVARXYZ, vlistinqvarxyz, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarNumber, VLISTINQVARNUMBER, vlistinqvarnumber, INT, INT)
@@ -197,6 +251,8 @@ FCALLSCSUB3 (vlistDefVarUnits, VLISTDEFVARUNITS, vlistdefvarunits, INT, INT, STR
 FCALLSCSUB3 (vlistInqVarUnits, VLISTINQVARUNITS, vlistinqvarunits, INT, INT, PSTRING)
 FCALLSCSUB3 (vlistDefVarMissval, VLISTDEFVARMISSVAL, vlistdefvarmissval, INT, INT, DOUBLE)
 FCALLSCFUN2 (DOUBLE, vlistInqVarMissval, VLISTINQVARMISSVAL, vlistinqvarmissval, INT, INT)
+FCALLSCSUB3 (vlistDefVarExtra, VLISTDEFVAREXTRA, vlistdefvarextra, INT, INT, STRING)
+FCALLSCSUB3 (vlistInqVarExtra, VLISTINQVAREXTRA, vlistinqvarextra, INT, INT, PSTRING)
 FCALLSCSUB3 (vlistDefVarScalefactor, VLISTDEFVARSCALEFACTOR, vlistdefvarscalefactor, INT, INT, DOUBLE)
 FCALLSCFUN2 (DOUBLE, vlistInqVarScalefactor, VLISTINQVARSCALEFACTOR, vlistinqvarscalefactor, INT, INT)
 FCALLSCSUB3 (vlistDefVarAddoffset, VLISTDEFVARADDOFFSET, vlistdefvaraddoffset, INT, INT, DOUBLE)
@@ -205,6 +261,8 @@ FCALLSCSUB3 (vlistDefVarTimave, VLISTDEFVARTIMAVE, vlistdefvartimave, INT, INT, 
 FCALLSCFUN2 (INT, vlistInqVarTimave, VLISTINQVARTIMAVE, vlistinqvartimave, INT, INT)
 FCALLSCSUB3 (vlistDefVarTimaccu, VLISTDEFVARTIMACCU, vlistdefvartimaccu, INT, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarTimaccu, VLISTINQVARTIMACCU, vlistinqvartimaccu, INT, INT)
+FCALLSCSUB3 (vlistDefVarTypeOfGeneratingProcess, VLISTDEFVARTYPEOFGENERATINGPROCESS, vlistdefvartypeofgeneratingprocess, INT, INT, INT)
+FCALLSCFUN2 (INT, vlistInqVarTypeOfGeneratingProcess, VLISTINQVARTYPEOFGENERATINGPROCESS, vlistinqvartypeofgeneratingprocess, INT, INT)
 FCALLSCFUN2 (INT, vlistInqVarSize, VLISTINQVARSIZE, vlistinqvarsize, INT, INT)
 FCALLSCSUB4 (vlistDefIndex, VLISTDEFINDEX, vlistdefindex, INT, INT, INT, INT)
 FCALLSCFUN3 (INT, vlistInqIndex, VLISTINQINDEX, vlistinqindex, INT, INT, INT)
@@ -219,6 +277,13 @@ FCALLSCFUN3 (INT, vlistMergedLevel, VLISTMERGEDLEVEL, vlistmergedlevel, INT, INT
 
 FCALLSCSUB5 (vlistDefVarEnsemble, VLISTDEFVARENSEMBLE, vlistdefvarensemble, INT, INT, INT, INT, INT)
 FCALLSCFUN5 (INT, vlistInqVarEnsemble, VLISTINQVARENSEMBLE, vlistinqvarensemble, INT, INT, PINT, PINT, PINT)
+FCALLSCSUB0 (cdiClearAdditionalKeys, CDICLEARADDITIONALKEYS, cdiclearadditionalkeys)
+FCALLSCSUB1 (cdiDefAdditionalKey, CDIDEFADDITIONALKEY, cdidefadditionalkey, STRING)
+FCALLSCSUB4 (vlistDefVarIntKey, VLISTDEFVARINTKEY, vlistdefvarintkey, INT, INT, STRING, INT)
+FCALLSCSUB4 (vlistDefVarDblKey, VLISTDEFVARDBLKEY, vlistdefvardblkey, INT, INT, STRING, DOUBLE)
+FCALLSCFUN3 (INT, vlistHasVarKey, VLISTHASVARKEY, vlisthasvarkey, INT, INT, STRING)
+FCALLSCFUN3 (DOUBLE, vlistInqVarDblKey, VLISTINQVARDBLKEY, vlistinqvardblkey, INT, INT, STRING)
+FCALLSCFUN3 (INT, vlistInqVarIntKey, VLISTINQVARINTKEY, vlistinqvarintkey, INT, INT, STRING)
 
 /*  VLIST attributes  */
 
@@ -227,10 +292,10 @@ FCALLSCFUN6 (INT, vlistInqAtt, VLISTINQATT, vlistinqatt, INT, INT, INT, PSTRING,
 FCALLSCFUN3 (INT, vlistDelAtt, VLISTDELATT, vlistdelatt, INT, INT, STRING)
 FCALLSCFUN6 (INT, vlistDefAttInt, VLISTDEFATTINT, vlistdefattint, INT, INT, STRING, INT, INT, PINT)
 FCALLSCFUN6 (INT, vlistDefAttFlt, VLISTDEFATTFLT, vlistdefattflt, INT, INT, STRING, INT, INT, PDOUBLE)
-FCALLSCFUN5 (INT, vlistDefAttTxt, VLISTDEFATTTXT, vlistdefatttxt, INT, INT, STRING, INT, STRING)
+FCALLSCFUN5 (INT, vlistDefAttTxt, VLISTDEFATTTXT, vlistdefatttxt, INT, INT, STRING, INT, CBUF)
 FCALLSCFUN5 (INT, vlistInqAttInt, VLISTINQATTINT, vlistinqattint, INT, INT, STRING, INT, PINT)
 FCALLSCFUN5 (INT, vlistInqAttFlt, VLISTINQATTFLT, vlistinqattflt, INT, INT, STRING, INT, PDOUBLE)
-FCALLSCFUN5 (INT, vlistInqAttTxt, VLISTINQATTTXT, vlistinqatttxt, INT, INT, STRING, INT, PSTRING)
+FCALLSCFUN5 (INT, vlistInqAttTxt, VLISTINQATTTXT, vlistinqatttxt, INT, INT, STRING, INT, CBUF)
 
 /*  GRID routines  */
 
@@ -242,7 +307,6 @@ FCALLSCFUN2 (INT, gridInqMaskGME, GRIDINQMASKGME, gridinqmaskgme, INT, PINT)
 FCALLSCSUB2 (gridDefMask, GRIDDEFMASK, griddefmask, INT, PINT)
 FCALLSCFUN2 (INT, gridInqMask, GRIDINQMASK, gridinqmask, INT, PINT)
 FCALLSCSUB2 (gridPrint, GRIDPRINT, gridprint, INT, INT)
-FCALLSCFUN0 (INT, gridSize, GRIDSIZE, gridsize)
 FCALLSCFUN2 (INT, gridCreate, GRIDCREATE, gridcreate, INT, INT)
 FCALLSCSUB1 (gridDestroy, GRIDDESTROY, griddestroy, INT)
 FCALLSCFUN1 (INT, gridDuplicate, GRIDDUPLICATE, gridduplicate, INT)
@@ -300,16 +364,16 @@ FCALLSCSUB2 (gridDefGMEni2, GRIDDEFGMENI2, griddefgmeni2, INT, INT)
 FCALLSCFUN1 (INT, gridInqGMEni3, GRIDINQGMENI3, gridinqgmeni3, INT)
 FCALLSCSUB2 (gridDefGMEni3, GRIDDEFGMENI3, griddefgmeni3, INT, INT)
 
-/*  Reference grid  */
+/*  Reference of an unstructured grid  */
 
-FCALLSCFUN1 (INT, gridInqNumber, GRIDINQNUMBER, gridinqnumber, INT)
 FCALLSCSUB2 (gridDefNumber, GRIDDEFNUMBER, griddefnumber, INT, INT)
-FCALLSCFUN1 (INT, gridInqPosition, GRIDINQPOSITION, gridinqposition, INT)
+FCALLSCFUN1 (INT, gridInqNumber, GRIDINQNUMBER, gridinqnumber, INT)
 FCALLSCSUB2 (gridDefPosition, GRIDDEFPOSITION, griddefposition, INT, INT)
-FCALLSCFUN2 (INT, gridInqReference, GRIDINQREFERENCE, gridinqreference, INT, PSTRING)
+FCALLSCFUN1 (INT, gridInqPosition, GRIDINQPOSITION, gridinqposition, INT)
 FCALLSCSUB2 (gridDefReference, GRIDDEFREFERENCE, griddefreference, INT, STRING)
-FCALLSCFUN2 (STRING, gridInqUUID, GRIDINQUUID, gridinquuid, INT, PSTRING)
-FCALLSCSUB2 (gridDefUUID, GRIDDEFUUID, griddefuuid, INT, STRING)
+FCALLSCFUN2 (INT, gridInqReference, GRIDINQREFERENCE, gridinqreference, INT, PSTRING)
+FCALLSCSUB2 (gridDefUUID, GRIDDEFUUID, griddefuuid, INT, CBUF)
+FCALLSCFUN2 (STRING, gridInqUUID, GRIDINQUUID, gridinquuid, INT, CBUF)
 
 /*  Lambert Conformal Conic grid (GRIB version)  */
 
@@ -350,15 +414,16 @@ FCALLSCFUN1 (INT, zaxisInqSize, ZAXISINQSIZE, zaxisinqsize, INT)
 FCALLSCFUN1 (INT, zaxisDuplicate, ZAXISDUPLICATE, zaxisduplicate, INT)
 FCALLSCSUB2 (zaxisResize, ZAXISRESIZE, zaxisresize, INT, INT)
 FCALLSCSUB1 (zaxisPrint, ZAXISPRINT, zaxisprint, INT)
-FCALLSCFUN0 (INT, zaxisSize, ZAXISSIZE, zaxissize)
 FCALLSCSUB2 (zaxisDefLevels, ZAXISDEFLEVELS, zaxisdeflevels, INT, PDOUBLE)
 FCALLSCSUB2 (zaxisInqLevels, ZAXISINQLEVELS, zaxisinqlevels, INT, PDOUBLE)
 FCALLSCSUB3 (zaxisDefLevel, ZAXISDEFLEVEL, zaxisdeflevel, INT, INT, DOUBLE)
 FCALLSCFUN2 (DOUBLE, zaxisInqLevel, ZAXISINQLEVEL, zaxisinqlevel, INT, INT)
-FCALLSCSUB2 (zaxisDefReference, ZAXISDEFREFERENCE, zaxisdefreference, INT, INT)
-FCALLSCSUB2 (zaxisDefUUID, ZAXISDEFUUID, zaxisdefuuid, INT, STRING)
-FCALLSCFUN2 (STRING, zaxisInqUUID, ZAXISINQUUID, zaxisinquuid, INT, PSTRING)
-FCALLSCFUN1 (INT, zaxisInqReference, ZAXISINQREFERENCE, zaxisinqreference, INT)
+FCALLSCSUB2 (zaxisDefNlevRef, ZAXISDEFNLEVREF, zaxisdefnlevref, INT, INT)
+FCALLSCFUN1 (INT, zaxisInqNlevRef, ZAXISINQNLEVREF, zaxisinqnlevref, INT)
+FCALLSCSUB2 (zaxisDefNumber, ZAXISDEFNUMBER, zaxisdefnumber, INT, INT)
+FCALLSCFUN1 (INT, zaxisInqNumber, ZAXISINQNUMBER, zaxisinqnumber, INT)
+FCALLSCSUB2 (zaxisDefUUID, ZAXISDEFUUID, zaxisdefuuid, INT, CBUF)
+FCALLSCFUN2 (STRING, zaxisInqUUID, ZAXISINQUUID, zaxisinquuid, INT, CBUF)
 FCALLSCSUB2 (zaxisDefName, ZAXISDEFNAME, zaxisdefname, INT, STRING)
 FCALLSCSUB2 (zaxisDefLongname, ZAXISDEFLONGNAME, zaxisdeflongname, INT, STRING)
 FCALLSCSUB2 (zaxisDefUnits, ZAXISDEFUNITS, zaxisdefunits, INT, STRING)
@@ -368,6 +433,7 @@ FCALLSCSUB2 (zaxisInqStdname, ZAXISINQSTDNAME, zaxisinqstdname, INT, PSTRING)
 FCALLSCSUB2 (zaxisInqUnits, ZAXISINQUNITS, zaxisinqunits, INT, PSTRING)
 FCALLSCSUB2 (zaxisDefPrec, ZAXISDEFPREC, zaxisdefprec, INT, INT)
 FCALLSCFUN1 (INT, zaxisInqPrec, ZAXISINQPREC, zaxisinqprec, INT)
+FCALLSCSUB2 (zaxisDefPositive, ZAXISDEFPOSITIVE, zaxisdefpositive, INT, INT)
 FCALLSCFUN1 (INT, zaxisInqPositive, ZAXISINQPOSITIVE, zaxisinqpositive, INT)
 FCALLSCSUB2 (zaxisDefLtype, ZAXISDEFLTYPE, zaxisdefltype, INT, INT)
 FCALLSCFUN1 (INT, zaxisInqLtype, ZAXISINQLTYPE, zaxisinqltype, INT)

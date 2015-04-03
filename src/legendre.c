@@ -56,7 +56,8 @@ void jspleg1(double *pleg, double plat, int ktrunc, double *work)
 
   */
   int itout1, i1m, ilm, jm, jcn, im2;
-  double zsin, zcos, zf1m, zre1, zf2m, zn, ze1, ze2;
+  double zsin, zcos, zf1m, zre1, zf2m, znsqr, ze1, ze2;
+  double zjmsqr;
   double *zhlp1, *zhlp2, *zhlp3;
 
 
@@ -115,12 +116,13 @@ void jspleg1(double *pleg, double plat, int ktrunc, double *work)
 
       /*  Step 5.       Sum for N = M+2 to T+1 */
 
+      zjmsqr = jm*jm;
       im2 = i1m+2;
 
       for ( jcn = im2; jcn < itout1; jcn++ )
 	{
-          zn         = jcn + 1;
-	  zhlp3[jcn] = sqrt((4.*zn*zn-1.)/(zn*zn-jm*jm));
+          znsqr      = (jcn + 1)*(jcn + 1);
+	  zhlp3[jcn] = sqrt((4.*znsqr-1.)/(znsqr-zjmsqr));
 	}
 
       for ( jcn = im2; jcn < itout1; jcn++ )
@@ -226,10 +228,10 @@ void phcs(double *pnm, double *hnm, int waves, double pmu,
     {
       pnm[0] = sqrt(1.0 + 1.0 / (jm+jm)) * zcos2 * ztemp2[0];
       hnm[0] = jm * pmu * pnm[0];
-#if defined (CRAY)
+#if defined(CRAY)
 #pragma _CRI novector
 #endif
-#if defined (__uxp__)
+#if defined(__uxp__)
 #pragma loop scalar
 #endif
       for (jn = 1; jn < twowaves-jm; jn++)
@@ -284,7 +286,7 @@ void sp2fctest(double *sa, double *fa, double *poli, int nlev, int nlat, int nfc
 	      sai = *sal++;
 	      far = fal;
 	      fai = fal + nlat;
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
 	      for ( latn = 0; latn < nlat/2; latn++ )
@@ -315,7 +317,7 @@ void sp2fc(const double *sa, double *fa, const double *poli, long nlev, long nla
 
   nsp2 = (nt+1)*(nt+2);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(jmm, jfc, lat, pol, sar, sai, sal, far, fai, fal)
 #endif
   for ( lev = 0; lev < nlev; lev++ )
@@ -349,12 +351,16 @@ void sp2fc(const double *sa, double *fa, const double *poli, long nlev, long nla
 void fc2sp(double *fa, double *sa, double *poli, int nlev, int nlat, int nfc, int nt)
 {
   int lev, jmm, jfc, lat, nsp2;
-  double sar, sai, *far, *fai, *pol;
-  double *sal, *fal;
+  double sar, sai;
+  const double * restrict far;
+  const double * restrict fai;
+  const double * restrict pol;
+  double *sal;
+  double *fal;
 
   nsp2 = (nt+1)*(nt+2);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(jmm, jfc, lat, pol, sar, sai, sal, far, fai, fal)
 #endif
   for ( lev = 0; lev < nlev; lev++ )

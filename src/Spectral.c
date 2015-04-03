@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,8 @@
       Spectral   sp2sp           Spectral to spectral
       Spectral   spcut           Cut spectral wave number
 */
+
+#include <ctype.h>
 
 #include <cdi.h>
 #include "cdo.h"
@@ -105,6 +107,8 @@ void *Spectral(void *argument)
   /* define output grid */
   if ( operatorID == GP2SP || operatorID == GP2SPL )
     {
+      if ( gridIDgp == -1 ) cdoWarning("No data on Gaussian grid found!");
+
       gridID1 = gridIDgp;
 
       if ( gridID1 != -1 )
@@ -123,20 +127,20 @@ void *Spectral(void *argument)
 	      gridDefTrunc(gridIDsp, ntr);
 	      gridDefComplexPacking(gridIDsp, 1);
 	    }
+
+	  if ( gridIDsp == -1 && gridInqType(vlistGrid(vlistID1, 0)) == GRID_GAUSSIAN_REDUCED )
+	    cdoAbort("Gaussian reduced grid found. Use option -R to convert it to a regular grid!");
+
+	  if ( gridIDsp == -1 ) cdoAbort("Computation of spherical harmonics failed!");
+
+	  gridID2 = gridIDsp;
+
+	  nlon = gridInqXsize(gridID1);
+	  nlat = gridInqYsize(gridID1);
+	  ntr  = gridInqTrunc(gridID2);
+
+	  sptrans = sptrans_new(nlon, nlat, ntr, 0);
 	}
-
-      if ( gridIDsp == -1 && gridInqType(vlistGrid(vlistID1, 0)) == GRID_GAUSSIAN_REDUCED )
-	cdoAbort("Gaussian reduced grid found. Use option -R to convert it to a regular grid!");
-
-      if ( gridIDsp == -1 ) cdoAbort("No Gaussian grid data found!");
-
-      gridID2 = gridIDsp;
-
-      nlon = gridInqXsize(gridID1);
-      nlat = gridInqYsize(gridID1);
-      ntr  = gridInqTrunc(gridID2);
-
-      sptrans = sptrans_new(nlon, nlat, ntr, 0);
     }
   else if ( operatorID == SP2GP || operatorID == SP2GPL )
     {   
@@ -183,6 +187,7 @@ void *Spectral(void *argument)
       operatorInputArg("truncation");
       if ( gridID1 != -1 )
 	{
+	  if ( !isdigit(operatorArgv()[0][0]) ) cdoAbort("parameter truncation must comprise only digits [0-9]!");
 	  int ntr = atoi(operatorArgv()[0]);
 	  int nsp = (ntr+1)*(ntr+2);
 	  gridIDsp = gridCreate(GRID_SPECTRAL, nsp);

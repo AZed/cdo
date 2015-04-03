@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -38,8 +38,7 @@ void invertLevDes(int vlistID)
   int ilev;
   int zaxistype;
   double *yv1, *yv2;
-  double *ylb1, *ylb2;
-  double *yub1, *yub2;
+  double *yb1, *yb2;
 
   nzaxis = vlistNzaxis(vlistID);
   for ( index = 0; index < nzaxis; index++ )
@@ -60,10 +59,7 @@ void invertLevDes(int vlistID)
 	  yv2 = (double *) malloc(nlev*sizeof(double));
 
 	  zaxisInqLevels(zaxisID1, yv1);
-
-	  for ( ilev = 0; ilev < nlev; ilev++ )
-	    yv2[nlev-ilev-1] = yv1[ilev];
-
+	  for ( ilev = 0; ilev < nlev; ++ilev ) yv2[nlev-ilev-1] = yv1[ilev];
 	  zaxisDefLevels(zaxisID2, yv2);
 
 	  if ( yv2 ) free(yv2);
@@ -72,29 +68,19 @@ void invertLevDes(int vlistID)
 
       if ( zaxisInqLbounds(zaxisID1, NULL) && zaxisInqUbounds(zaxisID1, NULL) )
 	{
-	  ylb1 = (double *) malloc(nlev*sizeof(double));
-	  ylb2 = (double *) malloc(nlev*sizeof(double));
+	  yb1 = (double *) malloc(nlev*sizeof(double));
+	  yb2 = (double *) malloc(nlev*sizeof(double));
 
-	  zaxisInqLbounds(zaxisID1, ylb1);
+	  zaxisInqLbounds(zaxisID1, yb1);
+	  for ( ilev = 0; ilev < nlev; ++ilev ) yb2[nlev-ilev-1] = yb1[ilev];
+	  zaxisDefLbounds(zaxisID2, yb2);
 
-	  yub1 = (double *) malloc(nlev*sizeof(double));
-	  yub2 = (double *) malloc(nlev*sizeof(double));
+	  zaxisInqUbounds(zaxisID1, yb1);
+	  for ( ilev = 0; ilev < nlev; ++ilev ) yb2[nlev-ilev-1] = yb1[ilev];
+	  zaxisDefUbounds(zaxisID2, yb2);
 
-	  zaxisInqUbounds(zaxisID1, yub1);
-
-	  for ( ilev = 0; ilev < nlev; ilev++ )
-	    {
-	      ylb2[nlev-ilev-1] = ylb1[ilev];
-	      yub2[nlev-ilev-1] = yub1[ilev];
-	    }
-
-	  zaxisDefLbounds(zaxisID2, ylb2);
-	  zaxisDefUbounds(zaxisID2, yub2);
-
-	  if ( ylb2 ) free(ylb2);
-	  if ( ylb1 ) free(ylb1);
-	  if ( yub2 ) free(yub2);
-	  if ( yub1 ) free(yub1);
+	  if ( yb2 ) free(yb2);
+	  if ( yb1 ) free(yb1);
 	}
 
       vlistChangeZaxis(vlistID, zaxisID1, zaxisID2);

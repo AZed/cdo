@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ void interp_lev(int gridsize, double missval, double *vardata1, double *vardata2
       var1L1 = vardata1+gridsize*idx1;
       var1L2 = vardata1+gridsize*idx2;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for shared(gridsize, var2, var1L1, var1L2, wgt1, wgt2, missval) private(i, w1, w2)
 #endif
       for ( i = 0; i < gridsize; ++i )

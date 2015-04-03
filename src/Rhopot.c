@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -43,17 +43,10 @@
 !!
 */
 
-/* compute density from potential temperature directly */
+/* compute density from insitu temperature */
 static
-double potrho_1(double tpot, double sal, double p)
+double potrho_1(double t, double sal, double p)
 {
-  double a_a1 = 3.6504E-4, a_a2 = 8.3198E-5, a_a3 = 5.4065E-7,
-         a_a4 = 4.0274E-9,
-         a_b1 = 1.7439E-5, a_b2 = 2.9778E-7,
-         a_c1 = 8.9309E-7, a_c2 = 3.1628E-8, a_c3 = 2.1987E-10,
-         a_d = 4.1057E-9,
-         a_e1 = 1.6056E-10, a_e2 = 5.0484E-12;
-
   double r_a0 = 999.842594, r_a1 = 6.793952e-2, r_a2 = -9.095290e-3,
          r_a3 = 1.001685e-4, r_a4 = -1.120083e-6, r_a5 = 6.536332e-9,
          r_b0 = 8.24493e-1, r_b1 = -4.0899e-3, r_b2 = 7.6438e-5,
@@ -72,24 +65,10 @@ double potrho_1(double tpot, double sal, double p)
          r_ak0 = 8.50935e-5, r_ak1 = -6.12293e-6, r_ak2 = 5.2787e-8,
          r_am0 = -9.9348e-7, r_am1 = 2.0816e-8, r_am2 = 9.1697e-10;
 
-  double dc, dv, dvs, fne, fst, qc, qn3, qnq, qv, qvs, s, s3h, t, tpo;
+  double s, s3h; 
   double rho;
 
-  qc = p * (a_a1 + p * (a_c1 - a_e1 * p));
-  qv = p * (a_b1 - a_d * p);
-  dc = 1. + p * (-a_a2 + p * (a_c2 - a_e2 * p));
-  dv = a_b2 * p;
-  qnq  = -p * (-a_a3 + p * a_c3);
-  qn3  = -p * a_a4;
-
     {
-      tpo = tpot;
-      qvs = qv*(sal - 35.) + qc;
-      dvs = dv*(sal - 35.) + dc;
-      t   = (tpo + qvs)/dvs;
-      fne = - qvs + t*(dvs + t*(qnq + t*qn3)) - tpo;
-      fst = dvs + t*(2.*qnq + 3.*qn3*t);
-      t = t - fne/fst;
       s = MAX(sal, 0.0);
       s3h = sqrt(s*s*s);
 
@@ -147,32 +126,32 @@ int main (int argc, char *argv[])
 */
 
 static
-void calc_rhopot(long gridsize, long nlevel, double *pressure, field_t tho, field_t sao, field_t rho)
+void calc_rhopot(long gridsize, long nlevel, double *pressure, field_t to, field_t sao, field_t rho)
 {
   /* pressure units: hPa     */
-  /* tho units:      Celsius */
+  /* to units:       Celsius */
   /* sao units:      psu     */
 
   long i, levelID, offset;
-  double *rhoptr, *thoptr, *saoptr;
+  double *rhoptr, *toptr, *saoptr;
 
   for ( levelID = 0; levelID < nlevel; ++levelID )
     {
       offset = gridsize*levelID;
-      thoptr = tho.ptr + offset;
+      toptr = to.ptr + offset;
       saoptr = sao.ptr + offset;
       rhoptr = rho.ptr + offset;
 
       for ( i = 0; i < gridsize; ++i )
 	{
-	  if ( DBL_IS_EQUAL(thoptr[i], tho.missval) ||
+	  if ( DBL_IS_EQUAL(toptr[i], to.missval) ||
 	       DBL_IS_EQUAL(saoptr[i], sao.missval) )
 	    {
 	      rhoptr[i] = rho.missval;
 	    }
 	  else
 	    {
-	      rhoptr[i] = potrho_1(thoptr[i], saoptr[i], pressure[levelID]); 
+	      rhoptr[i] = potrho_1(toptr[i], saoptr[i], pressure[levelID]); 
 	    }
 	}
     }
@@ -192,13 +171,13 @@ void *Rhopot(void *argument)
   int ngrids, nlevel;
   int i;
   int nmiss;
-  int thoID = -1, saoID = -1;
-  char varname[CDI_MAX_NAME];
+  int toID = -1, saoID = -1, thoID = -1;
+  char varname[CDI_MAX_NAME], stdname[CDI_MAX_NAME];
   int taxisID1, taxisID2;
   double pin = -1;
   double *pressure;
   double *single;
-  field_t tho, sao, rho;
+  field_t to, sao, rho;
 
   cdoInitialize(argument);
 
@@ -215,23 +194,37 @@ void *Rhopot(void *argument)
       gridID  = vlistInqVarGrid(vlistID1, varID);
 
       code = vlistInqVarCode(vlistID1, varID);
-      /* code = -1; */
+
       if ( code <= 0 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
-
+	  vlistInqVarStdname(vlistID1,varID, stdname);
 	  strtolower(varname);
 
-	  if      ( strcmp(varname, "tho")   == 0 ) code = 2;
-	  else if ( strcmp(varname, "sao")   == 0 ) code = 5;
+	  if      ( strcmp(varname, "to")    == 0 ) code = 20;
+	  else if ( strcmp(varname, "sao")   == 0 ) code =  5;
+	  else if ( strcmp(varname, "tho")   == 0 ) code =  2;
+
+	  else if ( strcmp(varname, "s")     == 0 ) code = 5;
+	  else if ( strcmp(varname, "t")     == 0 ) code = 2;
+
+	  else if ( strcmp(stdname, "sea_water_salinity")              == 0 ) code = 5;
+	  else if ( strcmp(stdname, "sea_water_potential_temperature") == 0 ) code = 2;
 	}
 
-      if      ( code == 2 ) thoID = varID;
-      else if ( code == 5 ) saoID = varID;
+      if      ( code == 20 ) toID  = varID;
+      else if ( code ==  5 ) saoID = varID;
+      else if ( code ==  2 ) thoID = varID;
     }
 
-  if ( thoID == -1 ) cdoAbort("Potential temperature not found!");
   if ( saoID == -1 ) cdoAbort("Sea water salinity not found!");
+  if ( toID  == -1 && thoID != -1 )
+    {   
+      cdoPrint("Use the CDO operator 'adisit' to convert potential temperature to In-situ temperature.");
+      cdoPrint("Here is an example:");
+      cdoPrint("   cdo rhopot -adisit %s %s", cdoStreamName(0)->args, cdoStreamName(1)->args);
+    }
+  if ( toID  == -1 ) cdoAbort("In-situ temperature not found!");
 
   ngrids = vlistNgrids(vlistID1);
   gridID = vlistGrid(vlistID1, 0);
@@ -247,7 +240,7 @@ void *Rhopot(void *argument)
 
   zaxisID = vlistInqVarZaxis(vlistID1, saoID);
   nlevel1 = zaxisInqSize(zaxisID);
-  zaxisID = vlistInqVarZaxis(vlistID1, thoID);
+  zaxisID = vlistInqVarZaxis(vlistID1, toID);
   nlevel2 = zaxisInqSize(zaxisID);
 
   if ( nlevel1 != nlevel2 ) cdoAbort("temperature and salinity have different number of levels!");
@@ -268,23 +261,26 @@ void *Rhopot(void *argument)
 	cdoPrint("%5d  %g", i+1, pressure[i]);
     }
 
-  tho.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
+  field_init(&to);
+  field_init(&sao);
+  field_init(&rho);
+  to.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
   sao.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
   rho.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
 
-  tho.nmiss = 0;
+  to.nmiss = 0;
   sao.nmiss = 0;
   rho.nmiss = 0;
   
-  tho.missval = vlistInqVarMissval(vlistID1, thoID);
+  to.missval = vlistInqVarMissval(vlistID1, toID);
   sao.missval = vlistInqVarMissval(vlistID1, saoID);
-  rho.missval = tho.missval;
+  rho.missval = to.missval;
 
 
   vlistID2 = vlistCreate();
   varID = vlistDefVar(vlistID2, gridID, zaxisID, TSTEP_INSTANT);
   vlistDefVarParam(vlistID2, varID, cdiEncodeParam(18, 255, 255));
-  vlistDefVarName(vlistID2, varID, "rhopot");
+  vlistDefVarName(vlistID2, varID, "rhopoto");
   vlistDefVarLongname(vlistID2, varID, "Sea water potential density");
   vlistDefVarStdname(vlistID2, varID, "sea_water_potential_density");
   vlistDefVarUnits(vlistID2, varID, "kg m-3");
@@ -312,11 +308,11 @@ void *Rhopot(void *argument)
 
 	  offset = gridsize*levelID;
 
-	  if ( varID == thoID ) streamReadRecord(streamID1, tho.ptr+offset, &(tho.nmiss));
+	  if ( varID == toID ) streamReadRecord(streamID1, to.ptr+offset, &(to.nmiss));
 	  if ( varID == saoID ) streamReadRecord(streamID1, sao.ptr+offset, &(sao.nmiss));
 	}
 
-      calc_rhopot(gridsize, nlevel, pressure, tho, sao, rho); 
+      calc_rhopot(gridsize, nlevel, pressure, to, sao, rho); 
 
       for ( levelID = 0; levelID < nlevel; ++levelID )
 	{
@@ -341,7 +337,7 @@ void *Rhopot(void *argument)
 
   free(pressure);
   free(rho.ptr);
-  free(tho.ptr);
+  free(to.ptr);
   free(sao.ptr);
 
   cdoFinish();

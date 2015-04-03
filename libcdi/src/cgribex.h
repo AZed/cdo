@@ -8,7 +8,10 @@
 
 /* GRIB1 Level Types */
 #define  GRIB1_LTYPE_SURFACE               1
-#define  GRIB1_LTYPE_TOA           8
+#define  GRIB1_LTYPE_CLOUD_BASE            2
+#define  GRIB1_LTYPE_CLOUD_TOP             3
+#define  GRIB1_LTYPE_ISOTHERM0             4
+#define  GRIB1_LTYPE_TOA                   8
 #define  GRIB1_LTYPE_SEA_BOTTOM            9
 #define  GRIB1_LTYPE_ATMOSPHERE           10
 #define  GRIB1_LTYPE_99                   99
@@ -23,27 +26,32 @@
 #define  GRIB1_LTYPE_LANDDEPTH           111
 #define  GRIB1_LTYPE_LANDDEPTH_LAYER     112
 #define  GRIB1_LTYPE_ISENTROPIC          113
-#define  GRIB1_LTYPE_SEADEPTH            160
+#define  GRIB1_LTYPE_SEADEPTH            160  /* Depth Below Sea Level                                 */
+#define  GRIB1_LTYPE_LAKE_BOTTOM         162  /* Lake or River Bottom                                  */
+#define  GRIB1_LTYPE_SEDIMENT_BOTTOM     163  /* Bottom Of Sediment Layer                              */
+#define  GRIB1_LTYPE_SEDIMENT_BOTTOM_TA  164  /* Bottom Of Thermally Active Sediment Layer             */
+#define  GRIB1_LTYPE_SEDIMENT_BOTTOM_TW  165  /* Bottom Of Sediment Layer Penetrated By Thermal Wave   */
+#define  GRIB1_LTYPE_MIX_LAYER           166  /* Mixing Layer                                          */
 #define  GRIB1_LTYPE_99_MARGIN          1000
 
 /* GRIB1 Data representation type (Grid Type) [Table 6] */
-#define  GRIB1_GTYPE_LATLON                0  /*  latitude/longitude                       */
-#define  GRIB1_GTYPE_LATLON_ROT           10  /*  rotated latitude/longitude               */
-#define  GRIB1_GTYPE_LATLON_STR           20  /*  stretched latitude/longitude             */
-#define  GRIB1_GTYPE_LATLON_ROTSTR        30  /*  rotated and stretched latitude/longitude */
-#define  GRIB1_GTYPE_GAUSSIAN              4  /*  gaussian grid                            */
-#define  GRIB1_GTYPE_GAUSSIAN_ROT         14  /*  rotated gaussian grid                    */
-#define  GRIB1_GTYPE_GAUSSIAN_STR         24  /*  stretched gaussian grid                  */
-#define  GRIB1_GTYPE_GAUSSIAN_ROTSTR      34  /*  rotated and stretched gaussian grid      */
-#define  GRIB1_GTYPE_LCC                   3  /*  Lambert conformal                        */
-#define  GRIB1_GTYPE_SPECTRAL             50  /*  spherical harmonics                      */
-#define  GRIB1_GTYPE_GME                 192  /*  hexagonal GME grid                       */
+#define  GRIB1_GTYPE_LATLON                0  /*  latitude/longitude                                   */
+#define  GRIB1_GTYPE_LATLON_ROT           10  /*  rotated latitude/longitude                           */
+#define  GRIB1_GTYPE_LATLON_STR           20  /*  stretched latitude/longitude                         */
+#define  GRIB1_GTYPE_LATLON_ROTSTR        30  /*  rotated and stretched latitude/longitude             */
+#define  GRIB1_GTYPE_GAUSSIAN              4  /*  gaussian grid                                        */
+#define  GRIB1_GTYPE_GAUSSIAN_ROT         14  /*  rotated gaussian grid                                */
+#define  GRIB1_GTYPE_GAUSSIAN_STR         24  /*  stretched gaussian grid                              */
+#define  GRIB1_GTYPE_GAUSSIAN_ROTSTR      34  /*  rotated and stretched gaussian grid                  */
+#define  GRIB1_GTYPE_LCC                   3  /*  Lambert conformal                                    */
+#define  GRIB1_GTYPE_SPECTRAL             50  /*  spherical harmonics                                  */
+#define  GRIB1_GTYPE_GME                 192  /*  hexagonal GME grid                                   */
 
 /*
  *  Macros for the indicator section ( Section 0 )
  */
-#define  ISEC0_GRIB_Len             (isec0[ 0])  /*  Number of octets in the GRIB message         */
-#define  ISEC0_GRIB_Version         (isec0[ 1])  /*  GRIB edition number                          */
+#define  ISEC0_GRIB_Len             (isec0[ 0])  /*  Number of octets in the GRIB message              */
+#define  ISEC0_GRIB_Version         (isec0[ 1])  /*  GRIB edition number                               */
 
 
 /*
@@ -212,7 +220,7 @@ void  gribPrintGDS(int nrec, long recpos, long recsize, unsigned char *gribbuffe
 void  gribPrintBMS(int nrec, long recpos, long recsize, unsigned char *gribbuffer);
 void  gribPrintBDS(int nrec, long recpos, long recsize, unsigned char *gribbuffer);
 void  gribCheck1(int nrec, long recpos, long recsize, unsigned char *gribbuffer);
-void  gribRepair1(int nrec, long recpos, long recsize, unsigned char *gribbuffer);
+void  gribRepair1(int nrec, long recsize, unsigned char *gribbuffer);
 
 int grib1Sections(unsigned char *gribbuffer, long recsize, unsigned char **pdsp,
 		  unsigned char **gdsp, unsigned char **bmsp, unsigned char **bdsp);

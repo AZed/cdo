@@ -100,7 +100,7 @@ void genind(int *nx, const double * restrict plev, const double * restrict fullp
 
   memset(nx, 0, ngp*nplev*sizeof(int));
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, lh, pres, nxl)
 #endif
   for ( lp = 0; lp < nplev; lp++ )
@@ -123,7 +123,7 @@ void genindmiss(int *nx, const double * restrict plev, int ngp, int nplev, const
   int *nxl;
   double pres;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, pres, nxl)
 #endif
   for ( lp = 0; lp < nplev; lp++ )
@@ -292,7 +292,7 @@ void interp_X(const double * restrict gt, double *pt, const double * restrict hy
   double *ptl;
   double pres;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, pres, nl, nh, nxl, ptl)
 #endif
   for ( lp = 0; lp < nplev; lp++ )
@@ -329,7 +329,7 @@ void interp_T(const double * restrict geop, const double * restrict gt, double *
   double *ptl;
   double pres;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, pres, nl, nh, nxl, ptl)
 #endif
   for ( lp = 0; lp < nplev; lp++ )
@@ -337,7 +337,7 @@ void interp_T(const double * restrict geop, const double * restrict gt, double *
       pres = plev[lp];
       nxl  = nx + lp*ngp;
       ptl  = pt + lp*ngp;
-#if defined (CRAY)
+#if defined(CRAY)
 #pragma _CRI inline extra_T
 #endif
       for ( i = 0; i < ngp; i++ )
@@ -352,7 +352,7 @@ void interp_T(const double * restrict geop, const double * restrict gt, double *
 		  if ( Mars )
 		    ptl[i] = gt[(nhlev-1)*ngp+i];
 		  else
-#if defined (SX)
+#if defined(SX)
 #pragma cdir inline
 #endif
 		    ptl[i] = extra_T(pres, halfp[nhlev*ngp+i],
@@ -382,7 +382,7 @@ void interp_Z(const double * restrict geop, const double * restrict gz, double *
   double *pzl;
   double pres;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, pres, nl, nh, nxl, pzl)
 #endif
   for ( lp = 0; lp < nplev; lp++ )
@@ -390,7 +390,7 @@ void interp_Z(const double * restrict geop, const double * restrict gz, double *
       pres = plev[lp];
       nxl  = nx + lp*ngp;
       pzl  = pz + lp*ngp;
-#if defined (CRAY)
+#if defined(CRAY)
 #pragma _CRI inline extra_Z
 #endif
       for ( i = 0; i < ngp; i++ )
@@ -407,7 +407,7 @@ void interp_Z(const double * restrict geop, const double * restrict gz, double *
 		  if ( Mars )
 		    pzl[i] = gt[(nhlev-1)*ngp+i];
 		  else
-#if defined (SX)
+#if defined(SX)
 #pragma cdir inline
 #endif
 		    pzl[i] = extra_Z(pres, halfp[nhlev*ngp+i],

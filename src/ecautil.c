@@ -395,7 +395,7 @@ void farsel(field_t *field1, field_t field2)
       for ( i = 0; i < len; i++ )
         if ( IS_EQUAL(array2[i], 0.0) ) array1[i] = missval1;
     }
-      
+
   field1->nmiss = 0;
   for ( i = 0; i < len; i++ )
     if ( DBL_IS_EQUAL(array1[i], missval1) ) field1->nmiss++;
@@ -544,14 +544,18 @@ void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
                 {
                   duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[1][levelID].ptr[i]));
-                  firstDay = (double) day_of_year((int) startDateWithHist[1][levelID].ptr[i]);
                 }
               else
                 {
                   duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[1][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[1][levelID].ptr[i]));
-                  firstDay = (double) day_of_year((int) startDateWithHist[1][levelID].ptr[i]);
                 }
+
+	      if ( DBL_IS_EQUAL(startDateWithHist[1][levelID].ptr[i], missval) )
+		firstDay = missval;
+	      else
+		firstDay = (double) day_of_year((int) startDateWithHist[1][levelID].ptr[i]);
+
               gslDuration[levelID].ptr[i] = duration;
               gslFirstDay[levelID].ptr[i] = firstDay;
             }
@@ -574,7 +578,11 @@ void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
                 {
                   duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[0][levelID].ptr[i]));
-                  firstDay = (double) day_of_year((int) startDateWithHist[0][levelID].ptr[i]);
+
+		  if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) )
+		    firstDay = missval;
+		  else
+		    firstDay = (double) day_of_year((int) startDateWithHist[0][levelID].ptr[i]);
 
                   gslDuration[levelID].ptr[i] = duration;
                   gslFirstDay[levelID].ptr[i] = firstDay;

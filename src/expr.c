@@ -28,19 +28,29 @@ static func_t fun_sym_tbl[] =
 {
   /* scalar functions */
   {0, "abs",   f_abs},
+  {0, "floor", floor},
+  {0, "ceil",  ceil},
   {0, "int",   f_int},
   {0, "nint",  f_nint},
   {0, "sqr",   f_sqr},
   {0, "sqrt",  sqrt},
   {0, "exp",   exp},
+  {0, "erf",   erf},
   {0, "log",   log},
   {0, "log10", log10},
   {0, "sin",   sin},
   {0, "cos",   cos},
   {0, "tan",   tan},
+  {0, "sinh",  sinh},
+  {0, "cosh",  cosh},
+  {0, "tanh",  tanh},
   {0, "asin",  asin},
   {0, "acos",  acos},
   {0, "atan",  atan},
+  {0, "asinh", asinh},
+  {0, "acosh", acosh},
+  {0, "atanh", atanh},
+  {0, "gamma", gamma},
 
   /* array functions
   {1, "min",   min},
@@ -71,7 +81,7 @@ nodeType *expr_con_con(int oper, nodeType *p1, nodeType *p2)
     case '*':  p->u.con.value = p1->u.con.value * p2->u.con.value; break;
     case '/':  p->u.con.value = p1->u.con.value / p2->u.con.value; break;
     case '^':  p->u.con.value = pow(p1->u.con.value, p2->u.con.value); break;
-    default:   cdoAbort("%s: operator %c unsupported!", __func__, oper);
+    default:   cdoAbort("%s: operator %c unsupported!", __func__, oper); break;
     }
 
   return (p);
@@ -165,6 +175,7 @@ nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
       break;
     default:
       cdoAbort("%s: operator %c unsupported!", __func__, oper);
+      break;
     }
 
   nmiss = 0;
@@ -272,6 +283,7 @@ nodeType *expr_var_con(int oper, nodeType *p1, nodeType *p2)
       break;
     default:
       cdoAbort("%s: operator %c unsupported!", __func__, oper);
+      break;
     }
 
   nmiss = 0;
@@ -291,7 +303,7 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
   nodeType *p;
   long ngp, ngp1, ngp2, i;
   long nlev, nlev1, nlev2, k;
-  long loff1, loff2;
+  long loff, loff1, loff2;
   int nmiss, nmiss1, nmiss2;
   double missval1, missval2;
 
@@ -304,7 +316,7 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
   ngp2 = gridInqSize(p2->gridID);
 
   if ( ngp1 != ngp2 )
-    cdoAbort("number of grid points differ. ngp1 = %d, ngp2 = %d", ngp1, ngp2);
+    cdoAbort("Number of grid points differ. ngp1 = %d, ngp2 = %d", ngp1, ngp2);
 
   ngp = ngp1;
 
@@ -345,6 +357,8 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
 
   for ( k = 0; k < nlev; k++ )
     {
+      loff = k*ngp;
+
       if ( nlev1 == 1 ) loff1 = 0;
       else              loff1 = k*ngp;
 
@@ -357,64 +371,70 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
 	  if ( nmiss1 > 0 || nmiss2 > 0 )
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = ADD(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = ADD(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  else
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = p1->data[i+loff1] + p2->data[i+loff2];
+		p->data[i+loff] = p1->data[i+loff1] + p2->data[i+loff2];
 	    }
 	  break;
 	case '-':
 	  if ( nmiss1 > 0 || nmiss2 > 0 )
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = SUB(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = SUB(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  else
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = p1->data[i+loff1] - p2->data[i+loff2];
+		p->data[i+loff] = p1->data[i+loff1] - p2->data[i+loff2];
 	    }
 	  break;
 	case '*':
 	  if ( nmiss1 > 0 || nmiss2 > 0 )
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = MUL(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = MUL(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  else
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = p1->data[i+loff1] * p2->data[i+loff2];
+		p->data[i+loff] = p1->data[i+loff1] * p2->data[i+loff2];
 	    }
 	  break;
 	case '/':
 	  if ( nmiss1 > 0 || nmiss2 > 0 )
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = DIV(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = DIV(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  else
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = p1->data[i+loff1] / p2->data[i+loff2];
+		{
+		  if ( IS_EQUAL(p2->data[i+loff2], 0.) )
+		    p->data[i+loff] = missval1;
+		  else
+		    p->data[i+loff] = p1->data[i+loff1] / p2->data[i+loff2];
+		}
 	    }
 	  break;
 	case '^':
 	  if ( nmiss1 > 0 || nmiss2 > 0 )
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = POW(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = POW(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  else
 	    {
 	      for ( i = 0; i < ngp; i++ )
-		p->data[i+k*ngp] = pow(p1->data[i+loff1], p2->data[i+loff2]);
+		p->data[i+loff] = pow(p1->data[i+loff1], p2->data[i+loff2]);
 	    }
 	  break;
 	default:
 	  cdoAbort("%s: operator %c unsupported!", __func__, oper);
+          break;
 	}
     }
 
@@ -441,6 +461,9 @@ void ex_copy(nodeType *p2, nodeType *p1)
 
   ngp1 = gridInqSize(p1->gridID);
   ngp2 = gridInqSize(p2->gridID);
+
+  if ( ngp1 != ngp2 )
+    cdoAbort("Number of grid points differ. ngp1 = %d, ngp2 = %d", ngp1, ngp2);
 
   ngp = ngp2;
   nlev = zaxisInqSize(p2->zaxisID);
@@ -507,7 +530,7 @@ nodeType *ex_fun_con(char *fun, nodeType *p1)
 	}
 
   if ( funcID == -1 )
-    cdoAbort("function %s not available!", fun);
+    cdoAbort("Function %s not available!", fun);
 
   p->u.con.value = fun_sym_tbl[funcID].func(p1->u.con.value);
 
@@ -552,7 +575,7 @@ nodeType *ex_fun_var(char *fun, nodeType *p1)
       }
 
   if ( funcID == -1 )
-    cdoAbort("function %s not available!", fun);
+    cdoAbort("Function %s not available!", fun);
 
   if ( nmiss > 0 )
     {
@@ -728,7 +751,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
       if ( parse_arg->init )
 	{
 	  if ( parse_arg->debug )
-	    printf("\tpush\t%g\n", p->u.con.value);
+	    printf("\tpush const \t%g\n", p->u.con.value);
 	}
       else
 	{
@@ -740,7 +763,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
       /*    if ( parse_arg->init ) */
 	{
 	  if ( parse_arg->debug )
-	    printf("\tpush\t%s\n", p->u.var.nm);
+	    printf("\tpush var \t%s\n", p->u.var.nm);
 
 	  nvars = vlistNvars(parse_arg->vlistID1);
 	  for ( varID = 0; varID < nvars; varID++ )
@@ -755,6 +778,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	    }
 	  else
 	    {
+	      int nlev1, nlev2 = 0;
 	      if ( varID >= MAX_VARS ) cdoAbort("Too many parameter (limit=%d)!", MAX_VARS);
 
 	      if ( parse_arg->var_needed[varID] == 0 )
@@ -765,17 +789,20 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 		  parse_arg->var_needed[varID] = 1;
 		}
 
-	      gridID1  = vlistInqVarGrid(parse_arg->vlistID1, varID);
-	      zaxisID1 = vlistInqVarZaxis(parse_arg->vlistID1, varID);
-	      tsteptype1  = vlistInqVarTsteptype(parse_arg->vlistID1, varID);
-	      missval  = vlistInqVarMissval(parse_arg->vlistID1, varID);
+	      gridID1    = vlistInqVarGrid(parse_arg->vlistID1, varID);
+	      zaxisID1   = vlistInqVarZaxis(parse_arg->vlistID1, varID);
+	      tsteptype1 = vlistInqVarTsteptype(parse_arg->vlistID1, varID);
+	      missval    = vlistInqVarMissval(parse_arg->vlistID1, varID);
+	      nlev1 = zaxisInqSize(zaxisID1);
 
 	      parse_arg->missval2 = missval;
 
 	      if ( parse_arg->gridID2 == -1 )
 		parse_arg->gridID2 = gridID1;
 
-	      if ( parse_arg->zaxisID2 == -1 )
+	      if ( parse_arg->zaxisID2 != -1 ) nlev2 = zaxisInqSize(parse_arg->zaxisID2);
+
+	      if ( parse_arg->zaxisID2 == -1 || (nlev1 > 1 && nlev2 == 1) )
 		parse_arg->zaxisID2 = zaxisID1;
 
 	      if ( parse_arg->tsteptype2 == -1 || parse_arg->tsteptype2 == TSTEP_CONSTANT )
@@ -785,7 +812,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	/* else */
 	{ 
 	  if ( parse_arg->debug )
-	    printf("%s %d %d %d\n", p->u.var.nm, varID, gridID1, zaxisID1);
+	    printf("var: %s %d %d %d\n", p->u.var.nm, varID, gridID1, zaxisID1);
 	  p->gridID  = gridID1;
 	  p->zaxisID = zaxisID1;
 	  p->missval = missval;
@@ -826,7 +853,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	  if ( parse_arg->init )
 	    {
 	      if ( parse_arg->debug )
-		printf("\tpop\t%s\n", p->u.opr.op[0]->u.var.nm);
+		printf("\tpop var\t%s\n", p->u.opr.op[0]->u.var.nm);
 	      /*
 	      if ( p->u.opr.op[1]->type != typeVar )
 		cdoAbort("Operand not variable!");
@@ -841,7 +868,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	  else
 	    {
 	      if ( parse_arg->debug )
-		printf("\tpop\t%s\t%s\n", p->u.opr.op[0]->u.var.nm, rnode->u.var.nm);
+		printf("\tpop var\t%s\t%s\n", p->u.opr.op[0]->u.var.nm, rnode->u.var.nm);
 
 	      nvars = vlistNvars(parse_arg->vlistID2);
 	      for ( varID = 0; varID < nvars; varID++ )
@@ -852,7 +879,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 
 	      if ( varID == nvars )
 		{
-		  cdoAbort("variable >%s< not found!", p->u.opr.op[0]->u.var.nm);
+		  cdoAbort("Variable >%s< not found!", p->u.opr.op[0]->u.var.nm);
 		}
 	      else
 		{
@@ -913,7 +940,9 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	      rnode = expr(p->u.opr.oper, expr_run(p->u.opr.op[0], parse_arg),
 			                  expr_run(p->u.opr.op[1], parse_arg));
 	    }
+          break;
         }
+      break;
     }
 
   return (rnode);

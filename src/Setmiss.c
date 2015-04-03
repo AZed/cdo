@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,11 +26,11 @@
 */
 
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
-#if  defined  (HAVE_ISNAN) && ! defined(__cplusplus)
+#if defined(HAVE_ISNAN) && ! defined(__cplusplus)
 int isnan(const double x);
 #endif
 
@@ -80,7 +80,7 @@ void *Setmiss(void *argument)
       /*
       if ( operatorArgv()[0][0] == 'n' || operatorArgv()[0][0] == 'N' )
 	{
-#if ! defined  (HAVE_ISNAN)
+#if ! defined(HAVE_ISNAN)
 	  cdoWarning("Function >isnan< not available!");
 #endif
 	  rconst = 0.0/0.0;
@@ -162,7 +162,7 @@ void *Setmiss(void *argument)
 	    }
 	  else if ( operatorID == SETCTOMISS )
 	    {
-#if  defined  (HAVE_ISNAN)
+#if defined(HAVE_ISNAN)
 	      if ( isnan(rconst) )
 		{
 		  for ( i = 0; i < gridsize; i++ )

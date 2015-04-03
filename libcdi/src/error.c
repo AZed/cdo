@@ -7,6 +7,9 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#if !defined (NAMESPACE_H)
+#include "namespace.h"
+#endif
 
 int _ExitOnError   = 1;	/* If set to 1, exit on error       */
 int _Verbose = 1;	/* If set to 1, errors are reported */
@@ -16,7 +19,7 @@ int _Debug   = 0;       /* If set to 1, debugging           */
 void SysError_(const char *caller, const char *fmt, ...)
 {
   va_list args;
-	
+
   va_start(args, fmt);
 
   printf("\n");
@@ -28,7 +31,7 @@ void SysError_(const char *caller, const char *fmt, ...)
 
   if ( errno )
     perror("System error message ");
-	
+
   exit(EXIT_FAILURE);
 }
 
@@ -36,7 +39,7 @@ void SysError_(const char *caller, const char *fmt, ...)
 void Error_(const char *caller, const char *fmt, ...)
 {
   va_list args;
-	
+
   va_start(args, fmt);
 
   printf("\n");
@@ -49,11 +52,43 @@ void Error_(const char *caller, const char *fmt, ...)
   if ( _ExitOnError ) exit(EXIT_FAILURE);
 }
 
+typedef void (*cdiAbortCFunc)(const char * caller, const char * filename,
+                              const char *functionname, int line,
+                              const char * errorString, va_list ap)
+#ifdef __GNUC__
+  __attribute__((noreturn))
+#endif
+;
+
+void cdiAbortC(const char * caller, const char * filename,
+               const char *functionname, int line,
+               const char * errorString, ... )
+{
+  va_list ap;
+  va_start(ap, errorString);
+  cdiAbortCFunc cdiAbortC_p
+    = (cdiAbortCFunc)namespaceSwitchGet(NSSWITCH_ABORT).func;
+  cdiAbortC_p(caller, filename, functionname, line, errorString, ap);
+  va_end(ap);
+}
+
+void
+cdiAbortC_serial(const char *caller, const char *filename,
+                 const char *functionname, int line,
+                 const char *errorString, va_list ap)
+{
+  fprintf(stderr, "ERROR, %s, %s, line %d%s%s\nerrorString: \"",
+          functionname, filename, line, caller?", called from ":"",
+          caller?caller:"");
+  vfprintf(stderr, errorString, ap);
+  fputs("\"\n", stderr);
+  exit(EXIT_FAILURE);
+}
 
 void Warning_(const char *caller, const char *fmt, ...)
 {
   va_list args;
-	
+
   va_start(args, fmt);
 
   if ( _Verbose )
@@ -70,7 +105,7 @@ void Warning_(const char *caller, const char *fmt, ...)
 void Message_(const char *caller, const char *fmt, ...)
 {
   va_list args;
-	
+
   va_start(args, fmt);
 
    fprintf(stdout, "%-18s : ", caller);

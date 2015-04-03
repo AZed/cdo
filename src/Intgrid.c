@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,12 +33,11 @@ int genThinoutGrid(int gridID1, int xinc, int yinc)
 {
   int ilon, ilat, olon, olat;
   int gridID2, gridtype;
-  int gridsize1, nlon1, nlat1;
+  int nlon1, nlat1;
   int gridsize2, nlon2, nlat2;
   double *xvals1, *yvals1, *xvals2, *yvals2;
 
   gridtype = gridInqType(gridID1);
-  gridsize1 = gridInqSize(gridID1);
   nlon1 = gridInqXsize(gridID1);
   nlat1 = gridInqYsize(gridID1);
 
@@ -91,14 +90,13 @@ int genBoxavgGrid(int gridID1, int xinc, int yinc)
 {
   int i, j, i1;
   int gridID2, gridtype;
-  int gridsize1, nlon1, nlat1;
+  int nlon1, nlat1;
   int gridsize2, nlon2, nlat2;
   double *xvals1, *yvals1, *xvals2, *yvals2;
   double *grid1_corner_lon = NULL, *grid1_corner_lat = NULL;
   double *grid2_corner_lon = NULL, *grid2_corner_lat = NULL;
 
   gridtype = gridInqType(gridID1);
-  gridsize1 = gridInqSize(gridID1);
   nlon1 = gridInqXsize(gridID1);
   nlat1 = gridInqYsize(gridID1);
 
@@ -310,7 +308,7 @@ void thinout(field_t *field1, field_t *field2, int xinc, int yinc)
 
 void *Intgrid(void *argument)
 {
-  int INTGRID, INTPOINT, INTERPOLATE, BOXAVG, THINOUT;
+  int INTGRIDBIL, INTGRIDCON, INTPOINT, INTERPOLATE, BOXAVG, THINOUT;
   int operatorID;
   int streamID1, streamID2;
   int nrecs, ngrids;
@@ -329,7 +327,8 @@ void *Intgrid(void *argument)
 
   cdoInitialize(argument);
 
-  INTGRID     = cdoOperatorAdd("intgridbil",  0, 0, NULL);
+  INTGRIDBIL  = cdoOperatorAdd("intgridbil",  0, 0, NULL);
+  INTGRIDCON  = cdoOperatorAdd("intgridcon",  0, 0, NULL);
   INTPOINT    = cdoOperatorAdd("intpoint",    0, 0, NULL);
   INTERPOLATE = cdoOperatorAdd("interpolate", 0, 0, NULL);
   BOXAVG      = cdoOperatorAdd("boxavg",      0, 0, NULL);
@@ -337,7 +336,7 @@ void *Intgrid(void *argument)
 
   operatorID = cdoOperatorID();
 
-  if ( operatorID == INTGRID || operatorID == INTERPOLATE )
+  if ( operatorID == INTGRIDBIL || operatorID == INTGRIDCON || operatorID == INTERPOLATE )
     {
       operatorInputArg("grid description file or name");
       gridID2 = cdoDefineGrid(operatorArgv()[0]);
@@ -414,6 +413,9 @@ void *Intgrid(void *argument)
   gridsize = gridInqSize(gridID2);
   array2   = (double *) malloc(gridsize*sizeof(double));
 
+  field_init(&field1);
+  field_init(&field2);
+
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
@@ -437,8 +439,10 @@ void *Intgrid(void *argument)
 	  field2.ptr     = array2;
 	  field2.nmiss   = 0;
 
-	  if ( operatorID == INTGRID || operatorID == INTPOINT )
-	    intgrid(&field1, &field2);
+	  if ( operatorID == INTGRIDBIL || operatorID == INTPOINT )
+	    intgridbil(&field1, &field2);
+	  if ( operatorID == INTGRIDCON )
+	    intgridcon(&field1, &field2);
 	  else if ( operatorID == INTERPOLATE )
 	    interpolate(&field1, &field2);
 	  else if ( operatorID == BOXAVG )

@@ -1,12 +1,12 @@
 #ifndef TEMPLATE_PARSER_HH
 #define TEMPLATE_PARSER_HH
 
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<locale.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <locale.h>
 
-#if  defined  (HAVE_LIBXML)
+#if defined(HAVE_LIBXML2)
 #include<libxml/parser.h>
 #include<libxml/tree.h>
 

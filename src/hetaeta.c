@@ -4,7 +4,7 @@
 #define  OPOINT 34179
 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
@@ -28,7 +28,7 @@ const double eta_pbl = 0.8;     /* upper limit of BPL eta coordiante */
 
 const double g = 9.81;
 
-#if defined (OUTPUT)
+#if defined(OUTPUT)
 FILE *old, *new;
 #endif
 
@@ -156,7 +156,7 @@ void hetaeta_sc(int ltq, int lpsmod, long ij, long ngp, long nlev1, long nlev2, 
 	  fi1[k] = fi1[k+1]+rair*tv1[k]*(lnph1[k+1]-lnph1[k]);
 	}
     }
-#if defined (OUTPUT)
+#if defined(OUTPUT)
   if ( ij == OPOINT )
     for ( k = nlev1-1; k >= 0; --k )
       { 
@@ -422,7 +422,7 @@ void hetaeta_sc(int ltq, int lpsmod, long ij, long ngp, long nlev1, long nlev2, 
 	zq2[k] = rh2[k]*epsilon*esat(zt2[k])/pf2[k];
     }
 
-#if defined (OUTPUT)
+#if defined(OUTPUT)
   if ( ij == OPOINT )
     for ( k = nlev2-1; k >= 0; --k )
       { 
@@ -488,7 +488,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   long nlev1p1;
   long nlev2p1;
   int lpsmod = 1;
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   double **zt2_2, **zq2_2;
   double **ph1_2, **lnph1_2, **fi1_2, **pf1_2, **lnpf1_2, **tv1_2, **theta1_2, **rh1_2, **zvar_2;
   double **ph2_2, **lnph2_2, **fi2_2, **pf2_2;
@@ -502,7 +502,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 #else
   double **vars_pbl = NULL;
 #endif
-#if defined (OUTPUT)
+#if defined(OUTPUT)
   double t, q, fi;
 
   old = fopen("old.dat","w");
@@ -512,7 +512,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   nlev1p1 = nlev1+1;
   nlev2p1 = nlev2+1;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   ph1_2    = (double **) malloc(ompNumThreads*sizeof(double *));
   lnph1_2  = (double **) malloc(ompNumThreads*sizeof(double *));
   fi1_2    = (double **) malloc(ompNumThreads*sizeof(double *));
@@ -715,7 +715,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   epsm1i = 1.0/epsilon-1.0;
 
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(ngp, ph1_2, lnph1_2, fi1_2, pf1_2, lnpf1_2, tv1_2, theta1_2, rh1_2, zvar_2, ph2_2, lnph2_2, \
 	 fi2_2, pf2_2, rh_pbl_2, zt2_2, zq2_2, theta_pbl_2, rh2_2, wgt_2, idx_2, vars_pbl_2, \
@@ -729,7 +729,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 #endif
   for ( ij = 0; ij < ngp; ++ij )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       int ompthID;
       long iv;      
 
@@ -788,13 +788,13 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
     } /* end for ij */
 
-#if defined (OUTPUT)
+#if defined(OUTPUT)
   fclose(old);
   fclose(new);
 #endif
 
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   for ( i = 0; i < ompNumThreads; i++ )
     {
       free(ph1_2[i]);    

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Detrend    detrend         Detrend
 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #  include <omp.h>
 #endif
 
@@ -145,23 +145,7 @@ void *Detrend(void *argument)
 
       taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
 
-      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-
-	  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    {
-	      vars[tsID][varID][levelID].grid    = gridID;
-	      vars[tsID][varID][levelID].missval = missval;
-	      vars[tsID][varID][levelID].ptr     = NULL;
-	    }
-	}
+      vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -193,12 +177,12 @@ void *Detrend(void *argument)
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, ompthID, tsID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
               ompthID = omp_get_thread_num();
 #else
               ompthID = 0;
@@ -237,11 +221,12 @@ void *Detrend(void *argument)
 		  streamDefRecord(streamID2, varID, levelID);
 		  streamWriteRecord(streamID2, vars[tsID][varID][levelID].ptr, nmiss);
 		  free(vars[tsID][varID][levelID].ptr);
+		  vars[tsID][varID][levelID].ptr = NULL;
 		}
 	    }
-	  free(vars[tsID][varID]);
 	}
-      free(vars[tsID]);
+
+      field_free(vars[tsID], vlistID1);
     }
 
   if ( vars  ) free(vars);

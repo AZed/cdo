@@ -13,7 +13,7 @@
 #include <cdi.h>
 int      vlistInqVarMissvalUsed(int vlistID, int varID);
 #ifndef DBL_IS_NAN
-#if  defined  (HAVE_ISNAN)
+#if  defined  (HAVE_DECL_ISNAN)
 #  define DBL_IS_NAN(x)     (isnan(x))
 #elif  defined  (FP_NAN)
 #  define DBL_IS_NAN(x)     (fpclassify(x) == FP_NAN)
@@ -56,13 +56,26 @@ int complevel = 0;              // Compression level
 static
 void version(void)
 {
-  fprintf(stderr, "CDI version 1.7.1\n");
+  int   filetypes[] = {FILETYPE_SRV, FILETYPE_EXT, FILETYPE_IEG, FILETYPE_GRB, FILETYPE_GRB2, FILETYPE_NC, FILETYPE_NC2, FILETYPE_NC4, FILETYPE_NC4C};
+  char *typenames[] = {        "srv",        "ext",        "ieg",        "grb",        "grb2",        "nc",        "nc2",        "nc4",        "nc4c"};
+
+  fprintf(stderr, "CDI version 1.8\n");
 #if defined (COMPILER)
   fprintf(stderr, "Compiler: %s\n", COMPILER);
 #endif
 #if defined (COMP_VERSION)
   fprintf(stderr, " version: %s\n", COMP_VERSION);
 #endif
+#if defined (USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
+  fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
+	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
+#endif
+
+  fprintf(stderr, "filetype: ");
+  for ( size_t i = 0; i < sizeof(filetypes)/sizeof(int); ++i )
+    if ( cdiHaveFiletype(filetypes[i]) ) fprintf(stderr, "%s ", typenames[i]);
+  fprintf(stderr, "\n");
+
   fprintf(stderr, "    with:");
 #if defined (HAVE_LIBPTHREAD)
   fprintf(stderr, " PTHREADS");
@@ -95,10 +108,6 @@ void version(void)
   fprintf(stderr, " CURL");
 #endif
   fprintf(stderr, "\n");
-#if defined (USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
-  fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
-	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
-#endif
   cdiPrintVersion();
   fprintf(stderr, "\n");
 /*
@@ -111,13 +120,14 @@ void version(void)
   1.4.2  22 Mar 2005 : change level from int to double
   1.4.3  11 Apr 2005 : change date and time format to ISO
   1.5.0  22 Nov 2005 : IEG support
-  1.5.1  21 Feb 2006 : add option -s for short info
-  1.6.0   1 Aug 2006 : add option -z szip for SZIP compression of GRIB records
+  1.5.1  21 Feb 2006 : added option -s for short info
+  1.6.0   1 Aug 2006 : added option -z szip for SZIP compression of GRIB records
   1.6.1  27 Feb 2007 : short info with ltype for GENERIC zaxis
   1.6.2   3 Jan 2008 : changes for CDI library version 1.1.0 (compress)
   1.6.3  26 Mar 2008 : call streamDefTimestep also if ntsteps = 0 (buf fix)
-  1.7.0  11 Apr 2008 : add option -z zip for deflate compression of netCDF4 variables
-  1.7.1   1 Nov 2009 : add option -z jpeg for JPEG compression of GRIB2 records
+  1.7.0  11 Apr 2008 : added option -z zip for deflate compression of netCDF4 variables
+  1.7.1   1 Nov 2009 : added option -z jpeg for JPEG compression of GRIB2 records
+  1.7.2  14 Nov 2012 : added optional compression level -z zip[_1-9]
 */
 }
 
@@ -144,7 +154,7 @@ void usage(void)
   fprintf(stderr, "    -V             Print version number\n");
   fprintf(stderr, "    -z szip        SZIP compression of GRIB1 records\n");
   fprintf(stderr, "       jpeg        JPEG compression of GRIB2 records\n");
-  fprintf(stderr, "        zip        Deflate compression of netCDF4 variables\n");
+  fprintf(stderr, "        zip[_1-9]  Deflate compression of netCDF4 variables\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdi>\n");
 }
@@ -158,25 +168,25 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
   int i, ivals = 0, imiss = 0;
   double arrmean, arrmin, arrmax;
   char vdatestr[32], vtimestr[32];
- 
+
   if ( ! rec )
   {
     if ( vardis )
-      fprintf(stdout, 
-    "   Rec :       Date  Time    Varname      Level    Size    Miss :     Minimum        Mean     Maximum\n");
+      fprintf(stdout,
+    "   Rec :       Date     Time   Level Gridsize    Miss :     Minimum        Mean     Maximum : Parameter name\n");
 /*   ----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+ */
     else
-      fprintf(stdout, 
-    "   Rec :       Date  Time    Param        Level    Size    Miss :     Minimum        Mean     Maximum\n");
+      fprintf(stdout,
+    "   Rec :       Date     Time   Level Gridsize    Miss :     Minimum        Mean     Maximum : Parameter ID\n");
 /*   ----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+ */
   }
 
   date2str(vdate, vdatestr, sizeof(vdatestr));
   time2str(vtime, vtimestr, sizeof(vtimestr));
 
-  fprintf(stdout, "%6d :%s %s %-10s %7g ", ++rec, vdatestr, vtimestr, varname, level);
+  fprintf(stdout, "%6d :%s %s %7g ", ++rec, vdatestr, vtimestr, level);
 
-  fprintf(stdout, "%7d ", datasize);
+  fprintf(stdout, "%8d ", datasize);
 
   fprintf(stdout, "%7d :", nmiss);
 
@@ -222,7 +232,7 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
 
       if ( datasize > 0 ) arrmean /= datasize;
 
-      fprintf(stdout, "%#12.5g%#12.5g%#12.5g\n", arrmin, arrmean, arrmax);
+      fprintf(stdout, "%#12.5g%#12.5g%#12.5g", arrmin, arrmean, arrmax);
     }
   else
     {
@@ -249,14 +259,41 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
 
       if ( nvals_r > 0 ) arrmean_r = arrsum_r / nvals_r;
       if ( nvals_i > 0 ) arrmean_i = arrsum_i / nvals_i;
-      fprintf(stdout, "  -  (%#12.5g,%#12.5g)  -\n", arrmean_r, arrmean_i);
+      fprintf(stdout, "  -  (%#12.5g,%#12.5g)  -", arrmean_r, arrmean_i);
     }
+
+  fprintf(stdout, " : %-11s\n", varname);
 
   if ( imiss != nmiss && nmiss > 0 )
     fprintf(stdout, "Found %d of %d missing values!\n", imiss, nmiss);
 }
 
 #define MAXCHARS 82
+
+const char * tunit2str(int tunits)
+{
+  if      ( tunits == TUNIT_YEAR )    return ("years");
+  else if ( tunits == TUNIT_MONTH )   return ("months");
+  else if ( tunits == TUNIT_DAY )     return ("days");
+  else if ( tunits == TUNIT_12HOURS ) return ("12hours");
+  else if ( tunits == TUNIT_6HOURS )  return ("6hours");
+  else if ( tunits == TUNIT_3HOURS )  return ("3hours");
+  else if ( tunits == TUNIT_HOUR )    return ("hours");
+  else if ( tunits == TUNIT_MINUTE )  return ("minutes");
+  else if ( tunits == TUNIT_SECOND )  return ("seconds");
+  else                                return ("unknown");
+}
+
+
+const char * calendar2str(int calendar)
+{
+  if      ( calendar == CALENDAR_STANDARD )  return ("standard");
+  else if ( calendar == CALENDAR_PROLEPTIC ) return ("proleptic_gregorian");
+  else if ( calendar == CALENDAR_360DAYS )   return ("360_day");
+  else if ( calendar == CALENDAR_365DAYS )   return ("365_day");
+  else if ( calendar == CALENDAR_366DAYS )   return ("366_day");
+  else                                       return ("unknown");
+}
 
 static
 void printShortinfo(int streamID, int vlistID, int vardis)
@@ -287,10 +324,10 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
       if ( vardis )
 	fprintf(stdout,
-		"   Var : Institut Source   Varname     Ttype   Dtype  Gridsize Num  Levels Num\n");
+		"   Var : Institut Source   Ttype    Levels Num  Gridsize Num Dtype : Parameter name\n");
       else
 	fprintf(stdout,
-		"   Var : Institut Source   Param       Ttype   Dtype  Gridsize Num  Levels Num\n");
+		"   Var : Institut Source   Ttype    Levels Num  Gridsize Num Dtype : Parameter ID\n");
 
       nvars = vlistNvars(vlistID);
 
@@ -300,41 +337,45 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  gridID  = vlistInqVarGrid(vlistID, varID);
 	  zaxisID = vlistInqVarZaxis(vlistID, varID);
 
-	  cdiParamToString(param, paramstr, sizeof(paramstr));
-
-	  if ( vardis ) vlistInqVarName(vlistID, varID, varname);
-
-	  gridsize = gridInqSize(gridID);
-
 	  fprintf(stdout, "%6d : ", varID + 1);
 
+	  /* institute info */
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  if ( instptr )
 	    fprintf(stdout, "%-8s ", instptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
+	  /* source info */
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  if ( modelptr )
 	    fprintf(stdout, "%-8s ", modelptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
-	  if ( vardis )
-	    fprintf(stdout, "%-11s ", varname);
-	  else
-	    fprintf(stdout, "%-11s ", paramstr);
-
+	  /* tsteptype */
 	  tsteptype = vlistInqVarTsteptype(vlistID, varID);
-	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s", "constant");
-	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s", "instant");
-	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s", "min");
-	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s", "max");
-	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s", "accum");
-	  else                                    fprintf(stdout, "%-8s", "unknown");
+	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s ", "constant");
+	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_INSTANT2 ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_INSTANT3 ) fprintf(stdout, "%-8s ", "instant");
+	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s ", "min");
+	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s ", "max");
+	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s ", "accum");
+	  else                                    fprintf(stdout, "%-8s ", "unknown");
 
+	  /* layer info */
+	  levelsize = zaxisInqSize(zaxisID);
+	  fprintf(stdout, "%6d ", levelsize);
+	  fprintf(stdout, "%3d ", vlistZaxisIndex(vlistID, zaxisID) + 1);
+
+	  /* grid info */
+	  gridsize = gridInqSize(gridID);
+	  fprintf(stdout, "%9d ", gridsize);
+	  fprintf(stdout, "%3d ", vlistGridIndex(vlistID, gridID) + 1);
+
+	  /* datatype */
 	  datatype = vlistInqVarDatatype(vlistID, varID);
-
 	  if      ( datatype == DATATYPE_PACK   ) strcpy(pstr, "P0");
 	  else if ( datatype > 0 && datatype <= 32  ) sprintf(pstr, "P%d", datatype);
 	  else if ( datatype == DATATYPE_CPX32  ) strcpy(pstr, "C32");
@@ -352,26 +393,30 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  fprintf(stdout, " %-3s", pstr);
 
 	  if ( vlistInqVarCompType(vlistID, varID) == COMPRESS_NONE )
-	    fprintf(stdout, " ");
+	    fprintf(stdout, "  ");
 	  else
-	    fprintf(stdout, "z");
+	    fprintf(stdout, "z ");
 
-	  fprintf(stdout, "%9d", gridsize);
+	  /* parameter info */
+	  fprintf(stdout, ": ");
 
-	  fprintf(stdout, " %3d ", vlistGridIndex(vlistID, gridID) + 1);
+	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
-	  levelsize = zaxisInqSize(zaxisID);
-	  fprintf(stdout, " %6d", levelsize);
-	  fprintf(stdout, " %3d", vlistZaxisIndex(vlistID, zaxisID) + 1);
+	  if ( vardis ) vlistInqVarName(vlistID, varID, varname);
+
+          if ( vardis )
+	    fprintf(stdout, "%-11s", varname);
+	  else
+	    fprintf(stdout, "%-11s", paramstr);
 
 	  fprintf(stdout, "\n");
 	}
 
-      fprintf(stdout, "   Horizontal grids :\n");
+      fprintf(stdout, "   Grid coordinates :\n");
       printGridInfo(vlistID);
 
       nzaxis = vlistNzaxis(vlistID);
-      fprintf(stdout, "   Vertical grids :\n");
+      fprintf(stdout, "   Vertical coordinates :\n");
       for ( index = 0; index < nzaxis; index++)
 	{
 	  zaxisID   = vlistZaxis(vlistID, index);
@@ -380,13 +425,13 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  levelsize = zaxisInqSize(zaxisID);
 	  /* zaxisInqLongname(zaxisID, longname); */
 	  zaxisName(zaxistype, longname);
-	  longname[17] = 0;
+	  longname[18] = 0;
 	  zaxisInqUnits(zaxisID, units);
 	  units[12] = 0;
 	  if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
 	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, ltype);
 	  else
-	    nbyte0    = fprintf(stdout, "  %4d : %-17s  %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
+	    nbyte0    = fprintf(stdout, "  %4d : %-18s %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {
@@ -404,7 +449,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	    {
 	      double level1, level2;
 	      nbyte = nbyte0;
-	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
+	      fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
 		  if ( nbyte > MAXCHARS )
@@ -419,6 +464,30 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 		}
 	      fprintf(stdout, "\n");
 	    }
+
+          if ( zaxistype == ZAXIS_REFERENCE )
+            {
+              int number   = zaxisInqNumber(zaxisID);
+
+              if ( number > 0 )
+                {
+                  fprintf(stdout, "%33s : ", "zaxis");
+                  fprintf(stdout, "number = %d\n", number);
+                }
+
+              char uuidOfVGrid[17];
+              zaxisInqUUID(zaxisID, uuidOfVGrid);
+              if ( uuidOfVGrid[0] != 0 )
+                {
+                  char uuidOfVGridStr[37];
+                  uuid2str(uuidOfVGrid, uuidOfVGridStr);
+                  if ( uuidOfVGridStr[0] != 0  && strlen(uuidOfVGridStr) == 36 )
+                    {
+                      fprintf(stdout, "%33s : ", "uuid");
+                      fprintf(stdout, "%s\n", uuidOfVGridStr);
+                    }
+                }
+            }
 	}
 
       taxisID = vlistInqTaxis(vlistID);
@@ -427,16 +496,16 @@ void printShortinfo(int streamID, int vlistID, int vardis)
       if ( ntsteps != 0 )
 	{
 	  if ( ntsteps == CDI_UNDEFID )
-	    fprintf(stdout, "   Time axis :  unlimited steps\n");
+	    fprintf(stdout, "   Time coordinate :  unlimited steps\n");
 	  else
-	    fprintf(stdout, "   Time axis :  %d step%s\n", ntsteps, ntsteps == 1 ? "" : "s");
+	    fprintf(stdout, "   Time coordinate :  %d step%s\n", ntsteps, ntsteps == 1 ? "" : "s");
 
 	  if ( taxisID != CDI_UNDEFID )
 	    {
-	      int calendar, tunits;
-
 	      if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
 		{
+                  int calendar, tunits;
+
 		  vdate = taxisInqRdate(taxisID);
 		  vtime = taxisInqRtime(taxisID);
 
@@ -447,46 +516,10 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 			  year, month, day, hour, minute, second);
 
 		  tunits = taxisInqTunit(taxisID);
-		  if ( tunits != CDI_UNDEFID )
-		    {
-		      if ( tunits == TUNIT_YEAR )
-			fprintf(stdout, "  Units = years");
-		      else if ( tunits == TUNIT_MONTH )
-			fprintf(stdout, "  Units = months");
-		      else if ( tunits == TUNIT_DAY )
-			fprintf(stdout, "  Units = days");
-		      else if ( tunits == TUNIT_12HOURS )
-			fprintf(stdout, "  Units = 12hours");
-		      else if ( tunits == TUNIT_6HOURS )
-			fprintf(stdout, "  Units = 6hours");
-		      else if ( tunits == TUNIT_3HOURS )
-			fprintf(stdout, "  Units = 3hours");
-		      else if ( tunits == TUNIT_HOUR )
-			fprintf(stdout, "  Units = hours");
-		      else if ( tunits == TUNIT_MINUTE )
-			fprintf(stdout, "  Units = minutes");
-		      else if ( tunits == TUNIT_SECOND )
-			fprintf(stdout, "  Units = seconds");
-		      else
-			fprintf(stdout, "  Units = unknown");
-		    }
+		  if ( tunits != CDI_UNDEFID )  fprintf(stdout, "  Units = %s", tunit2str(tunits));
 
 		  calendar = taxisInqCalendar(taxisID);
-		  if ( calendar != CDI_UNDEFID )
-		    {
-		      if ( calendar == CALENDAR_STANDARD )
-			fprintf(stdout, "  Calendar = STANDARD");
-		      else if ( calendar == CALENDAR_PROLEPTIC )
-			fprintf(stdout, "  Calendar = PROLEPTIC");
-		      else if ( calendar == CALENDAR_360DAYS )
-			fprintf(stdout, "  Calendar = 360DAYS");
-		      else if ( calendar == CALENDAR_365DAYS )
-			fprintf(stdout, "  Calendar = 365DAYS");
-		      else if ( calendar == CALENDAR_366DAYS )
-			fprintf(stdout, "  Calendar = 366DAYS");
-		      else
-			fprintf(stdout, "  Calendar = unknown");
-		    }
+		  if ( calendar != CDI_UNDEFID )  fprintf(stdout, "  Calendar = %s", calendar2str(calendar));
 
 		  if ( taxisHasBounds(taxisID) )
 		    fprintf(stdout, "  Bounds = true");
@@ -729,10 +762,13 @@ void defineCompress(const char *arg)
       comptype = COMPRESS_GZIP;
       complevel = 6;
     }
-  else if ( strncmp(arg, "zip", len) == 0 )
+  else if ( strncmp(arg, "zip", 3) == 0 )
     {
       comptype = COMPRESS_ZIP;
-      complevel = 1;
+      if ( len == 5 && arg[3] == '_' && isdigit(arg[4]) )
+	complevel = atoi(&arg[4]);
+      else
+        complevel = 1;
     }
   else
     fprintf(stderr, "%s compression unsupported!\n", arg);
@@ -862,7 +898,7 @@ int main(int argc, char *argv[])
       int recID;
       int tsID;
       int ntsteps = 0;
-      int taxisID;
+      int taxisID1, taxisID2 = CDI_UNDEFID;
       int gridtype;
       int vlistID1, vlistID2 = CDI_UNDEFID;
 
@@ -883,13 +919,18 @@ int main(int argc, char *argv[])
 	}
 
       nvars   = vlistNvars(vlistID1);
-      taxisID = vlistInqTaxis(vlistID1);
+      taxisID1 = vlistInqTaxis(vlistID1);
       ntsteps = vlistNtsteps(vlistID1);
 
       if ( Debug ) fprintf(stderr, "nvars   = %d\n", nvars);
       if ( Debug ) fprintf(stderr, "ntsteps = %d\n", ntsteps);
 
-      if ( fname2 ) vlistID2 = vlistDuplicate(vlistID1);
+      if ( fname2 )
+        {
+          vlistID2 = vlistDuplicate(vlistID1);
+          taxisID2 = taxisDuplicate(taxisID1);
+          vlistDefTaxis(vlistID2, taxisID2);
+        }
 
       for ( varID = 0; varID < nvars; varID++)
 	{
@@ -952,10 +993,12 @@ int main(int argc, char *argv[])
       while ( (nrecs = streamInqTimestep(streamID1, tsID)) > 0 )
 	{
 	  if ( fname2 /* && ntsteps != 0*/ )
-	    streamDefTimestep(streamID2, tsID);
-
-	  vdate = taxisInqVdate(taxisID);
-	  vtime = taxisInqVtime(taxisID);
+            {
+              taxisCopyTimestep(taxisID2, taxisID1);
+              streamDefTimestep(streamID2, tsID);
+            }
+	  vdate = taxisInqVdate(taxisID1);
+	  vtime = taxisInqVtime(taxisID1);
 
 	  if ( Debug )
 	    fprintf(stdout, "tsID = %d nrecs = %d date = %d time = %d\n", tsID, nrecs, vdate, vtime);
@@ -1047,6 +1090,7 @@ int main(int argc, char *argv[])
 	{
 	  streamClose(streamID2);
 	  vlistDestroy(vlistID2);
+	  taxisDestroy(taxisID2);
 	}
       streamClose(streamID1);
     }
@@ -1056,3 +1100,12 @@ int main(int argc, char *argv[])
 
   return (0);
 }
+/*
+ * Local Variables:
+ * c-file-style: "Java"
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * show-trailing-whitespace: t
+ * require-trailing-newline: t
+ * End:
+ */

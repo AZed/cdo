@@ -1,12 +1,24 @@
 #ifndef _GRID_H
 #define _GRID_H
 
-#define  deg2rad  (M_PI/180.)   /* conversion for deg to rad */
-#define  rad2deg  (180./M_PI)   /* conversion for rad to deg */
+#ifndef  M_PI
+#define  M_PI        3.14159265358979323846  /* pi */
+#endif
 
+
+#ifndef  RAD2DEG
+#define  RAD2DEG  (180./M_PI)   /* conversion for rad to deg */
+#endif
+
+#ifndef  DEG2RAD
+#define  DEG2RAD  (M_PI/180.)   /* conversion for deg to rad */
+#endif
+
+
+void grid_to_radian(const char *units, long nvals, double *restrict values, const char *description);
+void grid_to_degree(const char *units, long nvals, double *restrict values, const char *description);
 
 int referenceToGrid(int gridID);
-void gridToDegree(const char *units, const char *string, int gridsize, double *array);
 int gridToZonal(int gridID);
 int gridToMeridional(int gridID);
 int gridToUnstructured(int gridID, int lbounds);
@@ -37,8 +49,6 @@ void gme_grid(int lbounds, int gridsize, double *rlon, double *rlat,
 /* Rotated grid */
 double lamrot_to_lam(double phis, double rlas, double polphi, double pollam, double polgam);
 double phirot_to_phi(double phis, double rlas, double polphi, double polgam);
-double rl_to_rls(double phi, double rla, double polphi, double pollam);
-double ph_to_phs(double phi, double rla, double polphi, double pollam);
 void usvs_to_uv(double us, double vs, double phi, double rla,
 		double polphi, double pollam, double *u, double *v);
 

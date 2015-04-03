@@ -10,7 +10,7 @@
 
 #include "cdf.h"
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 #include "cdf_int.h"
 
 
@@ -61,10 +61,10 @@ void cdfDebug(int debug)
     Message("debug level %d", debug);
 }
 
+#if  defined  (HAVE_LIBNETCDF)
 static
 void cdfComment(int ncid)
 {
-#if  defined  (HAVE_LIBNETCDF)
   static char comment[256] = "Climate Data Interface version ";
   static int init = 0;
   char *blank;
@@ -85,9 +85,8 @@ void cdfComment(int ncid)
 
   cdf_put_att_text(ncid, NC_GLOBAL, "CDI", strlen(comment), comment);
   cdf_put_att_text(ncid, NC_GLOBAL, "Conventions", 6, "CF-1.4");
-#endif
 }
-
+#endif
 
 int cdfOpenFile(const char *filename, const char *mode, int *filetype)
 {
@@ -121,11 +120,11 @@ int cdfOpenFile(const char *filename, const char *mode, int *filetype)
 	  break;
 	case 'w':
 #if  defined  (NC_64BIT_OFFSET)
-	  if      ( *filetype == FILETYPE_NC2  ) writemode = NC_CLOBBER | NC_64BIT_OFFSET;
+	  if      ( *filetype == FILETYPE_NC2  ) writemode |= NC_64BIT_OFFSET;
 #endif
 #if  defined  (HAVE_NETCDF4)
-	  if      ( *filetype == FILETYPE_NC4  ) writemode = NC_CLOBBER | NC_NETCDF4;
-	  else if ( *filetype == FILETYPE_NC4C ) writemode = NC_CLOBBER | NC_NETCDF4 | NC_CLASSIC_MODEL;
+	  if      ( *filetype == FILETYPE_NC4  ) writemode |= NC_NETCDF4;
+	  else if ( *filetype == FILETYPE_NC4C ) writemode |= NC_NETCDF4 | NC_CLASSIC_MODEL;
 #endif
 	  cdf_create(filename, writemode, &ncid);
 	  cdfComment(ncid);

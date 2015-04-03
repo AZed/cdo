@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -94,6 +94,10 @@ void *Fldrms(void *argument)
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
 
   streamDefVlist(streamID3, vlistID3);
+
+  field_init(&field1);
+  field_init(&field2);
+  field_init(&field3);
 
   lim = vlistGridsizeMax(vlistID1);
   field1.ptr    = (double *) malloc(lim*sizeof(double));

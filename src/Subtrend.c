@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,14 +31,13 @@
 void *Subtrend(void *argument)
 {
   int gridsize;
-  int nrecs, nrecords;
+  int nrecs;
   int gridID, varID, levelID, recID;
   int tsID;
   int i;
   int streamID1, streamID2, streamID3, streamID4;
   int vlistID1, vlistID2, vlistID3, vlistID4, taxisID1, taxisID4;
   int nmiss;
-  int nvars, nlevel;
   double missval, missval1, missval2;
   field_t **vars2, **vars3;
   field_t field1, field4;
@@ -65,34 +64,15 @@ void *Subtrend(void *argument)
 
   streamDefVlist(streamID4, vlistID4);
 
-
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
-
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field1);
+  field_init(&field4);
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field4.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars2 = (field_t **) malloc(nvars*sizeof(field_t *));
-  vars3 = (field_t **) malloc(nvars*sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
-
-      vars2[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-      vars3[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  vars2[varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
-	  vars3[varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
-	}
-    }
+  vars2 = field_malloc(vlistID1, FIELD_PTR);
+  vars3 = field_malloc(vlistID1, FIELD_PTR);
 
 
   tsID = 0;
@@ -146,21 +126,8 @@ void *Subtrend(void *argument)
       tsID++;
     }
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  free(vars2[varID][levelID].ptr);
-	  free(vars3[varID][levelID].ptr);
-	}
-
-      free(vars2[varID]);
-      free(vars3[varID]);
-    }
-
-  free(vars2);
-  free(vars3);
+  field_free(vars2, vlistID1);
+  field_free(vars3, vlistID1);
 
   if ( field1.ptr ) free(field1.ptr);
   if ( field4.ptr ) free(field4.ptr);

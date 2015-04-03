@@ -302,7 +302,7 @@ int main(void)
   int year, month, day, hour, minute, second;
   int value = 30;
   int factor = 86400;
-  
+
   calendar = CALENDAR_360DAYS;
 
   year=1979; month=1; day=15; hour=12; minute=30; second = 0;

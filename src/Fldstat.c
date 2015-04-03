@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,9 @@
       Fldstat    fldmean         Field mean
       Fldstat    fldavg          Field average
       Fldstat    fldstd          Field standard deviation
+      Fldstat    fldstd1         Field standard deviation
       Fldstat    fldvar          Field variance
+      Fldstat    fldvar1         Field variance
       Fldstat    fldpctl         Field percentiles
 */
 
@@ -36,9 +38,16 @@
 
 static
 void print_location_LL(int operfunc, int vlistID, int varID, int levelID, int gridID, double sglval, double *fieldptr,
-		       int code, int year, int month, int day, int hour, int minute, int second)
+		       int vdate, int vtime)
 {
   static int showHeader = TRUE;
+  int year, month, day, hour, minute, second;
+  int code;
+
+  code = vlistInqVarCode(vlistID, varID);
+
+  cdiDecodeDate(vdate, &year, &month, &day);
+  cdiDecodeTime(vtime, &hour, &minute, &second);
 
   if ( gridInqType(gridID) == GRID_GAUSSIAN ||
        gridInqType(gridID) == GRID_LONLAT )
@@ -84,8 +93,6 @@ void *Fldstat(void *argument)
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int gridID2, lastgrid = -1;
-  int wstatus = FALSE;
-  int code = 0, oldcode = 0;
   int index, ngrids;
   int recID, nrecs;
   int tsID, varID, levelID;
@@ -96,9 +103,7 @@ void *Fldstat(void *argument)
   double sglval;
   field_t field;
   int taxisID1, taxisID2;
-  /* RQ */
   int pn = 0;
-  /* QR */
 
   cdoInitialize(argument);
 
@@ -107,16 +112,15 @@ void *Fldstat(void *argument)
   cdoOperatorAdd("fldsum",  func_sum,  0, NULL);
   cdoOperatorAdd("fldmean", func_mean, 0, NULL);
   cdoOperatorAdd("fldavg",  func_avg,  0, NULL);
-  cdoOperatorAdd("fldvar",  func_var,  0, NULL);
   cdoOperatorAdd("fldstd",  func_std,  0, NULL);
-  /* RQ */
+  cdoOperatorAdd("fldstd1", func_std1, 0, NULL);
+  cdoOperatorAdd("fldvar",  func_var,  0, NULL);
+  cdoOperatorAdd("fldvar1", func_var1, 0, NULL);
   cdoOperatorAdd("fldpctl", func_pctl, 0, NULL);
-  /* QR */
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
-  /* RQ */
   if ( operfunc == func_pctl )
     {
       operatorInputArg("percentile number");
@@ -125,10 +129,10 @@ void *Fldstat(void *argument)
       if ( pn < 1 || pn > 99 )
         cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
     }
-  /* QR */
 
   if ( operfunc == func_mean || operfunc == func_avg ||
-       operfunc == func_var  || operfunc == func_std )
+       operfunc == func_var  || operfunc == func_std ||
+       operfunc == func_var1 || operfunc == func_std1 )
     needWeights = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -157,6 +161,8 @@ void *Fldstat(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
+  field_init(&field);
+
   lim = vlistGridsizeMax(vlistID1);
   field.ptr    = (double *) malloc(lim*sizeof(double));
   field.weight = NULL;
@@ -170,16 +176,13 @@ void *Fldstat(void *argument)
       streamDefTimestep(streamID2, tsID);
 
       /* Precompute date + time for later representation in verbose mode */
-      int vdate, vtime;
-      int year, month, day, hour, minute, second;
+      int vdate = 0, vtime = 0;
       if ( cdoVerbose )
         {
           if ( operfunc == func_min || operfunc == func_max )
             {
               vdate = taxisInqVdate(taxisID1);
               vtime = taxisInqVtime(taxisID1);
-              cdiDecodeDate(vdate, &year, &month, &day);
-              cdiDecodeTime(vtime, &hour, &minute, &second);
             }
         }
 
@@ -190,32 +193,32 @@ void *Fldstat(void *argument)
 
 	  field.grid = vlistInqVarGrid(vlistID1, varID);
 	  field.size = gridInqSize(field.grid);
+
 	  if ( needWeights && field.grid != lastgrid )
 	    {
 	      lastgrid = field.grid;
-	      wstatus = gridWeights(field.grid, field.weight);
+	      field.weight[0] = 1;
+	      if ( field.size > 1 )
+		{
+		  int wstatus = gridWeights(field.grid, field.weight);
+		  if ( wstatus != 0 && tsID == 0 && levelID == 0 )
+		    {
+		      char varname[CDI_MAX_NAME];
+		      vlistInqVarName(vlistID1, varID, varname);
+		      cdoWarning("Using constant grid cell area weights for variable %s!", varname);
+		    }
+		}
 	    }
-	  code = vlistInqVarCode(vlistID1, varID);
-	  if ( wstatus != 0 && tsID == 0 && code != oldcode )
-	    cdoWarning("Using constant grid cell area weights for code %d!", oldcode=code);
 
 	  field.missval = vlistInqVarMissval(vlistID1, varID);
 
-	  /* RQ */
 	  if ( operfunc == func_pctl )
 	    sglval = fldpctl(field, pn);
 	  else  
 	    sglval = fldfun(field, operfunc);
-	  /* QR */
 
-	  if ( cdoVerbose )
-            {
-              if ( operfunc == func_min || operfunc == func_max )
-                {
-		  print_location_LL(operfunc, vlistID1, varID, levelID, field.grid, sglval, field.ptr,
-				    code, year, month, day, hour, minute, second);
-                }
-            }
+	  if ( cdoVerbose && (operfunc == func_min || operfunc == func_max) )
+	    print_location_LL(operfunc, vlistID1, varID, levelID, field.grid, sglval, field.ptr, vdate, vtime);
 
 	  if ( DBL_IS_EQUAL(sglval, field.missval) )
 	    nmiss = 1;
@@ -231,6 +234,8 @@ void *Fldstat(void *argument)
 
   streamClose(streamID2);
   streamClose(streamID1);
+
+  vlistDestroy(vlistID2);
 
   if ( field.ptr )    free(field.ptr);
   if ( field.weight ) free(field.weight);

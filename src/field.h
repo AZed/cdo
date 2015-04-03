@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -32,12 +32,12 @@
 #define  FSQRT(x)   (DBL_IS_EQUAL((x),missval1) || (x)<0 ? missval1 : sqrt(x))
 
 
-double _FADD_(double x, double y, double missval1, double missval2);
-double _FSUB_(double x, double y, double missval1, double missval2);
-double _FMUL_(double x, double y, double missval1, double missval2);
-double _FDIV_(double x, double y, double missval1, double missval2);
-double _FPOW_(double x, double y, double missval1, double missval2);
-double _FSQRT_(double x, double missval1);
+double _FADD_(const double x, const double y, const double missval1, const double missval2);
+double _FSUB_(const double x, const double y, const double missval1, const double missval2);
+double _FMUL_(const double x, const double y, const double missval1, const double missval2);
+double _FDIV_(const double x, const double y, const double missval1, const double missval2);
+double _FPOW_(const double x, const double y, const double missval1, const double missval2);
+double _FSQRT_(const double x, const double missval1);
 
 
 #define ADD(x,y)  _FADD_(x, y, missval1, missval2)
@@ -49,9 +49,10 @@ double _FSQRT_(double x, double missval1);
 
 
 typedef struct {
+  int      nwpv; // number of words per value; real:1  complex:2
   int      grid;
   int      zaxis;
-  int      size;
+  size_t   size;
   int      nsamp;
   int      nmiss;
   double   missval;
@@ -60,27 +61,31 @@ typedef struct {
 }
 field_t;
 
+
 /* fieldmem.c */
 
-field_t **field_malloc(int vlistID, int ptype);
-field_t **field_calloc(int vlistID, int ptype);
-void      field_free(field_t **field, int vlistID);
+void      field_init(field_t *field);
+field_t **field_malloc(const int vlistID, const int ptype);
+field_t **field_calloc(const int vlistID, const int ptype);
+void      field_free(field_t **field, const int vlistID);
 
 /* field.c */
 
-double fldfun(field_t field, int function);
+double fldfun(field_t field, const int function);
 double fldmin(field_t field);
 double fldmax(field_t field);
 double fldsum(field_t field);
 double fldavg(field_t field);
 double fldmean(field_t field);
 double fldstd(field_t field);
+double fldstd1(field_t field);
 double fldvar(field_t field);
+double fldvar1(field_t field);
 /* RQ */
-double fldpctl(field_t field, int k);
+double fldpctl(field_t field, const int k);
 /* QR */
 void   fldunm(field_t *field);
-int    fldhvs(field_t *field, int nlevels);
+int    fldhvs(field_t *field, const size_t nlevels);
 
 /* ENS VALIDATION */
 double fldcrps(field_t field);
@@ -90,7 +95,7 @@ double fldroc(field_t field);
 
 /* fieldzon.c */
 
-void zonfun(field_t field1, field_t *field2, int function);
+void zonfun(field_t field1, field_t *field2, const int function);
 void zonmin(field_t field1, field_t *field2);
 void zonmax(field_t field1, field_t *field2);
 void zonrange(field_t field1, field_t *field2);
@@ -100,12 +105,12 @@ void zonmean(field_t field1, field_t *field2);
 void zonstd(field_t field1, field_t *field2);
 void zonvar(field_t field1, field_t *field2);
 /* RQ */
-void zonpctl(field_t field1, field_t *field2, int k);
+void zonpctl(field_t field1, field_t *field2, const int k);
 /* QR */
 
 /* fieldmer.c */
 
-void merfun(field_t field1, field_t *field2, int function);
+void merfun(field_t field1, field_t *field2, const int function);
 void mermin(field_t field1, field_t *field2);
 void mermax(field_t field1, field_t *field2);
 void mersum(field_t field1, field_t *field2);
@@ -114,7 +119,7 @@ void mermean(field_t field1, field_t *field2);
 void merstd(field_t field1, field_t *field2);
 void mervar(field_t field1, field_t *field2);
 /* RQ */
-void merpctl(field_t field1, field_t *field2, int k);
+void merpctl(field_t field1, field_t *field2, const int k);
 /* QR */
 
 void fldrms(field_t field1, field_t field2, field_t *field3);
@@ -123,25 +128,25 @@ void varrms(field_t field1, field_t field2, field_t *field3);
 
 /* fieldc.c */
 
-void farcfun(field_t *field, double rconst, int function);
+void farcfun(field_t *field, const double rconst, const int function);
 
-void farcmul(field_t *field, double rconst);
-void farcdiv(field_t *field, double rconst);
-void farcadd(field_t *field, double rconst);
-void farcsub(field_t *field, double rconst);
+void farcmul(field_t *field, const double rconst);
+void farcdiv(field_t *field, const double rconst);
+void farcadd(field_t *field, const double rconst);
+void farcsub(field_t *field, const double rconst);
 
-void farmod(field_t *field, double divisor);
+void farmod(field_t *field, const double divisor);
 
 void farinv(field_t *field);
 
 /* field2.c */
 
-void farfun(field_t *field1, field_t field2, int function);
+void farfun(field_t *field1, field_t field2, const int function);
 
 void faradd(field_t *field1, field_t field2);
 void farsum(field_t *field1, field_t field2);
 void farsumq(field_t *field1, field_t field2);
-void farsumtr(field_t *field1, field_t field2, double refval);
+void farsumtr(field_t *field1, field_t field2, const double refval);
 void farsub(field_t *field1, field_t field2);
 void farmul(field_t *field1, field_t field2);
 void fardiv(field_t *field1, field_t field2);
@@ -149,8 +154,12 @@ void farmin(field_t *field1, field_t field2);
 void farmax(field_t *field1, field_t field2);
 void farvar(field_t *field1, field_t field2, field_t field3);
 void farstd(field_t *field1, field_t field2, field_t field3);
-void farcvar(field_t *field1, field_t field2, double rconst1);
-void farcstd(field_t *field1, field_t field2, double rconst1);
+void farvarx(field_t *field1, field_t field2, field_t field3, const double divisor);
+void farstdx(field_t *field1, field_t field2, field_t field3, const double divisor);
+void farcvar(field_t *field1, field_t field2, const double rconst1);
+void farcstd(field_t *field1, field_t field2, const double rconst1);
+void farcvarx(field_t *field1, field_t field2, const double rconst1, const double divisor);
+void farcstdx(field_t *field1, field_t field2, const double rconst1, const double divisor);
 void farmoq(field_t *field1, field_t field2);
 void faratan2(field_t *field1, field_t field2);
 

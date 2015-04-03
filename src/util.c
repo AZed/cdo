@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,16 +19,18 @@
 #include <string.h>
 #include <ctype.h>   /* tolower */
 
+#include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
 #include "modules.h"
 #include "util.h"
 
+
 char *getProgname(char *string)
 {
   char *progname;
 
-#if defined (_WIN32)
+#if defined(_WIN32)
   /*  progname = strrchr(string, '\\'); */
   progname = " cdo";
 #else
@@ -44,22 +46,15 @@ char *getProgname(char *string)
 char *getOperator(const char *argument)
 {
   char *operatorArg = NULL;
-  char *blankpos;
   size_t len;
 
   if ( argument )
     {
-      blankpos = strchr(argument, ' ');
+      len = 1 + strlen(argument);
 
-      if ( blankpos )
-	len = blankpos - argument;
-      else
-	len = strlen(argument);
-
-      operatorArg = (char *) malloc(len+1);
+      operatorArg = (char *) malloc(len);
 
       memcpy(operatorArg, argument, len);
-      operatorArg[len] = '\0';
     }
 
   return (operatorArg);
@@ -95,27 +90,93 @@ char *getOperatorName(const char *operatorArg)
 }
 
 
-char *makeArgument(int argc, char *argv[])
+argument_t *file_argument_new(const char *filename)
 {
-  char *argument = NULL;
-  int iarg;
-  size_t len, pos = 0, off = 0;
+  argument_t *argument;
 
-  if ( argv[0][0] == '-' ) off = 1;
-  for ( iarg = 0; iarg < argc; iarg++ )
-    {
-      len = strlen(argv[iarg]) + 1 - off;
-      argument = (char *) realloc(argument, pos+len);
-      strcpy(&argument[pos], argv[iarg]+off);
-      pos += len;
-      argument[pos-1] = ' ';
-      off = 0;
-    }
+  argument = (argument_t *) calloc(1, sizeof(argument_t));
 
-  if ( argc )
-    argument[pos-1] = '\0';
+  argument->argc = 1;
+  argument->argv = (char **) calloc(1, sizeof(char *));
+  argument->argv[0] = (char *) filename;
+  argument->args = (char *) filename;
 
   return (argument);
+}
+
+
+void file_argument_free(argument_t *argument)
+{
+  if ( argument )
+    {
+      if ( argument->argc )
+	{
+	  assert(argument->argc == 1);
+	  free(argument->argv);
+	}
+      free(argument);
+    }
+}
+
+
+argument_t *argument_new(size_t argc, size_t len)
+{
+  argument_t *argument;
+
+  argument = (argument_t *) calloc(1, sizeof(argument_t));
+
+  if ( argc > 0 )
+    {
+      argument->argc = argc;
+      argument->argv = (char **) calloc(argc, sizeof(char *));
+    }
+
+  if ( len > 0 )
+    argument->args = (char *) calloc(len, sizeof(char));
+
+  return (argument);
+}
+
+
+void argument_free(argument_t *argument)
+{
+  if ( argument )
+    {
+      if ( argument->argc )
+	{
+	  for ( int i = 0; i < argument->argc; ++i )
+	    {
+	      if ( argument->argv[i] )
+		{
+		  free(argument->argv[i]);
+		  argument->argv[i] = NULL;
+		}
+	    }
+
+	  free(argument->argv);
+	  argument->argv = NULL;
+	  argument->argc = 0;
+	}
+
+      if ( argument->args )
+	{
+	  free(argument->args);
+	  argument->args = NULL;
+	}
+
+      free(argument);
+    }
+}
+
+
+void argument_fill(argument_t *argument, int argc, char *argv[])
+{
+  int iarg;
+
+  assert(argument->argc == argc);
+
+  for ( iarg = 0; iarg < argc; ++iarg )
+    argument->argv[iarg] = strdup(argv[iarg]);
 }
 
 
@@ -211,7 +272,7 @@ void get_season_name(const char *seas_name[4])
 #include <sys/stat.h>
 //#include <unistd.h>
 
-int fileExist(const char *filename)
+int fileExists(const char *filename)
 {
   int status = 0;
   struct stat buf;
@@ -230,7 +291,7 @@ int userFileOverwrite(const char *filename)
   int status = 0, len;
   char line[1024], *pline;
 
-  fprintf(stderr, "File %s already exist, overwrite? (yes/no): ", filename);
+  fprintf(stderr, "File %s already exists, overwrite? (yes/no): ", filename);
   readline(stdin, line, 1024);
   pline = line;
   while ( isspace((int) *pline) ) pline++;
@@ -279,6 +340,8 @@ void progressStatus(double offset, double refval, double curval)
 {
   int ival;
 
+  if ( cdoSilentMode ) return;
+
   if ( !stdout_is_tty ) return;
 
   offset = offset < 0 ? 0: offset;
@@ -310,4 +373,57 @@ void progressStatus(double offset, double refval, double curval)
       while ( ps_nch-- ) fprintf(stdout, "\b \b");
       fflush(stdout);
     }
+}
+
+
+int datatype2str(int datatype, char *datatypestr)
+{
+  int status = 0;
+
+  if      ( datatype == DATATYPE_PACK   ) strcpy(datatypestr, "P0");
+  else if ( datatype > 0 && datatype <= 32  ) sprintf(datatypestr, "P%d", datatype);
+  else if ( datatype == DATATYPE_CPX32  ) strcpy(datatypestr, "C32");
+  else if ( datatype == DATATYPE_CPX64  ) strcpy(datatypestr, "C64");
+  else if ( datatype == DATATYPE_FLT32  ) strcpy(datatypestr, "F32");
+  else if ( datatype == DATATYPE_FLT64  ) strcpy(datatypestr, "F64");
+  else if ( datatype == DATATYPE_INT8   ) strcpy(datatypestr, "I8");
+  else if ( datatype == DATATYPE_INT16  ) strcpy(datatypestr, "I16");
+  else if ( datatype == DATATYPE_INT32  ) strcpy(datatypestr, "I32");
+  else if ( datatype == DATATYPE_UINT8  ) strcpy(datatypestr, "U8");
+  else if ( datatype == DATATYPE_UINT16 ) strcpy(datatypestr, "U16");
+  else if ( datatype == DATATYPE_UINT32 ) strcpy(datatypestr, "U32");
+  else                                  { strcpy(datatypestr, "-1"); status = -1;}
+
+  return (status);
+}
+
+
+int str2datatype(const char *datatypestr)
+{
+  int datatype = -1;
+  size_t len;
+
+  len = strlen(datatypestr);
+
+  if ( len > 1 )
+    {
+      int ilen = atoi(datatypestr+1);
+      if      ( memcmp(datatypestr, "P0",  len) == 0 ) datatype = DATATYPE_PACK;
+      else if ( memcmp(datatypestr, "P",     1) == 0 &&
+		ilen > 0 && ilen <= 32 )               datatype = atoi(datatypestr+1);
+      else if ( memcmp(datatypestr, "C32", len) == 0 ) datatype = DATATYPE_CPX32;
+      else if ( memcmp(datatypestr, "C64", len) == 0 ) datatype = DATATYPE_CPX64;
+      else if ( memcmp(datatypestr, "F32", len) == 0 ) datatype = DATATYPE_FLT32;
+      else if ( memcmp(datatypestr, "F64", len) == 0 ) datatype = DATATYPE_FLT64;
+      else if ( memcmp(datatypestr, "I8",  len) == 0 ) datatype = DATATYPE_INT8;
+      else if ( memcmp(datatypestr, "I16", len) == 0 ) datatype = DATATYPE_INT16;
+      else if ( memcmp(datatypestr, "I32", len) == 0 ) datatype = DATATYPE_INT32;
+      else if ( memcmp(datatypestr, "U8",  len) == 0 ) datatype = DATATYPE_UINT8;
+      else if ( memcmp(datatypestr, "U16", len) == 0 ) datatype = DATATYPE_UINT16;
+      else if ( memcmp(datatypestr, "U32", len) == 0 ) datatype = DATATYPE_UINT32;
+      else if ( memcmp(datatypestr, "real",   len) == 0 ) datatype = DATATYPE_FLT32;
+      else if ( memcmp(datatypestr, "double", len) == 0 ) datatype = DATATYPE_FLT64;
+    }
+
+  return (datatype);
 }

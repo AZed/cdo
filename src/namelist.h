@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,14 +22,14 @@
 
 
 #define  NML_INT         1
-#define  NML_DOUBLE      2
+#define  NML_FLT      2
 #define  NML_WORD        3
 #define  NML_TEXT        4
 
 #define NML_DEF_INT(name, size, val)  int sel##name[size]; int nsel##name = 0; int name = 0
 #define NML_DEF_FLT(name, size, val)  double sel##name[size]; int nsel##name = 0; double name = 0
 #define NML_ADD_INT(nml, name) namelistAdd(nml, #name, NML_INT, 0, sel##name, sizeof(sel##name)/sizeof(int))
-#define NML_ADD_FLT(nml, name) namelistAdd(nml, #name, NML_DOUBLE, 0, sel##name, sizeof(sel##name)/sizeof(double))
+#define NML_ADD_FLT(nml, name) namelistAdd(nml, #name, NML_FLT, 0, sel##name, sizeof(sel##name)/sizeof(double))
 #define NML_NUM(nml, name)   nsel##name = namelistNum(nml, #name)
 #define NML_PAR(name)        nsel##name, sel##name, name
 

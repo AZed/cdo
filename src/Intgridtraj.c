@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -93,6 +93,9 @@ void *Intgridtraj(void *argument)
   streamID1 = streamOpenRead(cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
+
+  field_init(&field1);
+  field_init(&field2);
 
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
@@ -217,7 +220,7 @@ void *Intgridtraj(void *argument)
 		  field2.ptr     = &point;
 		  field2.nmiss   = 0;
 
-		  intgrid(&field1, &field2);
+		  intgridbil(&field1, &field2);
 
 		  streamDefRecord(streamID2, varID, levelID);
 		  streamWriteRecord(streamID2, &point, nmiss);

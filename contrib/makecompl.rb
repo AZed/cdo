@@ -42,7 +42,7 @@ def getOperators
       }
     }.flatten
   else
-    help[help.index("Operators:")+1].split
+    help[(help.index("Operators:")+1)..help.index(help.find {|v| v =~ /CDO version/}) - 2].join(' ').split
   end
 end
 def getOptions

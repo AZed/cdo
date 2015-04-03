@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,35 +24,45 @@
       Timstat    timmean         Time mean
       Timstat    timavg          Time average
       Timstat    timvar          Time variance
+      Timstat    timvar1         Time variance [Divisor is (n-1)]
       Timstat    timstd          Time standard deviation
+      Timstat    timstd1         Time standard deviation [Divisor is (n-1)]
       Hourstat   hourmin         Hourly minimum
       Hourstat   hourmax         Hourly maximum
       Hourstat   hoursum         Hourly sum
       Hourstat   hourmean        Hourly mean
       Hourstat   houravg         Hourly average
       Hourstat   hourvar         Hourly variance
+      Hourstat   hourvar1        Hourly variance [Divisor is (n-1)]
       Hourstat   hourstd         Hourly standard deviation
+      Hourstat   hourstd1        Hourly standard deviation [Divisor is (n-1)]
       Daystat    daymin          Daily minimum
       Daystat    daymax          Daily maximum
       Daystat    daysum          Daily sum
       Daystat    daymean         Daily mean
       Daystat    dayavg          Daily average
       Daystat    dayvar          Daily variance
+      Daystat    dayvar1         Daily variance [Divisor is (n-1)]
       Daystat    daystd          Daily standard deviation
+      Daystat    daystd1         Daily standard deviation [Divisor is (n-1)]
       Monstat    monmin          Monthly minimum
       Monstat    monmax          Monthly maximum
       Monstat    monsum          Monthly sum
       Monstat    monmean         Monthly mean
       Monstat    monavg          Monthly average
       Monstat    monvar          Monthly variance
+      Monstat    monvar1         Monthly variance [Divisor is (n-1)]
       Monstat    monstd          Monthly standard deviation
+      Monstat    monstd1         Monthly standard deviation [Divisor is (n-1)]
       Yearstat   yearmin         Yearly minimum
       Yearstat   yearmax         Yearly maximum
       Yearstat   yearsum         Yearly sum
       Yearstat   yearmean        Yearly mean
       Yearstat   yearavg         Yearly average
       Yearstat   yearvar         Yearly variance
+      Yearstat   yearvar1        Yearly variance [Divisor is (n-1)]
       Yearstat   yearstd         Yearly standard deviation
+      Yearstat   yearstd1        Yearly standard deviation [Divisor is (n-1)]
 */
 
 
@@ -86,52 +96,70 @@ void *Timstat(void *argument)
   int *recVarID, *recLevelID;
   int taxis_has_bounds = FALSE;
   int lvfrac = FALSE;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
+  int nwpv; // number of words per value; real:1  complex:2
   char vdatestr[32], vtimestr[32];
   double vfrac = 1;
+  double divisor;
   double missval;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
   field_t field;
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("timmin",   func_min,  31, NULL);
-  cdoOperatorAdd("timmax",   func_max,  31, NULL);
-  cdoOperatorAdd("timsum",   func_sum,  31, NULL);
-  cdoOperatorAdd("timmean",  func_mean, 31, NULL);
-  cdoOperatorAdd("timavg",   func_avg,  31, NULL);
-  cdoOperatorAdd("timvar",   func_var,  31, NULL);
-  cdoOperatorAdd("timstd",   func_std,  31, NULL);
-  cdoOperatorAdd("yearmin",  func_min,  10, NULL);
-  cdoOperatorAdd("yearmax",  func_max,  10, NULL);
-  cdoOperatorAdd("yearsum",  func_sum,  10, NULL);
-  cdoOperatorAdd("yearmean", func_mean, 10, NULL);
-  cdoOperatorAdd("yearavg",  func_avg,  10, NULL);
-  cdoOperatorAdd("yearvar",  func_var,  10, NULL);
-  cdoOperatorAdd("yearstd",  func_std,  10, NULL);
-  cdoOperatorAdd("monmin",   func_min,   8, NULL);
-  cdoOperatorAdd("monmax",   func_max,   8, NULL);
-  cdoOperatorAdd("monsum",   func_sum,   8, NULL);
-  cdoOperatorAdd("monmean",  func_mean,  8, NULL);
-  cdoOperatorAdd("monavg",   func_avg,   8, NULL);
-  cdoOperatorAdd("monvar",   func_var,   8, NULL);
-  cdoOperatorAdd("monstd",   func_std,   8, NULL);
-  cdoOperatorAdd("daymin",   func_min,   6, NULL);
-  cdoOperatorAdd("daymax",   func_max,   6, NULL);
-  cdoOperatorAdd("daysum",   func_sum,   6, NULL);
-  cdoOperatorAdd("daymean",  func_mean,  6, NULL);
-  cdoOperatorAdd("dayavg",   func_avg,   6, NULL);
-  cdoOperatorAdd("dayvar",   func_var,   6, NULL);
-  cdoOperatorAdd("daystd",   func_std,   6, NULL);
-  cdoOperatorAdd("hourmin",  func_min,   4, NULL);
-  cdoOperatorAdd("hourmax",  func_max,   4, NULL);
-  cdoOperatorAdd("hoursum",  func_sum,   4, NULL);
-  cdoOperatorAdd("hourmean", func_mean,  4, NULL);
-  cdoOperatorAdd("houravg",  func_avg,   4, NULL);
-  cdoOperatorAdd("hourvar",  func_var,   4, NULL);
-  cdoOperatorAdd("hourstd",  func_std,   4, NULL);
+  cdoOperatorAdd("timmin",    func_min,  31, NULL);
+  cdoOperatorAdd("timmax",    func_max,  31, NULL);
+  cdoOperatorAdd("timsum",    func_sum,  31, NULL);
+  cdoOperatorAdd("timmean",   func_mean, 31, NULL);
+  cdoOperatorAdd("timavg",    func_avg,  31, NULL);
+  cdoOperatorAdd("timvar",    func_var,  31, NULL);
+  cdoOperatorAdd("timvar1",   func_var1, 31, NULL);
+  cdoOperatorAdd("timstd",    func_std,  31, NULL);
+  cdoOperatorAdd("timstd1",   func_std1, 31, NULL);
+  cdoOperatorAdd("yearmin",   func_min,  10, NULL);
+  cdoOperatorAdd("yearmax",   func_max,  10, NULL);
+  cdoOperatorAdd("yearsum",   func_sum,  10, NULL);
+  cdoOperatorAdd("yearmean",  func_mean, 10, NULL);
+  cdoOperatorAdd("yearavg",   func_avg,  10, NULL);
+  cdoOperatorAdd("yearvar",   func_var,  10, NULL);
+  cdoOperatorAdd("yearvar1",  func_var1, 10, NULL);
+  cdoOperatorAdd("yearstd",   func_std,  10, NULL);
+  cdoOperatorAdd("yearstd1",  func_std1, 10, NULL);
+  cdoOperatorAdd("monmin",    func_min,   8, NULL);
+  cdoOperatorAdd("monmax",    func_max,   8, NULL);
+  cdoOperatorAdd("monsum",    func_sum,   8, NULL);
+  cdoOperatorAdd("monmean",   func_mean,  8, NULL);
+  cdoOperatorAdd("monavg",    func_avg,   8, NULL);
+  cdoOperatorAdd("monvar",    func_var,   8, NULL);
+  cdoOperatorAdd("monvar1",   func_var1,  8, NULL);
+  cdoOperatorAdd("monstd",    func_std,   8, NULL);
+  cdoOperatorAdd("monstd1",   func_std1,  8, NULL);
+  cdoOperatorAdd("daymin",    func_min,   6, NULL);
+  cdoOperatorAdd("daymax",    func_max,   6, NULL);
+  cdoOperatorAdd("daysum",    func_sum,   6, NULL);
+  cdoOperatorAdd("daymean",   func_mean,  6, NULL);
+  cdoOperatorAdd("dayavg",    func_avg,   6, NULL);
+  cdoOperatorAdd("dayvar",    func_var,   6, NULL);
+  cdoOperatorAdd("dayvar1",   func_var1,  6, NULL);
+  cdoOperatorAdd("daystd",    func_std,   6, NULL);
+  cdoOperatorAdd("daystd1",   func_std1,  6, NULL);
+  cdoOperatorAdd("hourmin",   func_min,   4, NULL);
+  cdoOperatorAdd("hourmax",   func_max,   4, NULL);
+  cdoOperatorAdd("hoursum",   func_sum,   4, NULL);
+  cdoOperatorAdd("hourmean",  func_mean,  4, NULL);
+  cdoOperatorAdd("houravg",   func_avg,   4, NULL);
+  cdoOperatorAdd("hourvar",   func_var,   4, NULL);
+  cdoOperatorAdd("hourvar1",  func_var1,  4, NULL);
+  cdoOperatorAdd("hourstd",   func_std,   4, NULL);
+  cdoOperatorAdd("hourstd1",  func_std1,  4, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   if ( operfunc == func_mean )
     {
@@ -176,8 +204,10 @@ void *Timstat(void *argument)
 
       strcpy(filename, cdoOperatorName(operatorID));
       strcat(filename, "_");
-      strcat(filename, cdoStreamName(1));
-      streamID3 = streamOpenWrite(filename, cdoFiletype());
+      strcat(filename, cdoStreamName(1)->args);
+      argument_t *fileargument = file_argument_new(filename);
+      streamID3 = streamOpenWrite(fileargument, cdoFiletype());
+      file_argument_free(fileargument);
 
       vlistID3 = vlistDuplicate(vlistID1);
 
@@ -199,12 +229,14 @@ void *Timstat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
+  if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
 
+  field_init(&field);
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
   vars1 = field_malloc(vlistID1, FIELD_PTR);
   samp1 = field_malloc(vlistID1, FIELD_NONE);
-  if ( operfunc == func_std || operfunc == func_var )
+  if ( lvarstd )
     vars2 = field_malloc(vlistID1, FIELD_PTR);
 
   tsID    = 0;
@@ -249,7 +281,8 @@ void *Timstat(void *argument)
 		  recLevelID[recID] = levelID;
 		}
 
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+	      nwpv     = vars1[varID][levelID].nwpv;
+	      gridsize = gridInqSize(vars1[varID][levelID].grid);
 
 	      if ( nsets == 0 )
 		{
@@ -259,9 +292,9 @@ void *Timstat(void *argument)
 		  if ( nmiss > 0 || samp1[varID][levelID].ptr )
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
-			samp1[varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
+			samp1[varID][levelID].ptr = (double *) malloc(nwpv*gridsize*sizeof(double));
 
-		      for ( i = 0; i < gridsize; i++ )
+		      for ( i = 0; i < nwpv*gridsize; i++ )
 			if ( DBL_IS_EQUAL(vars1[varID][levelID].ptr[i], vars1[varID][levelID].missval) )
 			  samp1[varID][levelID].ptr[i] = 0;
 			else
@@ -278,17 +311,17 @@ void *Timstat(void *argument)
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
 			{
-			  samp1[varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
-			  for ( i = 0; i < gridsize; i++ )
+			  samp1[varID][levelID].ptr = (double *) malloc(nwpv*gridsize*sizeof(double));
+			  for ( i = 0; i < nwpv*gridsize; i++ )
 			    samp1[varID][levelID].ptr[i] = nsets;
 			}
 
-		      for ( i = 0; i < gridsize; i++ )
+		      for ( i = 0; i < nwpv*gridsize; i++ )
 			if ( !DBL_IS_EQUAL(field.ptr[i], vars1[varID][levelID].missval) )
 			  samp1[varID][levelID].ptr[i]++;
 		    }
 
-		  if ( operfunc == func_std || operfunc == func_var )
+		  if ( lvarstd )
 		    {
 		      farsumq(&vars2[varID][levelID], field);
 		      farsum(&vars1[varID][levelID], field);
@@ -300,7 +333,7 @@ void *Timstat(void *argument)
 		}
 	    }
 
-	  if ( nsets == 0 && (operfunc == func_std || operfunc == func_var) )
+	  if ( nsets == 0 && lvarstd )
 	    for ( varID = 0; varID < nvars; varID++ )
 	      {
 		if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -317,7 +350,7 @@ void *Timstat(void *argument)
 
       if ( nrecs == 0 && nsets == 0 ) break;
 
-      if ( operfunc == func_mean || operfunc == func_avg )
+      if ( lmean )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -330,7 +363,7 @@ void *Timstat(void *argument)
 		  fardiv(&vars1[varID][levelID], samp1[varID][levelID]);
 	      }
 	  }
-      else if ( operfunc == func_std || operfunc == func_var )
+      else if ( lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -339,18 +372,17 @@ void *Timstat(void *argument)
 	      {
 		if ( samp1[varID][levelID].ptr == NULL )
 		  {
-		    if ( operfunc == func_std )
-		      farcstd(&vars1[varID][levelID], vars2[varID][levelID], 1.0/nsets);
+		    if ( lstd )
+		      farcstdx(&vars1[varID][levelID], vars2[varID][levelID], nsets, divisor);
 		    else
-		      farcvar(&vars1[varID][levelID], vars2[varID][levelID], 1.0/nsets);
+		      farcvarx(&vars1[varID][levelID], vars2[varID][levelID], nsets, divisor);
 		  }
 		else
 		  {
-		    farinv(&samp1[varID][levelID]);
-		    if ( operfunc == func_std )
-		      farstd(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID]);
+		    if ( lstd )
+		      farstdx(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID], divisor);
 		    else
-		      farvar(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID]);
+		      farvarx(&vars1[varID][levelID], vars2[varID][levelID], samp1[varID][levelID], divisor);
 		  }
 	      }
 	  }
@@ -366,7 +398,8 @@ void *Timstat(void *argument)
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
-	    gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+	    nwpv     = vars1[varID][levelID].nwpv;
+	    gridsize = gridInqSize(vars1[varID][levelID].grid);
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
 	      {
@@ -374,7 +407,7 @@ void *Timstat(void *argument)
 		if ( samp1[varID][levelID].ptr )
 		  {
 		    int irun = 0;
-		    for ( i = 0; i < gridsize; ++i )
+		    for ( i = 0; i < nwpv*gridsize; ++i )
 		      {
 			if ( (samp1[varID][levelID].ptr[i] / nsets) < vfrac )
 			  {
@@ -386,7 +419,7 @@ void *Timstat(void *argument)
 		    if ( irun )
 		      {
 			nmiss = 0;
-			for ( i = 0; i < gridsize; ++i )
+			for ( i = 0; i < nwpv*gridsize; ++i )
 			  if ( DBL_IS_EQUAL(vars1[varID][levelID].ptr[i], missval) ) nmiss++;
 			vars1[varID][levelID].nmiss = nmiss;
 		      }
@@ -441,8 +474,7 @@ void *Timstat(void *argument)
 
   field_free(vars1, vlistID1);
   field_free(samp1, vlistID1);
-  if ( operfunc == func_std || operfunc == func_var )
-    field_free(vars2, vlistID1);
+  if ( lvarstd ) field_free(vars2, vlistID1);
 
   if ( cdoDiag ) streamClose(streamID3);
   streamClose(streamID2);

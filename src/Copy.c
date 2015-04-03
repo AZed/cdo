@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -30,14 +30,14 @@
 
 void *Copy(void *argument)
 {
-  int COPY, SELALL, SZIP;
+  int SELALL, SZIP;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs;
   int tsID1, tsID2, recID, varID, levelID;
   int lcopy = FALSE;
   int gridsize;
-  int vlistID1, vlistID2 = -1;
+  int vlistID1, vlistID2 = CDI_UNDEFID;
   int nmiss;
   int streamCnt, nfiles, indf;
   int taxisID1, taxisID2 = CDI_UNDEFID;
@@ -47,7 +47,7 @@ void *Copy(void *argument)
 
   cdoInitialize(argument);
 
-  COPY    = cdoOperatorAdd("copy",   0, 0, NULL);
+            cdoOperatorAdd("copy",   0, 0, NULL);
   SELALL  = cdoOperatorAdd("selall", 0, 0, NULL);
   SZIP    = cdoOperatorAdd("szip",   0, 0, NULL);
 
@@ -67,7 +67,7 @@ void *Copy(void *argument)
   tsID2 = 0;
   for ( indf = 0; indf < nfiles; indf++ )
     {
-      if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
+      if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf)->args);
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
 
@@ -166,6 +166,7 @@ void *Copy(void *argument)
   streamClose(streamID2);
 
   if ( array ) free(array);
+  if ( vlistID2 != CDI_UNDEFID ) vlistDestroy(vlistID2);
 
   cdoFinish();
 

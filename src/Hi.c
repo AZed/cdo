@@ -120,6 +120,9 @@ void *Hi(void *argument)
   
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field1);
+  field_init(&field2);
+  field_init(&field3);
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
   field3.ptr = (double *) malloc(gridsize*sizeof(double));
@@ -173,8 +176,7 @@ void *Hi(void *argument)
 	  if ( varID1 != varID2 || varID1 != varID3 || levelID1 != levelID2 || levelID1 != levelID3 )
 	    cdoAbort("Input streams have different structure!");
 	    
-          if ( varID1 != FIRST_VAR )
-            continue;
+          if ( varID1 != FIRST_VAR ) continue;
             
 	  field1.grid    = vlistInqVarGrid(vlistID1, varID1);
 	  field1.missval = vlistInqVarMissval(vlistID1, varID1);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,10 +27,11 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "util.h"
 
 
 static
-void printAtts(int vlistID, int varID)
+void printAtts(FILE *fp, int vlistID, int varID)
 {
 #define MAXATT 8192
   int natts, ia;
@@ -50,33 +51,198 @@ void printAtts(int vlistID, int varID)
 	{
 	  if ( attlen > MAXATT ) attlen = MAXATT;
 	  vlistInqAttInt(vlistID, varID, attname, attlen, attint);
-	  fprintf(stdout, "  %s=", attname);
+	  fprintf(fp, "  %s=", attname);
 	  for ( i = 0; i < attlen; ++i)
 	    {
-	      if ( i > 0 ) fprintf(stdout, ", ");
-	      fprintf(stdout, "%d", attint[i]);
+	      if ( i > 0 ) fprintf(fp, ", ");
+	      fprintf(fp, "%d", attint[i]);
 	    }
-	  fprintf(stdout, "\n");
+	  fprintf(fp, "\n");
 	}
       else if ( atttype == DATATYPE_FLT )
 	{
 	  if ( attlen > MAXATT ) attlen = MAXATT;
 	  vlistInqAttFlt(vlistID, varID, attname, MAXATT, attflt);
-	  fprintf(stdout, "  %s=", attname);
+	  fprintf(fp, "  %s=", attname);
 	  for ( i = 0; i < attlen; ++i)
 	    {
-	      if ( i > 0 ) fprintf(stdout, ", ");
-	      fprintf(stdout, "%g", attflt[i]);
+	      if ( i > 0 ) fprintf(fp, ", ");
+	      fprintf(fp, "%g", attflt[i]);
 	    }
-	  fprintf(stdout, "\n");
+	  fprintf(fp, "\n");
 	}
       else if ( atttype == DATATYPE_TXT )
 	{
 	  vlistInqAttTxt(vlistID, varID, attname, sizeof(atttxt), atttxt);
 	  atttxt[attlen] = 0;
-	  fprintf(stdout, "  %s=\"%s\"\n", attname, atttxt);
+	  fprintf(fp, "  %s=\"%s\"\n", attname, atttxt);
 	}
     }
+}
+
+static
+void partab(FILE *fp, int vlistID, int option)
+{
+  int varID, code, tabnum, tableID, datatype = -1;
+  char pstr[32];
+  char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varstdname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
+  int natts;
+  int nvars;
+  int chunktype;
+  double missval;
+      
+  nvars  = vlistNvars(vlistID);
+
+  if ( option == 2 )
+    {
+      vlistInqNatts(vlistID, CDI_GLOBAL, &natts);
+      if ( natts > 0 )
+	{
+	  fprintf(fp, "&parameter\n");
+	  fprintf(fp, "  name=_GLOBAL_\n");
+	  printAtts(fp, vlistID, CDI_GLOBAL);
+	  fprintf(fp, "/\n");
+	}
+    }
+
+  if ( nvars > 1 )
+    {
+      datatype = vlistInqVarDatatype(vlistID, 0);
+      for ( varID = 1; varID < nvars; varID++ )
+	{
+	  if ( datatype != vlistInqVarDatatype(vlistID, varID) )
+	    {
+	      datatype = -1;
+	      break;
+	    }
+	}
+
+      if ( datatype != -1 )
+	{
+	  fprintf(fp, "&parameter\n");
+	  fprintf(fp, "  name=_default_\n");
+	  if ( datatype2str(datatype, pstr) == 0 )
+	    fprintf(fp, "  datatype=%s\n", pstr);
+	  fprintf(fp, "/\n");
+	}
+    }
+
+  for ( varID = 0; varID < nvars; varID++ )
+    {
+      fprintf(fp, "&parameter\n");
+      
+      varname[0]     = 0;
+      varlongname[0] = 0;
+      varunits[0]    = 0;
+      code     = vlistInqVarCode(vlistID, varID);
+      tableID  = vlistInqVarTable(vlistID, varID);
+      tabnum   = tableInqNum(tableID);
+      missval  = vlistInqVarMissval(vlistID, varID);
+      vlistInqVarName(vlistID, varID, varname);
+      /* printf("1>%s<\n", varname); */
+      vlistInqVarStdname(vlistID, varID, varstdname);
+      /* printf("2>%s<\n", varname); */
+      vlistInqVarLongname(vlistID, varID, varlongname);
+      /* printf("3>%s<\n", varname); */
+      vlistInqVarUnits(vlistID, varID, varunits);
+            
+      fprintf(fp, "  name=%s\n", varname);
+      if ( code   > 0 ) fprintf(fp, "  code=%d\n", code);
+      if ( tabnum > 0 ) fprintf(fp, "  table=%d\n", tabnum);
+      if ( strlen(varstdname) )
+	fprintf(fp, "  standard_name=%s\n", varstdname);
+      if ( strlen(varlongname) )
+	fprintf(fp, "  long_name=\"%s\"\n", varlongname);
+      if ( strlen(varunits) )
+	fprintf(fp, "  units=\"%s\"\n", varunits);
+      
+      if ( datatype == -1 )
+	if ( datatype2str(vlistInqVarDatatype(vlistID, varID), pstr) == 0 )
+	  fprintf(fp, "  datatype=%s\n", pstr);
+
+      chunktype = vlistInqVarChunkType(vlistID, varID);
+      if ( chunktype == CHUNK_AUTO )
+	fprintf(fp, "  chunktype=auto\n");
+      else if ( chunktype == CHUNK_GRID )
+	fprintf(fp, "  chunktype=grid\n");
+      if ( chunktype == CHUNK_LINES )
+	fprintf(fp, "  chunktype=lines\n");
+	
+      
+      if ( option == 2 ) printAtts(fp, vlistID, varID);
+      if ( option == 2 ) 
+	fprintf(fp, "  missing_value=%g\n", missval);
+      
+      fprintf(fp, "/\n");
+    }   
+}
+
+static
+void filedes(int streamID)
+{
+  int filetype;
+
+  printf("\n");
+  filetype = streamInqFiletype(streamID);
+  switch ( filetype )
+    {
+    case FILETYPE_GRB:
+      printf("  GRIB data\n");
+      break;
+    case FILETYPE_NC:
+      printf("  netCDF data\n");
+      break;
+    case FILETYPE_NC2:
+      printf("  netCDF2 data\n");
+      break;
+    case FILETYPE_NC4:
+      printf("  netCDF4 data\n");
+      break;
+    case FILETYPE_NC4C:
+      printf("  netCDF4 classic data\n");
+      break;
+    case FILETYPE_SRV:
+      printf("  SERVICE data\n");
+      switch ( streamInqByteorder(streamID) )
+	{
+	case CDI_BIGENDIAN:
+	  printf("  byteorder is BIGENDIAN\n"); break;
+	case CDI_LITTLEENDIAN:
+	  printf("  byteorder is LITTLEENDIAN\n"); break;
+	default:
+	  printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
+	}
+      break;
+    case FILETYPE_EXT:
+      printf("  EXTRA data\n");
+      switch ( streamInqByteorder(streamID) )
+	{
+	case CDI_BIGENDIAN:
+	  printf("  byteorder is BIGENDIAN\n"); break;
+	case CDI_LITTLEENDIAN:
+	  printf("  byteorder is LITTLEENDIAN\n"); break;
+	default:
+	  printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
+	}
+      break;
+    case FILETYPE_IEG:
+      printf("  IEG data\n");
+      switch ( streamInqByteorder(streamID) )
+	{
+	case CDI_BIGENDIAN:
+	  printf("  byteorder is BIGENDIAN\n"); break;
+	case CDI_LITTLEENDIAN:
+	  printf("  byteorder is LITTLEENDIAN\n"); break;
+	default:
+	  printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
+	}
+      break;
+    default:
+      printf("  unsupported filetype %d\n" , filetype);
+      break;
+    }
+  
+  printf("\n");
 }
 
 
@@ -202,135 +368,15 @@ void *Filedes(void *argument)
     }
   else if ( operatorID == PARTAB || operatorID == PARTAB2 )
     {
-      int varID, code, tabnum, tableID, prec;
-      char pstr[4];
-      char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varstdname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
-      int natts;
+      int option = 1;
+
+      if ( operatorID == PARTAB2 ) option = 2;
       
-      if (  operatorID == PARTAB2 )
-	{
-	  vlistInqNatts(vlistID, CDI_GLOBAL, &natts);
-	  if ( natts > 0 )
-	    {
-	      fprintf(stdout, "&PARAMETER\n");
-	      fprintf(stdout, "  NAME=_GLOBAL_\n");
-	      printAtts(vlistID, CDI_GLOBAL);
-	      fprintf(stdout, "/\n");
-	    }
-	}
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  fprintf(stdout, "&PARAMETER\n");
-
-	  varname[0]     = 0;
-	  varlongname[0] = 0;
-	  varunits[0]    = 0;
-	  code     = vlistInqVarCode(vlistID, varID);
-	  tableID  = vlistInqVarTable(vlistID, varID);
-	  tabnum   = tableInqNum(tableID);
-	  vlistInqVarName(vlistID, varID, varname);
-	  /* printf("1>%s<\n", varname); */
-	  vlistInqVarStdname(vlistID, varID, varstdname);
-	  /* printf("2>%s<\n", varname); */
-	  vlistInqVarLongname(vlistID, varID, varlongname);
-	  /* printf("3>%s<\n", varname); */
-	  vlistInqVarUnits(vlistID, varID, varunits);
-
-	  prec = vlistInqVarDatatype(vlistID, varID);
-	  if      ( prec == DATATYPE_PACK   ) strcpy(pstr, "P0");
-	  else if ( prec > 0 && prec <= 32  ) sprintf(pstr, "P%d", prec);
-	  else if ( prec == DATATYPE_FLT32  ) strcpy(pstr, "F32");
-	  else if ( prec == DATATYPE_FLT64  ) strcpy(pstr, "F64");
-	  else if ( prec == DATATYPE_INT8   ) strcpy(pstr, "I8");
-	  else if ( prec == DATATYPE_INT16  ) strcpy(pstr, "I16");
-	  else if ( prec == DATATYPE_INT32  ) strcpy(pstr, "I32");
-	  else if ( prec == DATATYPE_UINT8  ) strcpy(pstr, "U8");
-	  else if ( prec == DATATYPE_UINT16 ) strcpy(pstr, "U16");
-	  else if ( prec == DATATYPE_UINT32 ) strcpy(pstr, "U32");
-	  else                                strcpy(pstr, "-1");
-
-	  if ( code   > 0 ) fprintf(stdout, "  CODE=%d\n", code);
-	  if ( tabnum > 0 ) fprintf(stdout, "  TABLE=%d\n", tabnum);
-	  fprintf(stdout, "  NAME=%s\n", varname);
-	  if ( strlen(varstdname) )
-	    fprintf(stdout, "  STANDARD_NAME=%s\n", varstdname);
-	  if ( strlen(varlongname) )
-	    fprintf(stdout, "  LONG_NAME=\"%s\"\n", varlongname);
-	  if ( strlen(varunits) )
-	    fprintf(stdout, "  UNITS=\"%s\"\n", varunits);
-
-	  /* if ( pstr ) fprintf(stdout, "  DATATYPE=%s\n", pstr); */
-
-	  if ( operatorID == PARTAB2 ) printAtts(vlistID, varID);
-
-	  fprintf(stdout, "/\n");
-	}   
+      partab(stdout, vlistID, option);
     }
   else if ( operatorID == FILEDES )
     {
-      int filetype;
-
-      printf("\n");
-      filetype = streamInqFiletype(streamID);
-      switch ( filetype )
-	{
-	case FILETYPE_GRB:
-	  printf("  GRIB data\n");
-	  break;
-	case FILETYPE_NC:
-	  printf("  netCDF data\n");
-	  break;
-	case FILETYPE_NC2:
-	  printf("  netCDF2 data\n");
-	  break;
-	case FILETYPE_NC4:
-	  printf("  netCDF4 data\n");
-	  break;
-	case FILETYPE_NC4C:
-	  printf("  netCDF4 classic data\n");
-	  break;
-	case FILETYPE_SRV:
-	  printf("  SERVICE data\n");
-	  switch ( streamInqByteorder(streamID) )
-	    {
-	    case CDI_BIGENDIAN:
-	      printf("  byteorder is BIGENDIAN\n"); break;
-	    case CDI_LITTLEENDIAN:
-	      printf("  byteorder is LITTLEENDIAN\n"); break;
-	    default:
-	      printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
-	    }
-	   break;
-	case FILETYPE_EXT:
-	  printf("  EXTRA data\n");
-	  switch ( streamInqByteorder(streamID) )
-	    {
-	    case CDI_BIGENDIAN:
-	      printf("  byteorder is BIGENDIAN\n"); break;
-	    case CDI_LITTLEENDIAN:
-	      printf("  byteorder is LITTLEENDIAN\n"); break;
-	    default:
-	      printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
-	    }
-	   break;
-	case FILETYPE_IEG:
-	  printf("  IEG data\n");
-	  switch ( streamInqByteorder(streamID) )
-	    {
-	    case CDI_BIGENDIAN:
-	      printf("  byteorder is BIGENDIAN\n"); break;
-	    case CDI_LITTLEENDIAN:
-	      printf("  byteorder is LITTLEENDIAN\n"); break;
-	    default:
-	      printf("  byteorder %d undefined\n", streamInqByteorder(streamID)); break;
-	    }
-	   break;
-	default:
-	  printf("  unsupported filetype %d\n" , filetype);
-	}
-
-      printf("\n");
+      filedes(streamID);
     }
 
   streamClose(streamID);

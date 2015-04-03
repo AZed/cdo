@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -46,6 +46,7 @@ void *Intyear(void *argument)
   int nchars;
   char filesuffix[32];
   char filename[8192];
+  const char *refname;
   double fac1, fac2;
   double missval1, missval2;
   double *array1, *array2, *array3;
@@ -81,19 +82,22 @@ void *Intyear(void *argument)
   if ( taxisHasBounds(taxisID3) ) taxisDeleteBounds(taxisID3);
   vlistDefTaxis(vlistID3, taxisID3);
 
-  strcpy(filename, cdoStreamName(2));
+  strcpy(filename, cdoStreamName(2)->args);
   nchars = strlen(filename);
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   for ( iy = 0; iy < nyears; iy++ )
     {
       sprintf(filename+nchars, "%04d", iyears[iy]);
       if ( filesuffix[0] )
 	sprintf(filename+nchars+4, "%s", filesuffix);
-      /*	  printf("filename %s\n", filename); */
-      streamIDs[iy] = streamOpenWrite(filename, cdoFiletype());
+
+      argument_t *fileargument = file_argument_new(filename);
+      streamIDs[iy] = streamOpenWrite(fileargument, cdoFiletype());
+      file_argument_free(fileargument);
 
       streamDefVlist(streamIDs[iy], vlistID3);
     }

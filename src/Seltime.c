@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -215,7 +215,6 @@ void *Seltime(void *argument)
   int nconst, lconstout = FALSE;
   int process_nts1 = FALSE, process_nts2 = FALSE;
   int *vdate_list = NULL, *vtime_list = NULL;
-  double missval;
   double *single;
   field_t ***vars = NULL;
 
@@ -319,7 +318,9 @@ void *Seltime(void *argument)
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
-  if ( nsel == 1 && operfunc == func_step )  vlistDefNtsteps(vlistID2, 1);
+
+  if ( nsel == 1 && operfunc == func_step )  vlistDefNtsteps(vlistID2,  1);
+  else                                       vlistDefNtsteps(vlistID2, -1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
@@ -355,24 +356,19 @@ void *Seltime(void *argument)
 
       for ( tsID = 0; tsID < nts1; tsID++ )
 	{
-	  vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
+	  vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      if ( lnts1 || (vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT) )
 		{
 		  gridID  = vlistInqVarGrid(vlistID1, varID);
-		  missval = vlistInqVarMissval(vlistID1, varID);
 		  nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		  gridsize = gridInqSize(gridID);
 		  
-		  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
-
 		  for ( levelID = 0; levelID < nlevel; levelID++ )
 		    {
-		      vars[tsID][varID][levelID].grid    = gridID;
-		      vars[tsID][varID][levelID].missval = missval;
-		      vars[tsID][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
+		      vars[tsID][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
 		    }
 		}
 	    }
@@ -604,9 +600,30 @@ void *Seltime(void *argument)
     {
       if ( selfound[isel] == FALSE )
 	{
+	 
+	  int isel2;
+	  int lcont = FALSE;
+	  for ( isel2 = isel+1; isel2 < nsel; isel2++ )
+	    if ( selfound[isel2] == TRUE ) break;
+	  if ( isel2 == nsel && (nsel-isel) > 1 ) lcont = TRUE;
+
 	  if ( operatorID == SELTIMESTEP )
 	    {
-	      cdoWarning("Time step %d not found!", intarr[isel]);
+	      int lcont2 = FALSE;
+	      if ( lcont )
+		{    
+		  for ( isel2 = isel+1; isel2 < nsel; isel2++ )
+		    if ( intarr[isel2-1] != intarr[isel2]-1 ) break;
+		  if ( isel2 == nsel ) lcont2 = TRUE;
+		}
+
+	      if ( lcont2 )
+		{
+		  cdoWarning("Time steps %d-%d not found!", intarr[isel], intarr[nsel-1]);
+		  break;
+		}
+	      else
+		cdoWarning("Time step %d not found!", intarr[isel]);
 	    }
 	  else if ( operatorID == SELDATE )
 	    {
@@ -647,22 +664,7 @@ void *Seltime(void *argument)
 
   if ( lnts1 || nconst )
     {
-      for ( tsID = 0; tsID < nts1; tsID++ )
-	{
-	  for ( varID = 0; varID < nvars; varID++ )
-	    {
-	      if ( lnts1 || (vlistInqVarTsteptype(vlistID2, varID) == TSTEP_CONSTANT) )
-		{
-		  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
-		  for ( levelID = 0; levelID < nlevel; levelID++ )
-		    if ( vars[tsID][varID][levelID].ptr )
-		      free(vars[tsID][varID][levelID].ptr);
-
-		  free(vars[tsID][varID]);
-		}
-	    }
-	  free(vars[tsID]);
-	}
+      for ( tsID = 0; tsID < nts1; tsID++ ) field_free(vars[tsID], vlistID2);
 
       if ( vars  ) free(vars);
       if ( vdate_list ) free(vdate_list);

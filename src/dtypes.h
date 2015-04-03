@@ -6,7 +6,7 @@
 
 /* INT32 */
 
-#if ! defined (INT_MAX)
+#if ! defined(INT_MAX)
 #  error INT_MAX undefined
 #endif
 
@@ -19,7 +19,7 @@
 
 /* INT64 */
 
-#if ! defined (LONG_MAX)
+#if ! defined(LONG_MAX)
 #  error LONG_MAX undefined
 #endif
 

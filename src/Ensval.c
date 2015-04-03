@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -43,20 +43,19 @@ enum RESTYPE_CRPS { CRPS_RES,CRPS_RELI,CRPS_POT };
 void *Ensval(void *argument)
 {
   int operatorID;
-  int operfunc, datafunc;
+  int operfunc;
   int i,k;
-  int nvars,nrecs = 0, nrecs0, nmiss, nens, nfiles,nlevs,valcount, nostreams = 0, ngrids;
+  int nvars,nrecs = 0, nrecs0, nmiss, nens, nfiles, nostreams = 0, ngrids;
   int levelID, varID, recID, tsID;
   int gridsize = 0;
   int gridID = -1, gridID2;
   int have_miss = 0;
-  int stream, streamID = 0, *streamID2;
+  int stream, streamID1 = -1, streamID = 0, *streamID2;
   int vlistID, vlistID1, *vlistID2;
   int taxisID1, *taxisID2;
   int zaxisID1, *zaxisID2;
-  int *varID2;
-  int xsize,ysize;
-  double missval;
+  //int xsize,ysize;
+  double missval = 0;
   double *alpha, *beta, *alpha_weights, *beta_weights;
   double *brs_g, *brs_o, *brs_g_weights, *brs_o_weights;
   double *r;                      // Pointer to hold results for single time step
@@ -74,6 +73,7 @@ void *Ensval(void *argument)
   char *ofilename;
   char file_suffix[32];
   char type_suffix[10];
+  const char *refname;
 
   typedef struct
   {
@@ -86,7 +86,6 @@ void *Ensval(void *argument)
 
   // INITIALIZE POINTERS
   streamID2 = NULL;
-  varID2 = NULL;
   alpha = NULL; beta = NULL; alpha_weights = NULL; beta_weights = NULL; 
   brs_g = NULL; brs_o = NULL; brs_g_weights = NULL; brs_o_weights = NULL;
   r = NULL;
@@ -102,7 +101,6 @@ void *Ensval(void *argument)
   
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
-  datafunc = cdoOperatorF2(operatorID);
 
   nfiles = cdoStreamCnt() - 1;
   nens = nfiles-1;
@@ -149,6 +147,7 @@ void *Ensval(void *argument)
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
       streamID = streamOpenRead(cdoStreamName(fileID));
+      if ( fileID == 0 ) streamID1 = streamID;
 
       vlistID = streamInqVlist(streamID);
       
@@ -171,7 +170,6 @@ void *Ensval(void *argument)
   vlistID1 = ef[0].vlistID;
   taxisID1 = vlistInqTaxis(vlistID1);
   zaxisID1 = vlistInqVarZaxis(vlistID1,0);
-  nlevs    = zaxisInqSize(zaxisID1);
 
   gridID2 = gridCreate(GRID_LONLAT, 1);
   gridDefXsize(gridID2, 1);
@@ -179,44 +177,45 @@ void *Ensval(void *argument)
   gridDefXvals(gridID2, &xval);
   gridDefYvals(gridID2, &yval);
 
-  ofilebase = cdoStreamName(nfiles);
+  ofilebase = cdoStreamName(nfiles)->args;
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   memset(file_suffix, 0, sizeof(file_suffix) );
-  cdoGenFileSuffix(&file_suffix[0], sizeof(file_suffix), 
-		   cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(file_suffix, sizeof(file_suffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   for ( stream = 0; stream < nostreams; stream++ ) {
     int namelen = strlen(ofilebase) 
       + 9  /*type_suffix*/ 
       + 32 /*file_suffix*/
       + 3  /*separating dots and EOS*/;
-    int ntype = 0;
 
     switch ( operfunc ) {
     case CRPS: switch ( stream ) {
-      case 0: ntype=4; sprintf(type_suffix,"crps");      break;
-      case 1: ntype=9; sprintf(type_suffix,"crps_reli"); break;
-      case 2: ntype=8; sprintf(type_suffix,"crps_pot");  break; } 
+      case 0: sprintf(type_suffix,"crps");      break;
+      case 1: sprintf(type_suffix,"crps_reli"); break;
+      case 2: sprintf(type_suffix,"crps_pot");  break; } 
       break;
     case BRS: switch ( stream ) {
-      case 0: ntype=3; sprintf(type_suffix,"brs");       break;
-      case 1: ntype=8; sprintf(type_suffix,"brs_reli");  break;
-      case 2: ntype=8; sprintf(type_suffix,"brs_reso");  break;
-      case 3: ntype=8; sprintf(type_suffix,"brs_unct");  break; }
+      case 0: sprintf(type_suffix,"brs");       break;
+      case 1: sprintf(type_suffix,"brs_reli");  break;
+      case 2: sprintf(type_suffix,"brs_reso");  break;
+      case 3: sprintf(type_suffix,"brs_unct");  break; }
       break;
     }
 
-    ofilename = (char *) calloc ( namelen, sizeof(char) );
+    ofilename = (char *) calloc(namelen, sizeof(char));
 
-    sprintf(ofilename,"%s.%s%s",ofilebase,type_suffix,file_suffix);
-    fprintf(stderr,"StreamID %i: %s\n",stream,ofilename);
+    sprintf(ofilename, "%s.%s%s", ofilebase, type_suffix, file_suffix);
+    // fprintf(stderr, "StreamID %i: %s\n", stream, ofilename);
 
     if ( !cdoSilentMode && !cdoOverwriteMode )
-      if ( fileExist(ofilename) )
+      if ( fileExists(ofilename) )
 	if ( !userFileOverwrite(ofilename) )
-	    cdoAbort("Outputfile %s already exist!", ofilename);
+	    cdoAbort("Outputfile %s already exists!", ofilename);
 
-    streamID2[stream] = streamOpenWrite(ofilename, cdoFiletype());    
+    argument_t *fileargument = file_argument_new(ofilename);
+    streamID2[stream] = streamOpenWrite(fileargument, cdoFiletype());    
+    file_argument_free(fileargument);
 
     free(ofilename);
 
@@ -225,17 +224,17 @@ void *Ensval(void *argument)
     vlistID2[stream] = vlistDuplicate(vlistID1);
 
     ngrids = vlistNgrids(vlistID2[stream]);
-    fprintf(stderr,"ngrids %i\n",ngrids);
+    //fprintf(stderr,"ngrids %i\n",ngrids);
     for ( i=0; i<ngrids; i++ )
       vlistChangeGridIndex(vlistID2[stream], i, gridID2);
 
     vlistDefTaxis(vlistID2[stream], taxisID2[stream]);
     streamDefVlist(streamID2[stream], vlistID2[stream]);
 
-    vlistCheck = streamInqVlist(streamID2[stream]);
-    gridsizeCheck = vlistGridsizeMax(vlistCheck);
+    // vlistCheck = streamInqVlist(streamID2[stream]);
+    // gridsizeCheck = vlistGridsizeMax(vlistCheck);
 
-    fprintf(stderr,"stream %i vlist %3i gridsize %4i\n",stream,vlistCheck,gridsizeCheck);
+    //fprintf(stderr,"stream %i vlist %3i gridsize %4i\n",stream,vlistCheck,gridsizeCheck);
   }
 
   if ( cdoVerbose ) 
@@ -250,7 +249,7 @@ void *Ensval(void *argument)
 	  streamID = ef[fileID].streamID;
 	  nrecs = streamInqTimestep(streamID, tsID);
 	  if ( nrecs != nrecs0 )
-	    cdoAbort("Number of records changed from %d to %d at time Step", nrecs0, nrecs, tsID);
+	    cdoAbort("Number of records at time step %d of %s and %s differ!", tsID+1, cdoStreamName(0)->args, cdoStreamName(fileID)->args);
 	}
       
       for ( stream = 0; stream < nostreams; stream++ ) {
@@ -281,8 +280,8 @@ void *Ensval(void *argument)
 	      streamReadRecord(streamID, ef[fileID].array, &nmiss);
 	    }
 
-	  xsize = gridInqXsize(gridID);
-	  ysize = gridInqYsize(gridID);
+	  // xsize = gridInqXsize(gridID);
+	  // ysize = gridInqYsize(gridID);
 	  
 	  /*	  if ( xsize > 1 && ysize > 1 )  {
 	    gridWeights(gridID, weights);
@@ -297,7 +296,6 @@ void *Ensval(void *argument)
 	  }
 	  
 	  nmiss = 0;
-	  valcount = 0;
 	  heavyside0 = 0;
 	  heavysideN = 0;
 	  
@@ -344,7 +342,7 @@ void *Ensval(void *argument)
 		}
 	      else if ( operfunc == BRS ) 
 		{
-		  int occ = xa > brs_thresh? 1 : 0;
+		  //  int occ = xa > brs_thresh? 1 : 0;
 
 		  // brs_g[i] - number of enemble members with rank i that forecast event
 		  //          - event: value > brs_thresh
@@ -412,7 +410,7 @@ void *Ensval(void *argument)
 	    // Last Bin
 	    p=1.; g=0.;
 	    o = 1. - heavysideN/gridsize; 
-	    if ( IS_EQUAL(o,1.) ) {
+	    if ( IS_NOT_EQUAL(o,1.) ) {
 	      g = alpha[nens] / (1-o);
 	      
 	      crps_reli    += g * (o-p) * (o-p);

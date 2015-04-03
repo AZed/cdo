@@ -1,4 +1,4 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -13,7 +13,7 @@
 
 #include "cdo.h"
 
-#if  defined  (HAVE_LIBDRMAA)
+#if defined(HAVE_LIBDRMAA)
 #  include "drmaa.h"
 #endif
 
@@ -21,7 +21,7 @@
 
 int ftpget(int flag, const char *url, const char *path, const char *target, const char *source);
 
-#if  defined  (HAVE_LIBDRMAA)
+#if defined(HAVE_LIBDRMAA)
 static drmaa_job_template_t *create_job_template(const char *expname, const char *jobfilename, const char *jobname, const char *tmppath)
 {
   drmaa_job_template_t *job = NULL;
@@ -45,7 +45,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
 
   /* determine hostname */
 
-#if defined (HAVE_GETHOSTNAME)
+#if defined(HAVE_GETHOSTNAME)
   gethostname(host, sizeof(host));  
 #else
   fprintf(stderr, "Function gethostname not available!\n");
@@ -127,7 +127,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
 #endif
 
 
-#if  defined  (HAVE_LIBDRMAA)
+#if defined(HAVE_LIBDRMAA)
 static int drmaa_submit(const char *expname, const char *jobfilename, const char *jobname, const char *tmppath, const char *ftppath)
 {
   char status[DRMAA_ERROR_STRING_BUFFER];
@@ -336,7 +336,7 @@ static int drmaa_submit(const char *expname, const char *jobfilename, const char
 int job_submit(const char *expname, const char *jobfilename, const char *jobname, const char *tmppath, const char *ftppath)
 {
   int status = 0;
-#if  defined  (HAVE_LIBDRMAA)
+#if defined(HAVE_LIBDRMAA)
 
   status = drmaa_submit(expname, jobfilename, jobname, tmppath, ftppath);
 #else
@@ -347,7 +347,7 @@ int job_submit(const char *expname, const char *jobfilename, const char *jobname
 
 
 
-#if  defined  (HAVE_LIBCURL)
+#if defined(HAVE_LIBCURL)
 #  include <curl/curl.h>
 #  include <curl/types.h>
 #  include <curl/easy.h>
@@ -390,7 +390,7 @@ int my_progress_func(int *stdout_is_tty,
 int ftpget(int flag, const char *url, const char *path, const char *target, const char *source)
 {
   int status = 0;
-#if  defined  (HAVE_LIBCURL)
+#if defined(HAVE_LIBCURL)
   CURL *curl;
   CURLcode res;
   struct curl_slist* commands = NULL ;
@@ -510,7 +510,7 @@ int ftpget(int flag, const char *url, const char *path, const char *target, cons
 int ftprmd(const char *url, const char *path)
 {
   int status = 0;
-#if  defined  (HAVE_LIBCURL)
+#if defined(HAVE_LIBCURL)
   CURL *curl;
   CURLcode res;
   struct curl_slist* commands = NULL ;
@@ -600,7 +600,7 @@ void exp_run(int argc, char *argv[], char *cdoExpName)
   size_t len;
   char host[1024];
 
-#if defined (HAVE_GETHOSTNAME)
+#if defined(HAVE_GETHOSTNAME)
   gethostname(host, sizeof(host));
 #else
   fprintf(stderr, "Function gethostname not available!\n");

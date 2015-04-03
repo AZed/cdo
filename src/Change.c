@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -39,7 +39,7 @@ int stringToParam(const char *paramstr);
 
 void *Change(void *argument)
 {
-  int CHCODE, CHTABNUM, CHPARAM, CHNAME, CHLEVEL, CHLEVELC, CHLEVELV, CHLTYPE;  
+  int CHCODE, CHTABNUM, CHPARAM, CHNAME, CHUNIT, CHLEVEL, CHLEVELC, CHLEVELV, CHLTYPE;  
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs, nvars;
@@ -69,6 +69,7 @@ void *Change(void *argument)
   CHTABNUM = cdoOperatorAdd("chtabnum", 0, 0, "pairs of old and new GRIB1 table numbers");
   CHPARAM  = cdoOperatorAdd("chparam",  0, 0, "pairs of old and new parameter identifiers");
   CHNAME   = cdoOperatorAdd("chname",   0, 0, "pairs of old and new variable names");
+  CHUNIT   = cdoOperatorAdd("chunit",   0, 0, "pairs of old and new variable units");
   CHLEVEL  = cdoOperatorAdd("chlevel",  0, 0, "pairs of old and new levels");
   CHLEVELC = cdoOperatorAdd("chlevelc", 0, 0, "code number, old and new level");
   CHLEVELV = cdoOperatorAdd("chlevelv", 0, 0, "variable name, old and new level");
@@ -86,7 +87,7 @@ void *Change(void *argument)
       for ( i = 0; i < nch; i++ )
 	chints[i] = atoi(operatorArgv()[i]);
     }
-  else if ( operatorID == CHPARAM || operatorID == CHNAME )
+  else if ( operatorID == CHPARAM || operatorID == CHNAME || operatorID == CHUNIT )
     {
       if ( nch%2 ) cdoAbort("Odd number of input arguments!");
       for ( i = 0; i < nch; i++ )
@@ -182,6 +183,18 @@ void *Change(void *argument)
 	  for ( i = 0; i < nch; i += 2 )
 	    if ( strcmp(varname, chnames[i]) == 0 )
 	      vlistDefVarName(vlistID2, varID, chnames[i+1]);
+	}
+    }
+  else if ( operatorID == CHUNIT )
+    {
+      nvars = vlistNvars(vlistID2);
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+
+	  vlistInqVarUnits(vlistID2, varID, varname);
+	  for ( i = 0; i < nch; i += 2 )
+	    if ( strcmp(varname, chnames[i]) == 0 )
+	      vlistDefVarUnits(vlistID2, varID, chnames[i+1]);
 	}
     }
   else if ( operatorID == CHLEVEL )

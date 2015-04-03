@@ -44,9 +44,8 @@
   2009-01-11 Uwe Schulzweida: OpenMP parallelization
  */
 
-//#define GRID_SEARCH_TEST
 
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
@@ -71,8 +70,6 @@ struct grid_layer
   int *grid2_link;
   struct grid_layer *next;
 };
-
-enum TPARMODE { parallel, serial };
 
 typedef struct grid_layer grid_layer_t;
 
@@ -433,7 +430,7 @@ void boundbox_from_corners(long size, long nc, const double *restrict corner_lon
   long i4, inc, i, j;
   restr_t clon, clat;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none)        \
   shared(bound_box, corner_lat, corner_lon, nc, size)	\
   private(i4, inc, i, j, clon, clat)
@@ -468,7 +465,7 @@ void boundbox_from_center(int lonIsCyclic, long size, long nx, long ny, const do
   long n_add, e_add, ne_add;
   restr_t tmp_lats[4], tmp_lons[4];  /* temps for computing bounding boxes */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none)        \
   shared(lonIsCyclic, size, nx, ny, center_lon, center_lat, bound_box)	\
   private(n4, i, j, k, n, ip1, jp1, n_add, e_add, ne_add, tmp_lats, tmp_lons)
@@ -532,27 +529,13 @@ void boundbox_from_center(int lonIsCyclic, long size, long nx, long ny, const do
     }
 }
 
-static
-void scale2(long nvals, double scalefactor, double *restrict vec1, double *restrict vec2)
-{
-  long n;
-
-#if defined (_OPENMP)
-#pragma omp parallel for default(none) shared(nvals, scalefactor, vec1, vec2)
-#endif
-  for ( n = 0; n < nvals; ++n )
-    {
-      vec1[n] *= scalefactor;
-      vec2[n] *= scalefactor;
-    }
-}
 
 static
 void check_lon_range(long nlons, double *lons)
 {
   long n;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nlons, lons)
 #endif
   for ( n = 0; n < nlons; ++n )
@@ -567,7 +550,7 @@ void check_lat_range(long nlats, double *lats)
 {
   long n;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nlats, lats)
 #endif
   for ( n = 0; n < nlats; ++n )
@@ -582,7 +565,7 @@ void check_lon_boundbox_range(long nlons, restr_t *bound_box)
 {
   long n, n4;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nlons, bound_box) private(n4)
 #endif
   for ( n = 0; n < nlons; ++n )
@@ -601,7 +584,7 @@ void check_lat_boundbox_range(long nlats, restr_t *restrict bound_box, double *r
 {
   long n, n4;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nlats, bound_box, lats) private(n4)
 #endif
   for ( n = 0; n < nlats; ++n )
@@ -671,7 +654,7 @@ int expand_curvilinear_grid(int gridID)
   int gridIDnew;
   long gridsize, gridsize_new;
   long nx, ny, nxp4, nyp4;
-  long i,j;
+  long i, j;
   double *xvals, *yvals;
 
   gridsize = gridInqSize(gridID);
@@ -767,8 +750,12 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
   if ( cdoVerbose )
     cdoPrint("Using %d latitude bins to restrict search.", nbins);
 
-  rg->bin_lats  = (restr_t *) realloc(rg->bin_lats, 2*nbins*sizeof(restr_t));
-  rg->bin_lons  = (restr_t *) realloc(rg->bin_lons, 2*nbins*sizeof(restr_t));
+  if ( nbins > 0 )
+    {
+      rg->bin_lats  = (restr_t *) realloc(rg->bin_lats, 2*nbins*sizeof(restr_t));
+      rg->bin_lons  = (restr_t *) realloc(rg->bin_lons, 2*nbins*sizeof(restr_t));
+    }
+
   for ( n = 0; n < nbins; ++n )
     {
       n2 = n<<1;
@@ -778,7 +765,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
       rg->bin_lons[n2+1] = RESTR_SCALE(PI2);
     }
 
-  rg->bin_addr1 = (int *) realloc(rg->bin_addr1, 2*nbins*sizeof(int));
+  if ( nbins > 0 ) rg->bin_addr1 = (int *) realloc(rg->bin_addr1, 2*nbins*sizeof(int));
   for ( n = 0; n < nbins; ++n )
     {
       n2 = n<<1;
@@ -786,7 +773,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
       rg->bin_addr1[n2+1] = 0;
     }
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   private(n, n2, nele4)		       \
   shared(grid1_size, nbins, rg)
@@ -800,7 +787,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
 	  if ( rg->grid1_bound_box[nele4  ] <= rg->bin_lats[n2+1] &&
 	       rg->grid1_bound_box[nele4+1] >= rg->bin_lats[n2  ] )
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      {
@@ -813,7 +800,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
 
   if ( map_type == MAP_TYPE_CONSERV )
     {
-      rg->bin_addr2 = (int *) realloc(rg->bin_addr2, 2*nbins*sizeof(int));
+      if ( nbins > 0 ) rg->bin_addr2 = (int *) realloc(rg->bin_addr2, 2*nbins*sizeof(int));
       for ( n = 0; n < nbins; ++n )
 	{
 	  n2 = n<<1;
@@ -821,7 +808,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
 	  rg->bin_addr2[n2+1] = 0;
 	}
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   private(n, n2, nele4)		       \
   shared(grid2_size, nbins, rg)
@@ -835,7 +822,7 @@ void calc_lat_bins(remapgrid_t *rg, int map_type)
 	      if ( rg->grid2_bound_box[nele4  ] <= rg->bin_lats[n2+1] &&
 		   rg->grid2_bound_box[nele4+1] >= rg->bin_lats[n2  ] )
 		{
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 		  {
@@ -1000,16 +987,28 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
       rg->gridID1 = gridID1 = expand_lonlat_grid(gridID1);
     }
 
-  if ( gridInqType(rg->gridID1) == GRID_REFERENCE )
+  if ( gridInqType(gridID1) == GRID_UNSTRUCTURED )
     {
-      rg->gridID1 = gridID1 = referenceToGrid(gridID1);
-      if ( gridID1 == -1 ) cdoAbort("grid1 reference not found!");
+      if ( gridInqYvals(gridID1, NULL) == 0 || gridInqXvals(gridID1, NULL) == 0 )
+	{
+	  if ( gridInqNumber(gridID1) > 0 )
+	    {
+	      rg->gridID1 = gridID1 = referenceToGrid(gridID1);
+	      if ( gridID1 == -1 ) cdoAbort("Reference to source grid not found!");
+	    }
+	}
     }
 
-  if ( gridInqType(rg->gridID2) == GRID_REFERENCE )
+  if ( gridInqType(gridID2) == GRID_UNSTRUCTURED )
     {
-      rg->gridID2 = gridID2 = referenceToGrid(gridID2);
-      if ( gridID2 == -1 ) cdoAbort("grid2 reference not found!");
+      if ( gridInqYvals(gridID2, NULL) == 0 || gridInqXvals(gridID2, NULL) == 0 )
+	{
+	  if ( gridInqNumber(gridID2) > 0 )
+	    {
+	      rg->gridID2 = gridID2 = referenceToGrid(gridID2);
+	      if ( gridID2 == -1 ) cdoAbort("Reference to target grid not found!");
+	    }
+	}
     }
 
   if ( gridInqSize(rg->gridID1) > 1 && 
@@ -1131,7 +1130,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 
   /* Initialize logical mask */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(grid1_size, rg)
 #endif
   for ( i = 0; i < grid1_size; ++i ) rg->grid1_mask[i] = TRUE;
@@ -1142,21 +1141,13 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 
   gridInqYunits(gridID1, units);
 
-  if ( memcmp(units, "degree", 6) == 0 )
+  grid_to_radian(units, rg->grid1_size, rg->grid1_center_lon, "grid1 center lon"); 
+  grid_to_radian(units, rg->grid1_size, rg->grid1_center_lat, "grid1 center lat"); 
+  /* Note: using units from latitude instead from bounds */
+  if ( rg->grid1_corners && rg->lneed_grid1_corners )
     {
-      scale2(rg->grid1_size, DEG2RAD, rg->grid1_center_lat, rg->grid1_center_lon);
-
-      /* Note: using units from latitude instead from bounds */
-      if ( rg->grid1_corners && rg->lneed_grid1_corners )
-	scale2(rg->grid1_corners*rg->grid1_size, DEG2RAD, rg->grid1_corner_lat, rg->grid1_corner_lon);
-    }
-  else if ( memcmp(units, "radian", 6) == 0 )
-    {
-      /* No conversion necessary */
-    }
-  else
-    {
-      cdoWarning("Unknown units supplied for grid1 center lat/lon: proceeding assuming radians");
+      grid_to_radian(units, rg->grid1_corners*rg->grid1_size, rg->grid1_corner_lon, "grid1 corner lon"); 
+      grid_to_radian(units, rg->grid1_corners*rg->grid1_size, rg->grid1_corner_lat, "grid1 corner lat"); 
     }
 
   if ( lgrid1_destroy ) gridDestroy(gridID1);
@@ -1202,7 +1193,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
     }
   else
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(grid2_size, rg)
 #endif
       for ( i = 0; i < grid2_size; ++i ) rg->grid2_mask[i] = TRUE;
@@ -1214,21 +1205,13 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
 
   gridInqYunits(gridID2, units);
 
-  if ( memcmp(units, "degree", 6) == 0 )
+  grid_to_radian(units, rg->grid2_size, rg->grid2_center_lon, "grid2 center lon"); 
+  grid_to_radian(units, rg->grid2_size, rg->grid2_center_lat, "grid2 center lat"); 
+  /* Note: using units from latitude instead from bounds */
+  if ( rg->grid2_corners && rg->lneed_grid2_corners )
     {
-      scale2(rg->grid2_size, DEG2RAD, rg->grid2_center_lat, rg->grid2_center_lon);
-
-      /* Note: using units from latitude instead from bounds */
-      if ( rg->grid2_corners && rg->lneed_grid2_corners )
-	scale2( rg->grid2_corners*rg->grid2_size, DEG2RAD, rg->grid2_corner_lat, rg->grid2_corner_lon);
-    }
-  else if ( memcmp(units, "radian", 6) == 0 )
-    {
-      /* No conversion necessary */
-    }
-  else
-    {
-      cdoWarning("Unknown units supplied for grid2 center lat/lon: proceeding assuming radians");
+      grid_to_radian(units, rg->grid2_corners*rg->grid2_size, rg->grid2_corner_lon, "grid2 corner lon"); 
+      grid_to_radian(units, rg->grid2_corners*rg->grid2_size, rg->grid2_corner_lat, "grid2 corner lat"); 
     }
 
   if ( lgrid2_destroy ) gridDestroy(gridID2);
@@ -1336,7 +1319,7 @@ void remapGridInit(int map_type, int lextrapolate, int gridID1, int gridID2, rem
     Set up and assign address ranges to search bins in order to 
     further restrict later searches
   */
-  if ( rg->restrict_type == RESTRICT_LATITUDE )
+  if ( rg->restrict_type == RESTRICT_LATITUDE || rg->restrict_type == 0 )
     {
       calc_lat_bins(rg, map_type);
     }
@@ -1407,8 +1390,7 @@ void remapVarsInit(int map_type, remapgrid_t *rg, remapvars_t *rv)
 /*****************************************************************************/
 
 /*
-   This routine resizes remapping arrays by increasing(decreasing)
-   the max_links by increment
+   This routine resizes remapping arrays by increasing(decreasing) the max_links by increment
 */
 void resize_remap_vars(remapvars_t *rv, int increment)
 {
@@ -1572,9 +1554,9 @@ long binary_search_int(const int *array, long len, int value)
       if ( value == array[midpoint] ) return midpoint;
 
       if ( value < array[midpoint] )
-	high = midpoint--;
+	high = midpoint - 1;
       else
-	low  = midpoint++;
+	low  = midpoint + 1;
     }
  
   // item was not found
@@ -1614,15 +1596,19 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
   double wts;
   double *src_cls;
   double *src_wts;
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   double **src_cls2;
   double **src_wts2;
   int ompthID;
 #endif
 
+  for ( i = 0; i < dst_size; ++i ) dst_array[i] = missval;
+
+  if ( num_links == 0 ) return;
+
   max_cls = get_max_add(num_links, dst_size, dst_add);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   src_cls2 = (double **) malloc(ompNumThreads*sizeof(double *));
   src_wts2 = (double **) malloc(ompNumThreads*sizeof(double *));
   for ( i = 0; i < ompNumThreads; ++i )
@@ -1635,12 +1621,10 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
   src_wts = (double *) malloc(max_cls*sizeof(double));
 #endif
 
-  for ( i = 0; i < dst_size; ++i ) dst_array[i] = missval;
-
   for ( n = 0; n < num_links; ++n )
     if ( DBL_IS_EQUAL(dst_array[dst_add[n]], missval) ) dst_array[dst_add[n]] = ZERO;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(dst_size, src_cls2, src_wts2, num_links, dst_add, src_add, src_array, map_wts, \
 	 num_wts, dst_array, max_cls)					\
@@ -1649,7 +1633,7 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
 #endif
   for ( i = 0; i < dst_size; ++i )
     {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       ompthID = omp_get_thread_num();
       src_cls = src_cls2[ompthID];
       src_wts = src_wts2[ompthID];
@@ -1729,7 +1713,7 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
 	}
     }
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   for ( i = 0; i < ompNumThreads; ++i )
     {
       free(src_cls2[i]);
@@ -1743,7 +1727,6 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
   free(src_wts);
 #endif
 }
-
 
 /*
   -----------------------------------------------------------------------
@@ -1797,7 +1780,7 @@ void remap_sum(double *restrict dst_array, double missval, long dst_size, long n
 
 #define  DEFAULT_MAX_ITER  100
 
-static long    Max_Iter = DEFAULT_MAX_ITER;  /* Max iteration count for i,j iteration */
+static long    Max_Iter = DEFAULT_MAX_ITER;  /* Max iteration count for i, j iteration */
 static double  converge = 1.e-10;            /* Convergence criterion */
 
 void remap_set_max_iter(long max_iter)
@@ -1811,359 +1794,6 @@ void remap_set_max_iter(long max_iter)
 /*      BILINEAR INTERPOLATION                                             */
 /*                                                                         */
 /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-
-#if defined (GRID_SEARCH_TEST)
-
-static
-void rsrch_cells(int is_cyclic, long gadd, long nx, long ny, long *num_srch_cells, int *srch_add, long *nwork, int *work,
-		restr_t rlat, restr_t rlon, const restr_t *restrict bound_box)
-{
-  long i, j;
-  long ip1 = -1, im1 = -1;
-  long jp1 = -1, jm1 = -1;
-  long gaddm4;
-
-  //fprintf(stdout, "%ld, %ld, %ld, %ld, %ld\n", gadd, nx, ny, *nwork, *num_srch_cells);
-  for ( i = 0; i < *nwork; ++i )
-    if ( work[i] == gadd ) return;
-
-  work[(*nwork)++] = gadd;
-
-  gaddm4 = gadd<<2;
-  /* Check bounding box */
-  if ( rlat >= bound_box[gaddm4  ] && rlat <= bound_box[gaddm4+1] &&
-       rlon >= bound_box[gaddm4+2] && rlon <= bound_box[gaddm4+3] )
-    {
-      srch_add[(*num_srch_cells)++] = gadd;
-
-      /* Determine neighbor addresses */
-      j = gadd/nx;
-      i = gadd - j*nx;
-
-      if      ( i < (nx-1) ) ip1 = i + 1;
-      else if ( is_cyclic )  ip1 = 0;
-
-      if      ( i > 0 )     im1 = i - 1;
-      else if ( is_cyclic ) im1 = nx-1;
-
-      if ( j < (ny-1) ) jp1 = j + 1;
-
-      if ( j > 0 ) jm1 = j - 1;
-
-      if ( ip1 != -1 ) rsrch_cells(is_cyclic, j*nx+ip1, nx, ny, num_srch_cells, srch_add, nwork, work, rlat, rlon, bound_box);
-      if ( im1 != -1 ) rsrch_cells(is_cyclic, j*nx+im1, nx, ny, num_srch_cells, srch_add, nwork, work, rlat, rlon, bound_box);
-      if ( jp1 != -1 ) rsrch_cells(is_cyclic, jp1*nx+i, nx, ny, num_srch_cells, srch_add, nwork, work, rlat, rlon, bound_box);
-      if ( jm1 != -1 ) rsrch_cells(is_cyclic, jm1*nx+i, nx, ny, num_srch_cells, srch_add, nwork, work, rlat, rlon, bound_box);
-    }
-}
-
-static
-long get_srch_cells_2D(double plat, double plon, const int *restrict src_grid_dims, long nbins, 
-		       const restr_t *restrict bin_lats, const restr_t *restrict bin_lons,
-                       const int *restrict bin_addr1, const restr_t *restrict grid1_bound_box, 
-		       long grid1_size, int *restrict srch_add)
-{
-  /*
-    Input variables:
-
-    double plat                    ! latitude  of the search point
-    double plon                    ! longitude of the search point
-
-    int src_grid_dims[2]           ! size of each src grid dimension
-  */
-  long num_srch_cells;  /* num cells in restricted search arrays */
-  long min_add;         /* addresses for restricting search of   */
-  long max_add;         /* destination grid                      */
-  long nx, ny;          /* dimensions of src grid                */
-  long n, n2;           /* generic counters                      */
-  long grid1_add;       /* current linear address for grid1 cell */
-  long grid1_addm4;
-  restr_t rlat, rlon;
-
-  rlat = RESTR_SCALE(plat);
-  rlon = RESTR_SCALE(plon);
-
-  /* Restrict search first using bins */
-
-  min_add = grid1_size-1;
-  max_add = 0;
-
-  for ( n = 0; n < nbins; ++n )
-    {
-      n2 = n<<1;
-      if ( rlat >= bin_lats[n2] && rlat <= bin_lats[n2+1] &&
-	   rlon >= bin_lons[n2] && rlon <= bin_lons[n2+1] )
-	{
-	  if ( bin_addr1[n2  ] < min_add ) min_add = bin_addr1[n2  ];
-	  if ( bin_addr1[n2+1] > max_add ) max_add = bin_addr1[n2+1];
-	}
-    }
-
-  /* Now perform a more detailed search */
-
-  //srch_add[0] = -1;
-  num_srch_cells = 0;
-  for ( grid1_add = min_add; grid1_add <= max_add; ++grid1_add )
-    {
-      grid1_addm4 = grid1_add<<2;
-      /* Check bounding box */
-      if ( rlat >= grid1_bound_box[grid1_addm4  ] && 
-	   rlat <= grid1_bound_box[grid1_addm4+1] &&
-	   rlon >= grid1_bound_box[grid1_addm4+2] &&
-	   rlon <= grid1_bound_box[grid1_addm4+3] )
-      	{
-	  //	  srch_add[num_srch_cells] = grid1_add;
-	  //	  num_srch_cells++;
-	  break;
-	}
-    }
-
-  nx = src_grid_dims[0];
-  ny = src_grid_dims[1];
-
-  {
-    long nwork = 0;
-    int *work;
-
-    work = (int *) malloc(grid1_size*sizeof(int));
-
-    rsrch_cells(1, grid1_add, nx, ny, &num_srch_cells, srch_add, &nwork, work, rlat, rlon, grid1_bound_box);
-    //printf("%g %g %ld %d %ld\n", plat, plon, num_srch_cells, *srch_add, nwork);
-    //memcpy(srch_add, work, nwork*sizeof(int));
-    //num_srch_cells = nwork;
-  
-    free(work);
-  }
-
-  return (num_srch_cells);
-}
-
-/*
-   This routine finds the location of the search point plat, plon in the 
-   source grid and returns the corners needed for a bilinear interpolation.
-*/
-static
-int grid_search_new(long num_srch_cells, int *srch_add, remapgrid_t *rg, int *restrict src_add, double *restrict src_lats, 
-		double *restrict src_lons,  double plat, double plon, const int *restrict src_grid_dims,
-		const double *restrict src_center_lat, const double *restrict src_center_lon)
-{
-  /*
-    Output variables:
-
-    int    src_add[4]              ! address of each corner point enclosing P
-    double src_lats[4]             ! latitudes  of the four corner points
-    double src_lons[4]             ! longitudes of the four corner points
-
-    Input variables:
-
-    double plat                    ! latitude  of the search point
-    double plon                    ! longitude of the search point
-
-    int src_grid_dims[2]           ! size of each src grid dimension
-
-    double src_center_lat[]        ! latitude  of each src grid center 
-    double src_center_lon[]        ! longitude of each src grid center
-
-    restr_t src_grid_bound_box[][4] ! bound box for source grid
-
-    int src_bin_add[][2]           ! latitude bins for restricting
-  */
-  /*  Local variables */
-  long grid1_add;
-  long nc, n, next_n;                             /* dummy indices                    */
-  long nx, ny;                                /* dimensions of src grid           */
-  long i, j, jp1, ip1, n_add, e_add, ne_add;  /* addresses                        */
-  /* Vectors for cross-product check */
-  double vec1_lat, vec1_lon;
-  double vec2_lat, vec2_lon, cross_product;
-  double coslat_dst, sinlat_dst, coslon_dst, sinlon_dst;
-  double dist_min, distance; /* For computing dist-weighted avg */
-  int scross[4], scross_last = 0;
-  int search_result = 0;
-
-  for ( n = 0; n < 4; ++n ) src_add[n] = 0;
- 
-  /* Now perform a more detailed search */
-
-  nx = src_grid_dims[0];
-  ny = src_grid_dims[1];
-
-  /* srch_loop */
-  for ( nc = 0; nc < num_srch_cells; ++nc )
-    {
-      grid1_add = srch_add[nc];
-
-      /* We are within bounding box so get really serious */
-
-      /* Determine neighbor addresses */
-      j = grid1_add/nx;
-      i = grid1_add - j*nx;
-
-      if ( i < (nx-1) )
-	ip1 = i + 1;
-      else
-	{
-	  /* 2009-01-09 Uwe Schulzweida: bug fix */
-	  if ( rg->grid1_is_cyclic )
-	    ip1 = 0;
-	  else
-	    ip1 = i;
-	}
-
-      if ( j < (ny-1) )
-	jp1 = j + 1;
-      else
-	{
-	  /* 2008-12-17 Uwe Schulzweida: latitute cyclic ??? (bug fix) */
-	  jp1 = j;
-	}
-
-      n_add  = jp1*nx + i;
-      e_add  = j  *nx + ip1;
-      ne_add = jp1*nx + ip1;
-
-      src_lats[0] = src_center_lat[grid1_add];
-      src_lats[1] = src_center_lat[e_add];
-      src_lats[2] = src_center_lat[ne_add];
-      src_lats[3] = src_center_lat[n_add];
-
-      src_lons[0] = src_center_lon[grid1_add];
-      src_lons[1] = src_center_lon[e_add];
-      src_lons[2] = src_center_lon[ne_add];
-      src_lons[3] = src_center_lon[n_add];
-
-      /* For consistency, we must make sure all lons are in same 2pi interval */
-
-      vec1_lon = src_lons[0] - plon;
-      if      ( vec1_lon >  PI ) src_lons[0] -= PI2;
-      else if ( vec1_lon < -PI ) src_lons[0] += PI2;
-
-      for ( n = 1; n < 4; ++n )
-	{
-	  vec1_lon = src_lons[n] - src_lons[0];
-	  if      ( vec1_lon >  PI ) src_lons[n] -= PI2;
-	  else if ( vec1_lon < -PI ) src_lons[n] += PI2;
-	}
-
-      /* corner_loop */
-      for ( n = 0; n < 4; ++n )
-	{
-	  next_n = (n+1)%4;
-
-	  /*
-	    Here we take the cross product of the vector making 
-	    up each box side with the vector formed by the vertex
-	    and search point.  If all the cross products are 
-	    positive, the point is contained in the box.
-	  */
-	  vec1_lat = src_lats[next_n] - src_lats[n];
-	  vec1_lon = src_lons[next_n] - src_lons[n];
-	  vec2_lat = plat - src_lats[n];
-	  vec2_lon = plon - src_lons[n];
-
-	  /* Check for 0,2pi crossings */
-	  
-	  if      ( vec1_lon >  THREE*PIH ) vec1_lon -= PI2;
-	  else if ( vec1_lon < -THREE*PIH ) vec1_lon += PI2;
-
-	  if      ( vec2_lon >  THREE*PIH ) vec2_lon -= PI2;
-	  else if ( vec2_lon < -THREE*PIH ) vec2_lon += PI2;
-
-	  cross_product = vec1_lon*vec2_lat - vec2_lon*vec1_lat;
-
-	  /* If cross product is less than ZERO, this cell doesn't work    */
-	  /* 2008-10-16 Uwe Schulzweida: bug fix for cross_product eq zero */
-
-	  scross[n] = cross_product < 0 ? -1 : cross_product > 0 ? 1 : 0;
-
-	  if ( n == 0 ) scross_last = scross[n];
-
-	  if ( (scross[n] < 0 && scross_last > 0) || (scross[n] > 0 && scross_last < 0) ) break;
-
-	  scross_last = scross[n];
-	} /* corner_loop */
-
-      if ( n >= 4 )
-	{
-	  n = 0;
-	  if      ( scross[0]>=0 && scross[1]>=0 && scross[2]>=0 && scross[3]>=0 ) n = 4;
-	  else if ( scross[0]<=0 && scross[1]<=0 && scross[2]<=0 && scross[3]<=0 ) n = 4;
-	}
-
-      /* If cross products all same sign, we found the location */
-      if ( n >= 4 )
-	{
-	  src_add[0] = grid1_add;
-	  src_add[1] = e_add;
-	  src_add[2] = ne_add;
-	  src_add[3] = n_add;
-
-	  search_result = 1;
-
-	  return (search_result);
-	}
-      
-      /* Otherwise move on to next cell */
-
-    } /* srch_loop */
-
-  /*
-    If no cell found, point is likely either in a box that straddles either pole or is outside 
-    the grid. Fall back to a distance-weighted average of the four closest points.
-    Go ahead and compute weights here, but store in src_lats and return -add to prevent the 
-    parent routine from computing bilinear weights.
-  */
-  if ( ! rg->lextrapolate ) return (search_result);
-
-  /*
-    printf("Could not find location for %g %g\n", plat*RAD2DEG, plon*RAD2DEG);
-    printf("Using nearest-neighbor average for this point\n");
-  */
-  coslat_dst = cos(plat);
-  sinlat_dst = sin(plat);
-  coslon_dst = cos(plon);
-  sinlon_dst = sin(plon);
-
-  dist_min = BIGNUM;
-  for ( n = 0; n < 4; ++n ) src_lats[n] = BIGNUM;
-  for ( nc = 0; nc < num_srch_cells; ++nc )
-    {
-      grid1_add = srch_add[nc];
-
-      distance = acos(coslat_dst*cos(src_center_lat[grid1_add])*
-		     (coslon_dst*cos(src_center_lon[grid1_add]) +
-                      sinlon_dst*sin(src_center_lon[grid1_add]))+
-		      sinlat_dst*sin(src_center_lat[grid1_add]));
-
-      if ( distance < dist_min )
-	{
-          for ( n = 0; n < 4; ++n )
-	    {
-	      if ( distance < src_lats[n] )
-		{
-		  for ( i = 3; i > n; --i )
-		    {
-		      src_add [i] = src_add [i-1];
-		      src_lats[i] = src_lats[i-1];
-		    }
-		  search_result = -1;
-		  src_add [n] = grid1_add;
-		  src_lats[n] = distance;
-		  dist_min = src_lats[3];
-		  break;
-		}
-	    }
-        }
-    }
-
-  for ( n = 0; n < 4; ++n ) src_lons[n] = ONE/(src_lats[n] + TINY);
-  distance = 0.0;
-  for ( n = 0; n < 4; ++n ) distance += src_lons[n];
-  for ( n = 0; n < 4; ++n ) src_lats[n] = src_lons[n]/distance;
-
-  return (search_result);
-}  /* grid_search_new */
-#endif // GRID_SEARCH_TEST
 
 static
 int grid_search(remapgrid_t *rg, int *restrict src_add, double *restrict src_lats, 
@@ -2420,7 +2050,6 @@ int grid_search(remapgrid_t *rg, int *restrict src_add, double *restrict src_lat
   This routine stores the address and weight for four links associated with one destination
   point in the appropriate address and weight arrays and resizes those arrays if necessary.
 */
-static
 void store_link_bilin(remapvars_t *rv, int dst_add, const int *restrict src_add, const double *restrict weights)
 {
   /*
@@ -2429,42 +2058,41 @@ void store_link_bilin(remapvars_t *rv, int dst_add, const int *restrict src_add,
     int src_add[4]    ! addresses on source grid
     double weights[4] ! array of remapping weights for these links
   */
-  long n;             /* dummy index */
-  long num_links_old; /* placeholder for old link number */
+  long n;
+  long nlink;
 
   /*
      Increment number of links and check to see if remap arrays need
-     to be increased to accomodate the new link.  Then store the link.
+     to be increased to accomodate the new link. Then store the link.
   */
-  num_links_old = rv->num_links;
-  rv->num_links = num_links_old + 4;
+  nlink = rv->num_links;
+  rv->num_links += 4;
 
   if ( rv->num_links >= rv->max_links ) 
     resize_remap_vars(rv, rv->resize_increment);
 
   for ( n = 0; n < 4; ++n )
     {
-      rv->grid1_add[num_links_old+n] = src_add[n];
-      rv->grid2_add[num_links_old+n] = dst_add;
-      rv->wts      [num_links_old+n] = weights[n];
+      rv->grid1_add[nlink+n] = src_add[n];
+      rv->grid2_add[nlink+n] = dst_add;
+      rv->wts      [nlink+n] = weights[n];
     }
 
 } /* store_link_bilin */
 
 static
-long find_ij_weights(double plon, double plat, double *restrict src_lats, double *restrict src_lons,
-		     double *ig, double *jg)
+long find_ij_weights(double plon, double plat, double *restrict src_lats, double *restrict src_lons, double *ig, double *jg)
 {
   long iter;                     /*  iteration counters   */
   double iguess, jguess;         /*  current guess for bilinear coordinate  */
-  double deli, delj;             /*  corrections to i,j                     */
+  double deli, delj;             /*  corrections to iw,jw                   */
   double dth1, dth2, dth3;       /*  some latitude  differences             */
   double dph1, dph2, dph3;       /*  some longitude differences             */
   double dthp, dphp;             /*  difference between point and sw corner */
   double mat1, mat2, mat3, mat4; /*  matrix elements                        */
   double determinant;            /*  matrix determinant                     */
 
-  /* Iterate to find i,j for bilinear approximation  */
+  /* Iterate to find iw,jw for bilinear approximation  */
 
   dth1 = src_lats[1] - src_lats[0];
   dth2 = src_lats[3] - src_lats[0];
@@ -2530,10 +2158,7 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
   /*   Local variables */
   int  lwarn = TRUE;
   int  search_result;
-  long num_srch_cells;   /* num cells in restricted search arrays  */
-  long grid1_size;
   long grid2_size;
-  long nbins;
   long dst_add;                  /*  destination addresss */
   long n, icount;
   long iter;                     /*  iteration counters   */
@@ -2545,22 +2170,12 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
   double wgts[4];                /*  bilinear weights for four corners      */
 
   double plat, plon;             /*  lat/lon coords of destination point    */
-  double iguess, jguess;         /*  current guess for bilinear coordinate  */
-  double sum_wgts;               /*  sum of weights for normalization       */
-#if defined (GRID_SEARCH_TEST)
-  int    *srch_add;         /* global address of cells in srch arrays */
-#if defined (_OPENMP)
-  int **srch_add2;
-  int ompthID, i;
-#endif
-#endif
+  double findex = 0;
 
   if ( cdoTimer ) timer_start(timer_remap_bil);
 
-  if ( ompNumThreads == 1 ) progressInit();
+  progressInit();
 
-  nbins = rg->num_srch_bins;
-  grid1_size = rg->grid1_size;
   grid2_size = rg->grid2_size;
 
   /* Compute mappings from grid1 to grid2 */
@@ -2568,44 +2183,26 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
   if ( rg->grid1_rank != 2 )
     cdoAbort("Can not do bilinear interpolation when grid1_rank != 2"); 
 
-#if defined (GRID_SEARCH_TEST)
-#if defined (_OPENMP)
-  srch_add2 = (int **) malloc(ompNumThreads*sizeof(int *));
-  for ( i = 0; i < ompNumThreads; i++ )
-    srch_add2[i] = (int *) malloc(grid1_size*sizeof(int));
-#else
-  srch_add = (int *) malloc(grid1_size*sizeof(int));
-#endif
-#endif
-
   /* Loop over destination grid */
 
-#if defined (_OPENMP)
-#if defined (GRID_SEARCH_TEST)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ompNumThreads, cdoTimer, nbins, grid1_size, cdoVerbose, grid2_size, rg, rv, Max_Iter, converge, lwarn, srch_add2) \
-  private(ompthID, srch_add, num_srch_cells, dst_add, n, icount, iter, src_add, src_lats, src_lons, \
-	  wgts, plat, plon, iguess, jguess, sum_wgts, search_result)					\
+  shared(ompNumThreads, cdoTimer, cdoVerbose, grid2_size, rg, rv, Max_Iter, converge, lwarn, findex) \
+  private(dst_add, n, icount, iter, src_add, src_lats, src_lons, wgts, plat, plon, search_result)    \
   schedule(dynamic,1)
-#else
-#pragma omp parallel for default(none) \
-  shared(ompNumThreads, cdoTimer, cdoVerbose, grid2_size, rg, rv, Max_Iter, converge, lwarn) \
-  private(dst_add, n, icount, iter, src_add, src_lats, src_lons, \
-	  wgts, plat, plon, iguess, jguess, sum_wgts, search_result)					\
-  schedule(dynamic,1)
-#endif
 #endif
   /* grid_loop1 */
   for ( dst_add = 0; dst_add < grid2_size; ++dst_add )
     {
-#if defined (GRID_SEARCH_TEST)
-#if defined (_OPENMP)
-      ompthID = omp_get_thread_num();
-      srch_add = srch_add2[ompthID];
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
 #endif
+#if defined(_OPENMP)
+#pragma omp atomic
 #endif
-
-      if ( ompNumThreads == 1 ) progressStatus(0, 1, (dst_add+1.)/grid2_size);
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/grid2_size);
 
       if ( ! rg->grid2_mask[dst_add] ) continue;
 
@@ -2614,19 +2211,10 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
 
       /* Find nearest square of grid points on source grid  */
 
-#if defined (GRID_SEARCH_TEST)
-      num_srch_cells = get_srch_cells_2D(plat, plon, rg->grid1_dims, nbins, rg->bin_lats, rg->bin_lons,
-     					 rg->bin_addr1, rg->grid1_bound_box, grid1_size, srch_add);
-
-      search_result = grid_search_new(num_srch_cells, srch_add, rg, src_add, src_lats, src_lons, 
-				      plat, plon, rg->grid1_dims,
-				      rg->grid1_center_lat, rg->grid1_center_lon);
-#else
       search_result = grid_search(rg, src_add, src_lats, src_lons, 
 				  plat, plon, rg->grid1_dims,
 				  rg->grid1_center_lat, rg->grid1_center_lon,
 				  rg->grid1_bound_box, rg->bin_addr1);
-#endif
      
 
       /* Check to see if points are land points */
@@ -2636,23 +2224,25 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
 	    if ( ! rg->grid1_mask[src_add[n]] ) search_result = 0;
 	}
 
-      /* If point found, find local i,j coordinates for weights  */
+      /* If point found, find local iw,jw coordinates for weights  */
       if ( search_result > 0 )
 	{
+	  double iw, jw;  /*  current guess for bilinear coordinate  */
+
           rg->grid2_frac[dst_add] = ONE;
 
-	  iter = find_ij_weights(plon, plat, src_lats, src_lons, &iguess, &jguess);
+	  iter = find_ij_weights(plon, plat, src_lats, src_lons, &iw, &jw);
 
           if ( iter < Max_Iter )
 	    {
-	      /* Successfully found i,j - compute weights */
+	      /* Successfully found iw,jw - compute weights */
 
-	      wgts[0] = (ONE-iguess)*(ONE-jguess);
-	      wgts[1] = iguess*(ONE-jguess);
-	      wgts[2] = iguess*jguess;
-	      wgts[3] = (ONE-iguess)*jguess;
+	      wgts[0] = (ONE-iw) * (ONE-jw);
+	      wgts[1] =      iw  * (ONE-jw);
+	      wgts[2] =      iw  *      jw;
+	      wgts[3] = (ONE-iw) *      jw;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      store_link_bilin(rv, dst_add, src_add, wgts);
@@ -2671,14 +2261,14 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
 		  cdoPrint("Src grid lons: %g %g %g %g",
 			   rg->grid1_center_lon[src_add[0]], rg->grid1_center_lon[src_add[1]],
 			   rg->grid1_center_lon[src_add[2]], rg->grid1_center_lon[src_add[3]]);
-		  cdoPrint("Current i,j : %g %g", iguess, jguess);
+		  cdoPrint("Current iw,jw : %g %g", iw, jw);
 		}
 
 	      if ( cdoVerbose || lwarn )
 		{
 		  lwarn = FALSE;
-		  //  cdoWarning("Iteration for i,j exceed max iteration count of %d!", Max_Iter);
-		  cdoWarning("Bilinear interpolation failed for some grid points - use a distance-weighted average instead!");
+		  //  cdoWarning("Iteration for iw,jw exceed max iteration count of %d!", Max_Iter);
+		  cdoWarning("Bilinear interpolation failed for some grid points - used a distance-weighted average instead!");
 		}
 
 	      search_result = -1;
@@ -2702,31 +2292,20 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
           if ( icount > 0 )
 	    {
 	      /* Renormalize weights */
-	      sum_wgts = 0.0;
+	      double sum_wgts = 0.0; /* sum of weights for normalization */
 	      /* 2012-05-08 Uwe Schulzweida: using absolute value of src_lats (bug fix) */
 	      for ( n = 0; n < 4; ++n ) sum_wgts += fabs(src_lats[n]);
 	      for ( n = 0; n < 4; ++n ) wgts[n] = fabs(src_lats[n])/sum_wgts;
 
 	      rg->grid2_frac[dst_add] = ONE;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      store_link_bilin(rv, dst_add, src_add, wgts);
 	    }
         }
     } /* grid_loop1 */
-
-#if defined (GRID_SEARCH_TEST)
-#if defined (_OPENMP)
-  for ( i = 0; i < ompNumThreads; ++i )
-    free(srch_add2[i]);
-
-  free(srch_add2);
-#else
-  free(srch_add);
-#endif
-#endif
 
   if ( cdoTimer ) timer_stop(timer_remap_bil);
 } /* remap_bilin */
@@ -2739,9 +2318,8 @@ void remap_bilin(remapgrid_t *rg, remapvars_t *rv)
 /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 /*
-  This routine stores the address and weight for four links 
-  associated with one destination point in the appropriate address 
-  and weight arrays and resizes those arrays if necessary.
+  This routine stores the address and weight for four links associated with one destination 
+  point in the appropriate address and weight arrays and resizes those arrays if necessary.
 */
 static
 void store_link_bicub(remapvars_t *rv, int dst_add, const int *restrict src_add, double weights[4][4])
@@ -2752,25 +2330,25 @@ void store_link_bicub(remapvars_t *rv, int dst_add, const int *restrict src_add,
     int src_add[4]       ! addresses on source grid
     double weights[4][4] ! array of remapping weights for these links
   */
-  long n, k;          /* dummy index */
-  long num_links_old; /* placeholder for old link number */
+  long n, k;
+  long nlink;
 
   /*
      Increment number of links and check to see if remap arrays need
-     to be increased to accomodate the new link.  then store the link.
+     to be increased to accomodate the new link. Then store the link.
   */
-  num_links_old = rv->num_links;
-  rv->num_links = num_links_old + 4;
+  nlink = rv->num_links;
+  rv->num_links += 4;
 
   if ( rv->num_links >= rv->max_links ) 
     resize_remap_vars(rv, rv->resize_increment);
 
   for ( n = 0; n < 4; ++n )
     {
-      rv->grid1_add[num_links_old+n] = src_add[n];
-      rv->grid2_add[num_links_old+n] = dst_add;
+      rv->grid1_add[nlink+n] = src_add[n];
+      rv->grid2_add[nlink+n] = dst_add;
       for ( k = 0; k < 4; ++k )
-	rv->wts[4*(num_links_old+n)+k] = weights[k][n];
+	rv->wts[4*(nlink+n)+k] = weights[k][n];
     }
 
 } /* store_link_bicub */
@@ -2799,10 +2377,9 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
   double wgts[4][4];  /*  bicubic weights for four corners    */
 
   double plat, plon;             /*  lat/lon coords of destination point    */
-  double iguess, jguess;         /*  current guess for bilinear coordinate  */
-  double sum_wgts;               /*  sum of weights for normalization       */
+  double findex = 0;
 
-  if ( ompNumThreads == 1 ) progressInit();
+  progressInit();
 
   /* Compute mappings from grid1 to grid2 */
 
@@ -2811,17 +2388,24 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
 
   /* Loop over destination grid */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ompNumThreads, cdoTimer, cdoVerbose, rg, rv, Max_Iter, converge, lwarn)	\
-  private(dst_add, n, icount, iter, src_add, src_lats, src_lons, wgts, plat, plon, iguess, jguess, \
-	  sum_wgts, search_result)					\
+  shared(ompNumThreads, cdoTimer, cdoVerbose, rg, rv, Max_Iter, converge, lwarn, findex) \
+  private(dst_add, n, icount, iter, src_add, src_lats, src_lons, wgts, plat, plon, search_result) \
   schedule(dynamic,1)
 #endif
   /* grid_loop1 */
   for ( dst_add = 0; dst_add < rg->grid2_size; ++dst_add )
     {
-      if ( ompNumThreads == 1 ) progressStatus(0, 1, (dst_add+1.)/rg->grid2_size);
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+#endif
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/rg->grid2_size);
 
       if ( ! rg->grid2_mask[dst_add] ) continue;
 
@@ -2841,51 +2425,37 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
 	    if ( ! rg->grid1_mask[src_add[n]] ) search_result = 0;
 	}
 
-      /* If point found, find local i,j coordinates for weights  */
+      /* If point found, find local iw,jw coordinates for weights  */
       if ( search_result > 0 )
 	{
+	  double iw, jw;  /*  current guess for bilinear coordinate  */
+
           rg->grid2_frac[dst_add] = ONE;
 
-	  iter = find_ij_weights(plon, plat, src_lats, src_lons, &iguess, &jguess);
+	  iter = find_ij_weights(plon, plat, src_lats, src_lons, &iw, &jw);
 
           if ( iter < Max_Iter )
 	    {
-	      /* Successfully found i,j - compute weights */
+	      /* Successfully found iw,jw - compute weights */
 
-	      wgts[0][0] = (ONE - jguess*jguess*(THREE-TWO*jguess))*
-		           (ONE - iguess*iguess*(THREE-TWO*iguess));
-	      wgts[0][1] = (ONE - jguess*jguess*(THREE-TWO*jguess))*
-                                  iguess*iguess*(THREE-TWO*iguess);
-	      wgts[0][2] =        jguess*jguess*(THREE-TWO*jguess)*
-                                  iguess*iguess*(THREE-TWO*iguess);
-	      wgts[0][3] =        jguess*jguess*(THREE-TWO*jguess)*
-                           (ONE - iguess*iguess*(THREE-TWO*iguess));
-	      wgts[1][0] = (ONE - jguess*jguess*(THREE-TWO*jguess))*
-                                  iguess*(iguess-ONE)*(iguess-ONE);
-	      wgts[1][1] = (ONE - jguess*jguess*(THREE-TWO*jguess))*
-                                  iguess*iguess*(iguess-ONE);
-	      wgts[1][2] =        jguess*jguess*(THREE-TWO*jguess)*
-                                  iguess*iguess*(iguess-ONE);
-	      wgts[1][3] =        jguess*jguess*(THREE-TWO*jguess)*
-                                  iguess*(iguess-ONE)*(iguess-ONE);
-	      wgts[2][0] =        jguess*(jguess-ONE)*(jguess-ONE)*
-                           (ONE - iguess*iguess*(THREE-TWO*iguess));
-	      wgts[2][1] =        jguess*(jguess-ONE)*(jguess-ONE)*
-                                  iguess*iguess*(THREE-TWO*iguess);
-	      wgts[2][2] =        jguess*jguess*(jguess-ONE)*
-                                  iguess*iguess*(THREE-TWO*iguess);
-	      wgts[2][3] =        jguess*jguess*(jguess-ONE)*
-                           (ONE - iguess*iguess*(THREE-TWO*iguess));
-	      wgts[3][0] =        iguess*(iguess-ONE)*(iguess-ONE)*
-                                  jguess*(jguess-ONE)*(jguess-ONE);
-              wgts[3][1] =        iguess*iguess*(iguess-ONE)*
-                                  jguess*(jguess-ONE)*(jguess-ONE);
-	      wgts[3][2] =        iguess*iguess*(iguess-ONE)*
-                                  jguess*jguess*(jguess-ONE);
-	      wgts[3][3] =        iguess*(iguess-ONE)*(iguess-ONE)*
-                                  jguess*jguess*(jguess-ONE);
+	      wgts[0][0] = (ONE-jw*jw*(THREE-TWO*jw)) * (ONE-iw*iw*(THREE-TWO*iw));
+	      wgts[0][1] = (ONE-jw*jw*(THREE-TWO*jw)) *      iw*iw*(THREE-TWO*iw);
+	      wgts[0][2] =      jw*jw*(THREE-TWO*jw)  *      iw*iw*(THREE-TWO*iw);
+	      wgts[0][3] =      jw*jw*(THREE-TWO*jw)  * (ONE-iw*iw*(THREE-TWO*iw));
+	      wgts[1][0] = (ONE-jw*jw*(THREE-TWO*jw)) *      iw*(iw-ONE)*(iw-ONE);
+	      wgts[1][1] = (ONE-jw*jw*(THREE-TWO*jw)) *      iw*iw*(iw-ONE);
+	      wgts[1][2] =      jw*jw*(THREE-TWO*jw)  *      iw*iw*(iw-ONE);
+	      wgts[1][3] =      jw*jw*(THREE-TWO*jw)  *      iw*(iw-ONE)*(iw-ONE);
+	      wgts[2][0] =      jw*(jw-ONE)*(jw-ONE)  * (ONE-iw*iw*(THREE-TWO*iw));
+	      wgts[2][1] =      jw*(jw-ONE)*(jw-ONE)  *      iw*iw*(THREE-TWO*iw);
+	      wgts[2][2] =      jw*jw*(jw-ONE)        *      iw*iw*(THREE-TWO*iw);
+	      wgts[2][3] =      jw*jw*(jw-ONE)        * (ONE-iw*iw*(THREE-TWO*iw));
+	      wgts[3][0] =      iw*(iw-ONE)*(iw-ONE)  *      jw*(jw-ONE)*(jw-ONE);
+              wgts[3][1] =      iw*iw*(iw-ONE)        *      jw*(jw-ONE)*(jw-ONE);
+	      wgts[3][2] =      iw*iw*(iw-ONE)        *      jw*jw*(jw-ONE);
+	      wgts[3][3] =      iw*(iw-ONE)*(iw-ONE)  *      jw*jw*(jw-ONE);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      store_link_bicub(rv, dst_add, src_add, wgts);
@@ -2895,8 +2465,8 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
 	      if ( cdoVerbose || lwarn )
 		{
 		  lwarn = FALSE;
-		  // cdoWarning("Iteration for i,j exceed max iteration count of %d!", Max_Iter);
-		  cdoWarning("Bicubic interpolation failed for some grid points - use a distance-weighted average instead!");
+		  // cdoWarning("Iteration for iw,jw exceed max iteration count of %d!", Max_Iter);
+		  cdoWarning("Bicubic interpolation failed for some grid points - used a distance-weighted average instead!");
 		}
 
 	      search_result = -1;
@@ -2920,7 +2490,7 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
           if ( icount > 0 )
 	    {
 	      /* Renormalize weights */
-	      sum_wgts = 0.0;
+	      double sum_wgts = 0.0; /* sum of weights for normalization */
 	      /* 2012-05-08 Uwe Schulzweida: using absolute value of src_lats (bug fix) */
 	      for ( n = 0; n < 4; ++n ) sum_wgts += fabs(src_lats[n]);
 	      for ( n = 0; n < 4; ++n ) wgts[0][n] = fabs(src_lats[n])/sum_wgts;
@@ -2930,7 +2500,7 @@ void remap_bicub(remapgrid_t *rg, remapvars_t *rv)
 
 	      rg->grid2_frac[dst_add] = ONE;
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      store_link_bicub(rv, dst_add, src_add, wgts);
@@ -3020,10 +2590,11 @@ void get_restrict_add(remapgrid_t *rg, double plat, double plon, const int *rest
 
   *minadd = min_add;
   *maxadd = max_add;
-
+  /*
   if ( cdoVerbose )
     printf("plon %g plat %g min_add %ld max_add %ld diff %ld\n",
 	   plon, plat, min_add, max_add, max_add-min_add);
+  */
 }
 
 /*
@@ -3105,9 +2676,8 @@ void grid_search_nbr(remapgrid_t *rg, int *restrict nbr_add, double *restrict nb
 }  /*  grid_search_nbr  */
 
 /*
-  This routine stores the address and weight for this link in
-  the appropriate address and weight arrays and resizes those
-  arrays if necessary.
+  This routine stores the address and weight for this link in the appropriate 
+  address and weight arrays and resizes those arrays if necessary.
 */
 static
 void store_link_nbr(remapvars_t *rv, int add1, int add2, double weights)
@@ -3122,18 +2692,17 @@ void store_link_nbr(remapvars_t *rv, int add1, int add2, double weights)
 
   /*
      Increment number of links and check to see if remap arrays need
-     to be increased to accomodate the new link.  Then store the link.
+     to be increased to accomodate the new link. Then store the link.
   */
   nlink = rv->num_links;
-
   rv->num_links++;
+
   if ( rv->num_links >= rv->max_links ) 
     resize_remap_vars(rv, rv->resize_increment);
 
   rv->grid1_add[nlink] = add1;
   rv->grid2_add[nlink] = add2;
-
-  rv->wts[nlink] = weights;
+  rv->wts[nlink]       = weights;
 
 } /* store_link_nbr */
 
@@ -3165,8 +2734,9 @@ void remap_distwgt(remapgrid_t *rg, remapvars_t *rv)
   double *coslat, *sinlat; /* cosine, sine of grid lats (for distance)    */
   double *coslon, *sinlon; /* cosine, sine of grid lons (for distance)    */
   double wgtstmp;          /* hold the link weight                        */
+  double findex = 0;
 
-  if ( ompNumThreads == 1 ) progressInit();
+  progressInit();
 
   /* Compute mappings from grid1 to grid2 */
 
@@ -3180,7 +2750,7 @@ void remap_distwgt(remapgrid_t *rg, remapvars_t *rv)
   sinlat = (double *) malloc(grid1_size*sizeof(double));
   sinlon = (double *) malloc(grid1_size*sizeof(double));
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(rg, grid1_size, coslat, coslon, sinlat, sinlon)
 #endif
@@ -3194,16 +2764,24 @@ void remap_distwgt(remapgrid_t *rg, remapvars_t *rv)
 
   /* Loop over destination grid  */
   /* grid_loop1 */
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ompNumThreads, cdoTimer, rg, rv, grid2_size, coslat, coslon, sinlat, sinlon)	\
+  shared(ompNumThreads, cdoTimer, rg, rv, grid2_size, coslat, coslon, sinlat, sinlon, findex) \
   private(dst_add, n, coslat_dst, coslon_dst, sinlat_dst, sinlon_dst, dist_tot, \
 	  nbr_add, nbr_dist, nbr_mask, wgtstmp)	\
   schedule(dynamic,1)
 #endif
   for ( dst_add = 0; dst_add < grid2_size; ++dst_add )
     {
-      if ( ompNumThreads == 1 ) progressStatus(0, 1, (dst_add+1.)/grid2_size);
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+#endif
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/grid2_size);
 
       if ( ! rg->grid2_mask[dst_add] ) continue;
 
@@ -3250,7 +2828,7 @@ void remap_distwgt(remapgrid_t *rg, remapvars_t *rv)
 	      wgtstmp = nbr_dist[n]/dist_tot;
 
 	      rg->grid2_frac[dst_add] = ONE;
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 	      store_link_nbr(rv, nbr_add[n]-1, dst_add, wgtstmp);
@@ -3315,6 +2893,39 @@ void grid_search_nbr1(remapgrid_t *rg, int *restrict nbr_add, double *restrict n
   nbr_dist[0] = BIGNUM;
 
   // printf("%g %g  min %d  max %d  range %d\n", plon, plat, min_add, max_add, max_add-min_add);
+  //#define TESTVECTOR
+
+#ifdef  TESTVECTOR
+  long i = 0;
+  long ni = max_add - min_add + 1;
+  double *distvect = malloc(ni*sizeof(double));
+
+  for ( i = 0; i < ni; ++i )
+    {
+      nadd = min_add + i;
+      /* Find distance to this point */
+      distvect[i] =  sinlat_dst*sinlat[nadd] + coslat_dst*coslat[nadd]*
+	            (coslon_dst*coslon[nadd] + sinlon_dst*sinlon[nadd]);
+      /* 2008-07-30 Uwe Schulzweida: check that distance is inside the range of -1 to 1,
+                                     otherwise the result of acos(distance) is NaN */
+      if ( distvect[i] >  1 ) distvect[i] =  1;
+      if ( distvect[i] < -1 ) distvect[i] = -1;
+    }
+
+  for ( i = 0; i < ni; ++i )
+    distvect[i] = acos(distvect[i]);
+
+  /* Store the address and distance if this is the smallest so far */
+  for ( i = 0; i < ni; ++i )
+    if ( distvect[i] < nbr_dist[0] )
+      {
+	nbr_add[0]  = min_add + i + 1;
+	nbr_dist[0] = distvect[i];
+      }
+
+  free(distvect);
+
+#else
   for ( nadd = min_add; nadd <= max_add; ++nadd )
     {
       /* Find distance to this point */
@@ -3333,42 +2944,9 @@ void grid_search_nbr1(remapgrid_t *rg, int *restrict nbr_add, double *restrict n
 	  nbr_dist[0] = distance;
         }
     }
+#endif
 
 }  /*  grid_search_nbr1  */
-
-/*
-  This routine stores the address and weight for this link in
-  the appropriate address and weight arrays and resizes those
-  arrays if necessary.
-*/
-static
-void store_link_nbr1(remapvars_t *rv, int add1, int add2, double weights)
-{
-  /*
-    Input variables:
-    int  add1         ! address on grid1
-    int  add2         ! address on grid2
-    double weights    ! remapping weight for this link
-  */
-  long nlink;
-
-  /*
-     Increment number of links and check to see if remap arrays need
-     to be increased to accomodate the new link.  Then store the link.
-  */
-  nlink = rv->num_links;
-
-  rv->num_links++;
-  if ( rv->num_links >= rv->max_links ) 
-    resize_remap_vars(rv, rv->resize_increment);
-
-  rv->grid1_add[nlink] = add1;
-  rv->grid2_add[nlink] = add2;
-
-  rv->wts[nlink] = weights;
-
-} /* store_link_nbr1 */
-
 
 /*
   -----------------------------------------------------------------------
@@ -3396,10 +2974,11 @@ void remap_distwgt1(remapgrid_t *rg, remapvars_t *rv)
   double *coslat, *sinlat; /* cosine, sine of grid lats (for distance)    */
   double *coslon, *sinlon; /* cosine, sine of grid lons (for distance)    */
   double wgtstmp;          /* hold the link weight                        */
+  double findex = 0;
 
   if ( cdoTimer ) timer_start(timer_remap_nn);
 
-  if ( ompNumThreads == 1 ) progressInit();
+  progressInit();
 
   /* Compute mappings from grid1 to grid2 */
 
@@ -3413,7 +2992,7 @@ void remap_distwgt1(remapgrid_t *rg, remapvars_t *rv)
   sinlat = (double *) malloc(grid1_size*sizeof(double));
   sinlon = (double *) malloc(grid1_size*sizeof(double));
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(rg, grid1_size, coslat, coslon, sinlat, sinlon)
 #endif
@@ -3427,16 +3006,23 @@ void remap_distwgt1(remapgrid_t *rg, remapvars_t *rv)
 
   /* Loop over destination grid  */
   /* grid_loop1 */
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ompNumThreads, cdoTimer, rg, rv, grid2_size, coslat, coslon, sinlat, sinlon)	\
-  private(dst_add, n, coslat_dst, coslon_dst, sinlat_dst, sinlon_dst,   \
-	  nbr_add, nbr_dist, nbr_mask, wgtstmp)	\
+  shared(ompNumThreads, cdoTimer, rg, rv, grid2_size, coslat, coslon, sinlat, sinlon, findex) \
+  private(dst_add, n, coslat_dst, coslon_dst, sinlat_dst, sinlon_dst, nbr_add, nbr_dist, nbr_mask, wgtstmp)	\
   schedule(dynamic,1)
 #endif
   for ( dst_add = 0; dst_add < grid2_size; ++dst_add )
     {
-      if ( ompNumThreads == 1 ) progressStatus(0, 1, (dst_add+1.)/grid2_size);
+      int lprogress = 1;
+#if defined(_OPENMP)
+      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+#endif
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0, 1, findex/grid2_size);
 
       if ( ! rg->grid2_mask[dst_add] ) continue;
 
@@ -3475,10 +3061,10 @@ void remap_distwgt1(remapgrid_t *rg, remapvars_t *rv)
 	  wgtstmp = ONE;
 
 	  rg->grid2_frac[dst_add] = ONE;
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
-	  store_link_nbr1(rv, nbr_add-1, dst_add, wgtstmp);
+	  store_link_nbr(rv, nbr_add-1, dst_add, wgtstmp);
 	}
 
     } /* grid_loop1 */
@@ -4673,7 +4259,7 @@ void store_link_cnsrv(remapvars_t *rv, long add1, long add2, double *restrict we
 
   /* If the link already exists, add the weight to the current weight arrays */
 
-#if  defined (SX)
+#if defined(SX)
 #define STRIPED 1
 #if STRIPED
 #define STRIPLENGTH 4096
@@ -4803,7 +4389,7 @@ long get_srch_cells(long grid1_add, long nbins, int *bin_addr1, int *bin_addr2,
   return (num_srch_cells);
 }
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 static
 void *alloc_srch_corner(size_t n)
 {
@@ -4866,7 +4452,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   long    srch_corners;     /* num of corners of srch cells           */
   long    nsrch_corners;
   int    *srch_add;         /* global address of cells in srch arrays */
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   int **srch_add2;
   int ompthID, i;
 #endif
@@ -4889,8 +4475,9 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
   int avoid_pole_count = 0;         /* count attempts to avoid pole  */
   double avoid_pole_offset = TINY;  /* endpoint offset to avoid pole */
   grid_store_t *grid_store = NULL;
+  double findex = 0;
 
-  if ( ompNumThreads == 1 ) progressInit();
+  progressInit();
 
   nbins = rg->num_srch_bins;
 
@@ -4921,7 +4508,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
       link_add2[0] = (int *) malloc(grid2_size*sizeof(int));
       link_add2[1] = (int *) malloc(grid2_size*sizeof(int));
 
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
       for ( n = 0; n < grid1_size; ++n )
@@ -4930,7 +4517,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 	  link_add1[1][n] = -1;
 	}
 
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
       for ( n = 0; n < grid2_size; ++n )
@@ -4961,7 +4548,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /*  Integrate around each cell on grid1 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   srch_add2 = (int **) malloc(ompNumThreads*sizeof(int *));
   for ( i = 0; i < ompNumThreads; ++i )
     srch_add2[i] = (int *) malloc(grid2_size*sizeof(int));
@@ -4976,12 +4563,11 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( cdoTimer ) timer_start(timer_remap_con_l1);
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(ompNumThreads, cdoTimer, nbins, grid1_centroid_lon, grid1_centroid_lat, \
-         grid_store, link_add1, link_add2,	 \
-         rv, cdoVerbose, max_subseg, \
-	 grid1_corners,	srch_corners, rg, grid2_size, grid1_size, srch_add2) \
+         grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
+	 grid1_corners,	srch_corners, rg, grid2_size, grid1_size, srch_add2, findex) \
   private(ompthID, srch_add, n, k, num_srch_cells, max_srch_cells, \
 	  grid1_add, grid2_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
@@ -4990,12 +4576,17 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #endif
   for ( grid1_add = 0; grid1_add < grid1_size; ++grid1_add )
     {
-#if defined (_OPENMP)
+      int lprogress = 1;
+#if defined(_OPENMP)
       ompthID = omp_get_thread_num();
       srch_add = srch_add2[ompthID];
+      if ( ompthID != 0 ) lprogress = 0;
 #endif
-
-      if ( ompNumThreads == 1 ) progressStatus(0, 0.5, (grid1_add+1.)/grid1_size);
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0, 0.5, findex/grid1_size);
 
       lthresh   = FALSE;
       luse_last = FALSE;
@@ -5010,7 +4601,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
       /* Create search arrays */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	  srch_corner_lat = (double *) alloc_srch_corner(srch_corners*num_srch_cells);
 	  srch_corner_lon = (double *) alloc_srch_corner(srch_corners*num_srch_cells);
 #else
@@ -5130,7 +4721,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 		  if ( grid2_add != -1 )
 		    if ( rg->grid1_mask[grid1_add] )
 		      {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 			{
@@ -5155,7 +4746,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 	    }
           /* End of segment */
         }
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       free_srch_corner(srch_corner_lat);
       free_srch_corner(srch_corner_lon);
 #endif
@@ -5165,12 +4756,12 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /* Finished with all cells: deallocate search arrays */
 
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   if ( srch_corner_lon ) free(srch_corner_lon);
   if ( srch_corner_lat ) free(srch_corner_lat);
 #endif
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   for ( i = 0; i < ompNumThreads; ++i )
     free(srch_add2[i]);
 
@@ -5181,7 +4772,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /* Integrate around each cell on grid2 */
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   srch_add2 = (int **) malloc(ompNumThreads*sizeof(int *));
   for ( i = 0; i < ompNumThreads; ++i )
     srch_add2[i] = (int *) malloc(grid1_size*sizeof(int));
@@ -5196,12 +4787,13 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( cdoTimer ) timer_start(timer_remap_con_l2);
 
-#if defined (_OPENMP)
+  findex = 0;
+
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(ompNumThreads, cdoTimer, nbins, grid2_centroid_lon, grid2_centroid_lat, \
-         grid_store, link_add1, link_add2, \
-         rv, cdoVerbose, max_subseg, \
-	 grid2_corners, srch_corners, rg, grid2_size, grid1_size, srch_add2) \
+         grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
+	 grid2_corners, srch_corners, rg, grid2_size, grid1_size, srch_add2, findex) \
   private(ompthID, srch_add, n, k, num_srch_cells, max_srch_cells, \
 	  grid1_add, grid2_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
@@ -5210,12 +4802,17 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 #endif
   for ( grid2_add = 0; grid2_add < grid2_size; ++grid2_add )
     {
-#if defined (_OPENMP)
+      int lprogress = 1;
+#if defined(_OPENMP)
       ompthID = omp_get_thread_num();
       srch_add = srch_add2[ompthID];
+      if ( ompthID != 0 ) lprogress = 0;
 #endif
-
-      if ( ompNumThreads == 1 ) progressStatus(0.5, 0.5, (grid2_add+1.)/grid2_size);
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+      findex++;
+      if ( lprogress ) progressStatus(0.5, 0.5, findex/grid2_size);
 
       lthresh   = FALSE;
       luse_last = FALSE;
@@ -5230,7 +4827,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
       /* Create search arrays */
       
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	  srch_corner_lat = (double *) alloc_srch_corner(srch_corners*num_srch_cells);
 	  srch_corner_lon = (double *) alloc_srch_corner(srch_corners*num_srch_cells);
 #else
@@ -5351,7 +4948,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 		  if ( ! lcoinc && grid1_add != -1 )
 		    if ( rg->grid1_mask[grid1_add] )
 		      {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp critical
 #endif
 			{
@@ -5376,7 +4973,7 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 	    }
           /* End of segment */
 	}
-#if defined (_OPENMP)
+#if defined(_OPENMP)
       free_srch_corner(srch_corner_lat);
       free_srch_corner(srch_corner_lon);
 #endif
@@ -5386,12 +4983,12 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   /* Finished with all cells: deallocate search arrays */
 
-#if ! defined (_OPENMP)
+#if ! defined(_OPENMP)
   if ( srch_corner_lon ) free(srch_corner_lon);
   if ( srch_corner_lat ) free(srch_corner_lat);
 #endif
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
   for ( i = 0; i < ompNumThreads; ++i )
     free(srch_add2[i]);
 
@@ -5586,10 +5183,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
 
   if ( rv->norm_opt == NORM_OPT_DESTAREA )
     {
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)		\
   private(n, n3, grid1_add, grid2_add, weights, norm_factor)
@@ -5612,10 +5209,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
     }
   else if ( rv->norm_opt == NORM_OPT_FRACAREA )
     {
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)		\
   private(n, n3, grid1_add, grid2_add, weights, norm_factor)
@@ -5638,10 +5235,10 @@ void remap_conserv(remapgrid_t *rg, remapvars_t *rv)
     }
   else if ( rv->norm_opt == NORM_OPT_NONE )
     {
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, rg, grid1_centroid_lat, grid1_centroid_lon)	\
   private(n, n3, grid1_add, grid2_add, weights, norm_factor)
@@ -5829,7 +5426,7 @@ void remap_stat(int remap_order, remapgrid_t rg, remapvars_t rv, const double *r
 
   for ( n = 0; n < rg.grid2_size; ++n ) grid2_count[n] = 0;
 
-#if defined (SX)
+#if defined(SX)
 #pragma vdir nodep
 #endif
   for ( n = 0; n < rv.num_links; ++n ) grid2_count[rv.grid2_add[n]]++;
@@ -5891,7 +5488,7 @@ void remap_gradients(remapgrid_t rg, const double *restrict array, double *restr
   nx = rg.grid1_dims[0];
   ny = rg.grid1_dims[1];
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(none)        \
   shared(grid1_size, grad1_lat, grad1_lon, grad1_latlon, rg, nx, ny, array) \
   private(n, i, j, ip1, im1, jp1, jm1, in, is, ie, iw, ine, inw, ise, isw, delew, delns, grad1_lat_zero, grad1_lon_zero)
@@ -6155,738 +5752,3 @@ void reorder_links(remapvars_t *rv)
       printf("loop %ld  nlinks %ld\n", j+1, nlinks);
     }
 }
-
-
-/*****************************************************************************/
-
-#if  defined  (HAVE_LIBNETCDF)
-#  include "netcdf.h"
-#endif
-
-
-#if  defined  (HAVE_LIBNETCDF)
-static
-void nce(int istat)
-{
-  /*
-    This routine provides a simple interface to netCDF error message routine.
-  */
-
-  if ( istat != NC_NOERR ) cdoAbort(nc_strerror(istat));
-}
-#endif
-
-
-void write_remap_scrip(const char *interp_file, int map_type, int submap_type, 
-		       int remap_order, remapgrid_t rg, remapvars_t rv)
-{
-  /*
-    Writes remap data to a netCDF file using SCRIP conventions
-  */
-  /*
-    Input variables:
-
-    interp_file  ! filename for remap data
-  */
-
-#if  defined  (HAVE_LIBNETCDF)
-
-  /* Local variables */
-
-  int nc_file_id;           /* id for netCDF file                       */
-  int nc_srcgrdsize_id;     /* id for source grid size                  */
-  int nc_dstgrdsize_id;     /* id for destination grid size             */
-  int nc_srcgrdcorn_id;     /* id for number of source grid corners     */
-  int nc_dstgrdcorn_id;     /* id for number of dest grid corners       */
-  int nc_srcgrdrank_id;     /* id for source grid rank                  */
-  int nc_dstgrdrank_id;     /* id for dest grid rank                    */
-  int nc_numlinks_id;       /* id for number of links in mapping        */
-  int nc_numwgts_id;        /* id for number of weights for mapping     */
-  int nc_srcgrddims_id;     /* id for source grid dimensions            */
-  int nc_dstgrddims_id;     /* id for dest grid dimensions              */
-  int nc_srcgrdcntrlat_id;  /* id for source grid center latitude       */
-  int nc_dstgrdcntrlat_id;  /* id for dest grid center latitude         */
-  int nc_srcgrdcntrlon_id;  /* id for source grid center longitude      */
-  int nc_dstgrdcntrlon_id;  /* id for dest grid center longitude        */
-  int nc_srcgrdimask_id;    /* id for source grid mask                  */
-  int nc_dstgrdimask_id;    /* id for dest grid mask                    */
-  int nc_srcgrdcrnrlat_id;  /* id for latitude of source grid corners   */
-  int nc_srcgrdcrnrlon_id;  /* id for longitude of source grid corners  */
-  int nc_dstgrdcrnrlat_id;  /* id for latitude of dest grid corners     */
-  int nc_dstgrdcrnrlon_id;  /* id for longitude of dest grid corners    */
-  int nc_srcgrdarea_id;     /* id for area of source grid cells         */
-  int nc_dstgrdarea_id;     /* id for area of dest grid cells           */
-  int nc_srcgrdfrac_id;     /* id for area fraction on source grid      */
-  int nc_dstgrdfrac_id;     /* id for area fraction on dest grid        */
-  int nc_srcadd_id;         /* id for map source address                */
-  int nc_dstadd_id;         /* id for map destination address           */
-  int nc_rmpmatrix_id;      /* id for remapping matrix                  */
-
-  int nc_dims2_id[2];       /* netCDF ids for 2d array dims             */
-
-  char map_name[] = "SCRIP remapping with CDO";
-  char normalize_opt[64] = "unknown";
-  char map_method[64] = "unknown";
-  char tmp_string[64] = "unknown";
-  char history[1024] = "date and time";
-  char grid1_name[64] = "source grid";
-  char grid2_name[64] = "dest grid";
-  char grid1_units[] = "radians";
-  char grid2_units[] = "radians";
-  time_t date_and_time_in_sec;
-  struct tm *date_and_time;
-  long i;
-  size_t filesize;
-  int writemode = NC_CLOBBER;
-
-  switch ( rv.norm_opt )
-    {
-    case NORM_OPT_NONE:
-      strcpy(normalize_opt, "none");
-      break;
-    case NORM_OPT_FRACAREA:
-      strcpy(normalize_opt, "fracarea");
-      break;
-    case NORM_OPT_DESTAREA:
-      strcpy(normalize_opt, "destarea");
-      break;
-    }
-
-  switch ( map_type )
-    {
-    case MAP_TYPE_CONSERV:
-      if ( submap_type == SUBMAP_TYPE_LAF )
-	{
-	  strcpy(map_method, "Largest area fraction");
-	  break;
-	}
-      else
-	{
-	  strcpy(map_method, "Conservative remapping");
-	  break;
-	}
-    case MAP_TYPE_BILINEAR:
-      strcpy(map_method, "Bilinear remapping");
-      break;
-    case MAP_TYPE_DISTWGT:
-      strcpy(map_method, "Distance weighted avg of nearest neighbors");
-      break;
-    case MAP_TYPE_DISTWGT1:
-      strcpy(map_method, "Nearest neighbor");
-      break;
-    case MAP_TYPE_BICUBIC:
-      strcpy(map_method, "Bicubic remapping");
-      break;
-    }
-
-  filesize = rg.grid1_size*(4*8 + 4 + rg.grid1_corners*2*8) +
-             rg.grid2_size*(4*8 + 4 + rg.grid2_corners*2*8) +
-             rv.num_links*(4 + 4 + rv.num_wts*8);
-
-  if ( cdoVerbose )
-    cdoPrint("Filesize for remap weights: ~%lu", (unsigned long) filesize);
-    
-  if ( filesize > 0x7FFFFC00 ) /* 2**31 - 1024 (<2GB) */
-    {
-#if  defined  (NC_64BIT_OFFSET)
-      writemode = NC_CLOBBER | NC_64BIT_OFFSET;
-#else
-      cdoAbort("Filesize for remap weights is too large!");
-#endif
-    }
-
-  /* Create netCDF file for mapping and define some global attributes */
-  nce(nc_create(interp_file, writemode, &nc_file_id));
-
-  /* Map name */
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "title", strlen(map_name), map_name));
-
-  /* Normalization option */
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "normalization", strlen(normalize_opt), normalize_opt));
-
-  /* Map method */
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "map_method", strlen(map_method), map_method));
-
-  /* Remap order */
-  if ( map_type == MAP_TYPE_CONSERV && submap_type == SUBMAP_TYPE_NONE )
-    nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "remap_order", NC_INT, 1L, &remap_order));
-
-  /* History */
-  date_and_time_in_sec = time(NULL);
-
-  if ( date_and_time_in_sec != -1 )
-    {
-      date_and_time = localtime(&date_and_time_in_sec);
-      (void) strftime(history, 1024, "%d %b %Y : ", date_and_time);
-      strcat(history, commandLine());
-    }
-
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "history", strlen(history), history));
-
-  /* File convention */
-  strcpy(tmp_string, "SCRIP");
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "conventions", strlen(tmp_string), tmp_string));
-
-  /* Source and destination grid names */
-  gridName(gridInqType(rg.gridID1), grid1_name);
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "source_grid", strlen(grid1_name), grid1_name));
-
-  gridName(gridInqType(rg.gridID2), grid2_name);
-  nce(nc_put_att_text(nc_file_id, NC_GLOBAL, "dest_grid", strlen(grid2_name), grid2_name));
-
-  /* Prepare netCDF dimension info */
-
-  /* Define grid size dimensions */
-  nce(nc_def_dim(nc_file_id, "src_grid_size", rg.grid1_size, &nc_srcgrdsize_id));
-  nce(nc_def_dim(nc_file_id, "dst_grid_size", rg.grid2_size, &nc_dstgrdsize_id));
-
-  /* Define grid corner dimension */
-  if ( rg.lneed_grid1_corners )
-    nce(nc_def_dim(nc_file_id, "src_grid_corners", rg.grid1_corners, &nc_srcgrdcorn_id));
-  if ( rg.lneed_grid2_corners )
-    nce(nc_def_dim(nc_file_id, "dst_grid_corners", rg.grid2_corners, &nc_dstgrdcorn_id));
-
-  /* Define grid rank dimension */
-  nce(nc_def_dim(nc_file_id, "src_grid_rank", rg.grid1_rank, &nc_srcgrdrank_id));
-  nce(nc_def_dim(nc_file_id, "dst_grid_rank", rg.grid2_rank, &nc_dstgrdrank_id));
-
-  /* Define map size dimensions */
-  nce(nc_def_dim(nc_file_id, "num_links", rv.num_links, &nc_numlinks_id));
-  nce(nc_def_dim(nc_file_id, "num_wgts", rv.num_wts, &nc_numwgts_id));
-       
-  /* Define grid dimensions */
-  nce(nc_def_var(nc_file_id, "src_grid_dims", NC_INT, 1, &nc_srcgrdrank_id, &nc_srcgrddims_id));
-  nce(nc_def_var(nc_file_id, "dst_grid_dims", NC_INT, 1, &nc_dstgrdrank_id, &nc_dstgrddims_id));
-
-  /* Define all arrays for netCDF descriptors */
-
-  /* Define grid center latitude array */
-  nce(nc_def_var(nc_file_id, "src_grid_center_lat", NC_DOUBLE, 1, &nc_srcgrdsize_id, &nc_srcgrdcntrlat_id));
-  nce(nc_def_var(nc_file_id, "dst_grid_center_lat", NC_DOUBLE, 1, &nc_dstgrdsize_id, &nc_dstgrdcntrlat_id));
-
-  /* Define grid center longitude array */
-  nce(nc_def_var(nc_file_id, "src_grid_center_lon", NC_DOUBLE, 1, &nc_srcgrdsize_id, &nc_srcgrdcntrlon_id));
-  nce(nc_def_var(nc_file_id, "dst_grid_center_lon", NC_DOUBLE, 1, &nc_dstgrdsize_id, &nc_dstgrdcntrlon_id));
-
-  /* Define grid corner lat/lon arrays */
-
-  nc_dims2_id[0] = nc_srcgrdsize_id;
-  nc_dims2_id[1] = nc_srcgrdcorn_id;
-
-  if ( rg.lneed_grid1_corners )
-    {
-      nce(nc_def_var(nc_file_id, "src_grid_corner_lat", NC_DOUBLE, 2, nc_dims2_id, &nc_srcgrdcrnrlat_id));
-      nce(nc_def_var(nc_file_id, "src_grid_corner_lon", NC_DOUBLE, 2, nc_dims2_id, &nc_srcgrdcrnrlon_id));
-    }
-
-  nc_dims2_id[0] = nc_dstgrdsize_id;
-  nc_dims2_id[1] = nc_dstgrdcorn_id;
-
-  if ( rg.lneed_grid2_corners )
-    {
-      nce(nc_def_var(nc_file_id, "dst_grid_corner_lat", NC_DOUBLE, 2, nc_dims2_id, &nc_dstgrdcrnrlat_id));
-      nce(nc_def_var(nc_file_id, "dst_grid_corner_lon", NC_DOUBLE, 2, nc_dims2_id, &nc_dstgrdcrnrlon_id));
-    }
-
-  /* Define units for all coordinate arrays */
-  nce(nc_put_att_text(nc_file_id, nc_srcgrdcntrlat_id, "units", 7, grid1_units));
-  nce(nc_put_att_text(nc_file_id, nc_dstgrdcntrlat_id, "units", 7, grid2_units));
-  nce(nc_put_att_text(nc_file_id, nc_srcgrdcntrlon_id, "units", 7, grid1_units));
-  nce(nc_put_att_text(nc_file_id, nc_dstgrdcntrlon_id, "units", 7, grid2_units));
-  if ( rg.lneed_grid1_corners )
-    {
-      nce(nc_put_att_text(nc_file_id, nc_srcgrdcrnrlat_id, "units", 7, grid1_units));
-      nce(nc_put_att_text(nc_file_id, nc_srcgrdcrnrlon_id, "units", 7, grid1_units));
-    }
-  if ( rg.lneed_grid2_corners )
-    {
-      nce(nc_put_att_text(nc_file_id, nc_dstgrdcrnrlat_id, "units", 7, grid2_units));
-      nce(nc_put_att_text(nc_file_id, nc_dstgrdcrnrlon_id, "units", 7, grid2_units));
-    }
-
-  /* Define grid mask */
-
-  nce(nc_def_var(nc_file_id, "src_grid_imask", NC_INT, 1, &nc_srcgrdsize_id, &nc_srcgrdimask_id));
-  nce(nc_put_att_text(nc_file_id, nc_srcgrdimask_id, "units", 8, "unitless"));
-
-  nce(nc_def_var(nc_file_id, "dst_grid_imask", NC_INT, 1, &nc_dstgrdsize_id, &nc_dstgrdimask_id));
-  nce(nc_put_att_text(nc_file_id, nc_dstgrdimask_id, "units", 8, "unitless"));
-
-  /* Define grid area arrays */
-
-  nce(nc_def_var(nc_file_id, "src_grid_area", NC_DOUBLE, 1, &nc_srcgrdsize_id, &nc_srcgrdarea_id));
-  nce(nc_put_att_text(nc_file_id, nc_srcgrdarea_id, "units", 14, "square radians"));
-
-  nce(nc_def_var(nc_file_id, "dst_grid_area", NC_DOUBLE, 1, &nc_dstgrdsize_id, &nc_dstgrdarea_id));   
-  nce(nc_put_att_text(nc_file_id, nc_dstgrdarea_id, "units", 14, "square radians"));
-
-  /* Define grid fraction arrays */
-
-  nce(nc_def_var(nc_file_id, "src_grid_frac", NC_DOUBLE, 1, &nc_srcgrdsize_id, &nc_srcgrdfrac_id));
-  nce(nc_put_att_text(nc_file_id, nc_srcgrdfrac_id, "units", 8, "unitless"));
-
-  nce(nc_def_var(nc_file_id, "dst_grid_frac", NC_DOUBLE, 1, &nc_dstgrdsize_id, &nc_dstgrdfrac_id));
-  nce(nc_put_att_text(nc_file_id, nc_dstgrdfrac_id, "units", 8, "unitless"));
-
-  /* Define mapping arrays */
-
-  nce(nc_def_var(nc_file_id, "src_address", NC_INT, 1, &nc_numlinks_id, &nc_srcadd_id));      
-  nce(nc_def_var(nc_file_id, "dst_address", NC_INT, 1, &nc_numlinks_id, &nc_dstadd_id));
-
-  nc_dims2_id[0] = nc_numlinks_id;
-  nc_dims2_id[1] = nc_numwgts_id;
-
-  nce(nc_def_var(nc_file_id, "remap_matrix", NC_DOUBLE, 2, nc_dims2_id, &nc_rmpmatrix_id));
-
-  /* End definition stage */
-  
-  nce(nc_enddef(nc_file_id));
-
-
-  /* Write mapping data */
-
-  nce(nc_put_var_int(nc_file_id, nc_srcgrddims_id, rg.grid1_dims));
-  nce(nc_put_var_int(nc_file_id, nc_dstgrddims_id, rg.grid2_dims));
-
-  nce(nc_put_var_int(nc_file_id, nc_srcgrdimask_id, rg.grid1_mask));
-  nce(nc_put_var_int(nc_file_id, nc_dstgrdimask_id, rg.grid2_mask));
-
-  nce(nc_put_var_double(nc_file_id, nc_srcgrdcntrlat_id, rg.grid1_center_lat)); 
-  nce(nc_put_var_double(nc_file_id, nc_srcgrdcntrlon_id, rg.grid1_center_lon));
-
-  if ( rg.lneed_grid1_corners )
-    {
-      nce(nc_put_var_double(nc_file_id, nc_srcgrdcrnrlat_id, rg.grid1_corner_lat));
-      nce(nc_put_var_double(nc_file_id, nc_srcgrdcrnrlon_id, rg.grid1_corner_lon));
-    }
-
-  nce(nc_put_var_double(nc_file_id, nc_dstgrdcntrlat_id, rg.grid2_center_lat));
-  nce(nc_put_var_double(nc_file_id, nc_dstgrdcntrlon_id, rg.grid2_center_lon));
-
-  if ( rg.lneed_grid2_corners )
-    {
-      nce(nc_put_var_double(nc_file_id, nc_dstgrdcrnrlat_id, rg.grid2_corner_lat));
-      nce(nc_put_var_double(nc_file_id, nc_dstgrdcrnrlon_id, rg.grid2_corner_lon));
-    }
-  /*
-  if ( luse_grid1_area )
-    nce(nc_put_var_double(nc_file_id, nc_srcgrdarea_id, rg.grid1_area_in));
-  else
-  */
-  if ( map_type == MAP_TYPE_CONSERV )
-    nce(nc_put_var_double(nc_file_id, nc_srcgrdarea_id, rg.grid1_area));
-
-  nce(nc_put_var_double(nc_file_id, nc_srcgrdfrac_id, rg.grid1_frac));
-
-  /*
-  if ( luse_grid2_area )
-    nce(nc_put_var_double(nc_file_id, nc_dstgrdarea_id, rg.grid2_area_in));
-  else
-  */
-  if ( map_type == MAP_TYPE_CONSERV )
-    nce(nc_put_var_double(nc_file_id, nc_dstgrdarea_id, rg.grid2_area));
-
-  nce(nc_put_var_double(nc_file_id, nc_dstgrdfrac_id, rg.grid2_frac));
-
-  for ( i = 0; i < rv.num_links; i++ )
-    {
-      rv.grid1_add[i]++;
-      rv.grid2_add[i]++;
-    }
-
-  nce(nc_put_var_int(nc_file_id, nc_srcadd_id, rv.grid1_add));
-  nce(nc_put_var_int(nc_file_id, nc_dstadd_id, rv.grid2_add));
-
-  nce(nc_put_var_double(nc_file_id, nc_rmpmatrix_id, rv.wts));
-
-  nce(nc_close(nc_file_id));
-
-#else
-  cdoAbort("netCDF support not compiled in!");
-#endif
-
-}  /* write_remap_scrip */
-
-/*****************************************************************************/
-
-void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *map_type, int *submap_type,
-		      int *remap_order, remapgrid_t *rg, remapvars_t *rv)
-{
-  /*
-    The routine reads a netCDF file to extract remapping info
-    in SCRIP format
-  */
-  /*
-    Input variables
-
-    interp_file        ! filename for remap data
-  */
-#if  defined  (HAVE_LIBNETCDF)
-
-  /* Local variables */
-
-  int status;
-  int nc_file_id;           /* id for netCDF file                       */
-  int nc_srcgrdsize_id;     /* id for source grid size                  */
-  int nc_dstgrdsize_id;     /* id for destination grid size             */
-  int nc_srcgrdcorn_id;     /* id for number of source grid corners     */
-  int nc_dstgrdcorn_id;     /* id for number of dest grid corners       */
-  int nc_srcgrdrank_id;     /* id for source grid rank                  */
-  int nc_dstgrdrank_id;     /* id for dest grid rank                    */
-  int nc_numlinks_id;       /* id for number of links in mapping        */
-  int nc_numwgts_id;        /* id for number of weights for mapping     */
-  int nc_srcgrddims_id;     /* id for source grid dimensions            */
-  int nc_dstgrddims_id;     /* id for dest grid dimensions              */
-  int nc_srcgrdcntrlat_id;  /* id for source grid center latitude       */
-  int nc_dstgrdcntrlat_id;  /* id for dest grid center latitude         */
-  int nc_srcgrdcntrlon_id;  /* id for source grid center longitude      */
-  int nc_dstgrdcntrlon_id;  /* id for dest grid center longitude        */
-  int nc_srcgrdimask_id;    /* id for source grid mask                  */
-  int nc_dstgrdimask_id;    /* id for dest grid mask                    */
-  int nc_srcgrdcrnrlat_id;  /* id for latitude of source grid corners   */
-  int nc_srcgrdcrnrlon_id;  /* id for longitude of source grid corners  */
-  int nc_dstgrdcrnrlat_id;  /* id for latitude of dest grid corners     */
-  int nc_dstgrdcrnrlon_id;  /* id for longitude of dest grid corners    */
-  int nc_srcgrdarea_id;     /* id for area of source grid cells         */
-  int nc_dstgrdarea_id;     /* id for area of dest grid cells           */
-  int nc_srcgrdfrac_id;     /* id for area fraction on source grid      */
-  int nc_dstgrdfrac_id;     /* id for area fraction on dest grid        */
-  int nc_srcadd_id;         /* id for map source address                */
-  int nc_dstadd_id;         /* id for map destination address           */
-  int nc_rmpmatrix_id;      /* id for remapping matrix                  */
-
-  long i;                   /* dummy index */
-
-  char map_name[1024];
-  char map_method[64];      /* character string for map_type             */
-  char normalize_opt[64];   /* character string for normalization option */
-  char convention[64];      /* character string for output convention    */
-  char grid1_name[64];      /* grid name for source grid                 */
-  char grid2_name[64];      /* grid name for dest   grid                 */
-  char grid1_units[64];
-  char grid2_units[64];
-  size_t attlen, dimlen;
-
-  int gridID1_gme_c = -1;
-
-
-  /* Open file and read some global information */
-
-  /* nce(nc_open(interp_file, NC_NOWRITE, &nc_file_id)); */
-  nc_file_id = cdf_openread(interp_file);
-
-  /* Map name */
-
-  nce(nc_get_att_text(nc_file_id, NC_GLOBAL, "title", map_name));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "title", &attlen));
-  map_name[attlen] = 0;
-
-  if ( cdoVerbose )
-    {
-      cdoPrint("Reading remapping: %s", map_name);
-      cdoPrint("From file: %s", interp_file);
-    }
-
-  /* Normalization option */
-
-  nce(nc_get_att_text(nc_file_id, NC_GLOBAL, "normalization", normalize_opt));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "normalization", &attlen));
-  normalize_opt[attlen] = 0;
-
-  if ( strcmp(normalize_opt, "none") == 0 )
-    rv->norm_opt = NORM_OPT_NONE;
-  else if ( strcmp(normalize_opt, "fracarea") == 0 )
-    rv->norm_opt = NORM_OPT_FRACAREA;
-  else if ( strcmp(normalize_opt, "destarea") == 0 )
-    rv->norm_opt = NORM_OPT_DESTAREA;
-  else
-    {
-      cdoPrint("normalize_opt = %s", normalize_opt);
-      cdoAbort("Invalid normalization option");
-    }
-
-  if ( cdoVerbose )
-    cdoPrint("normalize_opt = %s", normalize_opt);
-
-  /* Map method */
-
-  nce(nc_get_att_text (nc_file_id, NC_GLOBAL, "map_method", map_method));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "map_method", &attlen));
-  map_method[attlen] = 0;
-
-  *submap_type = SUBMAP_TYPE_NONE;
-  *remap_order = 1;
-
-  if ( memcmp(map_method, "Conservative", 12) == 0 )
-    {
-      int iatt;
-      rv->map_type = MAP_TYPE_CONSERV;
-      status = nc_get_att_int(nc_file_id, NC_GLOBAL, "remap_order", &iatt);
-      if ( status == NC_NOERR ) *remap_order = iatt;
-    }
-  else if ( memcmp(map_method, "Bilinear", 8) == 0 ) rv->map_type = MAP_TYPE_BILINEAR;
-  else if ( memcmp(map_method, "Distance", 8) == 0 ) rv->map_type = MAP_TYPE_DISTWGT;
-  else if ( memcmp(map_method, "Nearest", 7) == 0 )  rv->map_type = MAP_TYPE_DISTWGT1;
-  else if ( memcmp(map_method, "Bicubic", 7) == 0 )  rv->map_type = MAP_TYPE_BICUBIC;
-  else if ( memcmp(map_method, "Largest", 7) == 0 )
-    {
-      rv->map_type = MAP_TYPE_CONSERV;
-      *submap_type = SUBMAP_TYPE_LAF;
-    }
-  else
-    {
-      cdoPrint("map_type = %s", map_method);
-      cdoAbort("Invalid Map Type");
-    }
-
-  if ( cdoVerbose )
-    cdoPrint("map_type = %s", map_method);
-
-  *map_type = rv->map_type;
-
-  /* File convention */
-
-  nce(nc_get_att_text (nc_file_id, NC_GLOBAL, "conventions", convention));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "conventions", &attlen));
-  convention[attlen] = 0;
-
-  if ( strcmp(convention, "SCRIP") != 0 )
-    {
-      cdoPrint("convention = %s", convention);
-      if ( strcmp(convention, "NCAR-CSM") == 0 )
-        cdoAbort("Unsupported file convention!");
-      else
-        cdoAbort("Unknown file convention!");
-    }
-
-  /* Read some additional global attributes */
-
-  /* Source and destination grid names */
-
-  nce(nc_get_att_text (nc_file_id, NC_GLOBAL, "source_grid", grid1_name));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "source_grid", &attlen));
-  grid1_name[attlen] = 0;
-  
-  nce(nc_get_att_text (nc_file_id, NC_GLOBAL, "dest_grid", grid2_name));
-  nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "dest_grid", &attlen));
-  grid2_name[attlen] = 0;
- 
-  if ( cdoVerbose )
-    cdoPrint("Remapping between: %s and %s", grid1_name, grid2_name);
-
-  /* Read dimension information */
-
-  nce(nc_inq_dimid(nc_file_id, "src_grid_size", &nc_srcgrdsize_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_srcgrdsize_id, &dimlen));
-  rg->grid1_size = dimlen;
-  /*
-  if (  rg->grid1_size != gridInqSize(gridID1) )
-    cdoAbort("Source grids have different size!");
-  */
-  nce(nc_inq_dimid(nc_file_id, "dst_grid_size", &nc_dstgrdsize_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_dstgrdsize_id, &dimlen));
-  rg->grid2_size = dimlen;
-  /*
-  if ( rg->grid2_size != gridInqSize(gridID2) )
-    cdoAbort("Target grids have different size!");
-  */
-  rg->grid1_corners = 0;
-  rg->luse_grid1_corners = FALSE;
-  rg->lneed_grid1_corners = FALSE;
-  status = nc_inq_dimid(nc_file_id, "src_grid_corners", &nc_srcgrdcorn_id);
-  if ( status == NC_NOERR )
-    {
-      nce(nc_inq_dimlen(nc_file_id, nc_srcgrdcorn_id, &dimlen));
-      rg->grid1_corners = dimlen;
-      rg->luse_grid1_corners = TRUE;
-      rg->lneed_grid1_corners = TRUE;
-    }
-
-  rg->grid2_corners = 0;
-  rg->luse_grid2_corners = FALSE;
-  rg->lneed_grid2_corners = FALSE;
-  status = nc_inq_dimid(nc_file_id, "dst_grid_corners", &nc_dstgrdcorn_id);
-  if ( status == NC_NOERR )
-    {
-      nce(nc_inq_dimlen(nc_file_id, nc_dstgrdcorn_id, &dimlen));
-      rg->grid2_corners = dimlen;
-      rg->luse_grid2_corners = TRUE;
-      rg->lneed_grid2_corners = TRUE;
-    }
-
-  nce(nc_inq_dimid(nc_file_id, "src_grid_rank", &nc_srcgrdrank_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_srcgrdrank_id, &dimlen));
-  rg->grid1_rank = dimlen;
-
-  nce(nc_inq_dimid(nc_file_id, "dst_grid_rank", &nc_dstgrdrank_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_dstgrdrank_id, &dimlen));
-  rg->grid2_rank = dimlen;
-
-  nce(nc_inq_dimid(nc_file_id, "num_links", &nc_numlinks_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_numlinks_id, &dimlen));
-  rv->num_links = dimlen;
-
-  nce(nc_inq_dimid(nc_file_id, "num_wgts", &nc_numwgts_id));
-  nce(nc_inq_dimlen(nc_file_id, nc_numwgts_id, &dimlen));
-  rv->num_wts = dimlen;
-
-  rg->gridID1 = gridID1;
-  rg->gridID2 = gridID2;
-
-  /* Initialize all pointer */
-  rg->pinit = FALSE;
-  remapGridInitPointer(rg);
-
-  if ( gridInqType(gridID1) == GRID_GME )
-    {
-      rg->grid1_nvgp = gridInqSize(gridID1);
-      gridID1_gme_c = gridToUnstructured(gridID1, 1);
-    }
-
-  remapGridRealloc(rv->map_type, rg);
-
-  if ( gridInqType(gridID1) == GRID_GME ) gridInqMaskGME(gridID1_gme_c, rg->grid1_vgpm);    
-
-  rv->pinit = TRUE;
-  rv->wts = NULL;
-
-  rv->max_links = rv->num_links;
-
-  rv->resize_increment = (int) (0.1 * MAX(rg->grid1_size, rg->grid2_size));
-
-  /* Allocate address and weight arrays for mapping 1 */
-
-  rv->grid1_add = (int *) malloc(rv->num_links*sizeof(int));
-  rv->grid2_add = (int *) malloc(rv->num_links*sizeof(int));
-
-  rv->wts = (double *) malloc(rv->num_wts*rv->num_links*sizeof(double));
-
-  /* Get variable ids */
-
-  nce(nc_inq_varid(nc_file_id, "src_grid_dims", &nc_srcgrddims_id));
-  nce(nc_inq_varid(nc_file_id, "src_grid_imask", &nc_srcgrdimask_id));
-  nce(nc_inq_varid(nc_file_id, "src_grid_center_lat", &nc_srcgrdcntrlat_id));
-  nce(nc_inq_varid(nc_file_id, "src_grid_center_lon", &nc_srcgrdcntrlon_id));
-  if ( rg->grid1_corners )
-    {
-      nce(nc_inq_varid(nc_file_id, "src_grid_corner_lat", &nc_srcgrdcrnrlat_id));
-      nce(nc_inq_varid(nc_file_id, "src_grid_corner_lon", &nc_srcgrdcrnrlon_id));
-    }
-  nce(nc_inq_varid(nc_file_id, "src_grid_area", &nc_srcgrdarea_id));
-  nce(nc_inq_varid(nc_file_id, "src_grid_frac", &nc_srcgrdfrac_id));
-  nce(nc_inq_varid(nc_file_id, "dst_grid_dims", &nc_dstgrddims_id));
-  nce(nc_inq_varid(nc_file_id, "dst_grid_imask", &nc_dstgrdimask_id));
-  nce(nc_inq_varid(nc_file_id, "dst_grid_center_lat", &nc_dstgrdcntrlat_id));
-  nce(nc_inq_varid(nc_file_id, "dst_grid_center_lon", &nc_dstgrdcntrlon_id));
-  if ( rg->grid2_corners )
-    {
-      nce(nc_inq_varid(nc_file_id, "dst_grid_corner_lat", &nc_dstgrdcrnrlat_id));
-      nce(nc_inq_varid(nc_file_id, "dst_grid_corner_lon", &nc_dstgrdcrnrlon_id));
-    }
-  nce(nc_inq_varid(nc_file_id, "dst_grid_area", &nc_dstgrdarea_id));
-  nce(nc_inq_varid(nc_file_id, "dst_grid_frac", &nc_dstgrdfrac_id));    
-  nce(nc_inq_varid(nc_file_id, "src_address", &nc_srcadd_id));
-  nce(nc_inq_varid(nc_file_id, "dst_address", &nc_dstadd_id));
-  nce(nc_inq_varid(nc_file_id, "remap_matrix", &nc_rmpmatrix_id));
-
-  /* Read all variables */
-
-  nce(nc_get_var_int(nc_file_id, nc_srcgrddims_id, rg->grid1_dims));
-
-  nce(nc_get_var_int(nc_file_id, nc_srcgrdimask_id, rg->grid1_mask));
-
-  nce(nc_get_var_double(nc_file_id, nc_srcgrdcntrlat_id, rg->grid1_center_lat));
-  nce(nc_get_var_double(nc_file_id, nc_srcgrdcntrlon_id, rg->grid1_center_lon));
-
-  nce(nc_get_att_text(nc_file_id, nc_srcgrdcntrlat_id, "units", grid1_units));
-  nce(nc_inq_attlen(nc_file_id, nc_srcgrdcntrlat_id, "units", &attlen));
-  grid1_units[attlen] = 0;
-
-  if ( memcmp(grid1_units, "degree", 6) == 0 )
-    scale2(rg->grid1_size, DEG2RAD, rg->grid1_center_lat, rg->grid1_center_lon);
-  else if ( memcmp(grid1_units, "radian", 6) != 0 )
-    cdoPrint("Unknown units supplied for grid1 center lat/lon: proceeding assuming radians");
-
-  if ( rg->grid1_corners )
-    {
-      nce(nc_get_var_double(nc_file_id, nc_srcgrdcrnrlat_id, rg->grid1_corner_lat));
-      nce(nc_get_var_double(nc_file_id, nc_srcgrdcrnrlon_id, rg->grid1_corner_lon));
-
-      nce(nc_get_att_text(nc_file_id, nc_srcgrdcrnrlat_id, "units", grid1_units));
-      nce(nc_inq_attlen(nc_file_id, nc_srcgrdcrnrlat_id, "units", &attlen));
-      grid1_units[attlen] = 0;
-
-      if ( memcmp(grid1_units, "degree", 6) == 0 )
-	scale2( rg->grid1_corners*rg->grid1_size, DEG2RAD, rg->grid1_corner_lat, rg->grid1_corner_lon);
-      else if ( memcmp(grid1_units, "radian", 6) != 0 )
-	cdoPrint("Unknown units supplied for grid1 corner lat/lon: proceeding assuming radians");
-    }
-
-  if ( rv->map_type == MAP_TYPE_CONSERV )
-    nce(nc_get_var_double(nc_file_id, nc_srcgrdarea_id, rg->grid1_area));
-
-  nce(nc_get_var_double(nc_file_id, nc_srcgrdfrac_id, rg->grid1_frac));
-
-  nce(nc_get_var_int(nc_file_id, nc_dstgrddims_id, rg->grid2_dims));
-
-  nce(nc_get_var_int(nc_file_id, nc_dstgrdimask_id, rg->grid2_mask));
-
-  nce(nc_get_var_double(nc_file_id, nc_dstgrdcntrlat_id, rg->grid2_center_lat));
-  nce(nc_get_var_double(nc_file_id, nc_dstgrdcntrlon_id, rg->grid2_center_lon));
-
-  nce(nc_get_att_text(nc_file_id, nc_dstgrdcntrlat_id, "units", grid2_units));
-  nce(nc_inq_attlen(nc_file_id, nc_dstgrdcntrlat_id, "units", &attlen));
-  grid2_units[attlen] = 0;
-
-  if ( memcmp(grid2_units, "degree", 6) == 0 )
-    scale2(rg->grid2_size, DEG2RAD, rg->grid2_center_lat, rg->grid2_center_lon);
-  else if ( memcmp(grid2_units, "radian", 6) != 0 )
-    cdoPrint("Unknown units supplied for grid2 center lat/lon: proceeding assuming radians");
-
-  if ( rg->grid2_corners )
-    {
-      nce(nc_get_var_double(nc_file_id, nc_dstgrdcrnrlat_id, rg->grid2_corner_lat));
-      nce(nc_get_var_double(nc_file_id, nc_dstgrdcrnrlon_id, rg->grid2_corner_lon));
-
-      nce(nc_get_att_text(nc_file_id, nc_dstgrdcrnrlat_id, "units", grid2_units));
-      nce(nc_inq_attlen(nc_file_id, nc_dstgrdcrnrlat_id, "units", &attlen));
-      grid2_units[attlen] = 0;
-      
-      if ( memcmp(grid2_units, "degree", 6) == 0 )
-	scale2( rg->grid2_corners*rg->grid2_size, DEG2RAD, rg->grid2_corner_lat, rg->grid2_corner_lon);
-      else if ( memcmp(grid2_units, "radian", 6) != 0 )
-	cdoPrint("Unknown units supplied for grid2 corner lat/lon: proceeding assuming radians");
-    }
-
-  if ( rv->map_type == MAP_TYPE_CONSERV )
-    nce(nc_get_var_double(nc_file_id, nc_dstgrdarea_id, rg->grid2_area));
-
-  nce(nc_get_var_double(nc_file_id, nc_dstgrdfrac_id, rg->grid2_frac));
-
-  nce(nc_get_var_int(nc_file_id, nc_srcadd_id, rv->grid1_add));
-  nce(nc_get_var_int(nc_file_id, nc_dstadd_id, rv->grid2_add));
-
-  for ( i = 0; i < rv->num_links; i++ )
-    {
-      rv->grid1_add[i]--;
-      rv->grid2_add[i]--;
-    }
-
-  nce(nc_get_var_double(nc_file_id, nc_rmpmatrix_id, rv->wts));
-
-  /* Close input file */
-
-  nce(nc_close(nc_file_id));
-
-#else
-  cdoAbort("netCDF support not compiled in!");
-#endif
-
-  rv->links.option    = FALSE;
-  rv->links.max_links = 0;
-  rv->links.num_blks  = 0;
-  rv->links.num_links = NULL;
-  rv->links.src_add   = NULL;
-  rv->links.dst_add   = NULL;
-  rv->links.w_index   = NULL;
-}  /* read_remap_scrip */

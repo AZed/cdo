@@ -5,20 +5,20 @@
 #  include "service.h"
 #endif
 
-int    srvInqContents(int streamID);
-int    srvInqTimestep(int streamID, int tsID);
+int    srvInqContents(stream_t *streamptr);
+int    srvInqTimestep(stream_t *streamptr, int tsID);
 
-int    srvInqRecord(int streamID, int *varID, int *levelID);
-int    srvDefRecord(int streamID);
-int    srvCopyRecord(int streamIDdest, int streamIDsrc);
-int    srvReadRecord(int streamID, double *data, int *nmiss);
-int    srvWriteRecord(int streamID, const double *data);
+int    srvInqRecord(stream_t *streamptr, int *varID, int *levelID);
+int    srvDefRecord(stream_t *streamptr);
+int    srvCopyRecord(stream_t *streamptr2, stream_t *streamptr1);
+int    srvReadRecord(stream_t *streamptr, double *data, int *nmiss);
+int    srvWriteRecord(stream_t *streamptr, const double *data);
 
-void   srvReadVarDP (int streamID, int varID,       double *data, int *nmiss);
-void   srvWriteVarDP(int streamID, int varID, const double *data);
+void   srvReadVarDP (stream_t *streamptr, int varID,       double *data, int *nmiss);
+void   srvWriteVarDP(stream_t *streamptr, int varID, const double *data);
 
-void   srvReadVarSliceDP (int streamID, int varID, int levelID,       double *data, int *nmiss);
-void   srvWriteVarSliceDP(int streamID, int varID, int levelID, const double *data);
+void   srvReadVarSliceDP (stream_t *streamptr, int varID, int levelID,       double *data, int *nmiss);
+void   srvWriteVarSliceDP(stream_t *streamptr, int varID, int levelID, const double *data);
 
 #endif  /* _STREAM_SRV_H */
 /*

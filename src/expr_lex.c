@@ -31,7 +31,7 @@
 
 /* C99 systems have <inttypes.h>. Non-C99 systems may or may not. */
 
-#if defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 
 /* C99 says to define __STDC_LIMIT_MACROS before including stdint.h,
  * if you want the limit (max/min) macros for int types. 
@@ -95,11 +95,11 @@ typedef unsigned int flex_uint32_t;
 #else	/* ! __cplusplus */
 
 /* C99 requires __STDC__ to be defined as 1. */
-#if defined (__STDC__)
+#if defined(__STDC__)
 
 #define YY_USE_CONST
 
-#endif	/* defined (__STDC__) */
+#endif	/* defined(__STDC__) */
 #endif	/* ! __cplusplus */
 
 #ifdef YY_USE_CONST

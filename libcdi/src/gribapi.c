@@ -9,7 +9,7 @@
 #include <stdio.h>
 
 #include "cdi.h"
-#include "stream_int.h"
+#include "cdi_int.h"
 #include "gribapi.h"
 #include "dmemory.h"
 
@@ -36,11 +36,11 @@ const char *gribapiLibraryVersion(void)
 }
 
 
-void gribContainersNew(int streamID)
+void gribContainersNew(stream_t * streamptr)
 {
-  stream_t *streamptr;
+  int editionNumber = 2;
 
-  streamptr = stream_to_pointer(streamID);
+  if ( streamptr->filetype == FILETYPE_GRB ) editionNumber = 1;
 
 #if  defined  (HAVE_LIBCGRIBEX)
   if ( streamptr->filetype == FILETYPE_GRB )
@@ -49,39 +49,79 @@ void gribContainersNew(int streamID)
   else
 #endif
     {
-      int i, editionNumber = 2;
-      gribContainer_t *gribContainers;
+      int nvars = streamptr->nvars;
 
-      if ( streamptr->filetype == FILETYPE_GRB ) editionNumber = 1;
+#if defined (GRIBCONTAINER2D)
+      gribContainer_t **gribContainers;
+      gribContainers = (gribContainer_t **) malloc(nvars*sizeof(gribContainer_t *));
 
-      gribContainers = (gribContainer_t *) malloc(streamptr->nvars*sizeof(gribContainer_t));
-      streamptr->gribContainers = (void *) gribContainers;
+      for ( int varID = 0; varID < nvars; ++varID )
+        {
+          int nlevs = streamptr->vars[varID].nlevs;
+          gribContainers[varID] = (gribContainer_t *) malloc(nlevs*sizeof(gribContainer_t));
 
-      for ( i = 0; i < streamptr->nvars; ++i )
-	{
-	  gribContainers[i].gribHandle = gribHandleNew(editionNumber);
-	  gribContainers[i].init = FALSE;
+          for ( int levelID = 0; levelID < nlevs; ++levelID )
+            {
+              gribContainers[varID][levelID].gribHandle = gribHandleNew(editionNumber);
+              gribContainers[varID][levelID].init = FALSE;
+            }
 	}
+
+      streamptr->gribContainers = (void **) gribContainers;
+#else
+      gribContainer_t *gribContainers;
+      gribContainers = (gribContainer_t *) malloc(nvars*sizeof(gribContainer_t));
+
+      for ( int varID = 0; varID < nvars; ++varID )
+        {
+          gribContainers[varID].gribHandle = gribHandleNew(editionNumber);
+          gribContainers[varID].init = FALSE;
+	}
+
+      streamptr->gribContainers = (void *) gribContainers;
+#endif
     }
 }
 
 
-void gribContainersDelete(int streamID)
+void gribContainersDelete(stream_t * streamptr)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
-
   if ( streamptr->gribContainers )
     {
-      int i;
+      int nvars = streamptr->nvars;
+
+#if defined (GRIBCONTAINER2D)
+      gribContainer_t **gribContainers = (gribContainer_t **) streamptr->gribContainers;
+
+      for ( int varID = 0; varID < nvars; ++varID )
+	{
+          int nlevs = streamptr->vars[varID].nlevs;
+          for ( int levelID = 0; levelID < nlevs; ++levelID )
+            {
+              gribHandleDelete(gribContainers[varID][levelID].gribHandle);
+            }
+          free(gribContainers[varID]);
+	}
+#else
       gribContainer_t *gribContainers = (gribContainer_t *) streamptr->gribContainers;
 
-      for ( i = 0; i < streamptr->nvars; ++i )
+      for ( int varID = 0; varID < nvars; ++varID )
 	{
-	  gribHandleDelete(gribContainers[i].gribHandle);
+          gribHandleDelete(gribContainers[varID].gribHandle);
 	}
-      free(streamptr->gribContainers);
+#endif
+
+      free(gribContainers);
+
       streamptr->gribContainers = NULL;
     }
 }
+/*
+ * Local Variables:
+ * c-file-style: "Java"
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * show-trailing-whitespace: t
+ * require-trailing-newline: t
+ * End:
+ */

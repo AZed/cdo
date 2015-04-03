@@ -14,4 +14,6 @@ void StrToUpperCase ( char *sPtr );
 
 void StrToLowerCase ( char *sPtr );
 
+void StrReplaceChar( char *str_in, char orig_char, char rep_char );
+
 #endif

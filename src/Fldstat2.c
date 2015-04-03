@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -32,19 +32,18 @@
 /* correclation in space */
 static
 double correlation_s(const double * restrict in0, const double * restrict in1,
-		     const double * restrict weight, double missval, long gridsize)
+		     const double * restrict weight, double missval1, double missval2, long gridsize)
 {
   long i;
   double sum0, sum1, sum00, sum01, sum11, wsum0;
   double out;
-  double missval1 = missval, missval2 = missval;
 
   sum0 = sum1 = sum00 = sum01 = sum11 = 0;
   wsum0 = 0;
 	
   for ( i = 0; i < gridsize; ++i )
     {
-      if ( weight[i] != missval && in0[i] != missval && in1[i] != missval)
+      if ( IS_NOT_EQUAL(weight[i], missval1) && IS_NOT_EQUAL(in0[i], missval1) && IS_NOT_EQUAL(in1[i], missval2) )
 	    {
 	      sum0  += weight[i] * in0[i];
 	      sum1  += weight[i] * in1[i];
@@ -55,10 +54,10 @@ double correlation_s(const double * restrict in0, const double * restrict in1,
 	    }
     }
 
-  out = wsum0 ?
+  out = IS_NOT_EQUAL(wsum0, 0) ?
         DIV((sum01 * wsum0 - sum0 * sum1),
 	     SQRT((sum00 * wsum0 - sum0 * sum0) *
-	          (sum11 * wsum0 - sum1 * sum1))) : missval;
+	          (sum11 * wsum0 - sum1 * sum1))) : missval1;
 
   return (out);
 }
@@ -66,7 +65,7 @@ double correlation_s(const double * restrict in0, const double * restrict in1,
 /* covariance in space */
 static
 double covariance_s(const double * restrict in0, const double * restrict in1,
-		    const double * restrict weight, double missval, long gridsize)
+		    const double * restrict weight, double missval1, double missval2, long gridsize)
 {
   long i;
   double sum0, sum1, sum01, wsum0, wsum00;
@@ -77,7 +76,7 @@ double covariance_s(const double * restrict in0, const double * restrict in1,
 
   for ( i = 0; i < gridsize; ++i )
     {
-      if ( weight[i] != missval && in0[i] != missval && in1[i] != missval )
+      if ( IS_NOT_EQUAL(weight[i], missval1) && IS_NOT_EQUAL(in0[i], missval1) && IS_NOT_EQUAL(in1[i], missval2) )
 	{
 	  sum0   += weight[i] * in0[i];
 	  sum1   += weight[i] * in1[i];
@@ -87,8 +86,8 @@ double covariance_s(const double * restrict in0, const double * restrict in1,
 	}
     }
 
-  out = wsum0 ?
-        (sum01 * wsum0 - sum0 * sum1) / (wsum0 * wsum0) : missval;
+  out = IS_NOT_EQUAL(wsum0, 0) ?
+        (sum01 * wsum0 - sum0 * sum1) / (wsum0 * wsum0) : missval1;
 
   return (out);
 }
@@ -110,11 +109,11 @@ void *Fldstat2(void *argument)
   long gridsize;
   int needWeights = TRUE;
   int nmiss1, nmiss2, nmiss3;
-  double missval;
+  double missval1, missval2;
   double slon, slat;
   double sglval;
   double *array1, *array2, *weight;
-  int taxisID1, taxisID2, taxisID3;
+  int taxisID1, taxisID3;
 
   cdoInitialize(argument);
 
@@ -134,7 +133,6 @@ void *Fldstat2(void *argument)
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID3, taxisID3);
 
@@ -168,6 +166,12 @@ void *Fldstat2(void *argument)
     {
       nrecs2 = streamInqTimestep(streamID2, tsID);
 
+      if ( nrecs2 == 0 )
+	{
+	  cdoWarning("Input streams have different number of time steps!");
+	  break;
+	}
+
       taxisCopyTimestep(taxisID3, taxisID1);
 
       streamDefTimestep(streamID3, tsID);
@@ -190,18 +194,19 @@ void *Fldstat2(void *argument)
 	  if ( wstatus != 0 && tsID == 0 && code != oldcode )
 	    cdoWarning("Using constant grid cell area weights for code %d!", oldcode=code);
 
-	  missval = vlistInqVarMissval(vlistID1, varID);
+	  missval1 = vlistInqVarMissval(vlistID1, varID);
+	  missval2 = vlistInqVarMissval(vlistID2, varID);
 
 	  if ( operfunc == func_cor )
 	    {
-	      sglval = correlation_s(array1, array2, weight, missval, gridsize);
+	      sglval = correlation_s(array1, array2, weight, missval1, missval2, gridsize);
 	    }
 	  else if ( operfunc == func_covar )
 	    {
-	      sglval = covariance_s(array1, array2, weight, missval, gridsize);
+	      sglval = covariance_s(array1, array2, weight, missval1, missval2, gridsize);
 	    }
 
-	  if ( DBL_IS_EQUAL(sglval, missval) )
+	  if ( DBL_IS_EQUAL(sglval, missval1) )
 	    nmiss3 = 1;
 	  else
 	    nmiss3 = 0;

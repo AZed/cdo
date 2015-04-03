@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -149,10 +149,12 @@ static char *skipSeparator(char *pline)
 }
 
 
-int zaxisFromFile(FILE *gfp)
+int zaxisFromFile(FILE *gfp, const char *dname)
 {
   char line[MAX_LINE_LEN], *pline;
   int zaxisID;
+  int lerror;
+  size_t i, len;
   zaxis_t zaxis;
 
   zaxisInit(&zaxis);
@@ -161,6 +163,17 @@ int zaxisFromFile(FILE *gfp)
     {
       if ( line[0] == '#' ) continue;
       if ( line[0] == '\0' ) continue;
+      len = strlen(line);
+
+      lerror = FALSE;
+      for ( i = 0; i < len; ++i )
+	if ( !(line[i] == 9 || (line[i] > 31 && line[i] < 127)) )
+	  {
+	    lerror = TRUE;
+	    line[i] = '#';
+	  }
+      if ( lerror ) cdoAbort("Zaxis description file >%s< contains illegal characters (line: %s)!", dname, line);
+
       pline = line;
       while ( isspace((int) *pline) ) pline++;
       if ( pline[0] == '\0' ) continue;
@@ -193,7 +206,7 @@ int zaxisFromFile(FILE *gfp)
 	  else if ( memcmp(pline, "generic", 7)  == 0 )
 	    zaxis.type = ZAXIS_GENERIC;
 	  else
-	    Warning("Invalid zaxisname : %s", pline);
+	    cdoAbort("Invalid zaxisname : %s (zaxis description file: %s)", pline, dname);
 	}
       else if ( memcmp(pline, "size", 4)  == 0 )
 	{
@@ -231,10 +244,8 @@ int zaxisFromFile(FILE *gfp)
 		  if ( strlen(pline) == 0 )
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
-			{
-			  Warning("Incomplete command: >levels<");
-			  break;
-			}
+			cdoAbort("Incomplete command: >levels< (zaxis description file: %s)", dname);
+
 		      pline = line;
 		      pline = skipSeparator(pline);
 		    }
@@ -248,7 +259,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning("size undefined!");
+	      cdoAbort("size undefined (zaxis description file: %s)!", dname);
 	    }
 	}
       else if ( memcmp(pline, "vct", 3)  == 0 )
@@ -267,10 +278,8 @@ int zaxisFromFile(FILE *gfp)
 		  if ( strlen(pline) == 0 )
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
-			{
-			  Warning("Incomplete command: >vct<");
-			  break;
-			}
+			cdoAbort("Incomplete command: >vct< (zaxis description file: %s)", dname);
+
 		      pline = line;
 		      pline = skipSeparator(pline);
 		    }
@@ -284,7 +293,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning("vctsize undefined!");
+	      cdoAbort("vctsize undefined (zaxis description file: %s)!", dname);
 	    }
 	}
       else if ( memcmp(pline, "lbounds", 7)  == 0 )
@@ -303,10 +312,8 @@ int zaxisFromFile(FILE *gfp)
 		  if ( strlen(pline) == 0 )
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
-			{
-			  Warning("Incomplete command: >lbounds<");
-			  break;
-			}
+			cdoAbort("Incomplete command: >lbounds< (zaxis description file: %s)", dname);
+
 		      pline = line;
 		      pline = skipSeparator(pline);
 		    }
@@ -320,7 +327,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning("size undefined!");
+	      cdoAbort("size undefined (zaxis description file: %s)!", dname);
 	    }
 	}
       else if ( memcmp(pline, "ubounds", 7)  == 0 )
@@ -339,10 +346,8 @@ int zaxisFromFile(FILE *gfp)
 		  if ( strlen(pline) == 0 )
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
-			{
-			  Warning("Incomplete command: >ubounds<");
-			  break;
-			}
+			cdoAbort("Incomplete command: >ubounds< (zaxis description file: %s)", dname);
+
 		      pline = line;
 		      pline = skipSeparator(pline);
 		    }
@@ -356,11 +361,11 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning("size undefined!");
+	      cdoAbort("size undefined (zaxis description file: %s)!", dname);
 	    }
 	}
       else
-	Warning("Invalid zaxis command : >%s<", pline);
+	cdoAbort("Invalid zaxis command : >%s< (zaxis description file: %s)", pline, dname);
     }
 
   zaxisID = zaxisDefine(zaxis);
@@ -406,7 +411,7 @@ int cdoDefineZaxis(const char *zaxisfile)
     }
   else
     {
-      zaxisID = zaxisFromFile(zfp);
+      zaxisID = zaxisFromFile(zfp, zaxisfile);
       fclose(zfp);
     }
 
@@ -458,7 +463,6 @@ int ztype2ltype(int zaxistype)
   else if ( zaxistype == ZAXIS_DEPTH_BELOW_LAND  )  ltype = 111;
   else if ( zaxistype == ZAXIS_ISENTROPIC        )  ltype = 113;
   else if ( zaxistype == ZAXIS_DEPTH_BELOW_SEA   )  ltype = 160;
-  else cdoWarning("zaxis type %d not supported", zaxistype);
 
   return (ltype);
 }

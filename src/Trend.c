@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -39,7 +39,7 @@ void *Trend(void *argument)
   int streamID1, streamID2, streamID3;
   int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
-  int nvars, nlevel;
+  int nvars;
   int *recVarID, *recLevelID;
   int nwork = 5;
   double zj;
@@ -78,31 +78,14 @@ void *Trend(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
+  field_init(&field1);
+  field_init(&field2);
+
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
 
   for ( w = 0; w < nwork; w++ )
-    work[w] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      gridID   = vlistInqVarGrid(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
-      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      missval  = vlistInqVarMissval(vlistID1, varID);
-
-      for ( w = 0; w < nwork; w++ )
-	work[w][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  for ( w = 0; w < nwork; w++ )
-	    {
-	      work[w][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
-	      for ( i = 0; i < gridsize; i++ ) work[w][varID][levelID].ptr[i] = 0;
-	    }
-	}
-    }
+    work[w] = field_calloc(vlistID1, FIELD_PTR);
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
@@ -187,20 +170,8 @@ void *Trend(void *argument)
       streamWriteRecord(streamID3, field2.ptr, nmiss);
     }
 
-  for ( varID = 0; varID < nvars; varID++ )
-    {
-      nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      for ( levelID = 0; levelID < nlevel; levelID++ )
-	{
-	  for ( w = 0; w < nwork; w++ )
-	    free(work[w][varID][levelID].ptr);
-	}
 
-      for ( w = 0; w < nwork; w++ )
-	free(work[w][varID]);
-    }
-
-  for ( w = 0; w < nwork; w++ ) free(work[w]);
+  for ( w = 0; w < nwork; w++ ) field_free(work[w], vlistID1);
 
   if ( field1.ptr ) free(field1.ptr);
   if ( field2.ptr ) free(field2.ptr);

@@ -2,7 +2,7 @@
  This file is part of CDO. CDO is a collection of Operators to
  manipulate and analyse Climate model Data.
  
- Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+ Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
  See COPYING file for copying and redistribution conditions.
  
  This program is free software; you can redistribute it and/or modify
@@ -33,8 +33,9 @@
 void *Eofcoeff(void * argument)
 {
   char eof_name[8], oname[1024], filesuffix[32];
+  const char *refname;
   double *w;
-  double missval1=-999, missval2;
+  double missval1 = -999, missval2;
   double *xvals, *yvals;  
   field_t ***eof;  
   field_t in;  
@@ -72,7 +73,7 @@ void *Eofcoeff(void * argument)
     gridsize = vlistGridsizeMax(vlistID1);  
   else 
     {
-      gridsize=-1;
+      gridsize = -1;
       cdoAbort ("Gridsize of input files does not match");
     }
       
@@ -90,14 +91,15 @@ void *Eofcoeff(void * argument)
   
   if (vlistGridsizeMax(vlistID2)   != gridsize ||
       vlistInqVarGrid(vlistID2, 0) != gridID1 )
-    cdoAbort("EOFs (%s) and data (%s) defined on different grids", cdoStreamName(0), cdoStreamName(1));    
+    cdoAbort("EOFs (%s) and data (%s) defined on different grids", cdoStreamName(0)->args, cdoStreamName(1)->args);    
  
   
-  strcpy(oname, cdoStreamName(2));
+  strcpy(oname, cdoStreamName(2)->args);
   nchars = strlen(oname);
   
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
   
   eof = (field_t ***) malloc (nvars * sizeof(field_t**) );
   for ( varID=0; varID<nvars; varID++)
@@ -137,7 +139,7 @@ void *Eofcoeff(void * argument)
    }
   neof = eofID;  
   
-  if ( cdoVerbose ) cdoPrint("%s contains %i eof's", cdoStreamName(0), neof);
+  if ( cdoVerbose ) cdoPrint("%s contains %i eof's", cdoStreamName(0)->args, neof);
   // Create 1x1 Grid for output
   gridID3 = gridCreate(GRID_LONLAT, 1);
   gridDefXsize(gridID3, 1);
@@ -172,7 +174,10 @@ void *Eofcoeff(void * argument)
       if ( filesuffix[0] )
         strcat(oname, filesuffix);
       
-      streamIDs[eofID] = streamOpenWrite(oname, cdoFiletype());
+      argument_t *fileargument = file_argument_new(oname);
+      streamIDs[eofID] = streamOpenWrite(fileargument, cdoFiletype());
+      file_argument_free(fileargument);
+
       if (cdoVerbose) 
         cdoPrint("opened %s ('w')  as stream%i for %i. eof", oname, streamIDs[eofID], eofID+1);
       

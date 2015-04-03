@@ -44,22 +44,22 @@ int main(int argc, char *argv[])
 	  if ( !strncmp(cstring, "debug", len) )
 	    {
 	      debug = 1;
-	      break;
 	    }
+	  break;
         case 'h':
 	  if ( !strncmp(cstring, "help", len) )
 	    { 
 	      usage( );
 	      return( 0 );
-	      break;
             }
+	  break;
         case 'v':
 	  if ( !strncmp(cstring, "version", len) )
 	    {
 	      version();
 	      return (0);
-	      break;
             }
+	  break;
         default:
 	  usage();
 	  fprintf(stderr, "illegal option %s\n", cstring);

@@ -7,7 +7,6 @@
 #include <cdi.h>
 #include "gradsdeslib.h"
 
-extern int cdoDefaultDataType;
 
 static char pout[512];
 FILE *descr;             /* File descriptor pointer */
@@ -1919,7 +1918,7 @@ int read_gradsdes(char *filename, dsets_t *pfi)
       ens->length = pfi->dnum[3];
       ens->gt = 1;
       gr2t(pfi->grvals[3],1,&ens->tinit);
-      for (j=0;j<4;j++) ens->grbcode[j]=-999;
+      for (j=0;j<4;j++) ens->grbcode[j] = -999;
   }
 
   /* Make sure there are no conflicting options and data types */

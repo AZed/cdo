@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -77,7 +77,7 @@ void *Cond(void *argument)
   if ( vlistNrecs(vlistID1) == 1 && vlistNrecs(vlistID2) != 1 )
     {
       filltype = FILL_REC;
-      cdoPrint("Filling up stream1 >%s< by copying the first record.", cdoStreamName(0));
+      cdoPrint("Filling up stream1 >%s< by copying the first record.", cdoStreamName(0)->args);
     }
 
   if ( filltype == FILL_NONE )
@@ -93,7 +93,7 @@ void *Cond(void *argument)
   gridsize = vlistGridsizeMax(vlistID2);
 
   if ( filltype == FILL_REC && gridsize != gridInqSize(vlistGrid(vlistID1, 0)) )
-    cdoAbort("Stream1 >%s< has wrong gridsize!", cdoStreamName(0));
+    cdoAbort("Stream1 >%s< has wrong gridsize!", cdoStreamName(0)->args);
 
   array1 = (double *) malloc(gridsize*sizeof(double));
   array2 = (double *) malloc(gridsize*sizeof(double));
@@ -107,7 +107,7 @@ void *Cond(void *argument)
       if ( ntsteps1 == 1 && ntsteps2 != 1 )
 	{
 	  filltype = FILL_TS;
-	  cdoPrint("Filling up stream1 >%s< by copying the first timestep.", cdoStreamName(0));
+	  cdoPrint("Filling up stream1 >%s< by copying the first timestep.", cdoStreamName(0)->args);
 
 	  nvars  = vlistNvars(vlistID1);
 	  vardata1  = (double **) malloc(nvars*sizeof(double *));

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,10 +29,8 @@
 
 void *Splitsel(void *argument)
 {
-  int operatorID;
-  int operfunc;
   int gridsize;
-  int vdate = 0, vtime = 0;
+  //int vdate = 0, vtime = 0;
   int nrecs = 0;
   int varID, levelID, recID;
   int tsID, tsID2;
@@ -52,6 +50,7 @@ void *Splitsel(void *argument)
   int nchars;
   char filesuffix[32];
   char filename[8192];
+  const char *refname;
   int index = 0;
   int lcopy = FALSE;
   double *array = NULL;
@@ -60,9 +59,6 @@ void *Splitsel(void *argument)
   cdoInitialize(argument);
 
   cdoOperatorAdd("splitsel",  0,  0, NULL);
-
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -94,11 +90,12 @@ void *Splitsel(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  strcpy(filename, cdoStreamName(1));
+  strcpy(filename, cdoStreamName(1)->args);
   nchars = strlen(filename);
 
+  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
-  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
   //  if ( ! lcopy )
     {
@@ -128,6 +125,7 @@ void *Splitsel(void *argument)
 
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
+		  field_init(&vars[varID][levelID]);
 		  vars[varID][levelID].grid    = gridID;
 		  vars[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 		}
@@ -163,7 +161,9 @@ void *Splitsel(void *argument)
       sprintf(filename+nchars+6, "%s", filesuffix);
 	  
       if ( cdoVerbose ) cdoPrint("create file %s", filename);
-      streamID2 = streamOpenWrite(filename, cdoFiletype());
+      argument_t *fileargument = file_argument_new(filename);
+      streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+      file_argument_free(fileargument);
 
       streamDefVlist(streamID2, vlistID2);
 
@@ -174,9 +174,11 @@ void *Splitsel(void *argument)
 	  nrecs = streamInqTimestep(streamID1, tsID);
 	  if ( nrecs == 0 ) break;
 
+	  /*
 	  vdate = taxisInqVdate(taxisID1);
 	  vtime = taxisInqVtime(taxisID1);
-	  /* printf("vdate: %d vtime: %d\n", vdate, vtime); */
+	  printf("vdate: %d vtime: %d\n", vdate, vtime);
+	   */
 
 	  taxisCopyTimestep(taxisID2, taxisID1);
 	  streamDefTimestep(streamID2, tsID2);

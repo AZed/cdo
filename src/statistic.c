@@ -1330,7 +1330,7 @@ void annihilate_1side(double **M, long i, long j, long k, long n)
   tmp = fabs(gamma/sqrt(alpha*beta));
 
   if ( tmp < fnorm_precision ) {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
     #pragma omp critical 
 #endif
     {
@@ -1349,8 +1349,8 @@ void annihilate_1side(double **M, long i, long j, long k, long n)
   
   // calculate a_i,j - tilde
   for ( r=0; r<n; r++ ) {
-    mi[r] = ck*M[i][r]  + sk*M[j][r];
-    mj[r] =-sk*M[i][r]  + ck*M[j][r];
+    mi[r] =  ck*M[i][r]  + sk*M[j][r];
+    mj[r] = -sk*M[i][r]  + ck*M[j][r];
   }
   
   for ( r=0; r<n; r++ ) {
@@ -1421,7 +1421,7 @@ int jacobi_1side(double **M, double *A, long n)
     n_finished = 0;
     if ( n%2 == 1 ) {
       for(m=0;m<n;m++) {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	#pragma omp parallel for private(i,idx,i_ann,j_ann) shared(M,annihilations,n) reduction(+:n_finished)
 #endif
         for(i=0;i<n/2;i++) {
@@ -1435,7 +1435,7 @@ int jacobi_1side(double **M, double *A, long n)
     }
     else { // n%2 == 0                                                                               
       for(m=0;m<n;m++) {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 	#pragma omp parallel for private(i,idx,i_ann,j_ann) shared(M,annihilations,n) reduction(+:n_finished)
 #endif
         for(i=0;i<n/2-(m%2);i++) {

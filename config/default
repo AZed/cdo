@@ -21,38 +21,48 @@ case "${HOSTNAME}" in
 	${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16cgribex \
+                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
                     --with-netcdf=$HOME/local \
                     --with-hdf5=$HOME/local \
                     --with-szlib=$HOME/local \
                     --with-proj=/opt/local \
-                    --with-magics=/Users/m214003/local/magics-2.14.9 \
-	            CC=icc CFLAGS="-g  -D_REENTRANT -Wall -W -O3 -openmp -DHAVE_LIBXML -I/usr/include/libxml2 -I/opt/include" \
-                    LIBS="-L/usr/lib -lxml2 -L/opt/local/lib -lopenjpeg"
+	            CC=icc CFLAGS="-g  -D_REENTRANT -Wall -W -O3 -march=native -openmp" \
+                    LIBS="-L/opt/local/lib -lopenjpeg"
+#                    --with-libxml2=/usr \
+#                    --with-magics=/Users/m214003/local/magics-2.14.9 \
 	;;
 # i386-apple-darwin10
     bailung*)
 	${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16cgribex \
+                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
                     --with-netcdf=$HOME/local \
                     --with-hdf5=$HOME/local \
                     --with-szlib=$HOME/local \
+                    --with-udunits2=$HOME/local/udunits-2.1.24 \
                     --with-proj=/opt/local \
+                    --with-curl=/opt/local \
+                    --with-libxml2=/usr \
                     --with-magics=/Users/m214003/local/magics-2.14.9 \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -fopenmp -DHAVE_LIBXML -I/usr/include/libxml2 -I/opt/include" \
-                    LIBS="-L/usr/lib -lxml2 -L/opt/local/lib -lopenjpeg"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp -DHAVE_LIBYAC -I/Users/m214003/cdt/work/YAC/src" \
+                    LIBS="-L/opt/local/lib -lopenjpeg -L/Users/m214003/cdt/work/YAC/src -lyac"
+#                    --with-libxml2=/usr
+#                    --with-magics=/Users/m214003/local/magics-2.14.9
 	;;
     hama*)
 	${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     --with-jasper=/opt/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.8 \
+                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
                     --with-netcdf=/opt/local \
                     --with-szlib=$HOME/local \
                     --with-proj=/opt/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -fopenmp"
+                    --with-curl=/opt/local \
+                    --with-libxml2=/usr \
+                    --with-magics=/Users/m214003/local/Magics-2.18.14nio \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp -DHAVE_LIBYAC -I/Users/m214003/cdt/work/YAC/src" \
+                    LIBS="-L/Users/m214003/cdt/work/YAC/src -lyac"
 	;;
 # ia64-xxx-linux
     ds*)
@@ -78,38 +88,45 @@ case "${HOSTNAME}" in
 	;;
 # x86_64-squeeze-x64-linux
     thunder*)
-        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/squeeze-x64 \
+        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
+                    --enable-all-static \
                     --with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
                     --with-grib_api=/sw/squeeze-x64/grib_api-1.9.9-static \
                     --with-netcdf=/sw/squeeze-x64/netcdf-4.2-static \
                     --with-hdf5=/sw/squeeze-x64/hdf5-1.8.8-static \
                     --with-szlib=/sw/squeeze-x64/szip-2.1 \
+                    --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
                     --with-proj=/sw/squeeze-x64/proj-4.7.0 \
-                    CC=gcc CFLAGS='-g -Wall -O3 -fopenmp'
+                    CC=gcc CFLAGS='-g -Wall -O3 -march=native -fopenmp'
 	;;
 # x86_64-lenny-linux-gnu
     squall*)
-        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/lenny-x64 \
-                    --with-jasper=/sw/lenny-x64/jasper-1.900.1-static \
-                    --with-grib_api=/sw/lenny-x64/grib_api-1.9.9-static \
-                    --with-netcdf=/sw/lenny-x64/netcdf-4.2-static \
-                    --with-hdf5=/sw/lenny-x64/hdf5-1.8.8-static \
-                    --with-szlib=/sw/lenny-x64/szip-2.1 \
-                    --with-proj=/sw/lenny-x64/proj-4.7.0 \
+        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/squeeze-x64 \
+                    --enable-all-static \
+                    --with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
+                    --with-grib_api=/sw/squeeze-x64/grib_api-1.9.9-static \
+                    --with-netcdf=/sw/squeeze-x64/netcdf-4.2-static \
+                    --with-hdf5=/sw/squeeze-x64/hdf5-1.8.8-static \
+                    --with-szlib=/sw/squeeze-x64/szip-2.1 \
+                    --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
+                    --with-proj=/sw/squeeze-x64/proj-4.7.0 \
                     CC=gcc CFLAGS='-g -Wall -O3 -fopenmp'
 	;;
 # x86_64-archlinux
     thingol*)
- 	${CONFPATH}configure --prefix=`pwd`/build \
+ 	${CONFPATH}configure --prefix=$HOME/local \
+                    --program-suffix=-dev \
                     --enable-maintainer-mode \
-	            --with-netcdf=$HOME/local/libs4cdo-0.0.9 \
-	              --with-hdf5=$HOME/local/libs4cdo-0.0.9 \
-                     --with-szlib=$HOME/local/libs4cdo-0.0.9 \
-                      --with-proj=$HOME/local/libs4cdo-0.0.9 \
-                  --with-grib_api=$HOME/local/libs4cdo-0.0.9 \
-                    --with-jasper=$HOME/local/libs4cdo-0.0.9 \
+	            --with-netcdf=$HOME/src/cdo/branches/libs4cdo/build-dev \
+	              --with-hdf5=$HOME/src/cdo/branches/libs4cdo/build-dev \
+                     --with-szlib=$HOME/src/cdo/branches/libs4cdo/build-dev \
+                  --with-grib_api=$HOME/src/cdo/branches/libs4cdo/build-dev \
+                    --with-jasper=$HOME/src/cdo/branches/libs4cdo/build-dev \
+                    --with-magics=$HOME/src/cdo/branches/libs4cdo/build-dev \
+                    --with-libxml2=/usr \
                       --with-pic \
-	            CC=gcc CFLAGS="-g -Wall -O2 -fopenmp -DWITH_DATA" LIBS=-lopenjpeg
+                      CC=gcc CFLAGS="-g -Wall -O2 -fopenmp -DWITH_DATA" \
+                      LDFLAGS='-L/home/ram/local/netcdf-4.1.2/lib -L/usr/lib64 -L/usr/lib -lhdf5_hl -lhdf5  -lz -lm -lhdf5_hl -lhdf5 -lz  -lcurl -L/usr/local/lib64 -L/usr/X11R6/lib64 -lpangocairo-1.0 -lpango-1.0 -lgobject-2.0 -lglib-2.0 -lcairo   -lexpat -lpthread -lfontconfig -lz -lgd -lproj -lgrib_api -lpng -lxml2 -lm -ljasper -lopenjpeg   -L/home/ram/local/netcdf-4.1.2/lib -lnetcdf_c++ -lnetcdf  -lcurl  -lstdc++ -lgfortran'
 	;;
 # i686-suse-linux
     linux | laptop)
@@ -171,17 +188,16 @@ case "${HOSTNAME}" in
                     CFLAGS="-O -Onooverlap,restrict=all -pvctl,fullmsg,noassume,loopcnt=1000000"
 	;;
 # x86_64-unknown-linux-gnu (rhel55)
-    lizard*)
+    wizard*)
         LDFLAGS="-lpng"
         export LDFLAGS
-	${CONFPATH}configure --prefix=$HOME/local/rhel55-x64 \
-                    --with-jasper=/sw/rhel55-x64/jasper-1.900.1 \
-                    --with-grib_api=/sw/rhel55-x64/grib_api-1.9.0 \
-                    --with-netcdf=/sw/rhel55-x64/netcdf-4.2 \
-                    --with-hdf5=/sw/rhel55-x64/hdf5-1.8.8-threadsafe \
-                    --with-szlib=/sw/rhel55-x64/szip-2.1 \
+	${CONFPATH}configure --prefix=$HOME/local/centos58-x64 \
+                    --with-jasper=/sw/centos58-x64/jasper-1.900.1 \
+                    --with-grib_api=/sw/centos58-x64/grib_api-1.9.0-static \
+                    --with-netcdf=/sw/centos58-x64/netcdf-4.2.1.1 \
+                    --with-szlib=/sw/centos58-x64/szip-2.1 \
                     --with-zlib=/usr \
- 	            CC=gcc44 CFLAGS="-g -Wall -O2 -fopenmp"
+	            CC=gcc44 CFLAGS="-g -Wall -O3 -fopenmp"
 	;;
 # powerpc-ibm-aix5.2.0.0
     ecga*)
@@ -202,6 +218,7 @@ case "${HOSTNAME}" in
                     --with-netcdf=/sw/aix61/netcdf-4.2-threadsafe \
                     --with-hdf5=/sw/aix61/hdf5-1.8.8-threadsafe \
                     --with-szlib=/sw/aix61/szip-2.1-threadsafe \
+                    --with-udunits2=/sw/aix61/udunits-2.1.14 \
                     --with-proj=/sw/aix53/proj-4.6.1 \
                     AR="ar -X 64"  LDFLAGS="-brtl" \
  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"

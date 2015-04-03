@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,13 +24,56 @@
       Runstat    runmean         Running mean
       Runstat    runavg          Running average
       Runstat    runvar          Running variance
+      Runstat    runvar1         Running variance [Divisor is (n-1)]
       Runstat    runstd          Running standard deviation
+      Runstat    runstd1         Running standard deviation [Divisor is (n-1)]
 */
 
 #include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+
+
+void datetime_avg_dtinfo(int calendar, int ndates, dtinfo_t *dtinfo)
+{
+  int vdate, vtime;
+  juldate_t juldate1, juldate2, juldatem;
+  double seconds;
+  /*
+  for ( i = 0; i < ndates; i++ )
+    fprintf(stdout, "%4d %d %d\n", i+1, dtinfo[i].v.date, dtinfo[i].v.time);
+  */
+  if ( ndates%2 == 0 )
+    {
+      /*
+      vdate = dtinfo[ndates-1].v.date;
+      vtime = dtinfo[ndates-1].v.time;
+      */
+      vdate = dtinfo[ndates/2-1].v.date;
+      vtime = dtinfo[ndates/2-1].v.time;
+      juldate1 = juldate_encode(calendar, vdate, vtime);
+
+      vdate = dtinfo[ndates/2].v.date;
+      vtime = dtinfo[ndates/2].v.time;
+      juldate2 = juldate_encode(calendar, vdate, vtime);
+
+      seconds = juldate_to_seconds(juldate_sub(juldate2, juldate1)) / 2;
+      juldatem = juldate_add_seconds(NINT(seconds), juldate1);
+      juldate_decode(calendar, juldatem, &vdate, &vtime);
+    }
+  else
+    {
+      vdate = dtinfo[ndates/2].v.date;
+      vtime = dtinfo[ndates/2].v.time;
+    }
+
+  dtinfo[ndates].v.date = vdate;
+  dtinfo[ndates].v.time = vtime;
+  /*
+  fprintf(stdout, "res: %d %d\n\n", dtinfo[ndates].v.date, dtinfo[ndates].v.time);
+  */
+}
 
 
 void datetime_avg(int calendar, int ndates, datetime_t *datetime)
@@ -74,6 +117,35 @@ void datetime_avg(int calendar, int ndates, datetime_t *datetime)
 }
 
 
+void get_timestat_date(int *tstat_date)
+{
+  char *envstr;
+
+  envstr = getenv("TIMESTAT_DATE");
+  if ( envstr == NULL ) envstr = getenv("RUNSTAT_DATE");
+  if ( envstr )
+    {
+      int env_date = -1;
+      char envstrl[8];
+
+      memcpy(envstrl, envstr, 8);
+      envstrl[7] = 0;
+      strtolower(envstrl);
+
+      if      ( memcmp(envstrl, "first", 5)  == 0 )  env_date = DATE_FIRST;
+      else if ( memcmp(envstrl, "last", 4)   == 0 )  env_date = DATE_LAST;
+      else if ( memcmp(envstrl, "middle", 6) == 0 )  env_date = DATE_MIDDLE;
+
+      if ( env_date >= 0 )
+	{
+	  *tstat_date = env_date;
+
+	  if ( cdoVerbose ) cdoPrint("Set TIMESTAT_DATE to %s", envstr);
+	}
+    }
+}
+
+
 void *Runstat(void *argument)
 {
   int operatorID;
@@ -82,7 +154,6 @@ void *Runstat(void *argument)
   int i;
   int varID;
   int recID;
-  int gridID;
   int nrecs, nrecords;
   int levelID;
   int tsID;
@@ -93,14 +164,16 @@ void *Runstat(void *argument)
   int nmiss;
   int nvars, nlevel;
   int *recVarID, *recLevelID;
+  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
   int *imask;
   double missval;
+  double divisor;
   field_t ***vars1 = NULL, ***vars2 = NULL, ***samp1 = NULL;
-  datetime_t *datetime;
+  dtinfo_t *dtinfo;
   int taxisID1, taxisID2;
   int calendar;
   int runstat_nomiss = 0;
-  int runstat_date = DATE_MIDDLE;
+  int timestat_date = DATE_MIDDLE;
   char *envstr;
 
   cdoInitialize(argument);
@@ -113,29 +186,7 @@ void *Runstat(void *argument)
       if ( envval == 1 ) runstat_nomiss = 1;
     }
 
-  envstr = getenv("RUNSTAT_DATE");
-  if ( envstr )
-    {
-      int env_date = -1;
-
-      if      ( memcmp(envstr, "first", 5) == 0 ||
-		memcmp(envstr, "FIRST", 5) == 0 ||
-		memcmp(envstr, "First", 5) == 0 )  env_date = DATE_FIRST;
-      else if ( memcmp(envstr, "last", 4) == 0 ||
-		memcmp(envstr, "LAST", 4) == 0 ||
-		memcmp(envstr, "Last", 4) == 0 )   env_date = DATE_LAST;
-      else if ( memcmp(envstr, "middle", 6) == 0 ||
-		memcmp(envstr, "MIDDLE", 6) == 0 ||
-		memcmp(envstr, "Middle", 6) == 0 ) env_date = DATE_MIDDLE;
-
-      if ( env_date >= 0 )
-	{
-	  runstat_date = env_date;
-
-	  if ( cdoVerbose )
-	    cdoPrint("Set RUNSTAT_DATE to %s", envstr);
-	}
-    }
+  get_timestat_date(&timestat_date);
 
   cdoOperatorAdd("runmin",  func_min,  0, NULL);
   cdoOperatorAdd("runmax",  func_max,  0, NULL);
@@ -143,13 +194,20 @@ void *Runstat(void *argument)
   cdoOperatorAdd("runmean", func_mean, 0, NULL);
   cdoOperatorAdd("runavg",  func_avg,  0, NULL);
   cdoOperatorAdd("runvar",  func_var,  0, NULL);
+  cdoOperatorAdd("runvar1", func_var1, 0, NULL);
   cdoOperatorAdd("runstd",  func_std,  0, NULL);
+  cdoOperatorAdd("runstd1", func_std1, 0, NULL);
 
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
 
   operatorInputArg("number of timesteps");
   ndates = atoi(operatorArgv()[0]);
+
+  lmean   = operfunc == func_mean || operfunc == func_avg;
+  lstd    = operfunc == func_std || operfunc == func_std1;
+  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  divisor = operfunc == func_std1 || operfunc == func_var1;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -172,57 +230,20 @@ void *Runstat(void *argument)
   recVarID   = (int *) malloc(nrecords*sizeof(int));
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
-  datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
+  dtinfo = (dtinfo_t *) malloc((ndates+1)*sizeof(dtinfo_t));
   vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   if ( !runstat_nomiss )
     samp1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
-  if ( operfunc == func_std || operfunc == func_var )
+  if ( lvarstd )
     vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
 
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
+      vars1[its] = field_malloc(vlistID1, FIELD_PTR);
       if ( !runstat_nomiss )
-	samp1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-      if ( operfunc == func_std || operfunc == func_var )
-	vars2[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  gridID   = vlistInqVarGrid(vlistID1, varID);
-	  gridsize = gridInqSize(gridID);
-	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  missval  = vlistInqVarMissval(vlistID1, varID);
-
-	  vars1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	  if ( !runstat_nomiss )
-	    samp1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    {
-	      vars1[its][varID][levelID].grid    = gridID;
-	      vars1[its][varID][levelID].nmiss   = 0;
-	      vars1[its][varID][levelID].missval = missval;
-	      vars1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	      if ( !runstat_nomiss )
-		{
-		  samp1[its][varID][levelID].grid    = gridID;
-		  samp1[its][varID][levelID].nmiss   = 0;
-		  samp1[its][varID][levelID].missval = missval;
-		  samp1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
-
-	      if ( operfunc == func_std || operfunc == func_var )
-		{
-		  vars2[its][varID][levelID].grid    = gridID;
-		  vars2[its][varID][levelID].nmiss   = 0;
-		  vars2[its][varID][levelID].missval = missval;
-		  vars2[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-		}
-	    }
-	}
+	samp1[its] = field_malloc(vlistID1, FIELD_PTR);
+      if ( lvarstd )
+	vars2[its] = field_malloc(vlistID1, FIELD_PTR);
     }
 
   gridsizemax = vlistGridsizeMax(vlistID1);
@@ -231,11 +252,9 @@ void *Runstat(void *argument)
   for ( tsID = 0; tsID < ndates; tsID++ )
     {
       nrecs = streamInqTimestep(streamID1, tsID);
-      if ( nrecs == 0 )
-	cdoAbort("File has less then %d timesteps!", ndates);
+      if ( nrecs == 0 ) cdoAbort("File has less then %d timesteps!", ndates);
 
-      datetime[tsID].date = taxisInqVdate(taxisID1);
-      datetime[tsID].time = taxisInqVtime(taxisID1);
+      taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
 	
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -266,7 +285,7 @@ void *Runstat(void *argument)
 	      for ( i = 0; i < gridsize; i++ )
 		samp1[tsID][varID][levelID].ptr[i] = (double) imask[i];
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, inp)
 #endif
 	      for ( inp = 0; inp < tsID; inp++ )
@@ -277,10 +296,10 @@ void *Runstat(void *argument)
 		}
 	    }
 
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    {
 	      farmoq(&vars2[tsID][varID][levelID], vars1[tsID][varID][levelID]);
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared)
 #endif
 	      for ( inp = 0; inp < tsID; inp++ )
@@ -291,7 +310,7 @@ void *Runstat(void *argument)
 	    }
 	  else
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared)
 #endif
 	      for ( inp = 0; inp < tsID; inp++ )
@@ -305,7 +324,7 @@ void *Runstat(void *argument)
   otsID = 0;
   while ( TRUE )
     {
-      if ( operfunc == func_mean || operfunc == func_avg )
+      if ( lmean )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -318,7 +337,7 @@ void *Runstat(void *argument)
 		  fardiv(&vars1[0][varID][levelID], samp1[0][varID][levelID]);
 	      }
 	  }
-      else if ( operfunc == func_std || operfunc == func_var )
+      else if ( lvarstd )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
 	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
@@ -327,39 +346,32 @@ void *Runstat(void *argument)
 	      {
 		if ( runstat_nomiss )
 		  {
-		    if ( operfunc == func_std )
-		      farcstd(&vars1[0][varID][levelID], vars2[0][varID][levelID], 1.0/ndates);
+		    if ( lstd )
+		      farcstdx(&vars1[0][varID][levelID], vars2[0][varID][levelID], ndates, divisor);
 		    else
-		      farcvar(&vars1[0][varID][levelID], vars2[0][varID][levelID], 1.0/ndates);
+		      farcvarx(&vars1[0][varID][levelID], vars2[0][varID][levelID], ndates, divisor);
 		  }
 		else
 		  {
-		    farinv(&samp1[0][varID][levelID]);
-		    if ( operfunc == func_std )
-		      farstd(&vars1[0][varID][levelID], vars2[0][varID][levelID], samp1[0][varID][levelID]);
+		    if ( lstd )
+		      farstdx(&vars1[0][varID][levelID], vars2[0][varID][levelID], samp1[0][varID][levelID], divisor);
 		    else
-		      farvar(&vars1[0][varID][levelID], vars2[0][varID][levelID], samp1[0][varID][levelID]);
+		      farvarx(&vars1[0][varID][levelID], vars2[0][varID][levelID], samp1[0][varID][levelID], divisor);
 		  }
 	      }
 	  }
 
-      if ( runstat_date == DATE_MIDDLE )
+      if      ( timestat_date == DATE_MIDDLE ) datetime_avg_dtinfo(calendar, ndates, dtinfo);
+      else if ( timestat_date == DATE_FIRST  ) dtinfo[ndates].v = dtinfo[0].v;
+      else if ( timestat_date == DATE_LAST   ) dtinfo[ndates].v = dtinfo[ndates-1].v;
+
+      if ( taxisHasBounds(taxisID2) )
 	{
-	  datetime_avg(calendar, ndates, datetime);
-	}
-      else if ( runstat_date == DATE_FIRST )
-	{
-	  datetime[ndates].date = datetime[0].date;
-	  datetime[ndates].time = datetime[0].time;
-	}
-      else if ( runstat_date == DATE_LAST )
-	{
-	  datetime[ndates].date = datetime[ndates-1].date;
-	  datetime[ndates].time = datetime[ndates-1].time;
+	  dtinfo[ndates].b[0] = dtinfo[0].b[0];
+	  dtinfo[ndates].b[1] = dtinfo[ndates-1].b[1];
 	}
 
-      taxisDefVdate(taxisID2, datetime[ndates].date);
-      taxisDefVtime(taxisID2, datetime[ndates].time);
+      taxisDefDTinfo(taxisID2, dtinfo[ndates]);
       streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
@@ -375,28 +387,27 @@ void *Runstat(void *argument)
 
       otsID++;
 
-      datetime[ndates] = datetime[0];
+      dtinfo[ndates] = dtinfo[0];
       vars1[ndates] = vars1[0];
       if ( !runstat_nomiss )
 	samp1[ndates] = samp1[0];
-      if ( operfunc == func_std || operfunc == func_var )
+      if ( lvarstd )
         vars2[ndates] = vars2[0];
 
       for ( inp = 0; inp < ndates; inp++ )
 	{
-	  datetime[inp] = datetime[inp+1];
+	  dtinfo[inp] = dtinfo[inp+1];
 	  vars1[inp] = vars1[inp+1];
 	  if ( !runstat_nomiss )
 	    samp1[inp] = samp1[inp+1];
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    vars2[inp] = vars2[inp+1];
 	}
 
       nrecs = streamInqTimestep(streamID1, tsID);
       if ( nrecs == 0 ) break;
 
-      datetime[ndates-1].date = taxisInqVdate(taxisID1);
-      datetime[ndates-1].time = taxisInqVtime(taxisID1);
+      taxisInqDTinfo(taxisID1, &dtinfo[ndates-1]);
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -421,7 +432,7 @@ void *Runstat(void *argument)
 	      for ( i = 0; i < gridsize; i++ )
 		samp1[ndates-1][varID][levelID].ptr[i] = (double) imask[i];
 
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared) private(i, inp)
 #endif
 	      for ( inp = 0; inp < ndates-1; inp++ )
@@ -432,10 +443,10 @@ void *Runstat(void *argument)
 		}
 	    }
 
-	  if ( operfunc == func_std || operfunc == func_var )
+	  if ( lvarstd )
 	    {
 	      farmoq(&vars2[ndates-1][varID][levelID], vars1[ndates-1][varID][levelID]);
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared)
 #endif
 	      for ( inp = 0; inp < ndates-1; inp++ )
@@ -446,7 +457,7 @@ void *Runstat(void *argument)
 	    }
 	  else
 	    {
-#if defined (_OPENMP)
+#if defined(_OPENMP)
 #pragma omp parallel for default(shared)
 #endif
 	      for ( inp = 0; inp < ndates-1; inp++ )
@@ -461,30 +472,15 @@ void *Runstat(void *argument)
 
   for ( its = 0; its < ndates; its++ )
     {
-      for ( varID = 0; varID < nvars; varID++ )
-	{
-	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-	  for ( levelID = 0; levelID < nlevel; levelID++ )
-	    {
-	      free(vars1[its][varID][levelID].ptr);
-	      if ( !runstat_nomiss ) free(samp1[its][varID][levelID].ptr);
-	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID][levelID].ptr);
-	    }
-
-	  free(vars1[its][varID]);
-	  if ( !runstat_nomiss ) free(samp1[its][varID]);
-	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID]);
-	}
-
-      free(vars1[its]);
-      if ( !runstat_nomiss ) free(samp1[its]);
-      if ( operfunc == func_std || operfunc == func_var ) free(vars2[its]);
+      field_free(vars1[its], vlistID1);
+      if ( !runstat_nomiss ) field_free(samp1[its], vlistID1);
+      if ( lvarstd ) field_free(vars2[its], vlistID1);
     }
 
-  free(datetime);
+  free(dtinfo);
   free(vars1);
   if ( !runstat_nomiss ) free(samp1);
-  if ( operfunc == func_std || operfunc == func_var ) free(vars2);
+  if ( lvarstd ) free(vars2);
 
   if ( recVarID   ) free(recVarID);
   if ( recLevelID ) free(recLevelID);

@@ -264,7 +264,9 @@ void *Remapeta(void *argument)
       lfis2 = TRUE;
       fname = operatorArgv()[1];
       
-      streamID1 = streamOpenRead(fname);
+      argument_t *fileargument = file_argument_new(fname);
+      streamID1 = streamOpenRead(fileargument);
+      file_argument_free(fileargument);
 
       vlistID1 = streamInqVlist(streamID1);
 

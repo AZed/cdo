@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -256,3 +256,15 @@ int vlistIsSzipped(int vlistID)
 }
 
 
+int vlistInqNWPV(int vlistID, int varID)
+{
+  int nwpv; // number of words per value; real:1  complex:2
+
+  if ( vlistInqVarDatatype(vlistID, varID) == DATATYPE_CPX32 || 
+       vlistInqVarDatatype(vlistID, varID) == DATATYPE_CPX64 )
+    nwpv = 2;
+  else
+    nwpv = 1;
+
+  return (nwpv);
+}

@@ -108,6 +108,9 @@ void *Wct(void *argument)
   vlistCompare(vlistID1, vlistID2, CMP_DIM);
   
   gridsize = vlistGridsizeMax(vlistID1);
+  
+  field_init(&field1);
+  field_init(&field2);
 
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));

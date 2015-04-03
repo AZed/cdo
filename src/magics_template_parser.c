@@ -1,19 +1,14 @@
-#if  defined  (HAVE_CONFIG_H)
+#if defined(HAVE_CONFIG_H)
 #  include "config.h" /* HAVE_LIBMAGICS */
 #endif
 
 #include "magics_template_parser.h"
 #include "StringUtilities.h"
 
-#if  defined  (HAVE_LIBMAGICS)
 #include "magics_api.h"
-#endif
 
 #define DBG 0 
 
-
-#if  defined  (HAVE_LIBMAGICS)
-#if  defined  (HAVE_LIBXML)
 
 extern xmlNode *magics_node;
 
@@ -25,7 +20,6 @@ int magics_template_parser( xmlNode *a_node )
 {
     int param_set_flag;
     xmlNode *cur_node = NULL;
-    xmlAttrPtr attr = NULL;
     xmlChar    *param_name,*param_type,*param_value,*value;
 
     if( a_node == NULL )
@@ -95,7 +89,6 @@ int magics_template_parser( xmlNode *a_node )
     }
     return 0;
 }
-#endif
 
 int SetMagicsParameterValue( char *param_name, char *param_type, char *param_value )
 
@@ -246,4 +239,3 @@ int SetMagicsParameterValue( char *param_name, char *param_type, char *param_val
 
 	return ret_flag;
 }
-#endif
