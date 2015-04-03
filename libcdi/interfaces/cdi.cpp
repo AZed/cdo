@@ -4,7 +4,13 @@
 #include <vector>
 #include <map>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 #include "cdi.h"
+#if defined (__cplusplus)
+}
+#endif
 #include "cdi.hpp"
 
 /*

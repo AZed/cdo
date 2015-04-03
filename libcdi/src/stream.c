@@ -2,7 +2,13 @@
 #  include "config.h"
 #endif
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+
 #include <ctype.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "cdi.h"
 #include "cdi_int.h"
@@ -26,15 +32,8 @@
 
 #include "namespace.h"
 
-#include <string.h>
 
 #define  MAX_FNAMES  3
-
-extern resOps streamOps;
-
-
-FILE *popen(const char *command, const char *type);
-int pclose(FILE *stream);
 
 static void
 cdiPrintDefaults(void)
@@ -162,7 +161,7 @@ int getFiletype(const char *filename, int *byteorder)
 
   if ( fileID == CDI_UNDEFID )
     {
-      if ( memcmp(filename, "http:", 5) == 0 )
+      if ( strncmp(filename, "http:", 5) == 0 || strncmp(filename, "https:", 6) == 0 )
 	return (FILETYPE_NC);
       else
 	return (CDI_ESYSTEM);
@@ -397,9 +396,7 @@ The valid CDI file format types are @func{FILETYPE_GRB}, @func{FILETYPE_GRB2}, @
 */
 int streamInqFiletype(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -443,13 +440,11 @@ with the file format type @func{FILETYPE_SRV}, @func{FILETYPE_EXT} or @func{FILE
 void streamDefByteorder(int streamID, int byteorder)
 {
   int filetype;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
-  if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
+  if ( reshGetStatus ( streamID, &streamOps ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed.");
       return;
@@ -463,7 +458,7 @@ void streamDefByteorder(int streamID, int byteorder)
 #if  defined  (HAVE_LIBSERVICE)
     case FILETYPE_SRV:
       {
-	srvrec_t *srvp = streamptr->record->srvp;
+	srvrec_t *srvp = (srvrec_t*) streamptr->record->exsep;
 	srvp->byteswap = getByteswap(byteorder);
 
 	break;
@@ -472,7 +467,7 @@ void streamDefByteorder(int streamID, int byteorder)
 #if  defined  (HAVE_LIBEXTRA)
     case FILETYPE_EXT:
       {
-	extrec_t *extp = streamptr->record->extp;
+	extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 	extp->byteswap = getByteswap(byteorder);
 
 	break;
@@ -481,7 +476,7 @@ void streamDefByteorder(int streamID, int byteorder)
 #if  defined  (HAVE_LIBIEG)
     case FILETYPE_IEG:
       {
-	iegrec_t *iegp = streamptr->record->iegp;
+	iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 	iegp->byteswap = getByteswap(byteorder);
 
 	break;
@@ -510,9 +505,7 @@ The valid CDI byte order types are @func{CDI_BIGENDIAN} and @func{CDI_LITTLEENDI
 */
 int streamInqByteorder(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -522,7 +515,8 @@ int streamInqByteorder(int streamID)
 
 char *streamFilesuffix(int filetype)
 {
-  static char *fileSuffix[] = {"", ".grb", ".g2", ".nc", ".nc", ".nc4", ".nc4", ".srv", ".ext", ".ieg"};
+  // static char *fileSuffix[] = {"", ".grb", ".g2", ".nc", ".nc", ".nc4", ".nc4", ".srv", ".ext", ".ieg"};
+  static char *fileSuffix[] = {"", ".grb", ".grb", ".nc", ".nc", ".nc", ".nc", ".srv", ".ext", ".ieg"};
   int size = (int) (sizeof(fileSuffix)/sizeof(char *));
 
   if ( filetype > 0 && filetype < size )
@@ -534,9 +528,7 @@ char *streamFilesuffix(int filetype)
 
 char *streamFilename(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -548,9 +540,7 @@ int cdiInqTimeSize(int streamID)
 {
   int ntsteps;
   int tsID = 0, nrecs;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -672,7 +662,7 @@ int cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
           {
             streamptr->record = (Record *) malloc(sizeof(Record));
             streamptr->record->buffer = NULL;
-            streamptr->record->srvp   = srvNew();
+            streamptr->record->exsep  = srvNew();
           }
         break;
       }
@@ -686,7 +676,7 @@ int cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
           {
             streamptr->record = (Record *) malloc(sizeof(Record));
             streamptr->record->buffer = NULL;
-            streamptr->record->extp   = extNew();
+            streamptr->record->exsep  = extNew();
           }
         break;
       }
@@ -700,7 +690,7 @@ int cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
           {
             streamptr->record = (Record *) malloc(sizeof(Record));
             streamptr->record->buffer = NULL;
-            streamptr->record->iegp   = iegNew();
+            streamptr->record->exsep   = iegNew();
           }
         break;
       }
@@ -729,6 +719,9 @@ int cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
         return (CDI_ELIBNAVAIL);
       }
     }
+
+  streamptr->filetype = filetype;
+
   return fileID;
 }
 
@@ -766,7 +759,6 @@ int streamOpen(const char *filename, const char *filemode, int filetype)
 
       if ( streamID < 0 ) return (CDI_ELIMIT);
 
-      streamptr->filetype = filetype;
       streamptr->filemode = tolower(*filemode);
       streamptr->filename = strdupx(filename);
       streamptr->fileID   = fileID;
@@ -818,7 +810,6 @@ static int streamOpenA(const char *filename, const char *filemode, int filetype)
 
   streamID = streamptr->self;
 
-  streamptr->filetype = filetype;
   streamptr->filemode = tolower(*filemode);
   streamptr->filename = strdupx(filename);
   streamptr->fileID   = fileID;
@@ -950,7 +941,6 @@ int streamOpenRead(const char *filenames)
   int num_fnames = 0;
   char *fnames[MAX_FNAMES];
   const char *filename;
-  stream_t *streamptr = NULL;
 
   cdiInitialize();
 
@@ -973,7 +963,7 @@ int streamOpenRead(const char *filenames)
 
   if ( streamID >= 0 )
     {
-      streamptr = stream_to_pointer(streamID);
+      stream_t *streamptr = stream_to_pointer(streamID);
       streamptr->byteorder = byteorder;
 
       if ( num_fnames > 0 )
@@ -992,21 +982,19 @@ int streamOpenRead(const char *filenames)
 
 int streamOpenAppend(const char *filename)
 {
-  int filetype, byteorder;
-  int streamID;
-  stream_t *streamptr;
+  int byteorder;
 
   cdiInitialize();
 
-  filetype = getFiletype(filename, &byteorder);
+  int filetype = getFiletype(filename, &byteorder);
 
   if ( filetype < 0 ) return (filetype);
 
-  streamID = streamOpenA(filename, "a", filetype);
+  int streamID = streamOpenA(filename, "a", filetype);
 
   if ( streamID >= 0 )
     {
-      streamptr = stream_to_pointer(streamID);
+      stream_t *streamptr = stream_to_pointer(streamID);
       streamptr->byteorder = byteorder;
     }
 
@@ -1086,7 +1074,7 @@ cdiStreamCloseDefaultDelegate(stream_t *streamptr, int recordBufIsToBeDeleted)
         {
           fileClose(fileID);
           if (recordBufIsToBeDeleted)
-            srvDelete(streamptr->record->srvp);
+            srvDelete(streamptr->record->exsep);
           break;
         }
 #endif
@@ -1095,7 +1083,7 @@ cdiStreamCloseDefaultDelegate(stream_t *streamptr, int recordBufIsToBeDeleted)
         {
           fileClose(fileID);
           if (recordBufIsToBeDeleted)
-            extDelete(streamptr->record->extp);
+            extDelete(streamptr->record->exsep);
           break;
         }
 #endif
@@ -1104,7 +1092,7 @@ cdiStreamCloseDefaultDelegate(stream_t *streamptr, int recordBufIsToBeDeleted)
         {
           fileClose(fileID);
           if (recordBufIsToBeDeleted)
-            iegDelete(streamptr->record->iegp);
+            iegDelete(streamptr->record->exsep);
           break;
         }
 #endif
@@ -1144,9 +1132,7 @@ void streamClose(int streamID)
 {
   int index;
   int vlistID;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -1268,9 +1254,7 @@ The function @func{streamSync} offers a way to synchronize the disk copy of a da
 */
 void streamSync(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -1282,21 +1266,16 @@ void streamSync(int streamID)
 
 int cdiStreamDefTimestep_(stream_t *streamptr, int tsID)
 {
-  int newtsID;
   int taxisID;
-  int vlistID;
-  int time_is_varying;
-  taxis_t *taxisptr1;
-  taxis_t *taxisptr2;
 
   if ( CDI_Debug )
     Message("streamID = %d  tsID = %d", streamptr->self, tsID);
 
   stream_check_ptr(__func__, streamptr);
 
-  vlistID = streamptr->vlistID;
+  int vlistID = streamptr->vlistID;
 
-  time_is_varying = vlistHasTime(vlistID);
+  int time_is_varying = vlistHasTime(vlistID);
 
   if ( time_is_varying )
     {
@@ -1309,7 +1288,7 @@ int cdiStreamDefTimestep_(stream_t *streamptr, int tsID)
         }
     }
 
-  newtsID = tstepsNewEntry(streamptr);
+  int newtsID = tstepsNewEntry(streamptr);
 
   if ( tsID != newtsID )
     Error("Internal problem: tsID = %d newtsID = %d", tsID, newtsID);
@@ -1318,8 +1297,8 @@ int cdiStreamDefTimestep_(stream_t *streamptr, int tsID)
 
   if ( time_is_varying )
     {
-      taxisptr1 = taxisPtr(taxisID);
-      taxisptr2 = &streamptr->tsteps[tsID].taxis;
+      taxis_t *taxisptr1 = taxisPtr(taxisID);
+      taxis_t *taxisptr2 = &streamptr->tsteps[tsID].taxis;
       ptaxisCopy(taxisptr2, taxisptr1);
       if ( tsID == 0 )
         {
@@ -1401,17 +1380,13 @@ The function @func{streamInqTimestep} returns the time step of a stream.
 */
 int streamInqTimestep(int streamID, int tsID)
 {
-  int filetype;
   int nrecs = 0;
   int taxisID;
-  int vlistID;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
-  vlistID = streamptr->vlistID;
+  int vlistID = streamptr->vlistID;
 
   if ( tsID < streamptr->rtsteps )
     {
@@ -1431,7 +1406,7 @@ int streamInqTimestep(int streamID, int tsID)
       return (0);
     }
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   if ( CDI_Debug )
     Message("streamID = %d  tsID = %d  filetype = %d", streamID, tsID, filetype);
@@ -1512,19 +1487,16 @@ from an open dataset.
 */
 void streamReadVar(int streamID, int varID, double *data, int *nmiss)
 {
-  int filetype;
-  stream_t *streamptr;
-
   if ( CDI_Debug ) Message("streamID = %d  varID = %d", streamID, varID);
 
   check_parg(data);
   check_parg(nmiss);
 
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   *nmiss = 0;
 
@@ -1608,21 +1580,18 @@ void
 cdiStreamWriteVar_(int streamID, int varID, int memtype, const void *data,
                    int nmiss)
 {
-  int filetype;
-  stream_t *streamptr;
-
   if ( CDI_Debug ) Message("streamID = %d varID = %d", streamID, varID);
 
   check_parg(data);
 
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
   // check taxis
   if ( streamptr->curTsID == CDI_UNDEFID ) streamDefTimestep(streamID, 0);
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   switch (filetype)
     {
@@ -1723,19 +1692,16 @@ from an open dataset.
 */
 void streamReadVarSlice(int streamID, int varID, int levelID, double *data, int *nmiss)
 {
-  int filetype;
-  stream_t *streamptr;
-
   if ( CDI_Debug ) Message("streamID = %d  varID = %d", streamID, varID);
 
   check_parg(data);
   check_parg(nmiss);
 
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   *nmiss = 0;
 
@@ -1792,21 +1758,18 @@ void streamReadVarSlice(int streamID, int varID, int levelID, double *data, int 
 static
 void stream_write_var_slice(int streamID, int varID, int levelID, int memtype, const void *data, int nmiss)
 {
-  int filetype;
-  stream_t *streamptr;
-
   if ( CDI_Debug ) Message("streamID = %d varID = %d", streamID, varID);
 
   check_parg(data);
 
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
   // check taxis
   if ( streamptr->curTsID == CDI_UNDEFID ) streamDefTimestep(streamID, 0);
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   switch (filetype)
     {
@@ -1925,18 +1888,15 @@ void
 cdiStreamwriteVarChunk_(int streamID, int varID, int memtype,
                         const int rect[][2], const void *data, int nmiss)
 {
-  int filetype;
-  stream_t *streamptr;
-
   if ( CDI_Debug ) Message("streamID = %d varID = %d", streamID, varID);
 
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
   // streamDefineTaxis(streamID);
 
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
 
   switch (filetype)
     {
@@ -1976,27 +1936,13 @@ cdiStreamwriteVarChunk_(int streamID, int varID, int memtype,
 
 void streamWriteContents(int streamID, char *cname)
 {
-  FILE *cnp;
-  int tsID, recID, varID, levelID;
-  long recsize;
-  int nrecs, nvars;
-  int code, gridID, zaxisID, tsteptype, datatype;
-  int ngrids;
-  int filetype, gridtype;
-  int xsize, ysize;
-  int date, time;
-  int i;
-  off_t recpos, position;
-  int vlistID;
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
-  vlistID = streamptr->vlistID;
+  int vlistID = streamptr->vlistID;
 
-  cnp = fopen(cname, "w");
+  FILE *cnp = fopen(cname, "w");
 
   if ( cnp == NULL ) SysError(cname);
 
@@ -2004,19 +1950,19 @@ void streamWriteContents(int streamID, char *cname)
   fprintf(cnp, "#\n");
 
   fprintf(cnp, "filename: %s\n", streamptr->filename);
-  filetype = streamptr->filetype;
+  int filetype = streamptr->filetype;
   fprintf(cnp, "filetype: %s\n", strfiletype(filetype));
 
   fprintf(cnp, "#\n");
   fprintf(cnp, "#grids:\n");
 
-  ngrids = vlistNgrids(vlistID);
-  for ( i = 0; i < ngrids; i++ )
+  int ngrids = vlistNgrids(vlistID);
+  for ( int i = 0; i < ngrids; i++ )
     {
-      gridID   = vlistGrid(vlistID, i);
-      gridtype = gridInqType(gridID);
-      xsize    = gridInqXsize(gridID);
-      ysize    = gridInqYsize(gridID);
+      int gridID   = vlistGrid(vlistID, i);
+      int gridtype = gridInqType(gridID);
+      int xsize    = gridInqXsize(gridID);
+      int ysize    = gridInqYsize(gridID);
       fprintf(cnp, "%4d:%4d:%4d:%4d\n", i+1, gridtype, xsize, ysize);
     }
 
@@ -2024,14 +1970,14 @@ void streamWriteContents(int streamID, char *cname)
 
   fprintf(cnp, "varID:code:gridID:zaxisID:tsteptype:datatype\n");
 
-  nvars = vlistNvars(vlistID);
-  for ( varID = 0; varID < nvars; varID++ )
+  int nvars = vlistNvars(vlistID);
+  for ( int varID = 0; varID < nvars; varID++ )
     {
-      code      = vlistInqVarCode(vlistID, varID);
-      gridID    = vlistInqVarGrid(vlistID, varID);
-      zaxisID   = vlistInqVarZaxis(vlistID, varID);
-      tsteptype = vlistInqVarTsteptype(vlistID, varID);
-      datatype  = vlistInqVarDatatype(vlistID, varID);
+      int code      = vlistInqVarCode(vlistID, varID);
+      int gridID    = vlistInqVarGrid(vlistID, varID);
+      int zaxisID   = vlistInqVarZaxis(vlistID, varID);
+      int tsteptype = vlistInqVarTsteptype(vlistID, varID);
+      int datatype  = vlistInqVarDatatype(vlistID, varID);
       fprintf(cnp, "%4d:%4d:%4d:%4d:%4d:%4d:\n",
 	      varID+1, code, gridID, zaxisID, tsteptype, datatype);
     }
@@ -2040,13 +1986,13 @@ void streamWriteContents(int streamID, char *cname)
 
   fprintf(cnp, "tsID:nrecs:date:time\n");
 
-  tsID = 0;
+  int tsID = 0;
   while (1)
     {
-      nrecs = streamptr->tsteps[tsID].nallrecs;
-      date  = streamptr->tsteps[tsID].taxis.vdate;
-      time  = streamptr->tsteps[tsID].taxis.vtime;
-      position = streamptr->tsteps[tsID].position;
+      int nrecs      = streamptr->tsteps[tsID].nallrecs;
+      int date       = streamptr->tsteps[tsID].taxis.vdate;
+      int time       = streamptr->tsteps[tsID].taxis.vtime;
+      off_t position = streamptr->tsteps[tsID].position;
 
       fprintf(cnp, "%4d:%4d:%4d:%4d:%ld\n",
 	      tsID, nrecs, date, time, (long) position);
@@ -2064,13 +2010,13 @@ void streamWriteContents(int streamID, char *cname)
   tsID = 0;
   while (1)
     {
-      nrecs = streamptr->tsteps[tsID].nallrecs;
-      for ( recID = 0; recID < nrecs; recID++ )
+      int nrecs = streamptr->tsteps[tsID].nallrecs;
+      for ( int recID = 0; recID < nrecs; recID++ )
 	{
-	  varID   = streamptr->tsteps[tsID].records[recID].varID;
-	  levelID = streamptr->tsteps[tsID].records[recID].levelID;
-	  recpos  = streamptr->tsteps[tsID].records[recID].position;
-	  recsize = (long)streamptr->tsteps[tsID].records[recID].size;
+	  int varID   = streamptr->tsteps[tsID].records[recID].varID;
+	  int levelID = streamptr->tsteps[tsID].records[recID].levelID;
+	  off_t recpos = streamptr->tsteps[tsID].records[recID].position;
+	  long recsize = (long)streamptr->tsteps[tsID].records[recID].size;
 	  fprintf(cnp, "%4d:%4d:%4d:%4d:%4ld:%ld\n",
 		  tsID, recID, varID, levelID, recsize, (long) recpos);
 	}
@@ -2087,15 +2033,9 @@ void streamWriteContents(int streamID, char *cname)
 
 void cdiDefTableID(int tableID)
 {
-  int modelID, instID;
-
   cdiDefaultTableID = tableID;
-
-  modelID = tableInqModel(tableID);
-  cdiDefaultModelID = modelID;
-
-  instID = modelInqInstitut(modelID);
-  cdiDefaultInstID = instID;
+  int modelID = cdiDefaultModelID = tableInqModel(tableID);
+  cdiDefaultInstID = modelInqInstitut(modelID);
 }
 
 
@@ -2129,9 +2069,7 @@ void cdiPrintVersion(void)
 
 int streamNtsteps(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -2141,9 +2079,7 @@ int streamNtsteps(int streamID)
 
 off_t   streamNvals(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -2203,9 +2139,7 @@ The function @func{streamInqVlist} returns the variable list of a stream.
 */
 int streamInqVlist(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -2215,9 +2149,7 @@ int streamInqVlist(int streamID)
 
 int streamInqVlistIDorig(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -2229,7 +2161,7 @@ void streamDefCompType(int streamID, int comptype)
 {
   stream_t *streamptr;
 
-  if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
+  if ( reshGetStatus ( streamID, &streamOps ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed.");
       return;
@@ -2247,7 +2179,7 @@ void streamDefCompLevel(int streamID, int complevel)
 {
   stream_t *streamptr;
 
-  if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
+  if ( reshGetStatus ( streamID, &streamOps ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed.");
       return;
@@ -2263,9 +2195,7 @@ void streamDefCompLevel(int streamID, int complevel)
 
 int streamInqCompType(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 
@@ -2275,9 +2205,7 @@ int streamInqCompType(int streamID)
 
 int streamInqCompLevel(int streamID)
 {
-  stream_t *streamptr;
-
-  streamptr = stream_to_pointer(streamID);
+  stream_t *streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
 

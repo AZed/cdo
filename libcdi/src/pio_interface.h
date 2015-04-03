@@ -5,8 +5,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <mpi.h>
 #include <yaxt.h>
 
@@ -35,8 +33,6 @@ struct memCpyDataDesc
 void memcpyPackFunc(void *dataDesc, void *buf, int size, int *pos, void *context);
 
 extern float cdiPIOpartInflate_;
-
-#endif
 
 #endif
 /*

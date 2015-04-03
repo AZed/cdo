@@ -274,7 +274,7 @@ void dumpmap()
 
       if ( indx.hinum > 0 )
 	{
-	  indx.hipnt = malloc(sizeof(int)*indx.hinum);
+	  indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
 	  for ( i = 0; i < indx.hinum; i++ )
 	    {
 	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
@@ -283,12 +283,12 @@ void dumpmap()
 	}
       if ( indx.hfnum > 0 )
 	{
-	  indx.hfpnt = malloc(sizeof(float)*indx.hfnum);
+	  indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
 	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
 	}
       if ( indx.intnum > 0 )
 	{
-	  indx.intpnt = malloc(sizeof(int)*indx.intnum);
+	  indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
 	  for ( i = 0; i < indx.intnum; i++ )
 	    {
 	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
@@ -298,7 +298,7 @@ void dumpmap()
 	}
       if ( indx.fltnum > 0 )
 	{
-	  indx.fltpnt = malloc(sizeof(float)*indx.fltnum);
+	  indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
 	  for ( i = 0; i < indx.fltnum; i++ )
 	    {
 	      nbytes = fread(urec, sizeof(unsigned char), 4, mapfp);
@@ -317,26 +317,26 @@ void dumpmap()
       
       if ( indx.hinum > 0 )
 	{
-	  indx.hipnt = malloc(sizeof(int)*indx.hinum);
+	  indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
 	  nbytes = fread (indx.hipnt, sizeof(int), indx.hinum, mapfp);
 	  if ( swpflg ) gabswp((float *)(indx.hipnt),indx.hinum);
 	}
       if ( indx.hfnum > 0 )
 	{
-	  indx.hfpnt = malloc(sizeof(float)*indx.hfnum);
+	  indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
 	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
 	  if ( swpflg ) gabswp(indx.hfpnt,indx.hfnum);
 	}
 
       if ( indx.intnum > 0 )
 	{
-	  indx.intpnt = malloc(sizeof(int)*indx.intnum);
+	  indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
 	  nbytes = fread (indx.intpnt,sizeof(int),indx.intnum,mapfp);
 	  if ( swpflg ) gabswp((float *)(indx.intpnt),indx.intnum);
 	}
       if ( indx.fltnum > 0 )
 	{
-	  indx.fltpnt = malloc(sizeof(float)*indx.fltnum);
+	  indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
 	  nbytes = fread (indx.fltpnt,sizeof(float),indx.fltnum,mapfp);
 	  if ( swpflg ) gabswp(indx.fltpnt,indx.fltnum);
 	}
@@ -346,7 +346,7 @@ void dumpmap()
 	  indxb.bignum = indx.hipnt[4];
 	  if ( indxb.bignum > 0 )
 	    {
-	      indxb.bigpnt = malloc(sizeof(off_t)*indxb.bignum);
+	      indxb.bigpnt = (off_t*) malloc(sizeof(off_t)*indxb.bignum);
 	      nbytes = fread (indxb.bigpnt,sizeof(off_t),indxb.bignum,mapfp);
 	      if ( swpflg ) gabswp(indxb.bigpnt,indxb.bignum);
 	    }
@@ -435,8 +435,8 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
 	      xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
 
       gridID = gridToCurvilinear(gridID, 0);
-      xvals = malloc(xsize*ysize*sizeof(double));
-      yvals = malloc(xsize*ysize*sizeof(double));
+      xvals = (double*) malloc(xsize*ysize*sizeof(double));
+      yvals = (double*) malloc(xsize*ysize*sizeof(double));
       gridInqXvals(gridID, xvals);
       gridInqYvals(gridID, yvals);
       for ( i = 0; i < xsize*ysize; ++i )
@@ -477,7 +477,7 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
       xinc   = gridInqXinc(gridID);
       if ( IS_EQUAL(xinc, 0) && gridInqXvals(gridID, NULL) )
 	{
-	  xvals = malloc(xsize*sizeof(double));
+	  xvals = (double*) malloc(xsize*sizeof(double));
 	  gridInqXvals(gridID, xvals);
 	  fprintf(gdp ,"XDEF %d LEVELS ", xsize);
 	  j = 0;
@@ -513,7 +513,7 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
 
       if ( IS_EQUAL(yinc, 0) && gridInqYvals(gridID, NULL) )
 	{
-	  yvals = malloc(ysize*sizeof(double));
+	  yvals = (double*) malloc(ysize*sizeof(double));
 	  gridInqYvals(gridID, yvals);
 	  fprintf(gdp ,"YDEF %d LEVELS ", ysize);
 	  j = 0;
@@ -589,7 +589,7 @@ void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
 	}
     }
 
-  levels = malloc(nlevmax*sizeof(double));
+  levels = (double*) malloc(nlevmax*sizeof(double));
   zaxisInqLevels(zaxisIDmax, levels);
   if ( zaxisInqType(zaxisIDmax) == ZAXIS_PRESSURE ) lplev = TRUE;
   level0 = levels[0];
@@ -848,7 +848,7 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
       nb += 7;      /* base time (+ sec)  for compatibility with earlier version 2 maps */
       nb += 8*4;    /* grvals for time <-> grid conversion */
       
-      map = malloc(nb);
+      map = (unsigned char*) malloc(nb);
       
       bcnt = 0;
       Put1Byte(map, bcnt, 0);
@@ -910,7 +910,7 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
       if ( map_version == 1 )
 	{
 	  int *intnumbuf;
-	  intnumbuf = malloc(indx.intnum*sizeof(int));
+	  intnumbuf = (int*) malloc(indx.intnum*sizeof(int));
 	  for ( i = 0; i < nrecords; i++ )
 	    {
 	      intnumbuf[i*3+0] = (int) bignum[i*2];
@@ -1063,8 +1063,8 @@ void *Gradsdes(void *argument)
     cdoAbort("No Lon/Lat, Gaussian or Lambert grid found (%s data unsupported)!", gridNamePtr(gridtype));
 
   /* select all variables with used gridID */
-  vars = malloc(nvars*sizeof(int));
-  recoffset = malloc(nvars*sizeof(int));
+  vars = (int*) malloc(nvars*sizeof(int));
+  recoffset = (int*) malloc(nvars*sizeof(int));
   nvarsout = 0;
   nrecsout = 0;
   for ( varID = 0; varID < nvars; varID++ )
@@ -1183,7 +1183,7 @@ void *Gradsdes(void *argument)
 	}
 
       gridsize = vlistGridsizeMax(vlistID);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
   else if ( filetype == FILETYPE_NC )
     {
@@ -1297,9 +1297,9 @@ void *Gradsdes(void *argument)
 	  if ( nrecords >= maxrecs )
 	    {
 	      maxrecs = nrecords;
-	      intnum = realloc(intnum, 1*maxrecs*sizeof(int));
-	      fltnum = realloc(fltnum, 3*maxrecs*sizeof(float));
-	      bignum = realloc(bignum, 2*maxrecs*sizeof(off_t));
+	      intnum = (int*) realloc(intnum, 1*maxrecs*sizeof(int));
+	      fltnum = (float*) realloc(fltnum, 3*maxrecs*sizeof(float));
+	      bignum = (off_t*) realloc(bignum, 2*maxrecs*sizeof(off_t));
 	    }
 
 	  for ( recID = 0; recID < nrecs; recID++ )

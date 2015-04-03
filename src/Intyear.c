@@ -60,7 +60,7 @@ void *Intyear(void *argument)
 
   iyears = (int *) listArrayPtr(ilist);
 
-  streamIDs = malloc(nyears*sizeof(int));
+  streamIDs = (int*) malloc(nyears*sizeof(int));
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
@@ -72,9 +72,9 @@ void *Intyear(void *argument)
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
-  array3 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
+  array3 = (double*) malloc(gridsize*sizeof(double));
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);

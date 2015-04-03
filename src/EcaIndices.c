@@ -355,7 +355,7 @@ void *EcaCwdi(void *argument)
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   
-  longname = malloc(strlen(CWDI_LONGNAME) + 80);
+  longname = (char*) malloc(strlen(CWDI_LONGNAME) + 80);
   sprintf(longname, CWDI_LONGNAME, argN, argT);
 
   request.var1.name     = CWDI_NAME;
@@ -396,7 +396,7 @@ void *EcaCwfi(void *argument)
 
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
 
-  longname = malloc(strlen(CWFI_LONGNAME) + 40);
+  longname = (char*) malloc(strlen(CWFI_LONGNAME) + 40);
   sprintf(longname, CWFI_LONGNAME, argN);
 
   request.var1.name     = CWFI_NAME;
@@ -498,7 +498,7 @@ void *EcaGsl(void *argument)
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   if ( operatorArgc() > 2 ) minLandFraction = atof(operatorArgv()[2]);
 
-  longname = malloc(strlen(GSL_LONGNAME) + 160);
+  longname = (char*) malloc(strlen(GSL_LONGNAME) + 160);
   sprintf(longname, GSL_LONGNAME, argN, argT, argN, argT);
   
   request.name      = GSL_NAME;
@@ -576,7 +576,7 @@ void *EcaHwdi(void *argument)
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   
-  longname = malloc(strlen(HWDI_LONGNAME) + 80);
+  longname = (char*) malloc(strlen(HWDI_LONGNAME) + 80);
   sprintf(longname, HWDI_LONGNAME, argN, argT);
   
   request.var1.name     = HWDI_NAME;
@@ -617,7 +617,7 @@ void *EcaHwfi(void *argument)
 
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
 
-  longname = malloc(strlen(HWFI_LONGNAME) + 40);
+  longname = (char*) malloc(strlen(HWFI_LONGNAME) + 40);
   sprintf(longname, HWFI_LONGNAME, argN);
 
   request.var1.name     = HWFI_NAME;
@@ -683,7 +683,7 @@ void *EcaSu(void *argument)
   cdoOperatorAdd("eca_su", 0, 31, NULL);
 
   if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
-  longname = malloc(strlen(SU_LONGNAME) + 40);
+  longname = (char*) malloc(strlen(SU_LONGNAME) + 40);
   sprintf(longname, SU_LONGNAME, argT);
 
   request.var1.name     = SU_NAME;
@@ -818,7 +818,7 @@ void *EcaTr(void *argument)
   cdoOperatorAdd("eca_tr", 0, 31, NULL);
 
   if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
-  longname = malloc(strlen(TR_LONGNAME) + 40);
+  longname = (char*) malloc(strlen(TR_LONGNAME) + 40);
   sprintf(longname, TR_LONGNAME, argT);
  
   request.var1.name     = TR_NAME;
@@ -1327,7 +1327,7 @@ void *EcaRx5day(void *argument)
   cdoInitialize(argument);
   if ( operatorArgc() > 0 ) argX = atof(operatorArgv()[0]);
   
-  longname = malloc(strlen(RX5DAY_LONGNAME2) + 40);
+  longname = (char*) malloc(strlen(RX5DAY_LONGNAME2) + 40);
   sprintf(longname, RX5DAY_LONGNAME2, argX);
   
   cdoOperatorAdd("eca_rx5day", 0, 31, NULL);
@@ -1431,7 +1431,7 @@ void *Strwin(void *argument)
   if ( operatorArgc() > 0 )
     maxWind = atof(operatorArgv()[0]);
 
-  longname = malloc(strlen(STRWIN_LONGNAME) + 40);
+  longname = (char*) malloc(strlen(STRWIN_LONGNAME) + 40);
   sprintf(longname, STRWIN_LONGNAME, maxWind);
          
   request.var1.name     = STRWIN_NAME;

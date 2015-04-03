@@ -52,7 +52,7 @@ void *Template1(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;
@@ -122,7 +122,7 @@ void *Template2(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -56,7 +56,7 @@ void *Expr(void *argument)
   int gridsize, nlevel;
   int nmiss;
   int taxisID1, taxisID2;
-  int lwarn = TRUE;
+  //int lwarn = TRUE;
   double missval;
   double *array = NULL;
   double *single1, *single2;
@@ -74,6 +74,8 @@ void *Expr(void *argument)
   AEXPR  = cdoOperatorAdd("aexpr",  0, 0, "expressions");
   AEXPRF = cdoOperatorAdd("aexprf", 0, 0, "expr script filename");
 
+  UNUSED(AEXPRF);
+
   operatorID = cdoOperatorID();
 
   operatorInputArg(cdoOperatorEnter(operatorID));
@@ -83,7 +85,7 @@ void *Expr(void *argument)
       size_t slen;
 
       slen = strlen(operatorArgv()[0]);
-      exprs = malloc(slen+2);
+      exprs = (char*) malloc(slen+2);
       strcpy(exprs, operatorArgv()[0]);
       if ( exprs[slen-1] != ';' )
 	{
@@ -106,7 +108,7 @@ void *Expr(void *argument)
       if ( stat(exprf, &filestat) != 0 ) cdoAbort("Stat failed on %s", exprf);
 
       fsize = (size_t) filestat.st_size;
-      exprs = malloc(fsize+1);
+      exprs = (char*) malloc(fsize+1);
 
       while ( (ichar = fgetc(fp)) != EOF ) exprs[ipos++] = ichar;
 
@@ -166,8 +168,8 @@ void *Expr(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
-  parse_arg.vardata1 = malloc(nvars*sizeof(double*));
-  parse_arg.vardata2 = malloc(nvars2*sizeof(double*));
+  parse_arg.vardata1 = (double**) malloc(nvars*sizeof(double*));
+  parse_arg.vardata2 = (double**) malloc(nvars2*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -178,7 +180,7 @@ void *Expr(void *argument)
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(zaxisID);
       if ( parse_arg.var_needed[varID] )
-	parse_arg.vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
+	parse_arg.vardata1[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
       else
 	parse_arg.vardata1[varID] = NULL;
     }
@@ -190,11 +192,11 @@ void *Expr(void *argument)
 
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(zaxisID);
-      parse_arg.vardata2[varID] = malloc(gridsize*nlevel*sizeof(double));
+      parse_arg.vardata2[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
     }
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

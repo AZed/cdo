@@ -5,21 +5,17 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
 #include <stdlib.h>
 #include <mpi.h>
 
 #include "cdi_int.h"
 
-void   backendCleanup  ( void );
-void backendInit(void (*postCommSetupActions)(void));
+void cdiPioFileWritingInit(void (*postCommSetupActions)(void));
+void cdiPioFileWritingFinalize(void);
 int pioFileOpen(const char *filename, const char *mode);
 int    pioFileClose    ( int );
 size_t cdiPioFileWrite(int fileID, const void *restrict buffer, size_t len,
                        int tsID);
-#else
-typedef int MPI_Comm;
-#endif
 
 #endif
 /*

@@ -29,15 +29,15 @@ extern void    Free   (const char *caller, const char *file, int line, void *ptr
 #endif
 
 #if  defined  WITH_CALLER_NAME
-#  define  realloc(p, s)  Realloc(__func__, __FILE__, __LINE__, p, (size_t)s)
-#  define   calloc(n, s)   Calloc(__func__, __FILE__, __LINE__, n, (size_t)s)
-#  define   malloc(s)      Malloc(__func__, __FILE__, __LINE__, (size_t)s)
-#  define     free(p)        Free(__func__, __FILE__, __LINE__, p)
+#  define  realloc(p, s)  Realloc(__func__, __FILE__, __LINE__, (p), (s))
+#  define   calloc(n, s)   Calloc(__func__, __FILE__, __LINE__, (n), (s))
+#  define   malloc(s)      Malloc(__func__, __FILE__, __LINE__, (s))
+#  define     free(p)        Free(__func__, __FILE__, __LINE__, (p))
 #else
-#  define  realloc(p, s)  Realloc((void *) NULL, __FILE__, __LINE__, p, (size_t)s)
-#  define   calloc(n, s)   Calloc((void *) NULL, __FILE__, __LINE__, n, (size_t)s)
-#  define   malloc(s)      Malloc((void *) NULL, __FILE__, __LINE__, (size_t)s)
-#  define     free(p)        Free((void *) NULL, __FILE__, __LINE__, p)
+#  define  realloc(p, s)  Realloc((void *) NULL, __FILE__, __LINE__, (p), (s))
+#  define   calloc(n, s)   Calloc((void *) NULL, __FILE__, __LINE__, (n), (s))
+#  define   malloc(s)      Malloc((void *) NULL, __FILE__, __LINE__, (s))
+#  define     free(p)        Free((void *) NULL, __FILE__, __LINE__, (p))
 #endif
 
 #endif /* DEBUG_MEMORY */
@@ -46,12 +46,10 @@ void *cdiXmalloc(size_t, const char *, const char *, int);
 #define xmalloc(size) cdiXmalloc((size), __FILE__, __func__,  __LINE__ )
 
 void *cdiXcalloc(size_t, size_t, const char *, const char *, int);
-#define xcalloc(nmemb,size) cdiXcalloc((nmemb), (size),        \
-                                        __FILE__, __func__, __LINE__)
+#define xcalloc(nmemb,size) cdiXcalloc((nmemb), (size), __FILE__, __func__, __LINE__)
 
 void *cdiXrealloc(void *, size_t, const char *, const char *, int);
-#define xrealloc(p,size) cdiXrealloc((p), (size),              \
-                                      __FILE__, __func__, __LINE__)
+#define xrealloc(p,size) cdiXrealloc((p), (size), __FILE__, __func__, __LINE__)
 
 #endif /* _DMEMORY_H */
 /*

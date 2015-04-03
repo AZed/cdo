@@ -5,8 +5,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <mpi.h>
 #include <stdio.h>
 #include "cdi.h"
@@ -71,7 +69,6 @@ int      commInqNProcsColl      ( void );
 
 void     commPrint              ( FILE * );
 
-#endif
 #endif
 /*
  * Local Variables:

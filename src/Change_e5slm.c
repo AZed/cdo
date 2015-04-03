@@ -75,9 +75,9 @@ void *Change_e5slm(void *argument)
 
   gridsize = gridInqSize(vlistInqVarGrid(vlistIDslm, 0));
 
-  array = malloc(gridsize*sizeof(double));
-  cland = malloc(gridsize*sizeof(double));
-  lsea  = malloc(gridsize*sizeof(short));
+  array = (double*) malloc(gridsize*sizeof(double));
+  cland = (double*) malloc(gridsize*sizeof(double));
+  lsea  = (short*) malloc(gridsize*sizeof(short));
 
   streamInqTimestep(streamIDslm, 0);
 
@@ -102,7 +102,7 @@ void *Change_e5slm(void *argument)
 
 
   nvars = vlistNvars(vlistID1);
-  codes = malloc(nvars*sizeof(short));
+  codes = (short*) malloc(nvars*sizeof(short));
 
   for ( varID = 0; varID < nvars; ++varID )
     {

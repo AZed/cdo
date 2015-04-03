@@ -137,7 +137,7 @@ void *Gridcell(void *argument)
 
 
   gridsize = gridInqSize(gridID);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
 
   if ( operatorID == GRIDAREA )
@@ -185,7 +185,7 @@ void *Gridcell(void *argument)
   else if ( operatorID == GRIDMASK )
     {
       int *mask;
-      mask = malloc(gridsize*sizeof(int));
+      mask = (int*) malloc(gridsize*sizeof(int));
       if ( gridInqMask(gridID, NULL) )
 	{
 	  gridInqMask(gridID, mask);
@@ -218,8 +218,8 @@ void *Gridcell(void *argument)
 	  xsize = gridInqXsize(gridID);
 	  ysize = gridInqYsize(gridID);
 
-	  xv = malloc(gridsize*sizeof(double));
-	  yv = malloc(gridsize*sizeof(double));
+	  xv = (double*) malloc(gridsize*sizeof(double));
+	  yv = (double*) malloc(gridsize*sizeof(double));
 
 	  gridInqXvals(gridID, xv);
 	  gridInqYvals(gridID, yv);

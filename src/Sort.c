@@ -164,21 +164,21 @@ void *Sort(void *argument)
 
   nvars   = vlistNvars(vlistID1);
 
-  varInfo = malloc(nvars*sizeof(varinfo_t));
+  varInfo = (varinfo_t*) malloc(nvars*sizeof(varinfo_t));
   for ( varID = 0; varID < nvars; ++varID )
     {
       nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       varInfo[varID].nlevs = nlevs;
-      varInfo[varID].levInfo = malloc(nlevs*sizeof(levinfo_t));
+      varInfo[varID].levInfo = (levinfo_t*) malloc(nlevs*sizeof(levinfo_t));
     }
 
-  vardata = malloc(nvars*sizeof(double*));
+  vardata = (double**) malloc(nvars*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata[varID] = malloc(gridsize*nlevs*sizeof(double));
+      vardata[varID] = (double*) malloc(gridsize*nlevs*sizeof(double));
     }
 
   tsID = 0;

@@ -43,7 +43,8 @@ int streamvar_new_entry(stream_t *streamptr)
       int i;
 
       streamvarSize = 2;
-      streamvar = (svarinfo_t *) malloc(streamvarSize*sizeof(svarinfo_t));
+      streamvar
+        = (svarinfo_t *)xmalloc((size_t)streamvarSize * sizeof(svarinfo_t));
       if ( streamvar == NULL )
 	{
           Message("streamvarSize = %d", streamvarSize);
@@ -69,7 +70,9 @@ int streamvar_new_entry(stream_t *streamptr)
       int i;
 
       streamvarSize = 2*streamvarSize;
-      streamvar = (svarinfo_t *) realloc(streamvar, streamvarSize*sizeof(svarinfo_t));
+      streamvar
+        = (svarinfo_t *)xrealloc(streamvar,
+                                 (size_t)streamvarSize * sizeof (svarinfo_t));
       if ( streamvar == NULL )
 	{
           Message("streamvarSize = %d", streamvarSize);
@@ -112,8 +115,8 @@ int stream_new_var(stream_t *streamptr, int gridID, int zaxisID)
 
   nlevs = zaxisInqSize(zaxisID);
 
-  level  = (int *) malloc(nlevs*sizeof(int));
-  lindex = (int *) malloc(nlevs*sizeof(int));
+  level  = (int *)xmalloc((size_t)nlevs * sizeof (int));
+  lindex = (int *)xmalloc((size_t)nlevs * sizeof (int));
 
   for ( levID = 0; levID < nlevs; levID++ )
     level[levID] = CDI_UNDEFID;

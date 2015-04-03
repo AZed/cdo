@@ -101,12 +101,12 @@ void *Fldrms(void *argument)
   field_init(&field3);
 
   lim = vlistGridsizeMax(vlistID1);
-  field1.ptr    = malloc(lim*sizeof(double));
+  field1.ptr    = (double*) malloc(lim*sizeof(double));
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = malloc(lim*sizeof(double));
+    field1.weight = (double*) malloc(lim*sizeof(double));
 
-  field2.ptr    = malloc(lim*sizeof(double));
+  field2.ptr    = (double*) malloc(lim*sizeof(double));
   field2.weight = NULL;
 
   field3.ptr  = &sglval;

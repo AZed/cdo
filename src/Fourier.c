@@ -54,7 +54,7 @@ void *Fourier(void *argument)
     double *work_r;
     double *work_i;
   } memory_t;
-  memory_t *mem = NULL;
+  memory_t *ompmem = NULL;
 
 
   cdoInitialize(argument);
@@ -83,9 +83,9 @@ void *Fourier(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vdate = realloc(vdate, nalloc*sizeof(int));
-	  vtime = realloc(vtime, nalloc*sizeof(int));
-	  vars  = realloc(vars, nalloc*sizeof(field_t **));
+	  vdate = (int*) realloc(vdate, nalloc*sizeof(int));
+	  vtime = (int*) realloc(vtime, nalloc*sizeof(int));
+	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
@@ -98,7 +98,7 @@ void *Fourier(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = malloc(2*gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = (double*) malloc(2*gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 	}
@@ -110,15 +110,15 @@ void *Fourier(void *argument)
 
   for ( bit = nts; !(bit & 1); bit >>= 1 );
 
-  mem = malloc(ompNumThreads*sizeof(memory_t));
+  ompmem = (memory_t*) malloc(ompNumThreads*sizeof(memory_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
-      mem[i].real = malloc(nts*sizeof(double));
-      mem[i].imag = malloc(nts*sizeof(double));
+      ompmem[i].real = (double*) malloc(nts*sizeof(double));
+      ompmem[i].imag = (double*) malloc(nts*sizeof(double));
       if ( bit != 1 )
 	{
-	  mem[i].work_r = malloc(nts*sizeof(double));
-	  mem[i].work_i = malloc(nts*sizeof(double));
+	  ompmem[i].work_r = (double*) malloc(nts*sizeof(double));
+	  ompmem[i].work_i = (double*) malloc(nts*sizeof(double));
 	}
     }
 
@@ -143,23 +143,23 @@ void *Fourier(void *argument)
 #endif
 	      for ( tsID = 0; tsID < nts; tsID++ )
 		{
-		  mem[ompthID].real[tsID] = vars[tsID][varID][levelID].ptr[2*i];
-		  mem[ompthID].imag[tsID] = vars[tsID][varID][levelID].ptr[2*i+1];
-		  if ( DBL_IS_EQUAL(mem[ompthID].real[tsID], missval) ||
-		       DBL_IS_EQUAL(mem[ompthID].imag[tsID], missval) ) lmiss = 1;
+		  ompmem[ompthID].real[tsID] = vars[tsID][varID][levelID].ptr[2*i];
+		  ompmem[ompthID].imag[tsID] = vars[tsID][varID][levelID].ptr[2*i+1];
+		  if ( DBL_IS_EQUAL(ompmem[ompthID].real[tsID], missval) ||
+		       DBL_IS_EQUAL(ompmem[ompthID].imag[tsID], missval) ) lmiss = 1;
 		}
 
 	      if ( lmiss == 0 )
 		{
 		  if ( bit == 1 )	/* nts is a power of 2 */
-		    fft(mem[ompthID].real, mem[ompthID].imag, nts, sign);
+		    fft(ompmem[ompthID].real, ompmem[ompthID].imag, nts, sign);
 		  else
-		    ft_r(mem[ompthID].real, mem[ompthID].imag, nts, sign, mem[ompthID].work_r, mem[ompthID].work_i);
+		    ft_r(ompmem[ompthID].real, ompmem[ompthID].imag, nts, sign, ompmem[ompthID].work_r, ompmem[ompthID].work_i);
 
 		  for ( tsID = 0; tsID < nts; tsID++ )
 		    {
-		      vars[tsID][varID][levelID].ptr[2*i]   = mem[ompthID].real[tsID];
-		      vars[tsID][varID][levelID].ptr[2*i+1] = mem[ompthID].imag[tsID];
+		      vars[tsID][varID][levelID].ptr[2*i]   = ompmem[ompthID].real[tsID];
+		      vars[tsID][varID][levelID].ptr[2*i+1] = ompmem[ompthID].imag[tsID];
 		    }
 		}
 	      else
@@ -176,15 +176,15 @@ void *Fourier(void *argument)
 
   for ( i = 0; i < ompNumThreads; i++ )
     {
-      free(mem[i].real);
-      free(mem[i].imag);
+      free(ompmem[i].real);
+      free(ompmem[i].imag);
       if ( bit != 1 )
 	{
-	  free(mem[i].work_r);
-	  free(mem[i].work_i);
+	  free(ompmem[i].work_r);
+	  free(ompmem[i].work_i);
 	}
     }
-  free(mem);
+  free(ompmem);
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {

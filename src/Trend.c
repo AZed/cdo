@@ -73,16 +73,16 @@ void *Trend(void *argument)
   streamDefVlist(streamID2, vlistID2);
   streamDefVlist(streamID3, vlistID2);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field1);
   field_init(&field2);
 
-  field1.ptr = malloc(gridsize*sizeof(double));
-  field2.ptr = malloc(gridsize*sizeof(double));
+  field1.ptr = (double*) malloc(gridsize*sizeof(double));
+  field2.ptr = (double*) malloc(gridsize*sizeof(double));
 
   for ( w = 0; w < nwork; w++ )
     work[w] = field_calloc(vlistID1, FIELD_PTR);

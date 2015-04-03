@@ -53,10 +53,10 @@ int genThinoutGrid(int gridID1, int xinc, int yinc)
 
   if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_LONLAT )
     {
-      xvals1 = malloc(nlon1*sizeof(double));
-      yvals1 = malloc(nlat1*sizeof(double));
-      xvals2 = malloc(nlon2*sizeof(double));
-      yvals2 = malloc(nlat2*sizeof(double));
+      xvals1 = (double*) malloc(nlon1*sizeof(double));
+      yvals1 = (double*) malloc(nlat1*sizeof(double));
+      xvals2 = (double*) malloc(nlon2*sizeof(double));
+      yvals2 = (double*) malloc(nlat2*sizeof(double));
       gridInqXvals(gridID1, xvals1);
       gridInqYvals(gridID1, yvals1);
 
@@ -112,19 +112,19 @@ int genBoxavgGrid(int gridID1, int xinc, int yinc)
 
   if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_LONLAT )
     {
-      xvals1 = malloc(nlon1*sizeof(double));
-      yvals1 = malloc(nlat1*sizeof(double));
-      xvals2 = malloc(nlon2*sizeof(double));
-      yvals2 = malloc(nlat2*sizeof(double));
+      xvals1 = (double*) malloc(nlon1*sizeof(double));
+      yvals1 = (double*) malloc(nlat1*sizeof(double));
+      xvals2 = (double*) malloc(nlon2*sizeof(double));
+      yvals2 = (double*) malloc(nlat2*sizeof(double));
       gridInqXvals(gridID1, xvals1);
       gridInqYvals(gridID1, yvals1);
 
       if ( gridInqYbounds(gridID1, NULL) && gridInqXbounds(gridID1, NULL) )
 	{
-	  grid1_corner_lon = malloc(2*nlon1*sizeof(double));
-	  grid1_corner_lat = malloc(2*nlat1*sizeof(double));
-	  grid2_corner_lon = malloc(2*nlon2*sizeof(double));
-	  grid2_corner_lat = malloc(2*nlat2*sizeof(double));
+	  grid1_corner_lon = (double*) malloc(2*nlon1*sizeof(double));
+	  grid1_corner_lat = (double*) malloc(2*nlat1*sizeof(double));
+	  grid2_corner_lon = (double*) malloc(2*nlon2*sizeof(double));
+	  grid2_corner_lat = (double*) malloc(2*nlat2*sizeof(double));
 	  gridInqXbounds(gridID1, grid1_corner_lon);
 	  gridInqYbounds(gridID1, grid1_corner_lat);
 	}
@@ -204,13 +204,13 @@ void boxavg(field_t *field1, field_t *field2, int xinc, int yinc)
   nlon2 = gridInqXsize(gridID2);
   nlat2 = gridInqYsize(gridID2);
 
-  xfield1 = malloc(nlat1*sizeof(double *));
+  xfield1 = (double **) malloc(nlat1*sizeof(double *));
 
   for ( ilat = 0; ilat < nlat1; ilat++ )
     xfield1[ilat] = array1 + ilat*nlon1;
 
 
-  xfield2 = malloc(nlat2 * sizeof(double *));
+  xfield2 = (double **) malloc(nlat2 * sizeof(double *));
 
   for ( ilat = 0; ilat < nlat2; ilat++ )
     xfield2[ilat] = array2 + ilat*nlon2;
@@ -272,12 +272,12 @@ void thinout(field_t *field1, field_t *field2, int xinc, int yinc)
   nlon2 = gridInqXsize(gridID2);
   nlat2 = gridInqYsize(gridID2);
 
-  xfield1 = malloc(nlat1*sizeof(double *));
+  xfield1 = (double **) malloc(nlat1*sizeof(double *));
 
   for ( ilat = 0; ilat < nlat1; ilat++ )
     xfield1[ilat] = array1 + ilat*nlon1;
 
-  xfield2 = malloc(nlat2*sizeof(double *));
+  xfield2 = (double **) malloc(nlat2*sizeof(double *));
 
   for ( ilat = 0; ilat < nlat2; ilat++ )
     xfield2[ilat] = array2 + ilat*nlon2;
@@ -408,10 +408,10 @@ void *Intgrid(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1   = malloc(gridsize*sizeof(double));
+  array1   = (double*) malloc(gridsize*sizeof(double));
 
   gridsize = gridInqSize(gridID2);
-  array2   = malloc(gridsize*sizeof(double));
+  array2   = (double*) malloc(gridsize*sizeof(double));
 
   field_init(&field1);
   field_init(&field2);

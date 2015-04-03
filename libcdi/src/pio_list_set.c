@@ -11,7 +11,6 @@
 #include "cdi.h"
 #include "dmemory.h"
 
-#ifdef USE_MPI
 #include "pio_impl.h"
 #include "pio_util.h"
 
@@ -32,7 +31,7 @@ listSet *listSetNew( valDestroyFunction vD, eqPredicate kC )
 {
   listSet *myq;
 
-  myq = xmalloc ( sizeof ( listSet ));
+  myq = (listSet*) xmalloc( sizeof ( listSet ));
 
   myq->head = NULL;
   myq->tail = NULL;
@@ -79,7 +78,7 @@ listSetAdd(listSet *q, void *v)
         return -1;
   }
 
-  if ((newCons = malloc(sizeof(struct cons))) == NULL)
+  if ((newCons = (struct cons*) malloc(sizeof(struct cons))) == NULL)
     {
       perror ( "pio_listSet: listSetAdd (): Not enough memory" );
       /* FIXME: why not abort? */
@@ -145,8 +144,6 @@ listSetForeach(listSet *q, void (*func)(void *elem, void *data), void *data)
     func(p->val, data);
 }
 
-
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

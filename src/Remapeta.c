@@ -111,7 +111,7 @@ double *vctFromFile(const char *filename, int *nvct)
   fp = fopen(filename, "r");
   if ( fp == NULL ) { perror(filename); exit(EXIT_FAILURE); }
 
-  vct2 = malloc(maxvct*sizeof(double));
+  vct2 = (double*) malloc(maxvct*sizeof(double));
 
   while ( readline(fp, line, 1024) )
     {
@@ -141,7 +141,7 @@ double *vctFromFile(const char *filename, int *nvct)
   for ( i = 0; i < nlevh2+1; ++i )
     vct2[i+nvct2/2] = vct2[i+maxvct/2];
   
-  vct2 = realloc(vct2, nvct2*sizeof(double));
+  vct2 = (double*) realloc(vct2, nvct2*sizeof(double));
 
   *nvct = nvct2;
 
@@ -194,9 +194,9 @@ void *Remapeta(void *argument)
   int ngrids, gridID, zaxisID;
   int nlevel;
   int nvct1, nvct2 = 0;
-  int geopID = -1, tempID = -1, sqID = -1, psID = -1, lnpsID = -1, presID = -1;
+  int sgeopotID = -1, tempID = -1, sqID = -1, psID = -1, lnpsID = -1, presID = -1;
   int code;
-  char varname[CDI_MAX_NAME];
+  char varname[CDI_MAX_NAME], stdname[CDI_MAX_NAME];
   double *single2;
   int taxisID1, taxisID2;
   int lhavevct;
@@ -260,29 +260,33 @@ void *Remapeta(void *argument)
     for ( i = 0; i < nhlevf2+1; ++i )
       cdoPrint("vct2: %5d %25.17f %25.17f", i, vct2[i], vct2[nvct2/2+i]);
 
+  streamID1 = streamOpenRead(cdoStreamName(0));
+
   if ( operatorArgc() == 2 )
     {
+      int streamID;
+
       lfis2 = TRUE;
       fname = operatorArgv()[1];
       
       argument_t *fileargument = file_argument_new(fname);
-      streamID1 = streamOpenRead(fileargument);
+      streamID = streamOpenRead(fileargument);
       file_argument_free(fileargument);
 
-      vlistID1 = streamInqVlist(streamID1);
+      vlistID1 = streamInqVlist(streamID);
 
-      streamInqRecord(streamID1, &varID, &levelID);
+      streamInqRecord(streamID, &varID, &levelID);
       gridID  = vlistInqVarGrid(vlistID1, varID);
       nfis2gp = gridInqSize(gridID);
 
-      fis2 = malloc(nfis2gp*sizeof(double));
+      fis2 = (double*) malloc(nfis2gp*sizeof(double));
 
-      streamReadRecord(streamID1, fis2, &nmiss);
+      streamReadRecord(streamID, fis2, &nmiss);
 
       if ( nmiss )
 	{
 	  missval = vlistInqVarMissval(vlistID1, varID);
-	  imiss = malloc (nfis2gp*sizeof(int));
+	  imiss = (int*) malloc (nfis2gp*sizeof(int));
 	  for ( i = 0; i < nfis2gp; ++i )
 	    {
 	      if ( DBL_IS_EQUAL(fis2[i], missval) )
@@ -302,10 +306,8 @@ void *Remapeta(void *argument)
       if ( minval < -1.e10 || maxval > 1.e10 )
 	cdoAbort("%s out of range!", var_stdname(surface_geopotential));
 
-      streamClose(streamID1); 
+      streamClose(streamID); 
     }
-
-  streamID1 = streamOpenRead(cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -341,7 +343,7 @@ void *Remapeta(void *argument)
     }
 
   zaxisID2 = zaxisCreate(ZAXIS_HYBRID, nhlevf2);
-  lev2 = malloc(nhlevf2*sizeof(double));
+  lev2 = (double*) malloc(nhlevf2*sizeof(double));
   for ( i = 0; i < nhlevf2; ++i ) lev2[i] = i+1;
   zaxisDefLevels(zaxisID2, lev2);
   free(lev2);
@@ -381,7 +383,7 @@ void *Remapeta(void *argument)
                       if ( cdoVerbose )
                         cdoPrint("lhavevct=TRUE  zaxisIDh = %d, nhlevf1   = %d", zaxisIDh, nlevel);
  
-		      vct1 = malloc(nvct1*sizeof(double));
+		      vct1 = (double*) malloc(nvct1*sizeof(double));
 		      zaxisInqVct(zaxisID, vct1);
 		      
 		      vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
@@ -401,7 +403,9 @@ void *Remapeta(void *argument)
               else 
                 {
 		  if ( cdoVerbose )
-		    cdoPrint("nlevel /= (nvct1/2 - 1): nlevel = %d", nlevel);
+		    cdoPrint("nlevel = (nvct1/2 - 1): nlevel = %d", nlevel);
+		  if ( nlevel < (nvct1/2 - 1) )
+		    cdoPrint("z-axis %d has only %d of %d hybrid sigma pressure levels!", i+1, nlevel, (nvct1/2 - 1));
                 }
 	    }
 	  else
@@ -422,7 +426,7 @@ void *Remapeta(void *argument)
 
 
   if ( zaxisIDh == -1 )
-    cdoWarning("No data on hybrid model level found!");
+    cdoWarning("No 3D variable with hybrid sigma pressure coordinate found!");
 
   nvars = vlistNvars(vlistID1);
 
@@ -434,39 +438,38 @@ void *Remapeta(void *argument)
 
       code = vlistInqVarCode(vlistID1, varID);
       /* code = -1; */
-      if ( code <= 0 )
+      if ( code <= 0 || code == 255 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
-
 	  strtolower(varname);
 
-	  if ( nlevel == 1 )
-	    {
-	      if      ( strcmp(varname, "geosp")   == 0 ) code = 129;
-	      else if ( strcmp(varname, "aps")     == 0 ) code = 134;
-	      else if ( strcmp(varname, "ps")      == 0 ) code = 134;
-	      else if ( strcmp(varname, "lsp")     == 0 ) code = 152;
-	    }
+	  vlistInqVarStdname(vlistID1, varID, stdname);
+	  strtolower(stdname);
 
-	  if ( nlevel == nhlevf1 )
+	  code = echamcode_from_stdname(stdname);
+
+	  if ( code == -1 )
 	    {
-	      if      ( strcmp(varname, "t")       == 0 ) code = 130;
-	      else if ( strcmp(varname, "q")       == 0 ) code = 133;
+	      /*                                  ECHAM                            ECMWF       */
+	      if      ( sgeopotID == -1 && (strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0) ) code = 129;
+	      else if ( tempID    == -1 && (strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0) ) code = 130;
+	      else if ( psID      == -1 && (strcmp(varname, "aps")   == 0 || strcmp(varname, "ps"  ) == 0) ) code = 134;
+	      else if ( lnpsID    == -1 && (strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0) ) code = 152;
+	      else if ( sqID      == -1 && (strcmp(varname, "q")     == 0 ) ) code = 133;
 	    }
 	}
 
-      if      ( code == 129 ) geopID    = varID;
-      else if ( code == 130 ) tempID    = varID;
-      else if ( code == 133 ) sqID      = varID;
-      else if ( code == 134 ) psID      = varID;
-      else if ( code == 152 ) lnpsID    = varID;
+      if      ( code == 129 && nlevel == 1       ) sgeopotID = varID;
+      else if ( code == 130 && nlevel == nhlevf1 ) tempID    = varID;
+      else if ( code == 133 && nlevel == nhlevf1 ) sqID      = varID;
+      else if ( code == 134 && nlevel == 1       ) psID      = varID;
+      else if ( code == 152 && nlevel == 1       ) lnpsID    = varID;
 
       if ( gridInqType(gridID) == GRID_SPECTRAL && zaxisInqType(zaxisID) == ZAXIS_HYBRID )
 	cdoAbort("Spectral data on model level unsupported!");
 
       if ( gridInqType(gridID) == GRID_SPECTRAL )
 	cdoAbort("Spectral data unsupported!");
-
 
       if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlevf1 )
 	{
@@ -478,6 +481,16 @@ void *Remapeta(void *argument)
 	  if ( code == 130 ) tempID = -1;
 	  if ( code == 133 ) sqID   = -1;
 	}
+    }
+
+  if ( cdoVerbose )
+    {
+      cdoPrint("Found:");
+      if ( tempID    != -1 ) cdoPrint("  %s", var_stdname(air_temperature));
+      if ( psID      != -1 ) cdoPrint("  %s", var_stdname(surface_air_pressure));
+      if ( lnpsID    != -1 ) cdoPrint("  LOG(%s)", var_stdname(surface_air_pressure));
+      if ( sgeopotID != -1 ) cdoPrint("  %s", var_stdname(surface_geopotential));
+      if ( sqID      != -1 ) cdoPrint("  %s", var_stdname(specific_humidity));
     }
 
   if ( tempID != -1 && sqID != -1 )
@@ -495,59 +508,61 @@ void *Remapeta(void *argument)
       cdoWarning("Temperature and Humidity not found!");
     }
   */
+  if ( operatorID == REMAPETA ) {}
+
   if ( operatorID == REMAPETAS || operatorID == REMAPETAZ)
     {
-      sum1 = malloc(ngp*sizeof(double));
-      sum2 = malloc(ngp*sizeof(double));
+      sum1 = (double*) malloc(ngp*sizeof(double));
+      sum2 = (double*) malloc(ngp*sizeof(double));
     }
 
   if ( operatorID == REMAPETAZ )
     {
-      deltap1 = malloc(ngp*nhlevf1*sizeof(double));
-      deltap2 = malloc(ngp*nhlevf2*sizeof(double));
-      half_press1 = malloc(ngp*(nhlevf1+1)*sizeof(double));
-      half_press2 = malloc(ngp*(nhlevf2+1)*sizeof(double));
+      deltap1 = (double*) malloc(ngp*nhlevf1*sizeof(double));
+      deltap2 = (double*) malloc(ngp*nhlevf2*sizeof(double));
+      half_press1 = (double*) malloc(ngp*(nhlevf1+1)*sizeof(double));
+      half_press2 = (double*) malloc(ngp*(nhlevf2+1)*sizeof(double));
     }
 
-  array = malloc(ngp*sizeof(double));
+  array = (double*) malloc(ngp*sizeof(double));
 
-  fis1  = malloc(ngp*sizeof(double));
-  ps1   = malloc(ngp*sizeof(double));
+  fis1  = (double*) malloc(ngp*sizeof(double));
+  ps1   = (double*) malloc(ngp*sizeof(double));
 
-  if ( lfis2 == FALSE ) fis2  = malloc(ngp*sizeof(double));
+  if ( lfis2 == FALSE ) fis2  = (double*) malloc(ngp*sizeof(double));
   if ( lfis2 == TRUE && ngp != nfis2gp ) cdoAbort("Orographies have different grid size!");
 
-  ps2   = malloc(ngp*sizeof(double));
+  ps2   = (double*) malloc(ngp*sizeof(double));
 
   if ( ltq )
     {
-      tscor = malloc(ngp*sizeof(double));
-      pscor = malloc(ngp*sizeof(double));
-      secor = malloc(ngp*sizeof(double));
+      tscor = (double*) malloc(ngp*sizeof(double));
+      pscor = (double*) malloc(ngp*sizeof(double));
+      secor = (double*) malloc(ngp*sizeof(double));
 
-      t1    = malloc(ngp*nhlevf1*sizeof(double));
-      q1    = malloc(ngp*nhlevf1*sizeof(double));
+      t1    = (double*) malloc(ngp*nhlevf1*sizeof(double));
+      q1    = (double*) malloc(ngp*nhlevf1*sizeof(double));
 
-      t2    = malloc(ngp*nhlevf2*sizeof(double));
-      q2    = malloc(ngp*nhlevf2*sizeof(double));
+      t2    = (double*) malloc(ngp*nhlevf2*sizeof(double));
+      q2    = (double*) malloc(ngp*nhlevf2*sizeof(double));
     }
 
   if ( nvars3D )
     {
-      vars1  = malloc(nvars*sizeof(double));
-      vars2  = malloc(nvars*sizeof(double));
+      vars1  = (double**) malloc(nvars*sizeof(double*));
+      vars2  = (double**) malloc(nvars*sizeof(double*));
 
       for ( varID = 0; varID < nvars3D; ++varID )
 	{
-	  vars1[varID] = malloc(ngp*nhlevf1*sizeof(double));
-	  vars2[varID] = malloc(ngp*nhlevf2*sizeof(double));
+	  vars1[varID] = (double*) malloc(ngp*nhlevf1*sizeof(double));
+	  vars2[varID] = (double*) malloc(ngp*nhlevf2*sizeof(double));
 	}
     }
 
-  if ( zaxisIDh != -1 && geopID == -1 )
+  if ( zaxisIDh != -1 && sgeopotID == -1 )
     {
       if ( ltq )
-	cdoWarning("%s not found - using zero %s!", var_stdname(surface_geopotential), var_stdname(surface_geopotential));
+	cdoWarning("%s not found - set to zero!", var_stdname(surface_geopotential));
 
       memset(fis1, 0, ngp*sizeof(double));
     }
@@ -555,11 +570,18 @@ void *Remapeta(void *argument)
   presID = lnpsID;
   if ( zaxisIDh != -1 && lnpsID == -1 )
     {
-      presID = psID;
-      if ( psID != -1 )
-	cdoWarning("LOG(%s) not found - using %s!", var_stdname(surface_air_pressure), var_stdname(surface_air_pressure));
-      else
+      if ( psID == -1 )
 	cdoAbort("%s not found!", var_stdname(surface_air_pressure));
+      else
+	presID = psID;
+    }
+
+  if ( cdoVerbose )
+    {
+      if ( presID == lnpsID )
+	cdoPrint("using LOG(%s)", var_stdname(surface_air_pressure));      
+      else
+	cdoPrint("using %s", var_stdname(surface_air_pressure));
     }
 
   if ( cdoVerbose ) cdoPrint("nvars3D = %d   ltq = %d", nvars3D, ltq);
@@ -582,7 +604,7 @@ void *Remapeta(void *argument)
 
 	  if ( zaxisIDh != -1 )
 	    {
-	      if ( varID == geopID )
+	      if ( varID == sgeopotID )
 		memcpy(fis1, array, ngp*sizeof(double));
 	      else if ( varID == presID )
 		{
@@ -685,19 +707,19 @@ void *Remapeta(void *argument)
       if ( cptop > 0 )
 	nctop = ncctop(cptop, (long) nhlevf2, (long) nhlevf2+1, a2, b2);
 
-      if ( geopID != -1 )
+      if ( zaxisIDh != -1 && sgeopotID != -1 )
 	{
-	  varID   = geopID;
+	  varID   = sgeopotID;
 	  levelID = 0;
 	  setmissval(ngp, imiss, missval, fis2);
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, fis2, nmissout);
 	}
 
-      if ( lnpsID != -1 )
+      if ( zaxisIDh != -1 && lnpsID != -1 )
 	for ( i = 0; i < ngp; ++i ) ps2[i] = log(ps2[i]);
 
-      if ( presID != -1 )
+      if ( zaxisIDh != -1 && presID != -1 )
 	{
 	  varID   = presID;
 	  levelID = 0;

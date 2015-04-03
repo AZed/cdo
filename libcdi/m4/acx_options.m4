@@ -142,7 +142,7 @@ ENABLE_NETCDF=no
 ENABLE_NC2=no
 ENABLE_NC4=no
 AC_ARG_WITH([netcdf],
-            [AS_HELP_STRING([--with-netcdf=<yes|no|directory> (default=yes)],[location of netcdf library (lib and include subdirs)])],
+            [AS_HELP_STRING([--with-netcdf=<yes|no|directory> (default=no)],[location of netcdf library (lib and include subdirs)])],
             [AS_CASE(["$with_netcdf"],
                      [no],[AC_MSG_CHECKING([for netcdf library])
                            AC_MSG_RESULT([suppressed])],

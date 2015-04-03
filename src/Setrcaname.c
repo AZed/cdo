@@ -121,7 +121,7 @@ void *Setrcaname(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

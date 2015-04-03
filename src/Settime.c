@@ -374,7 +374,7 @@ void *Settime(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )

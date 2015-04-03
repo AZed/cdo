@@ -19,6 +19,10 @@
 #  include "config.h"
 #endif
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600 /* fseeko */
+#endif
+
 #include <ctype.h>
 
 #include <cdi.h>
@@ -86,8 +90,8 @@ int y_is_gauss(double *gridyvals, int ysize)
   if ( ysize > 2 )
     {
       double *yvals, *yw;
-      yvals = malloc(ysize*sizeof(double));
-      yw    = malloc(ysize*sizeof(double));
+      yvals = (double*) malloc(ysize*sizeof(double));
+      yw    = (double*) malloc(ysize*sizeof(double));
       gaussaw(yvals, yw, ysize);
       free(yw);
       for ( i = 0; i < (int) ysize; i++ )
@@ -126,8 +130,8 @@ int define_grid(dsets_t *pfi)
   nx = pfi->dnum[0];
   ny = pfi->dnum[1];
 
-  xvals = malloc(nx*sizeof(double));
-  yvals = malloc(ny*sizeof(double));
+  xvals = (double*) malloc(nx*sizeof(double));
+  yvals = (double*) malloc(ny*sizeof(double));
 
   get_dim_vals(pfi, xvals, nx, 0);
   get_dim_vals(pfi, yvals, ny, 1);
@@ -164,7 +168,7 @@ int define_level(dsets_t *pfi, int nlev)
     {
       double *zvals = NULL;
 
-      zvals = malloc(nz*sizeof(double));
+      zvals = (double*) malloc(nz*sizeof(double));
 
       get_dim_vals(pfi, zvals, nz, 2);
 
@@ -252,10 +256,10 @@ void *Importbinary(void *argument)
 
   vlistID = vlistCreate();
 
-  var_zaxisID = malloc(nvars*sizeof(int));
-  recVarID    = malloc(nrecs*sizeof(int));
-  recLevelID  = malloc(nrecs*sizeof(int));
-  var_dfrm    = malloc(nrecs*sizeof(int));
+  var_zaxisID = (int*) malloc(nvars*sizeof(int));
+  recVarID    = (int*) malloc(nrecs*sizeof(int));
+  recLevelID  = (int*) malloc(nrecs*sizeof(int));
+  var_dfrm    = (int*) malloc(nrecs*sizeof(int));
 
   recID = 0;
   for ( ivar = 0; ivar < nvars; ++ivar )
@@ -366,9 +370,9 @@ void *Importbinary(void *argument)
 
   //recsize = pfi.gsiz*4;
   recsize = pfi.gsiz*8;
-  rec = malloc(recsize);
+  rec = (char*) malloc(recsize);
 
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   /*
   if (pfi.tmplat)
@@ -438,7 +442,7 @@ void *Importbinary(void *argument)
       pfi.infile = fopen(ch,"rb");
       if (pfi.infile==NULL) {
 	if (pfi.tmplat) {
-	  if ( cdoVerbose ) cdoPrint("Could not open file: %s",ch);
+	  cdoWarning("Could not open file: %s",ch);
 	  break;
 	} else {
 	  cdoAbort("Could not open file: %s",ch);
@@ -551,9 +555,10 @@ void *Importbinary(void *argument)
 		      if ( array[i] > fmax ) fmax = array[i];
 		    }
 		}
+	      /*
 	      if ( cdoVerbose )
 		printf("%3d %4d %3d %6d %6d %12.5g %12.5g\n", tsID, recID, recoffset, nmiss, n_nan, fmin, fmax);
-
+	      */
 	      varID   = recVarID[recID];
 	      levelID = recLevelID[recID];
 	      streamDefRecord(streamID,  varID,  levelID);

@@ -173,7 +173,7 @@ int defineModel ( int instID )
 {
   int modelID = CDI_UNDEFID;
 
-  modelID = modelDef ( instID, 0, "myModel");
+  modelID = modelDef(instID, 0, "resource_copy");
 
   return modelID;
 }
@@ -182,20 +182,20 @@ static int destNamespace;
 
 int modelRun(MPI_Comm comm)
 {
-  int gridID, zaxisID, taxisID, instID, modelID, vlistID, streamID;
+  int gridID, zaxisID, taxisID, instID, vlistID, streamID;
 
   char * recvBuffer, * sendBuffer;
   int bufferSize, differ;
 
 #ifdef MPI_MARSHALLING
-  serializeSetMPI();
+  cdiPioSerializeSetMPI();
 #endif
 
   gridID  = defineGrid      ();
   zaxisID = defineZaxis     ();
   taxisID = defineTaxis     ();
   instID  = defineInstitute ();
-  modelID = defineModel     ( instID );
+  defineModel(instID);
   vlistID = defineVlist     ( gridID, zaxisID, taxisID);
   streamID = streamOpenWrite("example.grb", FILETYPE_GRB);
   if ( streamID < 0 ) xabort ( "Could not open file" );

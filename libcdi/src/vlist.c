@@ -46,15 +46,20 @@ static int vlistIsInitialized = 0;
 #endif
 
 
-/* FIXME: implementation incomplete, fix once leaf nodes are complete */
 static int
 vlist_compare(vlist_t *a, vlist_t *b)
 {
   int diff;
-  diff = (a->nvars != b->nvars) || (a->ngrids != b->ngrids)
-    || (a->nzaxis != b->nzaxis) || (a->instID != b->instID)
-    || (a->modelID != b->modelID) || (a->tableID != b->tableID)
-    || (a->ntsteps != b->ntsteps);
+  diff = (a->nvars != b->nvars) | (a->ngrids != b->ngrids)
+    | (a->nzaxis != b->nzaxis) | (a->instID != b->instID)
+    | (a->modelID != b->modelID) | (a->tableID != b->tableID)
+    | (a->ntsteps != b->ntsteps) | (a->atts.nelems != b->atts.nelems);
+  int nvars = a->nvars;
+  for (int varID = 0; varID < nvars; ++varID)
+    diff |= vlistVarCompare(a, varID, b, varID);
+  int natts = a->atts.nelems;
+  for (int attID = 0; attID < natts; ++attID)
+    diff |= vlist_att_compare(a, CDI_GLOBAL, b, CDI_GLOBAL, attID);
   return diff;
 }
 
@@ -68,6 +73,9 @@ static void vlistPackP    ( void * vlistptr, void * buff, int size,
                             int *position, void *context);
 static int  vlistTxCode   ( void );
 
+#if !defined(__cplusplus)
+const
+#endif
 resOps vlist_ops = {
   (valCompareFunc)vlist_compare,
   (valDestroyFunc)vlist_delete,
@@ -81,14 +89,13 @@ resOps vlist_ops = {
 vlist_t *vlist_to_pointer(int code)
 {
   VLIST_INIT();
-  return reshGetVal(code, &vlist_ops );
+  return (vlist_t*) reshGetVal(code, &vlist_ops );
 }
 
 static
 void vlist_init_entry(vlist_t *vlistptr)
 {
-  vlistptr->self           = reshPut(vlistptr, &vlist_ops);
-
+  vlistptr->self           = CDI_UNDEFID;
   vlistptr->nvars          = 0;
   vlistptr->vars           = NULL;
   vlistptr->ngrids         = 0;
@@ -104,14 +111,17 @@ void vlist_init_entry(vlist_t *vlistptr)
 }
 
 static
-vlist_t *vlist_new_entry(void)
+vlist_t *vlist_new_entry(cdiResH resH)
 {
-  vlist_t *vlistptr;
-
-  vlistptr = (vlist_t *)xmalloc(sizeof(vlist_t));
-
+  vlist_t *vlistptr = (vlist_t*) xmalloc(sizeof(vlist_t));
   vlist_init_entry(vlistptr);
-
+  if (resH == CDI_UNDEFID)
+    vlistptr->self = reshPut(vlistptr, &vlist_ops);
+  else
+    {
+      vlistptr->self = resH;
+      reshReplace(resH, vlistptr, &vlist_ops);
+    }
   return (vlistptr);
 }
 
@@ -194,7 +204,7 @@ int vlistCreate(void)
 
   VLIST_INIT();
 
-  vlistptr = vlist_new_entry();
+  vlistptr = vlist_new_entry(CDI_UNDEFID);
 
   vlistID = vlistptr->self;
 
@@ -919,7 +929,7 @@ void vlistMerge(int vlistID2, int vlistID1)
           */
           if (vlistptr1->vars[varID].levinfo)
             {
-              vlistptr2->vars[varID].levinfo =
+              vlistptr2->vars[varID].levinfo = (levinfo_t*)
                 xrealloc(vlistptr2->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
 
               memcpy(vlistptr2->vars[varID].levinfo+nlevs2,
@@ -1129,7 +1139,7 @@ void vlistDefNtsteps(int vlistID, int nts)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1277,7 +1287,7 @@ void vlistDefTaxis(int vlistID, int taxisID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1322,7 +1332,7 @@ void  vlistDefTable(int vlistID, int tableID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1352,7 +1362,7 @@ void vlistDefInstitut(int vlistID, int instID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1398,7 +1408,7 @@ void vlistDefModel(int vlistID, int modelID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1502,7 +1512,7 @@ void vlistChangeGridIndex(int vlistID, int index, int gridID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1528,7 +1538,7 @@ void vlistChangeGrid(int vlistID, int gridID1, int gridID2)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1595,7 +1605,7 @@ void vlistChangeZaxisIndex(int vlistID, int index, int zaxisID)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1635,7 +1645,7 @@ void vlistChangeZaxis(int vlistID, int zaxisID1, int zaxisID2)
 
   vlist_check_ptr(__func__, vlistptr);
 
-  if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
+  if ( reshGetStatus ( vlistID, &vlist_ops ) == RESH_CLOSED )
     {
       Warning("%s", "Operation not executed." );
       return;
@@ -1660,8 +1670,8 @@ void vlistChangeZaxis(int vlistID, int zaxisID1, int zaxisID2)
         if ( vlistptr->vars[varID].levinfo && nlevs2 != nlevs1 )
           {
             vlistptr->vars[varID].levinfo
-              = realloc(vlistptr->vars[varID].levinfo,
-                        nlevs2 * sizeof(levinfo_t));
+              = (levinfo_t*) realloc(vlistptr->vars[varID].levinfo,
+                                     nlevs2 * sizeof(levinfo_t));
 
             for ( levID = 0; levID < nlevs2; levID++ )
               vlistptr->vars[varID].levinfo[levID] = DEFAULT_LEVINFO(levID);
@@ -1705,7 +1715,7 @@ static
 int  vlistGetSizeP ( void * vlistptr, void *context)
 {
   int txsize, varID;
-  vlist_t *p = vlistptr;
+  vlist_t *p = (vlist_t*) vlistptr;
   txsize = serializeGetSize(vlist_nints, DATATYPE_INT, context);
   txsize += vlistAttsGetSize(p, CDI_GLOBAL, context);
   for ( varID = 0; varID <  p->nvars; varID++ )
@@ -1719,7 +1729,7 @@ void vlistPackP ( void * vlistptr, void * buf, int size, int *position,
                   void *context )
 {
   int varID, tempbuf[vlist_nints];
-  vlist_t *p = vlistptr;
+  vlist_t *p = (vlist_t*) vlistptr;
   tempbuf[0] = p->self;
   tempbuf[1] = p->nvars;
   tempbuf[2] = p->ntsteps;
@@ -1735,21 +1745,23 @@ void vlistPackP ( void * vlistptr, void * buf, int size, int *position,
     }
 }
 
-void vlistUnpack(char * buf, int size, int *position, int nspTarget, void *context)
+void vlistUnpack(char * buf, int size, int *position, int originNamespace,
+                 void *context, int force_id)
 {
-  int newvlist;
-  int varID, tempbuf[vlist_nints];
+  int tempbuf[vlist_nints];
   serializeUnpack(buf, size, position, tempbuf, vlist_nints, DATATYPE_INT, context);
-  newvlist = vlistCreate();
-  /* xassert(newvlist == tempbuf[0]); */
-  vlist_t *p = vlist_to_pointer(newvlist);
-  p->taxisID = namespaceAdaptKey(tempbuf[3], nspTarget);
+  int targetID = namespaceAdaptKey(tempbuf[0], originNamespace);
+  vlist_t *p = vlist_new_entry(force_id?targetID:CDI_UNDEFID);
+  xassert(!force_id || p->self == targetID);
+  if (!force_id)
+    targetID = p->self;
+  p->taxisID = namespaceAdaptKey(tempbuf[3], originNamespace);
   p->tableID = tempbuf[4];
-  p->instID = namespaceAdaptKey(tempbuf[5], nspTarget);
-  p->modelID = namespaceAdaptKey(tempbuf[6], nspTarget);
-  vlistAttsUnpack(newvlist, CDI_GLOBAL, buf, size, position, context);
-  for ( varID = 0; varID < tempbuf[1]; varID++ )
-    vlistVarUnpack(newvlist, buf, size, position, nspTarget, context);
+  p->instID = namespaceAdaptKey(tempbuf[5], originNamespace);
+  p->modelID = namespaceAdaptKey(tempbuf[6], originNamespace);
+  vlistAttsUnpack(targetID, CDI_GLOBAL, buf, size, position, context);
+  for (int varID = 0; varID < tempbuf[1]; varID++ )
+    vlistVarUnpack(targetID, buf, size, position, originNamespace, context);
 }
 
 /*

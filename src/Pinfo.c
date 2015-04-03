@@ -74,8 +74,8 @@ void *Pinfo(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
 
   indg = 0;
   tsID = 0;

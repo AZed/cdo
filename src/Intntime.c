@@ -68,25 +68,25 @@ void *Intntime(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
-  nmiss1   = malloc(nvars*sizeof(int *));
-  nmiss2   = malloc(nvars*sizeof(int *));
-  vardata1 = malloc(nvars*sizeof(double *));
-  vardata2 = malloc(nvars*sizeof(double *));
+  nmiss1   = (int **) malloc(nvars*sizeof(int *));
+  nmiss2   = (int **) malloc(nvars*sizeof(int *));
+  vardata1 = (double **) malloc(nvars*sizeof(double *));
+  vardata2 = (double **) malloc(nvars*sizeof(double *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      nmiss1[varID]   = malloc(nlevel*sizeof(int));
-      nmiss2[varID]   = malloc(nlevel*sizeof(int));
-      vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
-      vardata2[varID] = malloc(gridsize*nlevel*sizeof(double));
+      nmiss1[varID]   = (int*) malloc(nlevel*sizeof(int));
+      nmiss2[varID]   = (int*) malloc(nlevel*sizeof(int));
+      vardata1[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
+      vardata2[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
     }
 
   taxisID1 = vlistInqTaxis(vlistID1);
@@ -144,7 +144,7 @@ void *Intntime(void *argument)
 	{
 	  double seconds;
 	  seconds = it * juldate_to_seconds(juldate_sub(juldate2, juldate1)) / numts;
-	  juldate = juldate_add_seconds(NINT(seconds), juldate1);
+	  juldate = juldate_add_seconds(lround(seconds), juldate1);
 
 	  juldate_decode(calendar, juldate, &vdate, &vtime);
 

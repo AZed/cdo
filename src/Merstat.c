@@ -133,12 +133,12 @@ void *Merstat(void *argument)
   field_init(&field2);
 
   lim = vlistGridsizeMax(vlistID1);
-  field1.ptr    = malloc(lim*sizeof(double));
+  field1.ptr    = (double*) malloc(lim*sizeof(double));
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = malloc(lim*sizeof(double));
+    field1.weight = (double*) malloc(lim*sizeof(double));
 
-  field2.ptr  = malloc(nlonmax*sizeof(double));
+  field2.ptr  = (double*) malloc(nlonmax*sizeof(double));
   field2.grid = gridID2;
 
   tsID = 0;

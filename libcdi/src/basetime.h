@@ -6,11 +6,12 @@ typedef struct {
   int   ncvarid;
   int   ncdimid;
   int   ncvarboundsid;
+  int   leadtimeid;
   int   lwrf;     /* TRUE for time axis in WRF format */
 }
-BaseTime;
+basetime_t;
 
-void basetimeInit(BaseTime *basetime);
+void basetimeInit(basetime_t *basetime);
 
 #endif  /* _BASETIME_H */
 /*

@@ -128,15 +128,15 @@ void *Ydrunstat(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
-  datetime = malloc((ndates+1)*sizeof(datetime_t));
+  datetime = (datetime_t*) malloc((ndates+1)*sizeof(datetime_t));
   
   stats = ydstatCreate(vlistID1);
-  vars1 = malloc((ndates+1)*sizeof(field_t **));
+  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   if ( lvarstd )
-    vars2 = malloc((ndates+1)*sizeof(field_t **));
+    vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   
   for ( its = 0; its < ndates; its++ )
     {
@@ -298,7 +298,7 @@ YDAY_STATS *ydstatCreate(int vlistID)
 {
   int dayoy;
   
-  YDAY_STATS *stats = malloc(sizeof(YDAY_STATS));
+  YDAY_STATS *stats = (YDAY_STATS*) malloc(sizeof(YDAY_STATS));
   
   for ( dayoy = 0; dayoy < NDAY; dayoy++ )
     {

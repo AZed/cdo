@@ -31,6 +31,8 @@
  * along with YAC.  If not, see <http://www.gnu.org/licenses/gpl.txt>.
  */
 
+#include <stdio.h>
+
 #ifndef GRID_CELL_H
 #define GRID_CELL_H
 
@@ -42,8 +44,11 @@ enum edge_type {
 
 struct grid_cell {
    double * coordinates_x, * coordinates_y;
+   double * coordinates_xyz;
    enum edge_type * edge_type;
    unsigned num_corners;
+   unsigned array_size; //!< size in elements of the arrays: coordinates_x,
+                        //!< coordinates_y, edge_type and 1/3 of coordinates_xyz
 };
 
 /**
@@ -80,5 +85,7 @@ void pack_grid_cell(struct grid_cell cell, double ** dble_buf,
 void unpack_grid_cell(struct grid_cell * cell, double * dble_buf,
                       unsigned * dble_buf_data_size, unsigned * uint_buf,
                       unsigned * uint_buf_data_size);
+
+void print_grid_cell(FILE * stream, struct grid_cell cell, char * name);
 
 #endif // GRID_CELL_H

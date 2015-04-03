@@ -57,6 +57,7 @@ typedef struct {
   int     np;                     /* number of parallels between a pole and the equator */
   int     locked;
   int     lcomplex;
+  int     hasdims;
   char    xname[CDI_MAX_NAME];
   char    yname[CDI_MAX_NAME];
   char    xlongname[CDI_MAX_NAME];
@@ -78,14 +79,19 @@ int gridSize(void);
 const double *gridInqXvalsPtr(int gridID);
 const double *gridInqYvalsPtr(int gridID);
 
-double *gridInqXboundsPtr(int gridID);
-double *gridInqYboundsPtr(int gridID);
+const double *gridInqXboundsPtr(int gridID);
+const double *gridInqYboundsPtr(int gridID);
 const double *gridInqAreaPtr(int gridID);
 
 int gridCompare(int gridID, grid_t grid);
 int gridGenerate(grid_t grid);
 
 void gridGetIndexList( int, int * );
+
+void
+gridUnpack(char * unpackBuffer, int unpackBufferSize,
+           int * unpackBufferPos, int originNamespace, void *context,
+           int force_id);
 
 #endif
 /*

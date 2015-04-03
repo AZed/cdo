@@ -28,7 +28,7 @@
 #include "cdo_int.h"
 #include "pstream.h"
 
-
+static
 void printMap(int nlon, int nlat, double *array, double missval, double min, double max)
 {
   /* source code from PINGO */
@@ -37,7 +37,8 @@ void printMap(int nlon, int nlat, double *array, double missval, double min, dou
   double step;
   double level[10];
   int min_n, max_n;
-  char c;
+  int bmin = 1, bmax = 1;
+  unsigned char c;
 
   step = (max - min) / 10;
 
@@ -151,7 +152,29 @@ void printMap(int nlon, int nlat, double *array, double missval, double min, dou
 		    break;
 		  }
 	    }
+
+	  if      ( c == '0' ) { set_text_color(stdout, BRIGHT, BLUE); }
+	  else if ( c == '1' ) { set_text_color(stdout, RESET, BLUE); }
+	  else if ( c == '2' ) { set_text_color(stdout, BRIGHT, CYAN); }
+	  else if ( c == '3' ) { set_text_color(stdout, RESET, CYAN); }
+	  else if ( c == '4' ) { set_text_color(stdout, RESET, GREEN); }
+	  else if ( c == '5' ) { set_text_color(stdout, RESET, YELLOW); }
+	  else if ( c == '6' ) { set_text_color(stdout, RESET, RED); }
+	  else if ( c == '7' ) { set_text_color(stdout, BRIGHT, RED); }
+	  else if ( c == '8' ) { set_text_color(stdout, RESET, MAGENTA); }
+	  else if ( c == '9' ) { set_text_color(stdout, BRIGHT, MAGENTA); }
+	  else if ( c == 'M' )
+	    {
+	      if ( bmax ) { bmax = 0; set_text_color(stdout, BLINK, BLACK); }
+	      else        {           set_text_color(stdout, RESET, BLACK); }
+	    }
+	  else if ( c == 'm' )
+	    {
+	      if ( bmin ) { bmin = 0; set_text_color(stdout, BLINK, BLACK); }
+	      else        {           set_text_color(stdout, RESET, BLACK); }
+	    }
 	  putchar (c);
+	  reset_text_color(stdout);
 	}
       printf (" %0*d\n", nlat < 10 ? 1 : nlat < 100 ? 2 : nlat < 1000 ? 3 : 4, ilat + 1);
       fflush (stdout);
@@ -266,7 +289,7 @@ void *Info(void *argument)
       gridsize = vlistGridsizeMax(vlistID);
       if ( vlistNumber(vlistID) != CDI_REAL ) gridsize *= 2;
 
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
 
       indg = 0;
       tsID = 0;
@@ -283,6 +306,7 @@ void *Info(void *argument)
 	    {
 	      if ( (tsID == 0 && recID == 0) || operatorID == MAP )
 		{
+		  set_text_color(stdout, BRIGHT, BLACK);
 		  fprintf(stdout, "%6d :       Date     Time   Level Gridsize    Miss :"
 			  "     Minimum        Mean     Maximum : ",  -(indf+1));
 
@@ -290,8 +314,9 @@ void *Info(void *argument)
 		  else if ( operatorID == INFOC ) fprintf(stdout, "Code number");
 		  else                            fprintf(stdout, "Parameter ID");
 
-		  if ( cdoVerbose ) fprintf(stdout, " : Extra" );              
-		  fprintf(stdout, "\n" );              
+		  if ( cdoVerbose ) fprintf(stdout, " : Extra" );
+		  reset_text_color(stdout);
+		  fprintf(stdout, "\n" );
 		}
 
 	      streamInqRecord(streamID, &varID, &levelID);
@@ -310,12 +335,23 @@ void *Info(void *argument)
 
 	      if ( operatorID == INFON ) vlistInqVarName(vlistID, varID, varname);
 
-	      fprintf(stdout, "%6d :%s %s ", indg, vdatestr, vtimestr);
-
+	      set_text_color(stdout, BRIGHT, BLACK);
+	      fprintf(stdout, "%6d ", indg);
+	      reset_text_color(stdout);
+	      set_text_color(stdout, RESET, BLACK);
+	      fprintf(stdout, ":");
+	      reset_text_color(stdout);
+	      
+	      set_text_color(stdout, RESET, BLUE);
+	      fprintf(stdout, "%s %s ", vdatestr, vtimestr);
 	      level = zaxisInqLevel(zaxisID, levelID);
 	      fprintf(stdout, "%7g ", level);
-
-	      fprintf(stdout, "%8d %7d :", gridsize, nmiss);
+	      fprintf(stdout, "%8d %7d ", gridsize, nmiss);
+	      reset_text_color(stdout);
+		
+	      set_text_color(stdout, RESET, BLACK);
+	      fprintf(stdout, ":");
+	      reset_text_color(stdout);
 
 	      if ( /* gridInqType(gridID) == GRID_SPECTRAL || */
 		   (gridsize == 1 && nmiss == 0 && number == CDI_REAL) )
@@ -364,7 +400,7 @@ void *Info(void *argument)
 			      /* #pragma omp critical */
 			      if ( array[i] > arrmax ) arrmax = array[i];
 			      arrmean += array[i];
-			      arrvar  += array[i]*array[i];
+			      // arrvar  += array[i]*array[i];
 			    }
 			  nvals = gridsize;
 			}
@@ -372,7 +408,7 @@ void *Info(void *argument)
 		      if ( nvals )
 			{
 			  arrmean = arrmean/nvals;
-			  arrvar  = arrvar/nvals - arrmean*arrmean;
+			  // arrvar  = arrvar/nvals - arrmean*arrmean;
 			  fprintf(stdout, "%#12.5g%#12.5g%#12.5g", arrmin, arrmean, arrmax);
 			}
 		      else
@@ -407,12 +443,18 @@ void *Info(void *argument)
 		    }
 		}
 
+	      set_text_color(stdout, RESET, BLACK);
+	      fprintf(stdout, " : ");
+	      reset_text_color(stdout);
+
+	      set_text_color(stdout, BRIGHT, GREEN);
 	      if ( operatorID == INFON )
-		fprintf(stdout, " : %-14s", varname);
+		fprintf(stdout, "%-14s", varname);
 	      else if ( operatorID == INFOC )
-		fprintf(stdout, " : %4d   ", code);
+		fprintf(stdout, "%4d   ", code);
 	      else
-		fprintf(stdout, " : %-14s", paramstr);
+		fprintf(stdout, "%-14s", paramstr);
+	      reset_text_color(stdout);
 
 	      if ( cdoVerbose )
 		{

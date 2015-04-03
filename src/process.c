@@ -52,7 +52,7 @@ typedef struct {
   const char *name;
   const char *enter;
 }
-operator_t;
+oper_t;
 
 typedef struct {
 #if defined(HAVE_LIBPTHREAD)
@@ -80,7 +80,7 @@ typedef struct {
   char       *oargv[MAX_OARGC];
   char        prompt[64];
   short       noper;
-  operator_t  operator[MAX_OPERATOR];
+  oper_t      oper[MAX_OPERATOR];
 }
 process_t;
 
@@ -406,7 +406,7 @@ char *getOperatorArg(const char *xoperator)
 	  len = strlen(commapos+1);
 	  if ( len )
 	    {
-	      operatorArg = malloc(len+1);
+	      operatorArg = (char*) malloc(len+1);
 	      strcpy(operatorArg, commapos+1);
 	    }
 	}
@@ -424,7 +424,6 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
   int streamOutCnt;
   char *opername;
   char *comma_position;
-  const char *caller = processInqPrompt();
 
   opername = &argv[globArgc][1];
   comma_position = strchr(opername, ',');
@@ -436,7 +435,7 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
   if ( streamInCnt == -1 ) streamInCnt = 1;
 
   if ( streamOutCnt > 1 )
-    Errorc("More than one output stream not allowed in CDO pipes (Operator %s)!", opername);
+    cdoAbort("More than one output stream not allowed in CDO pipes (Operator %s)!", opername);
 
   globArgc++;
 
@@ -450,13 +449,11 @@ int getGlobArgc(int argc, char *argv[], int globArgc)
 static
 int skipInputStreams(int argc, char *argv[], int globArgc, int nstreams)
 {
-  const char *caller = processInqPrompt();
-
   while ( nstreams > 0 )
     {
       if ( globArgc >= argc )
 	{
-	  Errorc("Too few arguments. Check command line!");
+	  cdoAbort("Too few arguments. Check command line!");
 	  break;
 	}
       if ( argv[globArgc][0] == '-' )
@@ -512,7 +509,7 @@ void setStreamNames(int argc, char *argv[])
 	  globArgc = getGlobArgc(argc, argv, globArgc);
 	  len = 0;
 	  for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
-	  streamname = calloc(1, len);
+	  streamname = (char*) calloc(1, len);
 	  for ( i = globArgcStart; i < globArgc; i++ )
 	    {
 	      strcat(streamname, argv[i]);
@@ -522,7 +519,7 @@ void setStreamNames(int argc, char *argv[])
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
 	  ac = globArgc - globArgcStart;
 	  //printf("setStreamNames:  ac %d  streamname1: %s\n", ac, streamname);
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = malloc(ac*sizeof(char *));
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
 	  for ( i = 0; i < ac; ++i )
 	    Process[processID].streamNames[Process[processID].streamCnt].argv[i] = argv[i+globArgcStart];
 	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
@@ -532,11 +529,11 @@ void setStreamNames(int argc, char *argv[])
       else
 	{
 	  len = strlen(argv[globArgc]) + 1;
-	  streamname = malloc(len);
+	  streamname = (char*) malloc(len);
 	  strcpy(streamname, argv[globArgc]);
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
 	  ac = 1;
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = malloc(ac*sizeof(char *));
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
 	  Process[processID].streamNames[Process[processID].streamCnt].argv[0] = argv[globArgc];
 	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
@@ -567,7 +564,7 @@ int expand_wildcards(int processID, int streamCnt)
 	  free(Process[processID].streamNames[0].argv);
 	  free(Process[processID].streamNames[0].args);
 
-	  Process[processID].streamNames = realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
+	  Process[processID].streamNames = (argument_t*) realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
 	      
 	  // move output streams to the end
 	  for ( i = 1; i < Process[processID].streamCnt; ++i )
@@ -576,7 +573,7 @@ int expand_wildcards(int processID, int streamCnt)
 	  for ( i = 0; i < glob_arg->argc; ++i )
 	    {
 	      // printf("add %d %s\n", i, glob_arg->argv[i]);
-	      Process[processID].streamNames[i].argv    = malloc(sizeof(char *));
+	      Process[processID].streamNames[i].argv    = (char **) malloc(sizeof(char *));
 	      Process[processID].streamNames[i].argc    = 1;
 	      Process[processID].streamNames[i].argv[0] = strdupx(glob_arg->argv[i]);
 	      Process[processID].streamNames[i].args    = strdupx(glob_arg->argv[i]);
@@ -608,7 +605,6 @@ int checkStreamCnt(void)
   int i, j;
   int obase = FALSE;
   int status = 0;
-  const char *caller = processInqPrompt();
 
   streamInCnt  = operatorStreamInCnt(Process[processID].operatorName);
   streamOutCnt = operatorStreamOutCnt(Process[processID].operatorName);
@@ -622,19 +618,19 @@ int checkStreamCnt(void)
     }
 
   if ( streamInCnt == -1 && streamOutCnt == -1 )
-    Errorc("I/O stream counts unlimited no allowed!");
+    cdoAbort("I/O stream counts unlimited no allowed!");
     
   // printf(" streamInCnt, streamOutCnt %d %d\n", streamInCnt, streamOutCnt);
   if ( streamInCnt == -1 )
     {
       streamInCnt = Process[processID].streamCnt - streamOutCnt;
-      if ( streamInCnt < 1 ) Errorc("Input streams missing!");
+      if ( streamInCnt < 1 ) cdoAbort("Input streams missing!");
     }
 
   if ( streamOutCnt == -1 )
     {
       streamOutCnt = Process[processID].streamCnt - streamInCnt;
-      if ( streamInCnt < 1 ) Errorc("Output streams missing!");
+      if ( streamOutCnt < 1 ) cdoAbort("Output streams missing!");
     }
   // printf(" streamInCnt, streamOutCnt %d %d\n", streamInCnt, streamOutCnt);
 
@@ -642,27 +638,27 @@ int checkStreamCnt(void)
   // printf(" streamCnt %d %d\n", Process[processID].streamCnt, streamCnt);
 
   if ( Process[processID].streamCnt > streamCnt )
-    Errorc("Too many streams!"
-	   " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
+    cdoAbort("Too many streams!"
+	     " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
   if ( Process[processID].streamCnt < streamCnt )
-    Errorc("Too few streams specified!"
-	   " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
+    cdoAbort("Too few streams specified!"
+	     " Operator needs %d input and %d output streams.", streamInCnt, streamOutCnt);
 
 
   for ( i = streamInCnt; i < streamCnt; i++ )
     {
       if ( Process[processID].streamNames[i].args[0] == '-' )
 	{
-	  Errorc("Output file name %s must not begin with \"-\"!\n",
-		 Process[processID].streamNames[i].args);
+	  cdoAbort("Output file name %s must not begin with \"-\"!\n",
+		   Process[processID].streamNames[i].args);
 	}
       else if ( !obase )
 	{
 	  for ( j = 0; j < streamInCnt; j++ ) /* does not work with files in pipes */
 	    if ( strcmp(Process[processID].streamNames[i].args, Process[processID].streamNames[j].args) == 0 )
-	      Errorc("Output file name %s is equal to input file name"
-		     " on position %d!\n", Process[processID].streamNames[i].args, j+1);
+	      cdoAbort("Output file name %s is equal to input file name"
+		       " on position %d!\n", Process[processID].streamNames[i].args, j+1);
 	}
     }
 
@@ -688,7 +684,7 @@ void setStreams(int argc, char *argv[])
 
   Process[processID].streamCnt  = 0; /* filled in setStreamNames */
   if ( streamCnt )
-    Process[processID].streamNames = malloc(streamCnt*sizeof(argument_t));
+    Process[processID].streamNames = (argument_t*) malloc(streamCnt*sizeof(argument_t));
   for ( i = 0; i < streamCnt; i++ )
     {
       Process[processID].streamNames[i].argc = 0;
@@ -850,7 +846,15 @@ void operatorInputArg(const char *enter)
       size_t pos, len, linelen;
       int lreadline = 1;
 
-      if ( enter ) fprintf(stderr, "%-16s : Enter %s > ", processInqPrompt(), enter);
+      if ( enter )
+	{
+	  set_text_color(stderr, BRIGHT, MAGENTA);
+	  fprintf(stderr, "%-16s : ", processInqPrompt());
+	  reset_text_color(stderr);
+	  // set_text_color(stderr, BLINK, BLACK);
+	  fprintf(stderr, "Enter %s > ", enter);
+	  // reset_text_color(stderr);
+	}
 
       while ( lreadline )
 	{
@@ -874,7 +878,7 @@ void operatorInputArg(const char *enter)
 		  while ( pline[len] != ' '  && pline[len] != ',' &&
 			  pline[len] != '\\' && len < linelen ) len++;
 
-		  Process[processID].oargv[oargc] = malloc(len+1);
+		  Process[processID].oargv[oargc] = (char*) malloc(len+1);
 		  memcpy(Process[processID].oargv[oargc], pline, len);
 		  Process[processID].oargv[oargc][len] = '\0';
 		  oargc++;
@@ -898,10 +902,10 @@ int cdoOperatorAdd(const char *name, int f1, int f2, const char *enter)
 
   if ( operID < MAX_OPERATOR )
     {
-      Process[processID].operator[operID].f1     = f1;
-      Process[processID].operator[operID].f2     = f2;
-      Process[processID].operator[operID].name   = name;
-      Process[processID].operator[operID].enter  = enter;
+      Process[processID].oper[operID].f1     = f1;
+      Process[processID].oper[operID].f2     = f2;
+      Process[processID].oper[operID].name   = name;
+      Process[processID].oper[operID].enter  = enter;
 
       Process[processID].noper++;
     }
@@ -922,8 +926,8 @@ int cdoOperatorID(void)
   if ( Process[processID].noper > 0 )
     {
       for ( operID = 0; operID < Process[processID].noper; operID++ )
-	if ( Process[processID].operator[operID].name )
-	  if ( strcmp(Process[processID].operatorName, Process[processID].operator[operID].name) == 0 ) break;
+	if ( Process[processID].oper[operID].name )
+	  if ( strcmp(Process[processID].operatorName, Process[processID].oper[operID].name) == 0 ) break;
 
       if ( operID == Process[processID].noper )
 	cdoAbort("Operator not callable by this name!");
@@ -941,7 +945,7 @@ int cdoOperatorF1(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].f1);
+  return (Process[processID].oper[operID].f1);
 }
 
 
@@ -949,7 +953,7 @@ int cdoOperatorF2(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].f2);
+  return (Process[processID].oper[operID].f2);
 }
 
 
@@ -957,7 +961,7 @@ const char *cdoOperatorName(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].name);
+  return (Process[processID].oper[operID].name);
 }
 
 
@@ -965,7 +969,7 @@ const char *cdoOperatorEnter(int operID)
 {
   int processID = processSelf();
 
-  return (Process[processID].operator[operID].enter);
+  return (Process[processID].oper[operID].enter);
 }
 
 

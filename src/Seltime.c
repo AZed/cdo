@@ -211,7 +211,7 @@ void *Seltime(void *argument)
   LIST *ilist = listNew(INT_LIST);
   LIST *flist = listNew(FLT_LIST);
   int gridID;
-  int nvars, nlevel;
+  int nvars, nlevel, ntsteps;
   int nconst, lconstout = FALSE;
   int process_nts1 = FALSE, process_nts2 = FALSE;
   int *vdate_list = NULL, *vtime_list = NULL;
@@ -301,17 +301,8 @@ void *Seltime(void *argument)
 
   if ( nsel )
     {
-      selfound = malloc(nsel*sizeof(int));
+      selfound = (int*) malloc(nsel*sizeof(int));
       for ( i = 0; i < nsel; i++ ) selfound[i] = FALSE;
-    }
-
-  if ( cdoVerbose )
-    {
-      for ( i = 0; i < nsel; i++ )
-	if ( operatorID == SELDATE )
-	  cdoPrint("fltarr entry: %d %14.4f", i+1, fltarr[i]);
-	else
-	  cdoPrint("intarr entry: %d %d", i+1, intarr[i]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -330,7 +321,32 @@ void *Seltime(void *argument)
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
+    }
+
+  ntsteps = vlistNtsteps(vlistID1);
+
+  /* add support for negative timestep values */
+  if ( operatorID == SELTIMESTEP && ntsteps > 0 )
+    {
+      for ( i = 0; i < nsel; i++ )
+	{
+	  if ( intarr[i] < 0 )
+	    {
+	      if ( cdoVerbose )
+		cdoPrint("timestep %d changed to %d", intarr[i], ntsteps + 1 + intarr[i]);
+	      intarr[i] = ntsteps + 1 + intarr[i];
+	    }
+	}
+    }
+
+  if ( cdoVerbose )
+    {
+      for ( i = 0; i < nsel; i++ )
+	if ( operatorID == SELDATE )
+	  cdoPrint("fltarr entry: %d %14.4f", i+1, fltarr[i]);
+	else
+	  cdoPrint("intarr entry: %d %d", i+1, intarr[i]);
     }
 
   nvars = vlistNvars(vlistID1);
@@ -344,15 +360,15 @@ void *Seltime(void *argument)
     {
       if ( lnts1 )
 	{
-	  vdate_list = malloc(nts1*sizeof(int));
-	  vtime_list = malloc(nts1*sizeof(int));
+	  vdate_list = (int*) malloc(nts1*sizeof(int));
+	  vtime_list = (int*) malloc(nts1*sizeof(int));
 	}
       else
 	{
 	  nts1 = 1;
 	}
 
-      vars  = malloc(nts1*sizeof(field_t **));
+      vars  = (field_t ***) malloc(nts1*sizeof(field_t **));
 
       for ( tsID = 0; tsID < nts1; tsID++ )
 	{
@@ -368,7 +384,7 @@ void *Seltime(void *argument)
 		  
 		  for ( levelID = 0; levelID < nlevel; levelID++ )
 		    {
-		      vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
+		      vars[tsID][varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 		    }
 		}
 	    }

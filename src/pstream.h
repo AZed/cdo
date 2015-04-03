@@ -18,6 +18,8 @@
 #ifndef _PSTREAM_H
 #define _PSTREAM_H
 
+#include <sys/types.h> /* off_t */
+
 #define  streamOpenWrite          pstreamOpenWrite
 #define  streamOpenRead           pstreamOpenRead
 #define  streamOpenAppend         pstreamOpenAppend

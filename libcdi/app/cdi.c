@@ -285,7 +285,7 @@ const char * tunit2str(int tunits)
 }
 
 
-const char * calendar2str(int calendar)
+const char* calendar2str(int calendar)
 {
   if      ( calendar == CALENDAR_STANDARD )  return ("standard");
   else if ( calendar == CALENDAR_PROLEPTIC ) return ("proleptic_gregorian");
@@ -296,30 +296,41 @@ const char * calendar2str(int calendar)
 }
 
 static
+void limit_string_length(char* string)
+{
+  size_t len = strlen(string);
+
+  if ( len > 10 )
+    {
+      for ( size_t i = 3; i < len; ++i )
+	if ( string[i] == ' ' )
+	  {
+	    string[i] = 0;
+	    break;
+	  }
+    }
+}
+
+static
 void printShortinfo(int streamID, int vlistID, int vardis)
 {
   int varID;
   int gridsize = 0;
   int gridID, zaxisID, param;
-  int zaxistype, ltype;
   int vdate, vtime;
-  int nrecs, nvars, nzaxis, ntsteps;
-  int levelID, levelsize;
-  int tsID, ntimeout;
+  int nvars, ntsteps;
+  int levelsize;
   int tsteptype, taxisID;
-  int nbyte, nbyte0;
-  int index;
+  char tmpname[CDI_MAX_NAME];
   char varname[CDI_MAX_NAME];
-  char longname[CDI_MAX_NAME];
-  char units[CDI_MAX_NAME];
-  double level;
   char *modelptr, *instptr;
   int datatype;
   int year, month, day, hour, minute, second;
   char pstr[4];
   char paramstr[32];
 
-      printf("   File format: ");
+      fprintf(stdout, "   File format");
+      fprintf(stdout, " : ");
       printFiletype(streamID, vlistID);
 
       if ( vardis )
@@ -341,17 +352,17 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  /* institute info */
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
-	  if ( instptr )
-	    fprintf(stdout, "%-8s ", instptr);
-	  else
-	    fprintf(stdout, "unknown  ");
+	  strcpy(tmpname, "unknown");
+	  if ( instptr ) strcpy(tmpname, instptr);
+	  limit_string_length(tmpname);
+	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* source info */
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
-	  if ( modelptr )
-	    fprintf(stdout, "%-8s ", modelptr);
-	  else
-	    fprintf(stdout, "unknown  ");
+	  strcpy(tmpname, "unknown");
+	  if ( modelptr ) strcpy(tmpname, modelptr);
+	  limit_string_length(tmpname);
+	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* tsteptype */
 	  tsteptype = vlistInqVarTsteptype(vlistID, varID);
@@ -412,83 +423,15 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  fprintf(stdout, "\n");
 	}
 
-      fprintf(stdout, "   Grid coordinates :\n");
+      fprintf(stdout, "   Grid coordinates");
+      fprintf(stdout, " :\n");
+
       printGridInfo(vlistID);
 
-      nzaxis = vlistNzaxis(vlistID);
-      fprintf(stdout, "   Vertical coordinates :\n");
-      for ( index = 0; index < nzaxis; index++)
-	{
-	  zaxisID   = vlistZaxis(vlistID, index);
-	  zaxistype = zaxisInqType(zaxisID);
-	  ltype     = zaxisInqLtype(zaxisID);
-	  levelsize = zaxisInqSize(zaxisID);
-	  /* zaxisInqLongname(zaxisID, longname); */
-	  zaxisName(zaxistype, longname);
-	  longname[18] = 0;
-	  zaxisInqUnits(zaxisID, units);
-	  units[12] = 0;
-	  if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
-	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, ltype);
-	  else
-	    nbyte0    = fprintf(stdout, "  %4d : %-18s %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
-	  nbyte = nbyte0;
-	  for ( levelID = 0; levelID < levelsize; levelID++ )
-	    {
-	      if ( nbyte > MAXCHARS )
-		{
-		  fprintf(stdout, "\n");
-		  fprintf(stdout, "%*s", nbyte0, "");
-		  nbyte = nbyte0;
-		}
-	      level = zaxisInqLevel(zaxisID, levelID);
-	      nbyte += fprintf(stdout, "%.9g ", level);
-	    }
-	  fprintf(stdout, "\n");
-	  if ( zaxisInqLbounds(zaxisID, NULL) && zaxisInqUbounds(zaxisID, NULL) )
-	    {
-	      double level1, level2;
-	      nbyte = nbyte0;
-	      fprintf(stdout, "%33s : ", "bounds");
-	      for ( levelID = 0; levelID < levelsize; levelID++ )
-		{
-		  if ( nbyte > MAXCHARS )
-		    {
-		      fprintf(stdout, "\n");
-		      fprintf(stdout, "%*s", nbyte0, "");
-		      nbyte = nbyte0;
-		    }
-		  level1 = zaxisInqLbound(zaxisID, levelID);
-		  level2 = zaxisInqUbound(zaxisID, levelID);
-		  nbyte += fprintf(stdout, "%.9g-%.9g ", level1, level2);
-		}
-	      fprintf(stdout, "\n");
-	    }
+      fprintf(stdout, "   Vertical coordinates");
+      fprintf(stdout, " :\n");
 
-          if ( zaxistype == ZAXIS_REFERENCE )
-            {
-              int number   = zaxisInqNumber(zaxisID);
-
-              if ( number > 0 )
-                {
-                  fprintf(stdout, "%33s : ", "zaxis");
-                  fprintf(stdout, "number = %d\n", number);
-                }
-
-              char uuidOfVGrid[17];
-              zaxisInqUUID(zaxisID, uuidOfVGrid);
-              if ( uuidOfVGrid[0] != 0 )
-                {
-                  char uuidOfVGridStr[37];
-                  uuid2str(uuidOfVGrid, uuidOfVGridStr);
-                  if ( uuidOfVGridStr[0] != 0  && strlen(uuidOfVGridStr) == 36 )
-                    {
-                      fprintf(stdout, "%33s : ", "uuid");
-                      fprintf(stdout, "%s\n", uuidOfVGridStr);
-                    }
-                }
-            }
-	}
+      printZaxisInfo(vlistID);
 
       taxisID = vlistInqTaxis(vlistID);
       ntsteps = vlistNtsteps(vlistID);
@@ -530,27 +473,8 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  fprintf(stdout, "  YYYY-MM-DD hh:mm:ss  YYYY-MM-DD hh:mm:ss  YYYY-MM-DD hh:mm:ss  YYYY-MM-DD hh:mm:ss\n");
 
-	  ntimeout = 0;
-	  tsID = 0;
-	  while ( (nrecs = streamInqTimestep(streamID, tsID)) )
-	    {
-	      if ( ntimeout == 4 )
-		{
-		  ntimeout = 0;
-		  fprintf(stdout, "\n");
-		}
+	  printTimesteps(streamID, taxisID, 0);
 
-	      vdate = taxisInqVdate(taxisID);
-	      vtime = taxisInqVtime(taxisID);
-
-	      cdiDecodeDate(vdate, &year, &month, &day);
-	      cdiDecodeTime(vtime, &hour, &minute, &second);
-
-	      fprintf(stdout, " %5.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
-		      year, month, day, hour, minute, second);
-	      ntimeout++;
-	      tsID++;
-	    }
 	  fprintf(stdout, "\n");
 	}
 }

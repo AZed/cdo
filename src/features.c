@@ -63,6 +63,9 @@ void printFeatures(void)
 #if defined(HAVE_LIBCURL)
   fprintf(stderr, " CURL");
 #endif
+#if defined(HAVE_LIBFFTW3)
+  fprintf(stderr, " FFTW3");
+#endif
   fprintf(stderr, "\n");
 }
 

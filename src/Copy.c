@@ -102,11 +102,11 @@ void *Copy(void *argument)
 	  streamDefVlist(streamID2, vlistID2);
 
 	  gridsize = vlistGridsizeMax(vlistID1);
-	  array = malloc(gridsize*sizeof(double));
+	  array = (double*) malloc(gridsize*sizeof(double));
 	  if ( cdoParIO )
 	    {
 	      fprintf(stderr, "Parallel reading enabled!\n");
-	      parIO.array = malloc(gridsize*sizeof(double));
+	      parIO.array = (double*) malloc(gridsize*sizeof(double));
 	      parIO.array_size = gridsize;
 	    }
 	}

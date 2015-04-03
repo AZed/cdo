@@ -147,8 +147,8 @@ void *Importobs(void *argument)
 
   // printf("gridsize=%d, xsize=%d, ysize=%d\n", gridsize, xsize, ysize);
 
-  xvals = malloc(gridsize*sizeof(double));
-  yvals = malloc(gridsize*sizeof(double));
+  xvals = (double*) malloc(gridsize*sizeof(double));
+  yvals = (double*) malloc(gridsize*sizeof(double));
 
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);
@@ -178,7 +178,7 @@ void *Importobs(void *argument)
   vlistDefTaxis(vlistID, taxisID);
 
     {
-      for ( i = 0; i < nvars; ++i ) data[i] = malloc(gridsize*sizeof(double));
+      for ( i = 0; i < nvars; ++i ) data[i] = (double*) malloc(gridsize*sizeof(double));
 
       init_vars(vlistID, gridID, zaxisID, nvars);
 
@@ -237,7 +237,7 @@ void *Importobs(void *argument)
 	  if ( i < xsize && j < ysize && index >= 0 )
 	    {
 	      pstation = station;
-	      while (isalpha(*pstation)) *pstation++;
+	      while (isalpha(*pstation)) pstation++;
 	      // printf("station %s %d\n", pstation, atoi(pstation));
 	      data[index][j*xsize+i] = value;
 	      data[    4][j*xsize+i] = height1;

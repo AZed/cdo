@@ -12,17 +12,13 @@
 #include "cdi.h"
 #include "dmemory.h"
 
-#ifdef USE_MPI
 static
 char commands[][13] = { "FINALIZE\0",
                         "RESOURCES\0",
                         "WINCREATE\0",
                         "WRITETS\0"};
-#endif
-
 
 /*****************************************************************************/
-#ifdef USE_MPI
 void
 cdiAbortC_MPI(const char *caller, const char *filename,
               const char *functionname, int line,
@@ -52,13 +48,10 @@ void cdiPioWarning(const char *caller, const char *fmt, va_list ap)
   fputc('\n', stderr);
 }
 
-#endif
-
 /*****************************************************************************/
 
 /***************************************************************/
 
-#ifdef USE_MPI
 void pcdiXMPI(int iret, const char *filename, int line)
 {
   char errorString[2][MPI_MAX_ERROR_STRING + 1];
@@ -108,11 +101,9 @@ void pcdiXMPIStat ( int iret, const char *filename, int line, MPI_Status *status
 
   return;
 }
-#endif
 
 /****************************************************/
 
-#ifdef USE_MPI
 void pcdiDebugComm ( const char *filename, const char *functionname, int line, MPI_Comm *comm )
 {
   int rank = -1, size, len, rankGlob = -1;
@@ -138,11 +129,9 @@ void pcdiDebugComm ( const char *filename, const char *functionname, int line, M
   free ( name );
 
 }
-#endif
 
 /****************************************************/
 
-#ifdef USE_MPI
 void pcdiDebugMsg ( const char * cdiPioDebugString, const char *filename,
                     const char *functionname, int line, int tag, int source,
                     int nfinished )
@@ -154,10 +143,9 @@ void pcdiDebugMsg ( const char * cdiPioDebugString, const char *filename,
             cdiPioDebugString, rank, functionname, filename, line,
             &commands[tag][0], source, nfinished );
 }
-#endif
+
 /****************************************************/
 
-#ifdef USE_MPI
 void pcdiDebugMsg2 ( const char *filename, const char *functionname, int line,
                    int tag, int source, char * text )
 {
@@ -168,8 +156,6 @@ void pcdiDebugMsg2 ( const char *filename, const char *functionname, int line,
             rank, functionname, filename, line,
             &commands[tag][0], source, text );
 }
-#endif
-
 
 /****************************************************/
 
@@ -180,16 +166,11 @@ void printArray ( const char * cdiPioDebugString, char * ps, const void * array,
   int * iArray;
   double * dArray;
 
-#ifdef USE_MPI
   {
     int rank = getMPICommWorldRank();
     fprintf ( stdout, "%s pe%d in %s, %s, line %d: %s = ",
               cdiPioDebugString, rank, funname, filename, line, ps );
   }
-#else
-  fprintf ( stdout, "%s %s, %s, line %d: %s = ",
-	    cdiPioDebugString, funname, filename, line, ps );
-#endif
 
   switch ( datatype )
     {

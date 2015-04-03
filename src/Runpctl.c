@@ -82,12 +82,12 @@ void *Runpctl(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
-  dtinfo = malloc((ndates+1)*sizeof(dtinfo_t));
-  vars1 = malloc((ndates+1)*sizeof(field_t **));
-  array = malloc(ndates*sizeof(double));
+  dtinfo = (dtinfo_t*) malloc((ndates+1)*sizeof(dtinfo_t));
+  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+  array = (double*) malloc(ndates*sizeof(double));
   
   for ( its = 0; its < ndates; its++ )
     {

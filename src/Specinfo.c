@@ -137,7 +137,7 @@ int ngp2ntr(int ngp)
 {
   int ntr, nlatl, nlonl;
 
-  ntr = NINT(sqrt(0.25+ngp)-1.5);
+  ntr = lround(sqrt(0.25+ngp)-1.5);
   nlatl = ntr2nlat_linear(ntr);
   nlonl = compnlon(nlatl);
   nlatl = nlonl/2;

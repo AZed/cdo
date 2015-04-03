@@ -71,7 +71,7 @@ void *Arithlat(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
@@ -118,7 +118,7 @@ void *Arithlat(void *argument)
 
 	      gridsize = gridInqSize(gridID);
 
-	      scale = realloc(scale, gridsize*sizeof(double));
+	      scale = (double*) realloc(scale, gridsize*sizeof(double));
 	      gridInqYvals(gridID, scale);
 
 	      /* Convert lat/lon units if required */

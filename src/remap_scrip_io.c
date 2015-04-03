@@ -121,7 +121,7 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type, i
 	  strcpy(map_method, "Conservative remapping");
 	  break;
 	}
-    case MAP_TYPE_CONSPHERE:
+    case MAP_TYPE_CONSERV_YAC:
       lgridarea = TRUE;
       /*
       if ( submap_type == SUBMAP_TYPE_LAF )
@@ -474,6 +474,8 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
   nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "normalization", &attlen));
   normalize_opt[attlen] = 0;
 
+  rv->sort_add = FALSE;
+
   if ( strcmp(normalize_opt, "none") == 0 )
     rv->norm_opt = NORM_OPT_NONE;
   else if ( strcmp(normalize_opt, "fracarea") == 0 )
@@ -498,30 +500,30 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
   *submap_type = SUBMAP_TYPE_NONE;
   *remap_order = 1;
 
-  if ( memcmp(map_method, "Conservative", 12) == 0 )
+  if ( strcompare(map_method, "Conservative") == 0 )
     {
       int iatt;
-      if ( memcmp(map_method, "Conservative remapping using clipping on sphere", 47) == 0 )
-	rv->map_type = MAP_TYPE_CONSPHERE;
+      if ( strcompare(map_method, "Conservative remapping using clipping on sphere") == 0 )
+	rv->map_type = MAP_TYPE_CONSERV_YAC;
       else
 	rv->map_type = MAP_TYPE_CONSERV;
 
       status = nc_get_att_int(nc_file_id, NC_GLOBAL, "remap_order", &iatt);
       if ( status == NC_NOERR ) *remap_order = iatt;
     }
-  else if ( memcmp(map_method, "Bilinear", 8) == 0 ) rv->map_type = MAP_TYPE_BILINEAR;
-  else if ( memcmp(map_method, "Bicubic",  7) == 0 ) rv->map_type = MAP_TYPE_BICUBIC;
-  else if ( memcmp(map_method, "Distance", 8) == 0 )
+  else if ( strcompare(map_method, "Bilinear") == 0 ) rv->map_type = MAP_TYPE_BILINEAR;
+  else if ( strcompare(map_method, "Bicubic")  == 0 ) rv->map_type = MAP_TYPE_BICUBIC;
+  else if ( strcompare(map_method, "Distance") == 0 )
     {
       rv->map_type = MAP_TYPE_DISTWGT;
       *num_neighbors = 4;
     }
-  else if ( memcmp(map_method, "Nearest",  7) == 0 )
+  else if ( strcompare(map_method, "Nearest") == 0 )
     {
       rv->map_type = MAP_TYPE_DISTWGT;
       *num_neighbors = 1;
     }
-  else if ( memcmp(map_method, "Largest",  7) == 0 )
+  else if ( strcompare(map_method, "Largest") == 0 )
     {
       rv->map_type = MAP_TYPE_CONSERV;
       *submap_type = SUBMAP_TYPE_LAF;
@@ -649,10 +651,10 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
 
   /* Allocate address and weight arrays for mapping 1 */
 
-  rv->src_grid_add = malloc(rv->num_links*sizeof(int));
-  rv->tgt_grid_add = malloc(rv->num_links*sizeof(int));
+  rv->src_grid_add = (int*) malloc(rv->num_links*sizeof(int));
+  rv->tgt_grid_add = (int*) malloc(rv->num_links*sizeof(int));
 
-  rv->wts = malloc(rv->num_wts*rv->num_links*sizeof(double));
+  rv->wts = (double*) malloc(rv->num_wts*rv->num_links*sizeof(double));
 
   /* Get variable ids */
 

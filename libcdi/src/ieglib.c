@@ -29,7 +29,7 @@ static int iegDefaultDprec = 0;
  */
 
 #undef  LIBVERSION
-#define LIBVERSION      1.3.1
+#define LIBVERSION      1.3.2
 #define XSTRING(x)	#x
 #define STRING(x)	XSTRING(x)
 static const char ieg_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
@@ -72,12 +72,14 @@ void iegLibInit()
 		  default:
 		    Message("Invalid digit in %s: %s", envName, envString);
 		  }
-		break;		
+		break;
 	      }
 	    default:
-	      Message("Invalid character in %s: %s", envName, envString);
-	      break;
-	    }
+              {
+                Message("Invalid character in %s: %s", envName, envString);
+                break;
+              }
+            }
 	  pos += 2;
 	}
     }
@@ -254,7 +256,7 @@ int iegInqData(iegrec_t *iegp, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT32));
-	  }	
+	  }
 	break;
       }
     case DOUBLE_PRECISION:
@@ -271,7 +273,7 @@ int iegInqData(iegrec_t *iegp, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT64));
-	  }	
+	  }
 	break;
     default:
       {
@@ -453,13 +455,13 @@ int iegRead(int fileID, iegrec_t *iegp)
       for ( i = 0; i < 100; i++ )
 	iegp->vct[i] = (double) ((double *) tmpbuf)[i];
     }
-  
+
   /*
   fprintf(stderr, "refval %g\n", iegp->refval);
 
   for ( i = 0; i < 100; i++ )
     fprintf(stderr, "%3d %g\n", i, iegp->vct[i]);
-  
+
   {
     int i;
     for ( i = 0; i < 37; i++ )
@@ -568,7 +570,7 @@ int iegWrite(int fileID, iegrec_t *iegp)
     {
       binWriteFlt64(fileID, byteswap, 100, iegp->vct);
     }
-  
+
   binWriteF77Block(fileID, byteswap, blocklen);
 
   datasize = iegp->igdb[4]*iegp->igdb[5];

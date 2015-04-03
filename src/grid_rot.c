@@ -7,12 +7,10 @@
 double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam, double polgam)
 {
   /*
-    This function converts lambda from one rotated system to lambda in another
-    system. If the optional argument polgam is present, the other system
-    can also be a rotated one, where polgam is the angle between the two
-    north poles.
-    If polgam is not present, the other system is the real geographical
-    system.
+    This function converts lambda from one rotated system to lambda in another system. 
+    If the optional argument polgam is present, the other system can also be a rotated one, 
+    where polgam is the angle between the two north poles.
+    If polgam is not present, the other system is the real geographical system.
 
     phirot : latitude in the rotated system
     lamrot : longitude in the rotated system (E>0)
@@ -24,6 +22,7 @@ double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam,
   double zsinpol, zcospol, zlampol;
   double zphirot, zlamrot, zarg1, zarg2;
   double zgam;
+  double result = 0;
 
   zsinpol = sin(DEG2RAD*polphi);
   zcospol = cos(DEG2RAD*polphi);
@@ -49,16 +48,17 @@ double lamrot_to_lam(double phirot, double lamrot, double polphi, double pollam,
   else
     {
       zarg1 = sin(zlampol)*(- zsinpol*cos(zlamrot)*cos(zphirot)  +
-      		              zcospol*           sin(zphirot)) -
+      		              zcospol*             sin(zphirot)) -
 	      cos(zlampol)*           sin(zlamrot)*cos(zphirot);
       zarg2 = cos(zlampol)*(- zsinpol*cos(zlamrot)*cos(zphirot)  +
-                              zcospol*           sin(zphirot)) +
+                              zcospol*             sin(zphirot)) +
               sin(zlampol)*           sin(zlamrot)*cos(zphirot);
     }
 
-  if ( fabs(zarg2) < 1.0e-20 ) zarg2 = 1.0e-20;
+  if ( fabs(zarg2) > 0 ) result = RAD2DEG*atan2(zarg1, zarg2);
+  if ( fabs(result) < 9.e-14 ) result = 0;
 
-  return (RAD2DEG*atan2(zarg1, zarg2));
+  return (result);
 }
 
 

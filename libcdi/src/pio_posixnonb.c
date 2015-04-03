@@ -2,8 +2,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -290,7 +288,6 @@ pioWriterStdIO(void)
     }
 }
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

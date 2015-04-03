@@ -10,6 +10,7 @@
 #include "resource_unpack.h"
 #include "namespace.h"
 #include "serialize.h"
+#include "institution.h"
 
 #undef  UNDEFID
 #define UNDEFID  -1
@@ -31,18 +32,21 @@ typedef struct
 institute_t;
 
 
-static int    instituteCompareP ( void * instituteptr1, void * instituteptr2 );
-static void   instituteDestroyP ( void * instituteptr );
-static void   institutePrintP   ( void * instituteptr, FILE * fp );
-static int    instituteGetSizeP ( void * instituteptr, void *context );
+static int instituteCompareKernel(institute_t *ip1, institute_t *ip2);
+static void instituteDestroyP(institute_t *instituteptr);
+static void   institutePrintP(institute_t *instituteptr, FILE * fp);
+static int instituteGetPackSize(institute_t *instituteptr, void *context);
 static void   institutePackP    ( void * instituteptr, void *buf, int size, int *position, void *context );
 static int    instituteTxCode   ( void );
 
-resOps instituteOps = { instituteCompareP, instituteDestroyP, institutePrintP
-                        ,instituteGetSizeP, institutePackP, instituteTxCode
- };
-
-static int * instituteInitializedNsp;
+static const resOps instituteOps = {
+  (int (*)(void *, void *))instituteCompareKernel,
+  (void (*)(void *))instituteDestroyP,
+  (void (*)(void *, FILE *))institutePrintP,
+  (int (*)(void *, void *))instituteGetPackSize,
+  institutePackP,
+  instituteTxCode
+};
 
 static
 void instituteDefaultValue ( institute_t * instituteptr )
@@ -55,21 +59,6 @@ void instituteDefaultValue ( institute_t * instituteptr )
   instituteptr->longname   = NULL;
 }
 
-static
-institute_t * instituteNewEntry ( void )
-{
-  institute_t *instituteptr;
-
-  instituteptr = ( institute_t * ) xmalloc ( sizeof ( institute_t ));
-
-  instituteDefaultValue ( instituteptr );
-  instituteptr->self = reshPut (( void * ) instituteptr, &instituteOps );
-  instituteptr->used = 1;
-
-  return  instituteptr;
-}
-
-static
 void instituteDefaultEntries ( void )
 {
   cdiResH resH[64];
@@ -91,35 +80,7 @@ void instituteDefaultEntries ( void )
   /*     (void) institutDef(  0,   0, "IPSL", "IPSL (Institut Pierre Simon Laplace, Paris, France)"); */
 
   for ( i = 0; i < n ; i++ )
-    reshSetStatus(resH[i], &instituteOps, SUSPENDED);
-}
-
-static
-void instituteFinalize ( void )
-{
-  free ( instituteInitializedNsp );
-}
-
-static
-void instituteInit (void)
-{
-  static int instituteInitialized = 0;
-  int nsp, nspc;
-
-  nspc = namespaceGetNumber ();
-
-  if ( !instituteInitialized )
-    {
-      instituteInitialized = 1;
-      instituteInitializedNsp = xcalloc ( 1, nspc * sizeof ( int ));
-      atexit ( instituteFinalize );
-    }
-
-  nsp = namespaceGetActive ();
-  if ( instituteInitializedNsp[nsp] ) return;
-  instituteInitializedNsp[nsp] = 1;
-
-  instituteDefaultEntries();
+    reshSetStatus(resH[i], &instituteOps, RESH_PRE_ASSIGNED);
 }
 
 
@@ -129,7 +90,8 @@ int instituteCount ( void )
 }
 
 
-int instituteCompareKernel ( institute_t *  ip1, institute_t * ip2 )
+static int
+instituteCompareKernel(institute_t *  ip1, institute_t * ip2)
 {
   int differ = 0;
   size_t len1, len2;
@@ -168,19 +130,6 @@ int instituteCompareKernel ( institute_t *  ip1, institute_t * ip2 )
 }
 
 
-static int instituteCompareP ( void *  instituteptr1, void * instituteptr2 )
-{
-  institute_t * i1, * i2;
-
-  i1 = ( institute_t * ) instituteptr1;
-  i2 = ( institute_t * ) instituteptr2;
-
-  xassert(i1);
-  xassert(i2);
-
-  return instituteCompareKernel ( i1, i2 );
-}
-
 struct instLoc
 {
   institute_t *ip;
@@ -191,7 +140,7 @@ static enum cdiApplyRet
 findInstitute(int id, void *res, void *data)
 {
   institute_t * ip1 = ((struct instLoc *)data)->ip;
-  institute_t * ip2 = res;
+  institute_t * ip2 = (institute_t*) res;
   if (ip2->used && !instituteCompareKernel(ip1, ip2))
     {
       ((struct instLoc *)data)->id = id;
@@ -204,9 +153,7 @@ findInstitute(int id, void *res, void *data)
 
 int institutInq(int center, int subcenter, const char *name, const char *longname)
 {
-  instituteInit ();
-
-  institute_t * ip_ref = xmalloc(sizeof (*ip_ref));
+  institute_t * ip_ref = (institute_t *)xmalloc(sizeof (*ip_ref));
   ip_ref->self       = UNDEFID;
   ip_ref->used       = 0;
   ip_ref->center     = center;
@@ -222,20 +169,34 @@ int institutInq(int center, int subcenter, const char *name, const char *longnam
   return state.id;
 }
 
+static
+institute_t *instituteNewEntry(cdiResH resH, int center, int subcenter,
+                               const char *name, const char *longname)
+{
+  institute_t *instituteptr = (institute_t*) xmalloc(sizeof(institute_t));
+  instituteDefaultValue(instituteptr);
+  if (resH == CDI_UNDEFID)
+    instituteptr->self = reshPut(instituteptr, &instituteOps);
+  else
+    {
+      instituteptr->self = resH;
+      reshReplace(resH, instituteptr, &instituteOps);
+    }
+  instituteptr->used = 1;
+  instituteptr->center = center;
+  instituteptr->subcenter = subcenter;
+  if ( name && *name )
+    instituteptr->name = strdupx(name);
+  if (longname && *longname)
+    instituteptr->longname = strdupx(longname);
+  return  instituteptr;
+}
+
 
 int institutDef(int center, int subcenter, const char *name, const char *longname)
 {
-  institute_t * instituteptr;
-
-  instituteInit ();
-
-  instituteptr = instituteNewEntry();
-
-  instituteptr->center    = center;
-  instituteptr->subcenter = subcenter;
-  if ( name && *name )         instituteptr->name     = strdupx(name);
-  if ( longname && *longname ) instituteptr->longname = strdupx(longname);
-
+  institute_t * instituteptr
+    = instituteNewEntry(CDI_UNDEFID, center, subcenter, name, longname);
   return instituteptr->self;
 }
 
@@ -243,8 +204,6 @@ int institutDef(int center, int subcenter, const char *name, const char *longnam
 int institutInqCenter(int instID)
 {
   institute_t * instituteptr = NULL;
-
-  instituteInit ();
 
   if ( instID != UNDEFID )
     instituteptr = ( institute_t * ) reshGetVal ( instID, &instituteOps );
@@ -257,8 +216,6 @@ int institutInqSubcenter(int instID)
 {
   institute_t * instituteptr = NULL;
 
-  instituteInit ();
-
   if ( instID != UNDEFID )
     instituteptr = ( institute_t * ) reshGetVal ( instID, &instituteOps );
 
@@ -270,8 +227,6 @@ char *institutInqNamePtr(int instID)
 {
   institute_t * instituteptr = NULL;
 
-  instituteInit ();
-
   if ( instID != UNDEFID )
     instituteptr = ( institute_t * ) reshGetVal ( instID, &instituteOps );
 
@@ -282,8 +237,6 @@ char *institutInqNamePtr(int instID)
 char *institutInqLongnamePtr(int instID)
 {
   institute_t * instituteptr = NULL;
-
-  instituteInit ();
 
   if ( instID != UNDEFID )
     instituteptr = ( institute_t * ) reshGetVal ( instID, &instituteOps );
@@ -303,43 +256,39 @@ int institutInqNumber(void)
 {
   int instNum = 0;
 
-  instituteInit ();
-
   cdiResHFilterApply(&instituteOps, activeInstitutes, &instNum);
   return instNum;
 }
 
 
-void instituteDestroyP ( void * instituteptr )
+static void
+instituteDestroyP(institute_t *instituteptr)
 {
-  int id;
-  institute_t * i1 = ( institute_t * ) instituteptr;
+  xassert(instituteptr);
 
-  xassert ( i1 );
-
-  id = i1->self;
-
-  if ( instituteptr ) free ( instituteptr );
-
-  reshRemove ( id, &instituteOps );
+  int instituteID = instituteptr->self;
+  free(instituteptr->name);
+  free(instituteptr->longname);
+  reshRemove(instituteID, &instituteOps);
+  free(instituteptr);
 }
 
 
-void institutePrintP   ( void * instituteptr, FILE * fp )
+static void institutePrintP(institute_t *ip, FILE * fp )
 {
-  institute_t * ip = ( institute_t * ) instituteptr;
-
-  if ( !ip ) return;
-
-  fprintf ( fp, "#\n");
-  fprintf ( fp, "# instituteID %d\n", ip->self);
-  fprintf ( fp, "#\n");
-  fprintf ( fp, "self          = %d\n", ip->self );
-  fprintf ( fp, "used          = %d\n", ip->used );
-  fprintf ( fp, "center        = %d\n", ip->center );
-  fprintf ( fp, "subcenter     = %d\n", ip->subcenter );
-  fprintf ( fp, "name          = %s\n", ip->name ? ip->name : "NN" );
-  fprintf ( fp, "longname      = %s\n", ip->longname ? ip->longname : "NN" );
+  if (ip)
+    fprintf(fp, "#\n"
+            "# instituteID %d\n"
+            "#\n"
+            "self          = %d\n"
+            "used          = %d\n"
+            "center        = %d\n"
+            "subcenter     = %d\n"
+            "name          = %s\n"
+            "longname      = %s\n",
+            ip->self, ip->self, ip->used, ip->center, ip->subcenter,
+            ip->name ? ip->name : "NN",
+            ip->longname ? ip->longname : "NN");
 }
 
 
@@ -353,18 +302,17 @@ enum {
   institute_nints = 5,
 };
 
-static int instituteGetSizeP ( void * instituteptr, void *context)
+static int instituteGetPackSize(institute_t *ip, void *context)
 {
-  institute_t *p = instituteptr;
   int txsize = serializeGetSize(institute_nints, DATATYPE_INT, context)
-    + serializeGetSize(strlen(p->name) + 1, DATATYPE_TXT, context)
-    + serializeGetSize(strlen(p->longname) + 1, DATATYPE_TXT, context);
+    + serializeGetSize(strlen(ip->name) + 1, DATATYPE_TXT, context)
+    + serializeGetSize(strlen(ip->longname) + 1, DATATYPE_TXT, context);
   return txsize;
 }
 
 static void institutePackP(void * instituteptr, void *buf, int size, int *position, void *context)
 {
-  institute_t *p = instituteptr;
+  institute_t *p = (institute_t*) instituteptr;
   int tempbuf[institute_nints];
   tempbuf[0] = p->self;
   tempbuf[1] = p->center;
@@ -376,19 +324,23 @@ static void institutePackP(void * instituteptr, void *buf, int size, int *positi
   serializePack(p->longname, tempbuf[4], DATATYPE_TXT, buf, size, position, context);
 }
 
-int instituteUnpack(void *buf, int size, int *position, int nspTarget, void *context)
+int instituteUnpack(void *buf, int size, int *position, int originNamespace,
+                    void *context, int force_id)
 {
   int tempbuf[institute_nints];
   int instituteID;
   char *name, *longname;
   serializeUnpack(buf, size, position, tempbuf, institute_nints, DATATYPE_INT, context);
-  name = xmalloc(tempbuf[3]);
-  longname = xmalloc(tempbuf[4]);
+  name = (char *)xmalloc(tempbuf[3] + tempbuf[4]);
+  longname = name + tempbuf[3];
   serializeUnpack(buf, size, position, name, tempbuf[3], DATATYPE_TXT, context);
   serializeUnpack(buf, size, position, longname, tempbuf[4], DATATYPE_TXT, context);
-  instituteID = institutDef(tempbuf[1], tempbuf[2], name, longname);
-  // FIXME: this should work, once all types are transferred
-  //xassert(instituteID == tempbuf[0]);
+  int targetID = namespaceAdaptKey(tempbuf[0], originNamespace);
+  institute_t *ip = instituteNewEntry(force_id?targetID:CDI_UNDEFID,
+                                      tempbuf[1], tempbuf[2], name, longname);
+  instituteID = ip->self;
+  xassert(!force_id || instituteID == targetID);
+  free(name);
   return instituteID;
 }
 

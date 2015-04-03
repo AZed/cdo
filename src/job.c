@@ -2,6 +2,10 @@
 #  include "config.h"
 #endif
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600 /* gethostname */
+#endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -55,7 +59,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
   /* determine current path */
 
   size = pathconf(".", _PC_PATH_MAX);
-  if ( (dir = malloc((size_t)size)) != NULL )
+  if ( (dir = (char*) malloc((size_t)size)) != NULL )
     {
       ptr = getcwd(dir, (size_t)size);
     }
@@ -67,7 +71,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
   len2 = strlen(GRID_TMPDIR);
   len = len1+len2+2;
 
-  output_path = malloc(len*sizeof(char));
+  output_path = (char*) malloc(len*sizeof(char));
   /*
   strcpy(output_path, host);
   strcat(output_path, ":");

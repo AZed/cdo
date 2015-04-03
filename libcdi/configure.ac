@@ -1,6 +1,10 @@
 #  Process this file with autoconf to produce a configure script.
+#
+#  automake 1.14
+#  autoconf 2.68
+#  libtool  2.4.2
 
-AC_INIT([cdi], [1.6.3], [http://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.4], [http://code.zmaw.de/projects/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
@@ -11,7 +15,7 @@ AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign serial-tests])
 AC_CONFIG_HEADERS([src/config.h])
 AM_MAINTAINER_MODE([disable])
 

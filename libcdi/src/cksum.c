@@ -1,4 +1,8 @@
 #include <inttypes.h>
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <sys/types.h>
 
@@ -108,18 +112,19 @@ memcrc_r(uint32_t *state, const unsigned char *block, size_t block_len)
   *state = s;
 }
 
-#define SWAP_CSUM(BITWIDTH,BYTEWIDTH)                             \
-  do {                                                            \
-  for (size_t i = num_elems; i > 0; --i) {                        \
-    {                                                             \
-      uint##BITWIDTH##_t accum = *(uint##BITWIDTH##_t *)b++;      \
-      for (j = 0; j < BYTEWIDTH; ++j)                             \
-      {                                                           \
-        uint32_t c = (uint32_t)(accum & UCHAR_MAX);               \
-        s = (s << 8) ^ crctab[(s >> 24) ^ c];                     \
-        accum >>= 8;                                              \
-      }                                                           \
-    }                                                             \
+#define SWAP_CSUM(BITWIDTH,BYTEWIDTH,NACC)                              \
+  do {                                                                  \
+    register const uint##BITWIDTH##_t *b = (uint##BITWIDTH##_t *)elems; \
+    for (size_t i = 0; i < num_elems; ++i) {                            \
+      for(size_t aofs = NACC; aofs > 0; --aofs) {                       \
+        uint##BITWIDTH##_t accum = b[i + aofs - 1];                     \
+        for (size_t j = 0; j < BYTEWIDTH; ++j) {                        \
+          uint32_t c = (uint32_t)(accum & UCHAR_MAX);                   \
+          s = (s << 8) ^ crctab[(s >> 24) ^ c];                         \
+          accum >>= 8;                                                  \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
   } while (0)
 
 
@@ -136,25 +141,24 @@ memcrc_r_eswap(uint32_t *state, const unsigned char *elems, size_t num_elems,
                size_t elem_size)
 {
 #ifdef WORDS_BIGENDIAN
-  register uint32_t c, s = *state;
-  register size_t n = block_len;
-  register unsigned char *b = elems;
+  register uint32_t s = *state;
 
   switch (elem_size)
   {
   case 1:
-    return memcrc_r(state, elems, num_elems, elem_size);
+    memcrc_r(state, elems, num_elems * elem_size);
+    return;
   case 2:
-    SWAP_CSUM(16,2);
+    SWAP_CSUM(16,2,1);
     break;
   case 4:
-    SWAP_CSUM(32,4);
+    SWAP_CSUM(32,4,1);
     break;
   case 8:
-    SWAP_CSUM(64,8);
+    SWAP_CSUM(64,8,1);
     break;
   case 16:
-    SWAP_CSUM(64,8);
+    SWAP_CSUM(64,8,2);
     break;
   }
   *state = s;
@@ -179,3 +183,13 @@ memcrc_finish(uint32_t *state, off_t total_size)
 
   return ~s;
 }
+
+/*
+ * Local Variables:
+ * c-file-style: "Java"
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * show-trailing-whitespace: t
+ * require-trailing-newline: t
+ * End:
+ */

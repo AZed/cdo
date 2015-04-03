@@ -194,6 +194,8 @@ void *Adisit(void *argument)
   ADISIT = cdoOperatorAdd("adisit", 1, 1, "");
   ADIPOT = cdoOperatorAdd("adipot", 1, 1, "");
 
+  UNUSED(ADIPOT);
+
   operatorID = cdoOperatorID();
 
   if ( operatorArgc() == 1 ) pin = atof(operatorArgv()[0]);
@@ -256,7 +258,7 @@ void *Adisit(void *argument)
   if ( nlevel1 != nlevel2 ) cdoAbort("temperature and salinity have different number of levels!");
   nlevel = nlevel1;
 
-  pressure = malloc(nlevel*sizeof(double));
+  pressure = (double*) malloc(nlevel*sizeof(double));
   zaxisInqLevels(zaxisID, pressure);
 
   if ( pin >= 0 ) 
@@ -274,9 +276,9 @@ void *Adisit(void *argument)
   field_init(&tho);
   field_init(&sao);
   field_init(&tis);
-  tho.ptr = malloc(gridsize*nlevel*sizeof(double));
-  sao.ptr = malloc(gridsize*nlevel*sizeof(double));
-  tis.ptr = malloc(gridsize*nlevel*sizeof(double));
+  tho.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
+  sao.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
+  tis.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
 
   tho.nmiss = 0;
   sao.nmiss = 0;

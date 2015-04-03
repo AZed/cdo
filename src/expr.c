@@ -14,7 +14,7 @@
 
 static double f_abs(double x)  { return (fabs(x));  }
 static double f_int(double x)  { return ((int)(x)); }
-static double f_nint(double x) { return (NINT(x));  }
+static double f_nint(double x) { return (round(x));  }
 static double f_sqr(double x)  { return (x*x);      }
 
 typedef struct {
@@ -70,7 +70,7 @@ nodeType *expr_con_con(int oper, nodeType *p1, nodeType *p2)
 {
   nodeType *p;
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type = typeCon;
 
@@ -106,7 +106,7 @@ nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
   ngp  = gridInqSize(gridID);
   nlev = zaxisInqSize(zaxisID);
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type     = typeVar;
   p->tmpvar   = 1;
@@ -115,7 +115,7 @@ nodeType *expr_con_var(int oper, nodeType *p1, nodeType *p2)
   p->zaxisID  = zaxisID;
   p->missval  = missval1;
 
-  p->data = malloc(ngp*nlev*sizeof(double));
+  p->data = (double*) malloc(ngp*nlev*sizeof(double));
 
   switch ( oper )
     {
@@ -208,7 +208,7 @@ nodeType *expr_var_con(int oper, nodeType *p1, nodeType *p2)
   ngp  = gridInqSize(gridID);
   nlev = zaxisInqSize(zaxisID);
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type     = typeVar;
   p->tmpvar   = 1;
@@ -217,7 +217,7 @@ nodeType *expr_var_con(int oper, nodeType *p1, nodeType *p2)
   p->zaxisID  = zaxisID;
   p->missval  = missval1;
 
-  p->data = malloc(ngp*nlev*sizeof(double));
+  p->data = (double*) malloc(ngp*nlev*sizeof(double));
 
   switch ( oper )
     {
@@ -323,7 +323,7 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
   nlev1 = zaxisInqSize(p1->zaxisID);
   nlev2 = zaxisInqSize(p2->zaxisID);
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type     = typeVar;
   p->tmpvar   = 1;
@@ -353,7 +353,7 @@ nodeType *expr_var_var(int oper, nodeType *p1, nodeType *p2)
       p->missval = p1->missval;
     }
 
-  p->data = malloc(ngp*nlev*sizeof(double));
+  p->data = (double*) malloc(ngp*nlev*sizeof(double));
 
   for ( k = 0; k < nlev; k++ )
     {
@@ -517,7 +517,7 @@ nodeType *ex_fun_con(char *fun, nodeType *p1)
   int i;
   int funcID = -1;
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type = typeCon;
 
@@ -556,7 +556,7 @@ nodeType *ex_fun_var(char *fun, nodeType *p1)
   ngp  = gridInqSize(gridID);
   nlev = zaxisInqSize(zaxisID);
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type     = typeVar;
   p->tmpvar   = 1;
@@ -565,7 +565,7 @@ nodeType *ex_fun_var(char *fun, nodeType *p1)
   p->zaxisID  = zaxisID;
   p->missval  = missval;
 
-  p->data = malloc(ngp*nlev*sizeof(double));
+  p->data = (double*) malloc(ngp*nlev*sizeof(double));
 
   for ( i = 0; i < NumFunc; i++)
     if ( strcmp(fun, fun_sym_tbl[i].name) == 0 )
@@ -648,7 +648,7 @@ nodeType *ex_uminus_var(nodeType *p1)
   ngp  = gridInqSize(gridID);
   nlev = zaxisInqSize(zaxisID);
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type     = typeVar;
   p->tmpvar   = 1;
@@ -657,7 +657,7 @@ nodeType *ex_uminus_var(nodeType *p1)
   p->zaxisID  = zaxisID;
   p->missval  = missval;
 
-  p->data = malloc(ngp*nlev*sizeof(double));
+  p->data = (double*) malloc(ngp*nlev*sizeof(double));
 
   if ( nmiss > 0 )
     {
@@ -680,7 +680,7 @@ nodeType *ex_uminus_con(nodeType *p1)
 {
   nodeType *p;
 
-  p = malloc(sizeof(nodeType));
+  p = (nodeType*) malloc(sizeof(nodeType));
 
   p->type = typeCon;
 

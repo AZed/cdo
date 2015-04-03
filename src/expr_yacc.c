@@ -1830,7 +1830,7 @@ nodeType *expr_con(double value)
 
   /* allocate node */
   nodeSize = SIZEOF_NODETYPE + sizeof(conNodeType);
-  if ((p = malloc(nodeSize)) == NULL)
+  if ((p = (nodeType*) malloc(nodeSize)) == NULL)
     yyerror(NULL, NULL, "Out of memory");
 
   /* copy information */
@@ -1847,7 +1847,7 @@ nodeType *expr_var(char *nm)
 
   /* allocate node */
   nodeSize = SIZEOF_NODETYPE + sizeof(varNodeType);
-  if ((p = malloc(nodeSize)) == NULL)
+  if ((p = (nodeType*) malloc(nodeSize)) == NULL)
     yyerror(NULL, NULL, "Out of memory");
 
   /* copy information */
@@ -1864,7 +1864,7 @@ nodeType *expr_fun(char *fname, nodeType *op)
 
   /* allocate node */
   nodeSize = SIZEOF_NODETYPE + sizeof(funNodeType);
-  if ((p = malloc(nodeSize)) == NULL)
+  if ((p = (nodeType*) malloc(nodeSize)) == NULL)
     yyerror(NULL, NULL, "Out of memory");
 
   /* copy information */
@@ -1884,7 +1884,7 @@ nodeType *expr_opr(int oper, int nops, ...)
 
   /* allocate node */
   nodeSize = SIZEOF_NODETYPE + sizeof(oprNodeType) + (nops - 1)*sizeof(nodeType*);
-  if ((p = malloc(nodeSize)) == NULL)
+  if ((p = (nodeType*) malloc(nodeSize)) == NULL)
     yyerror(NULL, NULL, "Out of memory");
 
   /* copy information */

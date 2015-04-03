@@ -42,10 +42,10 @@ void data_treat(double *zdata, double *xdata, double *ydata, long nx, long ny)
   int *iscale = NULL;
   long i, j;
 
-  zwork = malloc(3*nx*ny*sizeof(double));
-  xwork = malloc(3*nx*sizeof(double));
-  xscale = malloc(ny*sizeof(double));
-  iscale = malloc(ny*sizeof(int));
+  zwork  = (double*) malloc(3*nx*ny*sizeof(double));
+  xwork  = (double*) malloc(3*nx*sizeof(double));
+  xscale = (double*) malloc(ny*sizeof(double));
+  iscale = (int*) malloc(ny*sizeof(int));
 
   double pi2 = 2*acos(-1.);
   for ( i = 0; i < nx; ++i )
@@ -784,7 +784,7 @@ void *SSOpar(void *argument)
                       if ( cdoVerbose )
                         cdoPrint("lhavevct=TRUE  zaxisIDh = %d, nhlevf   = %d", zaxisIDh, nlevel);
  
-		      vct = malloc(nvct*sizeof(double));
+		      vct = (double*) malloc(nvct*sizeof(double));
 		      zaxisInqVct(zaxisID, vct);
 
 		      if ( cdoVerbose )
@@ -802,7 +802,7 @@ void *SSOpar(void *argument)
     }
 
   if ( zaxisIDh == -1 )
-    cdoAbort("No data on hybrid model level found!");
+    cdoAbort("No 3D variable with hybrid sigma pressure coordinate found!");
 
   nvars = vlistNvars(vlistID1);
 
@@ -866,23 +866,23 @@ void *SSOpar(void *argument)
 
   if ( tempID == -1 ) cdoAbort("Temperature not found!");
 
-  array  = malloc(ngp*sizeof(double));
+  array  = (double*) malloc(ngp*sizeof(double));
 
-  geop   = malloc(ngp*sizeof(double));
-  ps     = malloc(ngp*sizeof(double));
+  geop   = (double*) malloc(ngp*sizeof(double));
+  ps     = (double*) malloc(ngp*sizeof(double));
 
-  temp   = malloc(ngp*nhlevf*sizeof(double));
-  hum    = malloc(ngp*nhlevf*sizeof(double));
-  lwater = malloc(ngp*nhlevf*sizeof(double));
-  iwater = malloc(ngp*nhlevf*sizeof(double));
+  temp   = (double*) malloc(ngp*nhlevf*sizeof(double));
+  hum    = (double*) malloc(ngp*nhlevf*sizeof(double));
+  lwater = (double*) malloc(ngp*nhlevf*sizeof(double));
+  iwater = (double*) malloc(ngp*nhlevf*sizeof(double));
 
-  half_press   = malloc(ngp*(nhlevf+1)*sizeof(double));
-  geopotheight = malloc(ngp*(nhlevf+1)*sizeof(double));
+  half_press   = (double*) malloc(ngp*(nhlevf+1)*sizeof(double));
+  geopotheight = (double*) malloc(ngp*(nhlevf+1)*sizeof(double));
 
   if ( zaxisIDh != -1 && geopID == -1 )
     {
       if ( ltq )
-	cdoWarning("Orography (surf. geopotential) not found - using zero orography!");
+	cdoWarning("Orography (surf. geopotential) not found - set to zero!");
 
       memset(geop, 0, ngp*sizeof(double));
     }

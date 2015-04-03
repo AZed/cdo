@@ -33,19 +33,25 @@ typedef struct {
   valTxCodeFunc      valTxCode;
 }resOps;
 
-enum { RESH_UNDEFID, ASSIGNED, SUSPENDED, CLOSED };
+enum {
+  RESH_UNUSED,             /* resource holds no value */
+  RESH_ASSIGNED,           /* resource is user-assigned */
+  RESH_PRE_ASSIGNED,       /* resource is pre-assigned by library */
+  RESH_CLOSED,             /* resource is marked immutable */
+};
 
 void   reshListCreate(int namespaceID);
 void   reshListDestruct(int namespaceID);
-int    reshPut ( void *, resOps * );
-void   reshRemove ( cdiResH, resOps * );
+int    reshPut ( void *, const resOps * );
+void reshReplace(cdiResH resH, void *p, const resOps *ops);
+void   reshRemove ( cdiResH, const resOps * );
 
-int    reshCountType ( resOps * );
+int    reshCountType ( const resOps * );
 
-void * reshGetValue(const char *, cdiResH, resOps * );
+void * reshGetValue(const char *, cdiResH, const resOps * );
 #define reshGetVal(resH, ops)  reshGetValue(__func__, resH, ops)
 
-void   reshGetResHListOfType ( int, int *, resOps * );
+void   reshGetResHListOfType ( int, int *, const resOps * );
 
 enum cdiApplyRet {
   CDI_APPLY_ERROR = -1,
@@ -63,11 +69,11 @@ cdiResHFilterApply(const resOps *p,
 
 void   reshPackBufferCreate ( char **, int *, void *context );
 void   reshPackBufferDestroy ( char ** );
-int    reshResourceGetPackSize(int resh, resOps *ops, void *context);
-void   reshPackResource(int resh, resOps *ops,
+int    reshResourceGetPackSize(int resh, const resOps *ops, void *context);
+void   reshPackResource(int resh, const resOps *ops,
                         void *buf, int buf_size, int *position, void *context);
-void   reshSetStatus ( cdiResH, resOps *, int );
-int    reshGetStatus ( cdiResH, resOps * );
+void   reshSetStatus ( cdiResH, const resOps *, int );
+int    reshGetStatus ( cdiResH, const resOps * );
 
 void   reshLock   ( void );
 void   reshUnlock ( void );

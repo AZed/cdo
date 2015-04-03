@@ -2,6 +2,7 @@
 #define _STDNAMETABLE_H
 
 enum stdnameid {surface_geopotential,
+		geopotential,
 		air_temperature,
                 specific_humidity,
 		surface_air_pressure,
@@ -14,5 +15,18 @@ const char* var_stdname(int varid);
 const char* var_units(int varid);
 
 int echamcode_from_stdname(const char* stdname);
+
+typedef struct
+{
+  int geopot;
+  int temp;
+  int hum;
+  int ps;
+  int lsp;
+  int gheight;
+} gribcode_t;
+
+void echam_gribcodes(gribcode_t *gribcodes);
+void wmo_gribcodes(gribcode_t *gribcodes);
 
 #endif

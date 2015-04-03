@@ -1,6 +1,10 @@
 # Process this file with autoconf to produce a configure script.
+#
+#  automake 1.14
+#  autoconf 2.68
+#  libtool  2.4.2
 
-AC_INIT([cdo], [1.6.3], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.4], [http://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -8,7 +12,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
-AM_INIT_AUTOMAKE
+# AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+AM_INIT_AUTOMAKE([foreign -Wall])
 AC_CONFIG_HEADERS([src/config.h])
 AM_MAINTAINER_MODE([disable])
 
@@ -20,6 +25,7 @@ LT_INIT
 AC_CHECK_TOOL([CC],[gcc],[:])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
+AC_OPENMP
 AC_CHECK_TOOL([AR],[ar],[:])
 AC_CHECK_TOOL([CPP],[cpp],[:])
 AC_CHECK_TOOL([LD],[ld],[:])
@@ -32,7 +38,7 @@ AC_CHECK_TOOL([STRIP],[strip],[:])
 AC_CHECK_TOOL([RANLIB],[ranlib],[:])
 AC_PROG_INSTALL
 AC_PROG_CXX
-
+#
 FC=no
 export FC
 #  ----------------------------------------------------------------------
@@ -111,6 +117,9 @@ AC_ARG_ENABLE([data],
 AC_MSG_RESULT([$enable_data])
 AC_SUBST([ENABLE_DATA],[$enable_data])
 #  ----------------------------------------------------------------------
+CFLAGS="$CFLAGS ${OPENMP_CFLAGS}"
+#  ----------------------------------------------------------------------
+
 # Add configure options
 ACX_OPTIONS
 #  ----------------------------------------------------------------------
@@ -118,14 +127,22 @@ AC_SUBST([CPPFLAGS])
 AC_SUBST([FCFLAGS])
 AC_SUBST([CLDFLAGS])
 AC_SUBST([CLIBS])
-AC_SUBST([INCLUDES])
+#AC_SUBST([INCLUDES])
+AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AR])
 
 # Checks for compiler
 COMPILER="$CC $CFLAGS"
 AC_DEFINE_UNQUOTED(COMPILER, ["$COMPILER"], [Compiler])
 
-AC_OUTPUT(Makefile src/Makefile contrib/Makefile test/Makefile test/data/Makefile cdo.spec cdo.settings)
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
+AC_PROG_AWK
+
+AC_CONFIG_FILES([test/Cat.test test/Gridarea.test test/Genweights.test test/Remap.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([test/Select.test test/Spectral.test test/Timstat.test test/Vertint.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([test/Detrend.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([Makefile src/Makefile contrib/Makefile test/Makefile test/data/Makefile cdo.spec cdo.settings])
+AC_OUTPUT
 
 #  ----------------------------------------------------------------------
 #  Show configuration

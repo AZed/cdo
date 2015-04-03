@@ -187,8 +187,9 @@ void *Timstat(void *argument)
   if ( cdoOperatorF2(operatorID) == 31 ) vlistDefNtsteps(vlistID2, 1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
-  taxis_has_bounds = taxisHasBounds(taxisID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisInqType(taxisID2) == TAXIS_FORECAST ) taxisDefType(taxisID2, TAXIS_RELATIVE);
+  taxis_has_bounds = taxisHasBounds(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -225,14 +226,14 @@ void *Timstat(void *argument)
       streamDefVlist(streamID3, vlistID3);
     }
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
 
   field_init(&field);
-  field.ptr = malloc(gridsize*sizeof(double));
+  field.ptr = (double*) malloc(gridsize*sizeof(double));
 
   vars1 = field_malloc(vlistID1, FIELD_PTR);
   samp1 = field_malloc(vlistID1, FIELD_NONE);
@@ -292,7 +293,7 @@ void *Timstat(void *argument)
 		  if ( nmiss > 0 || samp1[varID][levelID].ptr )
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
-			samp1[varID][levelID].ptr = malloc(nwpv*gridsize*sizeof(double));
+			samp1[varID][levelID].ptr = (double*) malloc(nwpv*gridsize*sizeof(double));
 
 		      for ( i = 0; i < nwpv*gridsize; i++ )
 			if ( DBL_IS_EQUAL(vars1[varID][levelID].ptr[i], vars1[varID][levelID].missval) )
@@ -311,7 +312,7 @@ void *Timstat(void *argument)
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
 			{
-			  samp1[varID][levelID].ptr = malloc(nwpv*gridsize*sizeof(double));
+			  samp1[varID][levelID].ptr = (double*) malloc(nwpv*gridsize*sizeof(double));
 			  for ( i = 0; i < nwpv*gridsize; i++ )
 			    samp1[varID][levelID].ptr[i] = nsets;
 			}

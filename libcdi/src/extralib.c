@@ -32,7 +32,7 @@ static int extDefaultNumber = EXT_REAL;
  */
 
 #undef  LIBVERSION
-#define LIBVERSION      1.3.1
+#define LIBVERSION      1.3.2
 #define XSTRING(x)	#x
 #define STRING(x)	XSTRING(x)
 static const char ext_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
@@ -80,7 +80,7 @@ void extLibInit()
 		  default:
 		    Message("Invalid digit in %s: %s", envName, envString);
 		  }
-		break;		
+		break;
 	      }
 	    case 'c':
 	      {
@@ -92,12 +92,14 @@ void extLibInit()
 		  default:
 		    Message("Invalid digit in %s: %s", envName, envString);
 		  }
-		break;		
+		break;
 	      }
 	    default:
-	      Message("Invalid character in %s: %s", envName, envString);
-	      break;
-	    }
+              {
+                Message("Invalid character in %s: %s", envName, envString);
+                break;
+              }
+            }
 	}
     }
 
@@ -215,7 +217,7 @@ int extInqHeader(void *ext, int *header)
 
   for ( i = 0; i < EXT_HEADER_LEN; i++ )
     header[i] = extp->header[i];
-  
+
   if ( EXT_Debug ) Message("datasize = %lu", extp->datasize);
 
   return (0);
@@ -229,7 +231,7 @@ int extDefHeader(void *ext, const int *header)
 
   for ( i = 0; i < EXT_HEADER_LEN; i++ )
     extp->header[i] = header[i];
-  
+
   extp->datasize = header[3];
   if ( extp->number == EXT_COMP ) extp->datasize *= 2;
 
@@ -270,7 +272,7 @@ int extInqData(void *ext, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT32));
-	  }	
+	  }
 	break;
       }
     case DOUBLE_PRECISION:
@@ -287,12 +289,12 @@ int extInqData(void *ext, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT64));
-	  }	
+	  }
 	break;
     default:
       {
 	Error("unexpected data precision %d", rprec);
-        break;
+	break;
       }
     }
 
@@ -451,7 +453,7 @@ int extRead(int fileID, void *ext)
       }
     default:
       {
-	Error("unexpected header precision %d", hprec);
+	Error("Unexpected header precision %d", hprec);
         break;
       }
     }
@@ -460,8 +462,8 @@ int extRead(int fileID, void *ext)
 
   if ( blocklen2 != blocklen )
     {
-      Warning("header blocklen differ!");
-      return (-1);
+      Warning("Header blocklen differ (blocklen1=%d; blocklen2=%d)!", blocklen, blocklen2);
+      if ( blocklen2 != 0 ) return (-1);
     }
 
   extp->datasize = extp->header[3];
@@ -498,7 +500,7 @@ int extRead(int fileID, void *ext)
 
   if ( dprec != SINGLE_PRECISION && dprec != DOUBLE_PRECISION )
     {
-      Warning("unexpected data precision %d", dprec);
+      Warning("Unexpected data precision %d", dprec);
       return (-1);
     }
 
@@ -508,8 +510,8 @@ int extRead(int fileID, void *ext)
 
   if ( blocklen2 != blocklen )
     {
-      Warning("data blocklen differ!");
-      return (-1);
+      Warning("Data blocklen differ (blocklen1=%d; blocklen2=%d)!", blocklen, blocklen2);
+      if ( blocklen2 != 0 ) return (-1);
     }
 
   return (0);
@@ -564,7 +566,7 @@ int extWrite(int fileID, void *ext)
         break;
       }
     }
-  
+
   binWriteF77Block(fileID, byteswap, blocklen);
 
   datasize = header[3];

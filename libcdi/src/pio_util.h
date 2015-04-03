@@ -6,9 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
+#include <mpi.h>
 
 #ifndef _ERROR_H
 #include "error.h"
@@ -20,7 +18,6 @@
 
 #define debugString "#####"
 
-#ifdef USE_MPI
 void
 cdiAbortC_MPI(const char * caller, const char * filename,
               const char *functionname, int line,
@@ -29,9 +26,6 @@ cdiAbortC_MPI(const char * caller, const char * filename,
 
 void cdiPioWarning(const char *caller, const char *fmt, va_list ap);
 
-#endif
-
-#ifdef USE_MPI
 static inline int
 callsToMPIAreAllowed()
 {
@@ -48,9 +42,7 @@ getMPICommWorldRank()
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   return rank;
 }
-#endif
 
-#ifdef USE_MPI
 #define xdebug(fmt, ...)                                                \
   if ( ddebug ){                                                        \
     int rank = getMPICommWorldRank();                                   \
@@ -59,17 +51,6 @@ getMPICommWorldRank()
               __VA_ARGS__ );                                            \
   }
 
-#else
-#define xdebug(fmt, ...)                                           \
-  if ( ddebug ){                                                   \
-    fprintf ( stderr, "%s %s, %s, line %d: " fmt "\n",             \
-              debugString, __func__, __FILE__,  __LINE__,          \
-              __VA_ARGS__ );                                       \
-  }
-#endif
-
-
-#ifdef USE_MPI
 #define xdebug3(fmt, ...)                                               \
   if ( ddebug == MAXDEBUG ){                                            \
     int rank = getMPICommWorldRank();                                   \
@@ -78,15 +59,6 @@ getMPICommWorldRank()
               __VA_ARGS__ );                                            \
   }
 
-#else
-#define xdebug3(fmt, ...)					\
-  if ( ddebug == MAXDEBUG ){                                    \
-    fprintf ( stderr, "%s, %s, line %d: " fmt "\n",             \
-              __func__, __FILE__,  __LINE__,                    \
-              __VA_ARGS__ );                                 \
-  }
-#endif
-
 void pcdiXMPI(int iret, const char *, int);
 #define xmpi(ret) do {                                  \
     int tmpIRet = (ret);                                   \
@@ -94,7 +66,6 @@ void pcdiXMPI(int iret, const char *, int);
       pcdiXMPI(tmpIRet, __FILE__, __LINE__ );              \
   } while(0)
 
-#ifdef USE_MPI
 void pcdiXMPIStat ( int, const char *, int, MPI_Status * );
 #define xmpiStat(ret,stat) pcdiXMPIStat ( ret, __FILE__, __LINE__, stat )
 
@@ -102,7 +73,6 @@ void pcdiDebugComm ( const char *filename, const char *functionname, int line, \
                      MPI_Comm *comm );
 #define xdebugComm(comm)\
   if ( ddebug ) pcdiDebugComm (  __FILE__, __func__, __LINE__, comm )
-#endif
 
 void pcdiDebugMsg ( const char * cdiDebugString, const char *filename, const char *functionname, int line, \
                     int tag, int source, int nfinished );

@@ -10,9 +10,10 @@ void cdf_create (const char *path, int cmode, int *idp);
 int  cdf_open   (const char *path, int omode, int *idp);
 void cdf_close  (int ncid);
 
-void cdf_redef (int ncid);
-void cdf_enddef (int ncid);
-void cdf_sync (int ncid);
+void cdf_redef(int ncid);
+void cdf_enddef(int ncid);
+void cdf__enddef(const int ncid, const size_t hdr_pad);
+void cdf_sync(int ncid);
 
 void cdf_inq (int ncid, int *ndimsp, int *nvarsp, int *ngattsp, int *unlimdimidp);
 

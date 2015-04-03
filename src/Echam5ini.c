@@ -89,7 +89,7 @@ void inivar(VAR *var, int gridtype, int zaxistype, int code, const char *name,
 static
 void inivars_ml(VAR **vars)
 {
-  *vars = malloc((nvars_ml+1)*sizeof(VAR));
+  *vars = (VAR*) malloc((nvars_ml+1)*sizeof(VAR));
 
   inivar(&(*vars)[0], GRID_GAUSSIAN, ZAXIS_HYBRID,  133, "Q",   "specific humidity", "kg/kg");
   inivar(&(*vars)[1], GRID_SPECTRAL, ZAXIS_HYBRID,  138, "SVO", "vorticity", "1/s");
@@ -170,15 +170,15 @@ int import_e5ml(const char *filename, VAR **vars)
   zaxisIDsfc = zaxisCreate(ZAXIS_SURFACE, 1);
   zaxisIDml  = zaxisCreate(ZAXIS_HYBRID, nlev);
 
-  levs = malloc(nlev*sizeof(double));
+  levs = (double*) malloc(nlev*sizeof(double));
   for ( i = 0; i < nlev; i++ ) levs[i] = i+1;
   zaxisDefLevels(zaxisIDml, levs);
   free(levs);
 
   /* read variables */
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   nce(nc_inq_varid(nc_file_id, "lon", &nc_var_id));
   nce(nc_get_var_double(nc_file_id, nc_var_id, xvals));
@@ -192,7 +192,7 @@ int import_e5ml(const char *filename, VAR **vars)
   free(xvals);
   free(yvals);
 
-  vct   = malloc(nvct*sizeof(double));
+  vct   = (double*) malloc(nvct*sizeof(double));
 
   nce(nc_inq_varid(nc_file_id, "vct_a", &nc_var_id));
   nce(nc_get_var_double(nc_file_id, nc_var_id, vct));
@@ -210,6 +210,8 @@ int import_e5ml(const char *filename, VAR **vars)
       gridtype  = (*vars)[iv].gridtype;
       zaxistype = (*vars)[iv].zaxistype;
 
+      UNUSED(zaxistype);
+
       if ( gridtype == GRID_GAUSSIAN )
 	{
 	  (*vars)[iv].gridID = gridIDgp;
@@ -225,7 +227,7 @@ int import_e5ml(const char *filename, VAR **vars)
       (*vars)[iv].gridsize  = nvals;
       (*vars)[iv].nlev      = nlev;
 
-      (*vars)[iv].ptr = malloc(nlev*nvals*sizeof(double));
+      (*vars)[iv].ptr = (double*) malloc(nlev*nvals*sizeof(double));
       
       for ( i = 0; i < nlev; i++ )
 	{
@@ -255,7 +257,7 @@ int import_e5ml(const char *filename, VAR **vars)
   start[0] = 0;    start[1] = 0;  start[2] = nlev;
   count[0] = nsp;  count[1] = 2;  count[2] = 1;
 
-  (*vars)[nvars_ml].ptr = malloc(nsp*2*sizeof(double));
+  (*vars)[nvars_ml].ptr = (double*) malloc(nsp*2*sizeof(double));
 
   nce(nc_inq_varid(nc_file_id, "STP", &nc_var_id));
   nce(nc_get_vara_double(nc_file_id, nc_var_id, start, count, (*vars)[nvars_ml].ptr));
@@ -283,7 +285,7 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
   int varid, code;
   int ilev;
   int lon, lat;
-  int nlon, nlat, nlev, nlevp1, nvct, nsp, n2, i, nvclev;
+  int nlon, nlat, nlev, nlevp1/*, nvct*/, nsp, n2, i, nvclev;
   int lat_dimid, lon_dimid, nlev_dimid, nlevp1_dimid, nsp_dimid, nvclev_dimid, n2_dimid;
   int gridIDgp = -1, gridIDsp, zaxisIDml = -1;
   int gridtype, zaxistype;
@@ -293,7 +295,7 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
   const double *vct;
   char atttext[1024];
   size_t attlen;
-  int attint;
+  //int attint;
   char *username;
   char timestr[30];
   time_t date_and_time_in_sec;
@@ -335,6 +337,7 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
       else if ( gridtype == GRID_SPECTRAL && nsp == 0 )
 	{
 	  gridIDsp = vars[varid].gridID;
+	  UNUSED(gridIDsp);
 	  nsp = gridInqSize(vars[varid].gridID);
 	  nsp = nsp/2;
 	}
@@ -424,7 +427,7 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
   nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "vdate", NC_INT, 1, &vdate));
   nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "vtime", NC_INT, 1, &vtime));
 
-  attint = 31;
+  //attint = 31;
   nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "spherical_truncation_n", NC_INT, 1, &ntr));
   nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "spherical_truncation_m", NC_INT, 1, &ntr));
   nce(nc_put_att_int(nc_file_id, NC_GLOBAL, "spherical_truncation_k", NC_INT, 1, &ntr));
@@ -449,8 +452,8 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
 
   /* define gaussian grid */
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   gridInqXvals(gridIDgp, xvals);
   gridInqYvals(gridIDgp, yvals);
@@ -482,9 +485,9 @@ void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtim
 
   /* define model level */
 
-  nvct = nvclev*2;
+  // nvct = nvclev*2;
 
-  /* vct   = malloc(nvct*sizeof(double)); */
+  /* vct   = (double*) malloc(nvct*sizeof(double)); */
 
   vct = zaxisInqVctPtr(zaxisIDml);
 
@@ -631,7 +634,7 @@ void read_gg3d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxis
   var->gridsize  = gridsize;
   var->nlev      = nlev;
 
-  var->ptr = malloc(nlev*gridsize*sizeof(double));
+  var->ptr = (double*) malloc(nlev*gridsize*sizeof(double));
   
   for ( i = 0; i < nlev; i++ )
     {
@@ -668,7 +671,7 @@ void read_fc4d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxis
   var->gridsize  = nfc;
   var->nlev      = nlev;
 
-  var->ptr = malloc(nlev*nfc*sizeof(double));
+  var->ptr = (double*) malloc(nlev*nfc*sizeof(double));
   
   for ( i = 0; i < nlev; i++ )
     {
@@ -747,6 +750,8 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   nce(nc_inq_dimlen(nc_file_id, spc_dimid, &dimlen));
   spc = (int) dimlen;
 
+  UNUSED(spc);
+
   nce(nc_inq_dimid(nc_file_id, "nvclev", &nvclev_dimid));
   nce(nc_inq_dimlen(nc_file_id, nvclev_dimid, &dimlen));
   nvclev = (int) dimlen;
@@ -771,6 +776,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   nce(nc_inq_dimlen(nc_file_id, ilev_dimid, &dimlen));
   ilev = (int) dimlen;
 
+  UNUSED(ilev);
   /*
   nce(nc_inq_dimid(nc_file_id, "surface", &surface_dimid));
   nce(nc_inq_dimlen(nc_file_id, surface_dimid, &surface));
@@ -794,8 +800,8 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   gridDefXsize(gridIDgp, nlon);
   gridDefYsize(gridIDgp, nlat);
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   nce(nc_inq_varid(nc_file_id, "lon", &nc_var_id));
   nce(nc_get_var_double(nc_file_id, nc_var_id, xvals));
@@ -829,7 +835,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   nlev = belowsurface;
   zaxisIDbsfc = zaxisCreate(ZAXIS_DEPTH_BELOW_LAND, nlev);
 
-  levs = malloc(nlev*sizeof(double));
+  levs = (double*) malloc(nlev*sizeof(double));
   for ( i = 0; i < nlev; i++ ) levs[i] = 0;
   zaxisDefLevels(zaxisIDbsfc, levs);
   free(levs);
@@ -840,7 +846,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   nlev = n2;
   zaxisIDn2 = zaxisCreate(ZAXIS_GENERIC, nlev);
 
-  levs = malloc(nlev*sizeof(double));
+  levs = (double*) malloc(nlev*sizeof(double));
   for ( i = 0; i < nlev; i++ ) levs[i] = 0;
   zaxisDefLevels(zaxisIDn2, levs);
   free(levs);
@@ -850,7 +856,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   nlev = lev;
   nvct = nvclev*2;
 
-  vct   = malloc(nvct*sizeof(double));
+  vct   = (double*) malloc(nvct*sizeof(double));
 
   nce(nc_inq_varid(nc_file_id, "vct_a", &nc_var_id));
   nce(nc_get_var_double(nc_file_id, nc_var_id, vct));
@@ -862,7 +868,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 
   zaxisIDml  = zaxisCreate(ZAXIS_HYBRID, nlev);
 
-  levs = malloc(nlev*sizeof(double));
+  levs = (double*) malloc(nlev*sizeof(double));
   for ( i = 0; i < nlev; i++ ) levs[i] = i+1;
   zaxisDefLevels(zaxisIDml, levs);
   free(levs);
@@ -873,7 +879,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 
   zaxisIDmlh  = zaxisCreate(ZAXIS_HYBRID_HALF, nlevp1);
 
-  levs = malloc(nlevp1*sizeof(double));
+  levs = (double*) malloc(nlevp1*sizeof(double));
   for ( i = 0; i < nlevp1; i++ ) levs[i] = i;
   zaxisDefLevels(zaxisIDmlh, levs);
   free(levs);
@@ -930,7 +936,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 	}
     }
 
-  *vars = malloc(max_vars*sizeof(VAR));
+  *vars = (VAR*) malloc(max_vars*sizeof(VAR));
 
   varid = 0;
   for ( ncvarid = 0; ncvarid < nvars; ncvarid++ )
@@ -1002,7 +1008,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 	      (*vars)[varid].gridsize  = nvals;
 	      (*vars)[varid].nlev      = 1;
 
-	      (*vars)[varid].ptr = malloc(nvals*sizeof(double));
+	      (*vars)[varid].ptr = (double*) malloc(nvals*sizeof(double));
 
 	      nce(nc_inq_varid(nc_file_id, name, &nc_var_id));
 	      nce(nc_get_var_double(nc_file_id, nc_var_id, (*vars)[varid].ptr));
@@ -1020,7 +1026,7 @@ int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 	      (*vars)[varid].gridsize  = nvals;
 	      (*vars)[varid].nlev      = nlev;
 
-	      (*vars)[varid].ptr = malloc(nvals*nlev*sizeof(double));
+	      (*vars)[varid].ptr = (double*) malloc(nvals*nlev*sizeof(double));
 
 	      for ( i = 0; i < nlev; i++ )
 		{
@@ -1083,7 +1089,7 @@ void export_e5res(const char *filename, VAR *vars, int nvars)
   int varid;
   size_t nvals;
   size_t start[4], count[4];
-  int nlon, nlat, nlev, nvct, nfc, i;
+  int nlon, nlat, nlev/*, nvct*/, nfc, i;
   int gridIDgp = -1, zaxisIDml = -1;
   int nc_file_id;
   double *xvals, *yvals;
@@ -1369,8 +1375,8 @@ void export_e5res(const char *filename, VAR *vars, int nvars)
   nlon = lon;
   nlat = lat;
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   gridInqXvals(gridIDgp, xvals);
   gridInqYvals(gridIDgp, yvals);
@@ -1392,9 +1398,9 @@ void export_e5res(const char *filename, VAR *vars, int nvars)
   /* define model level */
 
   nlev = lev;
-  nvct = nvclev*2;
+  //nvct = nvclev*2;
 
-  /* vct   = malloc(nvct*sizeof(double)); */
+  /* vct   = (double*) malloc(nvct*sizeof(double)); */
 
   vct = zaxisInqVctPtr(zaxisIDml);
 
@@ -1530,7 +1536,7 @@ void *Echam5ini(void *argument)
 
       nvars = vlistNvars(vlistID1);
 
-      vars = malloc(nvars*sizeof(VAR));
+      vars = (VAR*) malloc(nvars*sizeof(VAR));
 
       for ( varID = 0; varID < nvars; ++varID )
 	{
@@ -1581,7 +1587,7 @@ void *Echam5ini(void *argument)
 	  vars[varID].gridsize  = gridsize;
 	  vars[varID].nlev      = nlev;
 
-	  vars[varID].ptr = malloc(nlev*gridsize*sizeof(double));
+	  vars[varID].ptr = (double*) malloc(nlev*gridsize*sizeof(double));
 	}
 
       nrecs = streamInqTimestep(streamID1, 0);

@@ -4,6 +4,7 @@
 
 #include "cdi.h"
 #include "dmemory.h"
+#include "grid.h"
 #include "institution.h"
 #include "model.h"
 #include "cdi_int.h"
@@ -12,20 +13,14 @@
 #include "serialize.h"
 #include "resource_unpack.h"
 #include "taxis.h"
-
-extern void   gridUnpack ( char *, int, int *, int, void *context);
-extern void  zaxisUnpack ( char *, int, int *, int, void *context);
-extern int streamNint;
-
+#include "zaxis.h"
 
 /*****************************************************************************/
-
-
 
 void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
                          void *context)
 {
-  int token1, token2, nspTarget;
+  int token1, token2, originNamespace;
   int unpackBufferPos = 0;
   int numAssociations = 0, sizeAssociations = 16;
   struct streamAssoc *associations
@@ -42,27 +37,27 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
 	{
 	case START:
 	  serializeUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                          &nspTarget, 1, DATATYPE_INT, context);
+                          &originNamespace, 1, DATATYPE_INT, context);
 	  break;
 	case GRID:
 	  gridUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                     nspTarget, context );
+                     originNamespace, context, 1);
 	  break;
 	case ZAXIS:
 	  zaxisUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                      nspTarget, context);
+                      originNamespace, context, 1);
 	  break;
 	case TAXIS:
 	  taxisUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                      nspTarget, context, 1);
+                      originNamespace, context, 1);
 	  break;
 	case INSTITUTE:
           instituteUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                          nspTarget, context);
+                          originNamespace, context, 1);
 	  break;
 	case MODEL:
           modelUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                      nspTarget, context);
+                      originNamespace, context, 1);
 	  break;
 	case STREAM:
           if (sizeAssociations == numAssociations)
@@ -71,12 +66,12 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
                          sizeof (associations[0]) * (sizeAssociations *= 2));
 	  associations[numAssociations]
             = streamUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                           nspTarget, context);
+                           originNamespace, context);
           ++numAssociations;
 	  break;
 	case VLIST:
           vlistUnpack(unpackBuffer, unpackBufferSize, &unpackBufferPos,
-                      nspTarget, context);
+                      originNamespace, context, 1);
 	  break;
 	default:
 	  xabort ( "TOKEN MAPS NO VALID DATATYPE" );
@@ -90,9 +85,9 @@ void reshUnpackResources(char * unpackBuffer, int unpackBufferSize,
     {
       cdiStreamSetupVlist(stream_to_pointer(associations[i].streamID),
                           namespaceAdaptKey(associations[i].vlistID,
-                                            nspTarget),
+                                            originNamespace),
                           namespaceAdaptKey(associations[i].vlistIDorig,
-                                            nspTarget));
+                                            originNamespace));
     }
   free(associations);
 }

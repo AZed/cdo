@@ -101,7 +101,7 @@ void pstream_list_new(void)
 {
   assert(_pstreamList == NULL);
 
-  _pstreamList = malloc(_pstream_max*sizeof(pstreamPtrToIdx));
+  _pstreamList = (pstreamPtrToIdx*) malloc(_pstream_max*sizeof(pstreamPtrToIdx));
 }
 
 static
@@ -213,7 +213,7 @@ pstream_t *pstream_new_entry(void)
 {
   pstream_t *pstreamptr;
 
-  pstreamptr = malloc(sizeof(pstream_t));
+  pstreamptr = (pstream_t*) malloc(sizeof(pstream_t));
 
   if ( pstreamptr ) pstream_init_entry(pstreamptr);
 
@@ -325,7 +325,7 @@ int pstreamOpenRead(const argument_t *argument)
       char *operatorArg;
       char *operatorName;
       char *newarg;
-      char *pipename = malloc(16);
+      char *pipename = (char*) malloc(16);
       int rval;
       pthread_t thrID;
       pthread_attr_t attr;
@@ -333,17 +333,17 @@ int pstreamOpenRead(const argument_t *argument)
       size_t len;
       size_t stacksize;
       int status;
-      argument_t *newargument = malloc(sizeof(argument_t));
+      argument_t *newargument = (argument_t*) malloc(sizeof(argument_t));
 
       newargument->argc = argument->argc + 1;
-      newargument->argv = malloc(newargument->argc*sizeof(char *));
+      newargument->argv = (char **) malloc(newargument->argc*sizeof(char *));
       memcpy(newargument->argv, argument->argv, argument->argc*sizeof(char *));
 
       operatorArg  = argument->argv[0];
       operatorName = getOperatorName(operatorArg);
 
       len = strlen(argument->args);
-      newarg = malloc(len+16);
+      newarg = (char*) malloc(len+16);
       strcpy(newarg, argument->args);
       sprintf(pipename, "(pipe%d.%d)", processSelf() + 1, processInqChildNum() + 1);
       newarg[len] = ' ';
@@ -363,7 +363,7 @@ int pstreamOpenRead(const argument_t *argument)
       pstreamptr->argument  = (void *) newargument;
  
       if ( ! cdoSilentMode )
-	fprintf(stderr, "%s: Started child process \"%s\".\n", processInqPrompt(), newarg+1);
+	cdoPrint("Started child process \"%s\".", newarg+1);
 
       status = pthread_attr_init(&attr);
       if ( status ) SysError("pthread_attr_init failed for '%s'\n", newarg+1);
@@ -455,7 +455,7 @@ int pstreamOpenRead(const argument_t *argument)
 		  if ( nfiles == 0 ) cdoAbort("No imput file found in %s", pch);
 
 		  pstreamptr->mfiles = nfiles;
-		  pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
+		  pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
 		  
 		  rewind(fp);
 
@@ -476,7 +476,7 @@ int pstreamOpenRead(const argument_t *argument)
 		  char line[65536];
 
 		  pstreamptr->mfiles = nfiles;
-		  pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
+		  pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
 		  
 		  strcpy(line, pch);
 		  for ( i = 0; i < len; i++ ) if ( line[i] == ',' ) line[i] = 0;
@@ -513,7 +513,7 @@ int pstreamOpenRead(const argument_t *argument)
 	      pclose(pfp);
 
 	      pstreamptr->mfiles = nfiles;
-	      pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
+	      pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
 
 	      for ( j = 0; j < nfiles; j++ )
 		pstreamptr->mfnames[j] = fnames[j];
@@ -523,14 +523,14 @@ int pstreamOpenRead(const argument_t *argument)
       if ( pstreamptr->mfiles )
 	{
 	  len = strlen(pstreamptr->mfnames[0]);
-	  filename = malloc(len+1);
+	  filename = (char*) malloc(len+1);
 	  strcpy(filename, pstreamptr->mfnames[0]);
 	  pstreamptr->nfiles = 1;
 	}
       else
 	{
 	  len = strlen(argument->args);
-	  filename = malloc(len+1);
+	  filename = (char*) malloc(len+1);
 	  strcpy(filename, argument->args);
 	}
 
@@ -656,7 +656,7 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
   else
     {
       /* extern int cdoDefaultInstID; */
-      char *filename = malloc(strlen(argument->args)+1);
+      char *filename = (char*) malloc(strlen(argument->args)+1);
 
       pstreamptr = pstream_new_entry();
       if ( ! pstreamptr ) Error("No memory");
@@ -759,7 +759,7 @@ int pstreamOpenAppend(const argument_t *argument)
     }
   else
     {
-      char *filename = malloc(strlen(argument->args)+1);
+      char *filename = (char*) malloc(strlen(argument->args)+1);
 
       pstreamptr = pstream_new_entry();
       if ( ! pstreamptr ) Error("No memory");
@@ -1008,7 +1008,7 @@ void pstreamDefVarlist(pstream_t *pstreamptr, int vlistID)
     cdoAbort("Internal problem, varlist already allocated!");
 
   nvars = vlistNvars(vlistID);
-  varlist = malloc(nvars*sizeof(varlist_t));
+  varlist = (varlist_t*) malloc(nvars*sizeof(varlist_t));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -1102,6 +1102,10 @@ void pstreamDefVlist(int pstreamID, int vlistID)
 
       vlistDefAttTxt(vlistID, CDI_GLOBAL, "CDO", (int)strlen(cdoComment())+1, cdoComment());
 
+#if defined(_OPENMP)
+      if ( ompNumThreads > 1 )
+	vlistDefAttInt(vlistID, CDI_GLOBAL, "cdo_openmp_thread_number", DATATYPE_INT32, 1, &ompNumThreads);
+#endif
       pstreamDefVarlist(pstreamptr, vlistID);
 
       if ( processNums() == 1 && ompNumThreads == 1 ) timer_start(timer_write);
@@ -1247,8 +1251,8 @@ void pstreamCheckDatarange(pstream_t *pstreamptr, int varID, double *array, int 
       if ( datatype == DATATYPE_INT8  || datatype == DATATYPE_UINT8 ||
 	   datatype == DATATYPE_INT16 || datatype == DATATYPE_UINT16 )
 	{
-	  smin = (int) NINTD(smin);
-	  smax = (int) NINTD(smax);
+	  smin = (int) round(smin);
+	  smax = (int) round(smax);
 	}
 
       if      ( datatype == DATATYPE_INT8   ) { vmin =        -128.; vmax =        127.; }
@@ -1383,7 +1387,7 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 	  streamClose(pstreamptr->fileID);
 
 	  len = strlen(pstreamptr->mfnames[nfile]);
-	  filename = malloc(len+1);
+	  filename = (char*) malloc(len+1);
 	  strcpy(filename, pstreamptr->mfnames[nfile]);
 	  pstreamptr->nfiles++;
 
@@ -1554,36 +1558,29 @@ void cdoFinish(void)
 
   if ( !cdoSilentMode )
     {
+      set_text_color(stderr, RESET, GREEN);
+      fprintf(stderr, "%s: ", processInqPrompt());
+      reset_text_color(stderr);
       if ( nvals > 0 )
 	{
 	  if ( sizeof(INT64) > sizeof(long) )
 #if defined(_WIN32)
-	    fprintf(stderr, "%s: Processed %I64d value%s from %d variable%s",
+	    fprintf(stderr, "Processed %I64d value%s from %d variable%s",
 #else
-	    fprintf(stderr, "%s: Processed %jd value%s from %d variable%s",
+	    fprintf(stderr, "Processed %jd value%s from %d variable%s",
 #endif
-		    processInqPrompt(),
-		    nvals, nvals > 1 ? "s" : "",
-		    nvars, nvars > 1 ? "s" : "");
+		    nvals, ADD_PLURAL(nvals), nvars, ADD_PLURAL(nvars));
 	  else
-	    fprintf(stderr, "%s: Processed %ld value%s from %d variable%s",
-		    processInqPrompt(),
-		    (long) nvals, nvals > 1 ? "s" : "",
-		    nvars, nvars > 1 ? "s" : "");
+	    fprintf(stderr, "Processed %ld value%s from %d variable%s",
+		    (long) nvals, ADD_PLURAL(nvals), nvars, ADD_PLURAL(nvars));
 	}
       else if ( nvars > 0 )
 	{
-	  fprintf(stderr, "%s: Processed %d variable%s",
-		  processInqPrompt(),
-		  nvars, nvars > 1 ? "s" : "");
-	}
-      else
-	{
-	  fprintf(stderr, "%s: ", processInqPrompt());
+	  fprintf(stderr, "Processed %d variable%s", nvars,  ADD_PLURAL(nvars));
 	}
 
       if ( ntimesteps > 0 )
-	fprintf(stderr, " over %d timestep%s", ntimesteps, ntimesteps > 1 ? "s" : "");
+	fprintf(stderr, " over %d timestep%s", ntimesteps,  ADD_PLURAL(ntimesteps));
 
       //  fprintf(stderr, ".");
     }

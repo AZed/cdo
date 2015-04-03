@@ -391,7 +391,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_SRV:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("srvWriteRecord not implemented for memtype float!");
-        status = srvWriteRecord(streamptr, data);
+        status = srvWriteRecord(streamptr, (const double*) data);
 	break;
       }
 #endif
@@ -399,7 +399,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_EXT:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("extWriteRecord not implemented for memtype float!");
-        status = extWriteRecord(streamptr, data);
+        status = extWriteRecord(streamptr, (const double*) data);
 	break;
       }
 #endif
@@ -407,7 +407,7 @@ void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
     case FILETYPE_IEG:
       {
         if ( memtype == MEMTYPE_FLOAT ) Error("iegWriteRecord not implemented for memtype float!");
-        status = iegWriteRecord(streamptr, data);
+        status = iegWriteRecord(streamptr, (const double*) data);
 	break;
       }
 #endif

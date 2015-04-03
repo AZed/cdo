@@ -29,15 +29,15 @@ extern void    Free   (const char *caller, const char *file, int line, void *ptr
 #endif
 
 #if  defined  WITH_CALLER_NAME
-#  define  realloc(p, s)  Realloc(__func__, __FILE__, __LINE__, p, (size_t)s)
-#  define   calloc(n, s)   Calloc(__func__, __FILE__, __LINE__, n, (size_t)s)
-#  define   malloc(s)      Malloc(__func__, __FILE__, __LINE__, (size_t)s)
-#  define     free(p)        Free(__func__, __FILE__, __LINE__, p)
+#  define  realloc(p, s)  Realloc(__func__, __FILE__, __LINE__, (p), (s))
+#  define   calloc(n, s)   Calloc(__func__, __FILE__, __LINE__, (n), (s))
+#  define   malloc(s)      Malloc(__func__, __FILE__, __LINE__, (s))
+#  define     free(p)        Free(__func__, __FILE__, __LINE__, (p))
 #else
-#  define  realloc(p, s)  Realloc((void *) NULL, __FILE__, __LINE__, p, (size_t)s)
-#  define   calloc(n, s)   Calloc((void *) NULL, __FILE__, __LINE__, n, (size_t)s)
-#  define   malloc(s)      Malloc((void *) NULL, __FILE__, __LINE__, (size_t)s)
-#  define     free(p)        Free((void *) NULL, __FILE__, __LINE__, p)
+#  define  realloc(p, s)  Realloc((void *) NULL, __FILE__, __LINE__, (p), (s))
+#  define   calloc(n, s)   Calloc((void *) NULL, __FILE__, __LINE__, (n), (s))
+#  define   malloc(s)      Malloc((void *) NULL, __FILE__, __LINE__, (s))
+#  define     free(p)        Free((void *) NULL, __FILE__, __LINE__, (p))
 #endif
 
 #endif /* DEBUG_MEMORY */

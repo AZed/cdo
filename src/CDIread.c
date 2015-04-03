@@ -140,8 +140,8 @@ void *CDIread(void *argument)
 	  
       gridsize = vlistGridsizeMax(vlistID);
       
-      if ( darray == NULL ) darray = malloc(gridsize*sizeof(double));
-      if ( farray == NULL && memtype == MEMTYPE_FLOAT ) farray = malloc(gridsize*sizeof(float));
+      if ( darray == NULL ) darray = (double*) malloc(gridsize*sizeof(double));
+      if ( farray == NULL && memtype == MEMTYPE_FLOAT ) farray = (float*) malloc(gridsize*sizeof(float));
 
       t0 = timer_val(timer_read);
 

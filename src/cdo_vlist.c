@@ -20,12 +20,106 @@
 #include "cdo_int.h"
 #include "error.h"
 
+
+static
+void compare_lat_reg2d(int ysize, int gridID1, int gridID2)
+{
+  if ( ysize > 1 )
+    {
+      double *yvals1, *yvals2;
+      
+      yvals1 = (double*) malloc(ysize*sizeof(double));
+      yvals2 = (double*) malloc(ysize*sizeof(double));
+
+      gridInqYvals(gridID1, yvals1);
+      gridInqYvals(gridID2, yvals2);
+		
+      if ( IS_EQUAL(yvals1[0], yvals2[ysize-1]) &&
+	   IS_EQUAL(yvals1[ysize-1], yvals2[0]) )
+	{
+	  if ( yvals1[0] > yvals2[0] )
+	    cdoWarning("Latitude orientation differ! First grid: N->S; second grid: S->N");
+	  else
+	    cdoWarning("Latitude orientation differ! First grid: S->N; second grid: N->S");
+	}
+      else
+	{
+	  for ( int i = 0; i < ysize; ++i )
+	    if ( fabs(yvals1[i] - yvals2[i]) > 1.e-5 )
+	      {
+		// printf("lat %g %g %g\n", yvals1[i], yvals2[i], yvals1[i] - yvals2[i]);
+		cdoWarning("Grid latitudes differ!");
+		break;
+	      }
+	}
+
+      free(yvals1);
+      free(yvals2);
+    }
+}
+
+static
+void compare_lon_reg2d(int xsize, int gridID1, int gridID2)
+{
+  if ( xsize > 1 )
+    {
+      double *xvals1, *xvals2;
+
+      xvals1 = (double*) malloc(xsize*sizeof(double));
+      xvals2 = (double*) malloc(xsize*sizeof(double));
+
+      gridInqXvals(gridID1, xvals1);
+      gridInqXvals(gridID2, xvals2);
+		  
+      for ( int i = 0; i < xsize; ++i )
+	if ( fabs(xvals1[i] - xvals2[i]) > 1.e-5 )
+	  {
+	    cdoWarning("Grid longitudes differ!");
+	    break;
+	  }
+      
+      free(xvals1);
+      free(xvals2);
+    }
+}
+
+static
+void compare_grid_unstructured(int gridID1, int gridID2)
+{
+  double *xvals1, *xvals2;
+  double *yvals1, *yvals2;
+  int gridsize;
+
+  gridsize = gridInqSize(gridID1);
+
+  xvals1 = (double*) malloc(gridsize*sizeof(double));
+  xvals2 = (double*) malloc(gridsize*sizeof(double));
+  yvals1 = (double*) malloc(gridsize*sizeof(double));
+  yvals2 = (double*) malloc(gridsize*sizeof(double));
+
+  gridInqXvals(gridID1, xvals1);
+  gridInqXvals(gridID2, xvals2);
+  gridInqYvals(gridID1, yvals1);
+  gridInqYvals(gridID2, yvals2);
+		  
+  for ( int i = 0; i < gridsize; ++i )
+    if ( fabs(xvals1[i] - xvals2[i]) > 1.e-5 || fabs(yvals1[i] - yvals2[i]) > 1.e-5 )
+      {
+	cdoWarning("Geographic location of some grid points differ!");
+	break;
+      }
+      
+  free(xvals1);
+  free(xvals2);
+  free(yvals1); 
+  free(yvals2); 
+}
+
 static
 void compareGrids(int gridID1, int gridID2)
 {
   /* compare grids of first variable */
   int xsize, ysize;
-  int i;
 
   if ( gridInqType(gridID1) == gridInqType(gridID2) )
     {
@@ -35,68 +129,18 @@ void compareGrids(int gridID1, int gridID2)
 	  ysize = gridInqYsize(gridID1);
 		
 	  if ( ysize == gridInqYsize(gridID2) )
-	    {
-	      if ( ysize > 1 )
-		{
-		  double *yvals1, *yvals2;
-
-		  yvals1 = malloc(ysize*sizeof(double));
-		  yvals2 = malloc(ysize*sizeof(double));
-
-		  gridInqYvals(gridID1, yvals1);
-		  gridInqYvals(gridID2, yvals2);
-		
-		  if ( IS_EQUAL(yvals1[0], yvals2[ysize-1]) &&
-		       IS_EQUAL(yvals1[ysize-1], yvals2[0]) )
-		    {
-		      if ( yvals1[0] > yvals2[0] )
-			cdoWarning("Grid orientation differ! First grid: N->S; second grid: S->N");
-		      else
-			cdoWarning("Grid orientation differ! First grid: S->N; second grid: N->S");
-		    }
-		  else
-		    {
-		      for ( i = 0; i < ysize; ++i )
-			if ( fabs(yvals1[i] - yvals2[i]) > 1.e-5 )
-			  {
-			    // printf("lat %g %g %g\n", yvals1[i], yvals2[i], yvals1[i] - yvals2[i]);
-			    cdoWarning("Grid latitudes differ!");
-			    break;
-			  }
-		    }
-
-		  free(yvals1);
-		  free(yvals2);
-		}
-	    }
+	    compare_lat_reg2d(ysize, gridID1, gridID2);
 	  else
 	    cdoWarning("ysize of input grids differ!");
 		
 	  if ( xsize == gridInqXsize(gridID2) )
-	    {
-	      if ( xsize > 1 )
-		{
-		  double *xvals1, *xvals2;
-
-		  xvals1 = malloc(xsize*sizeof(double));
-		  xvals2 = malloc(xsize*sizeof(double));
-
-		  gridInqXvals(gridID1, xvals1);
-		  gridInqXvals(gridID2, xvals2);
-		
-		  for ( i = 0; i < xsize; ++i )
-		    if ( fabs(xvals1[i] - xvals2[i]) > 1.e-5 )
-		      {
-			cdoWarning("Grid longitudes differ!");
-			break;
-		      }
-
-		  free(xvals1);
-		  free(xvals2);
-		}
-	    }
+	    compare_lon_reg2d(xsize, gridID1, gridID2);
 	  else
-	    cdoWarning("ysize of input grids differ!");
+	    cdoWarning("xsize of input grids differ!");
+	}
+      else if ( gridInqType(gridID1) == GRID_CURVILINEAR || gridInqType(gridID1) == GRID_UNSTRUCTURED )
+	{
+	  compare_grid_unstructured(gridID1, gridID2);
 	}
     }
   else

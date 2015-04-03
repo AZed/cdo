@@ -139,77 +139,6 @@ void set_source_data(double * source_data, double init_value,
 }
 
 
-static
-long find_ij_weights(double plon, double plat, double *restrict src_lats, double *restrict src_lons, double *ig, double *jg)
-{
-#define  THREE    3.0
-#define  HALF     0.5
-  long    Max_Iter = 100;
-  double  converge = 1.e-10;            /* Convergence criterion */
-  long iter;                     /*  iteration counters   */
-  double iguess, jguess;         /*  current guess for bilinear coordinate  */
-  double deli, delj;             /*  corrections to i,j                     */
-  double dth1, dth2, dth3;       /*  some latitude  differences             */
-  double dph1, dph2, dph3;       /*  some longitude differences             */
-  double dthp, dphp;             /*  difference between point and sw corner */
-  double mat1, mat2, mat3, mat4; /*  matrix elements                        */
-  double determinant;            /*  matrix determinant                     */
-
-  /* Iterate to find i,j for bilinear approximation  */
-
-  dth1 = src_lats[1] - src_lats[0];
-  dth2 = src_lats[3] - src_lats[0];
-  dth3 = src_lats[2] - src_lats[1] - dth2;
-
-  dph1 = src_lons[1] - src_lons[0];
-  dph2 = src_lons[3] - src_lons[0];
-  dph3 = src_lons[2] - src_lons[1];
-
-  if ( dph1 >  THREE*PIH ) dph1 -= PI2;
-  if ( dph2 >  THREE*PIH ) dph2 -= PI2;
-  if ( dph3 >  THREE*PIH ) dph3 -= PI2;
-  if ( dph1 < -THREE*PIH ) dph1 += PI2;
-  if ( dph2 < -THREE*PIH ) dph2 += PI2;
-  if ( dph3 < -THREE*PIH ) dph3 += PI2;
-
-  dph3 = dph3 - dph2;
-
-  iguess = HALF;
-  jguess = HALF;
-
-  for ( iter = 0; iter < Max_Iter; ++iter )
-    {
-      dthp = plat - src_lats[0] - dth1*iguess - dth2*jguess - dth3*iguess*jguess;
-      dphp = plon - src_lons[0];
-      
-      if ( dphp >  THREE*PIH ) dphp -= PI2;
-      if ( dphp < -THREE*PIH ) dphp += PI2;
-
-      dphp = dphp - dph1*iguess - dph2*jguess - dph3*iguess*jguess;
-
-      mat1 = dth1 + dth3*jguess;
-      mat2 = dth2 + dth3*iguess;
-      mat3 = dph1 + dph3*jguess;
-      mat4 = dph2 + dph3*iguess;
-
-      determinant = mat1*mat4 - mat2*mat3;
-
-      deli = (dthp*mat4 - dphp*mat2)/determinant;
-      delj = (dphp*mat1 - dthp*mat3)/determinant;
-
-      if ( fabs(deli) < converge && fabs(delj) < converge ) break;
-
-      iguess += deli;
-      jguess += delj;
-    }
-
-  *ig = iguess;
-  *jg = jguess;
-
-  return (iter);
-}
-
-
 void yar_remap_bil(field_t *field1, field_t *field2)
 {
   int nlonIn, nlatIn;
@@ -255,15 +184,15 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   nlonIn = gridInqXsize(gridIDin);
   nlatIn = gridInqYsize(gridIDin);
   gridsize1 = gridInqSize(gridIDin);
-  lonIn = malloc(nlonIn*sizeof(double));
-  latIn = malloc(nlatIn*sizeof(double));
+  lonIn = (double*) malloc(nlonIn*sizeof(double));
+  latIn = (double*) malloc(nlatIn*sizeof(double));
   gridInqXvals(gridIDin, lonIn);
   gridInqYvals(gridIDin, latIn);
   for ( int i = 0; i < nlonIn; ++i ) lonIn[i] *= DEG2RAD;
   for ( int i = 0; i < nlatIn; ++i ) latIn[i] *= DEG2RAD;
 
-  xlonIn = malloc((nlonIn+1)*sizeof(double));
-  xlatIn = malloc((nlatIn+1)*sizeof(double));
+  xlonIn = (double*) malloc((nlonIn+1)*sizeof(double));
+  xlatIn = (double*) malloc((nlatIn+1)*sizeof(double));
   gridInqXvals(gridIDin, xlonIn);
   gridInqYvals(gridIDin, xlatIn);
   dxIn = xlonIn[1] - xlonIn[0];
@@ -280,15 +209,15 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   nlonOut = gridInqXsize(gridIDout);
   nlatOut = gridInqYsize(gridIDout);
   gridsize2 = gridInqSize(gridIDout);
-  lonOut = malloc(nlonOut*sizeof(double));
-  latOut = malloc(nlatOut*sizeof(double));
+  lonOut = (double*) malloc(nlonOut*sizeof(double));
+  latOut = (double*) malloc(nlatOut*sizeof(double));
   gridInqXvals(gridIDout, lonOut);
   gridInqYvals(gridIDout, latOut);
   for ( int i = 0; i < nlonOut; ++i ) lonOut[i] *= DEG2RAD;
   for ( int i = 0; i < nlatOut; ++i ) latOut[i] *= DEG2RAD;
 
-  xlonOut = malloc((nlonOut+1)*sizeof(double));
-  xlatOut = malloc((nlatOut+1)*sizeof(double));
+  xlonOut = (double*) malloc((nlonOut+1)*sizeof(double));
+  xlatOut = (double*) malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, xlonOut);
   gridInqYvals(gridIDout, xlatOut);
   dxOut = xlonOut[1] - xlonOut[0];
@@ -351,6 +280,12 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   if ( cdoTimer ) timer_start(timer_yar_remap_bil);
 
   search = bucket_search_new(source_grid);
+  /*
+  search = sphere_part_search_new(source_grid);
+  printf("search %p\n", search);
+  printf("search->vtable %p\n", search->vtable);
+  printf("search->vtable->do_point_search_p3 %d\n", search->vtable->do_point_search_p3);
+  */
   /*
 
   printf("total_num_dependencies: %d\n", get_total_num_dependencies(deps));
@@ -416,7 +351,7 @@ void yar_remap_bil(field_t *field1, field_t *field2)
 	    }
 
 	  // try it with do_point_search_p3
-	  if ( find_ij_weights(plon, plat, src_lats, src_lons, &iguess, &jguess) < 100 )
+	  if ( find_ij_weights(plon, plat, src_lats, src_lons, &iguess, &jguess) )
 	    {
 
 	      wgts[0] = (1.-iguess)*(1.-jguess);
@@ -498,12 +433,12 @@ void yar_remap_con(field_t *field1, field_t *field2)
   nlonIn = gridInqXsize(gridIDin);
   nlatIn = gridInqYsize(gridIDin);
   gridsize1 = gridInqSize(gridIDin);
-  lonIn = malloc((nlonIn+1)*sizeof(double));
-  latIn = malloc((nlatIn+1)*sizeof(double));
+  lonIn = (double*) malloc((nlonIn+1)*sizeof(double));
+  latIn = (double*) malloc((nlatIn+1)*sizeof(double));
   gridInqXvals(gridIDin, lonIn);
   gridInqYvals(gridIDin, latIn);
-  xlonIn = malloc((nlonIn)*sizeof(double));
-  xlatIn = malloc((nlatIn)*sizeof(double));
+  xlonIn = (double*) malloc((nlonIn)*sizeof(double));
+  xlatIn = (double*) malloc((nlatIn)*sizeof(double));
   gridInqXvals(gridIDin, xlonIn);
   gridInqYvals(gridIDin, xlatIn);
   dxIn = lonIn[1] - lonIn[0];
@@ -520,12 +455,12 @@ void yar_remap_con(field_t *field1, field_t *field2)
   nlonOut = gridInqXsize(gridIDout);
   nlatOut = gridInqYsize(gridIDout);
   gridsize2 = gridInqSize(gridIDout);
-  lonOut = malloc((nlonOut+1)*sizeof(double));
-  latOut = malloc((nlatOut+1)*sizeof(double));
+  lonOut = (double*) malloc((nlonOut+1)*sizeof(double));
+  latOut = (double*) malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, lonOut);
   gridInqYvals(gridIDout, latOut);
-  xlonOut = malloc((nlonOut+1)*sizeof(double));
-  xlatOut = malloc((nlatOut+1)*sizeof(double));
+  xlonOut = (double*) malloc((nlonOut+1)*sizeof(double));
+  xlatOut = (double*) malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, xlonOut);
   gridInqYvals(gridIDout, xlatOut);
   dxOut = lonOut[1] - lonOut[0];
@@ -605,20 +540,20 @@ void yar_remap_con(field_t *field1, field_t *field2)
   double const epsilon = 1.0e-10; // relative precision 
 
   double *weight;
-  weight = malloc(gridsize1*sizeof(double));
+  weight = (double*) malloc(gridsize1*sizeof(double));
 
   double tgt_area;
   double *area;
-  area = malloc(gridsize1*sizeof(double));
+  area = (double*) malloc(gridsize1*sizeof(double));
 
   struct grid_cell *SourceCell;
-  SourceCell = malloc (gridsize1  * sizeof(*SourceCell) );
+  SourceCell = (struct grid_cell*) malloc(gridsize1  * sizeof(struct grid_cell));
 
   for ( int n = 0; n <  gridsize1; n++ ) {
     SourceCell[n].num_corners   = 4;
     SourceCell[n].edge_type     = quad_type;
-    SourceCell[n].coordinates_x = malloc ( 4 * sizeof(SourceCell[n].coordinates_x[0]) );
-    SourceCell[n].coordinates_y = malloc ( 4 * sizeof(SourceCell[n].coordinates_y[0]) );
+    SourceCell[n].coordinates_x = (double*) malloc( 4 * sizeof(double));
+    SourceCell[n].coordinates_y = (double*) malloc( 4 * sizeof(double));
   }
 
   struct grid_cell  TargetCell;
@@ -626,8 +561,8 @@ void yar_remap_con(field_t *field1, field_t *field2)
   TargetCell.num_corners   = 4;
   TargetCell.edge_type     = quad_type;
 
-  TargetCell.coordinates_x = malloc ( 4 * sizeof(*TargetCell.coordinates_x) );
-  TargetCell.coordinates_y = malloc ( 4 * sizeof(*TargetCell.coordinates_y) );
+  TargetCell.coordinates_x = (double*) malloc( 4 * sizeof(double));
+  TargetCell.coordinates_y = (double*) malloc( 4 * sizeof(double));
 
   unsigned const * curr_deps;
   //struct polygons polygons;
@@ -838,10 +773,10 @@ void *YAR(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1   = malloc(gridsize*sizeof(double));
+  array1   = (double*) malloc(gridsize*sizeof(double));
 
   gridsize = gridInqSize(gridID2);
-  array2   = malloc(gridsize*sizeof(double));
+  array2   = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -41,14 +41,13 @@
 #include "utils.h"
 #include "ensure_array_size.h"
 
-// area tolerance (100 m*m = 0.0001 km*km)
-const double area_tol = 1e-4;
+// area tolerance (10 m^2 = 0.0001 km^2)
+const double area_tol = 0.02*0.02; // 20m*20m
 
-static double scalar_product(double a[], double b[]);
+static inline double scalar_product(double a[], double b[]);
 
-static void cross_product(double a[], double b[], double cross[]);
-
-static double inner_angle ( double plat, double plon, double qlon, double qlat );
+static inline double inner_angle ( double plat, double plon,
+                                   double qlon, double qlat );
 
 static double partial_area ( double a_lon, double a_lat,
                              double b_lon, double b_lat,
@@ -86,7 +85,7 @@ double triangle_area ( struct grid_cell cell ) {
   double ca1, ca2, ca3;
   double a1, a2, a3;
 
-  double triangle[3][3];
+  double * triangle[3];
   double u01[3], u12[3], u20[3];
 
   if ( cell.num_corners != 3 ) {
@@ -94,16 +93,15 @@ double triangle_area ( struct grid_cell cell ) {
     return -1;
   }
 
-  /* Convert into cartesian coordinates */
-
-  for (int m = 0; m < 3; m++ )
-    LLtoXYZ(cell.coordinates_x[m], cell.coordinates_y[m], triangle[m]);
+  triangle[0] = cell.coordinates_xyz + 0*3;
+  triangle[1] = cell.coordinates_xyz + 1*3;
+  triangle[2] = cell.coordinates_xyz + 2*3;
 
   /* First, compute cross products Uij = Vi x Vj. */
 
-  cross_product(triangle[0], triangle[1], u01);
-  cross_product(triangle[1], triangle[2], u12);
-  cross_product(triangle[2], triangle[0], u20);
+  crossproduct_ld(triangle[0], triangle[1], u01);
+  crossproduct_ld(triangle[1], triangle[2], u12);
+  crossproduct_ld(triangle[2], triangle[0], u20);
 
   /*  Normalize Uij to unit vectors. */
 
@@ -172,18 +170,16 @@ double cell_area ( struct grid_cell cell ) {
   double ca[cell.num_corners];
   double a[cell.num_corners];
 
-  double p[cell.num_corners][3];
+  double * p[cell.num_corners];
   double u[cell.num_corners][3];
 
-  /* Convert into cartesian coordinates */
-
-  for (int m = 0; m < M; m++ )
-    LLtoXYZ( cell.coordinates_x[m], cell.coordinates_y[m], p[m]);
+  for (int i = 0; i < cell.num_corners; ++i)
+    p[i] = cell.coordinates_xyz + i * 3;
 
   /* First, compute cross products Uij = Vi x Vj. */
 
   for (int m = 0; m < M; m++ )
-    cross_product (p[m], p[(m+1)%M], u[m]);
+    crossproduct_ld (p[m], p[(m+1)%M], u[m]);
 
   /*  Normalize Uij to unit vectors. */
 
@@ -304,14 +300,12 @@ double cell3d_area( struct grid_cell cell ) {
 
    int  coord;           // coord to ignore: 1=x[1], 2=x[2], 3=x[3]
 
-   double V[cell.num_corners][3];
+   double * V[cell.num_corners];
    double Norm[3];
    double edge[2][3];
 
-   /* transform vertices into cartesian coordinates on the earth surface
-      must be done already here to avoid round-off errors later */
-   for (int i = 0; i < M; i++ )
-      LLtoXYZ( cell.coordinates_x[i], cell.coordinates_y[i], V[i]);
+   for (int i = 0; i < cell.num_corners; ++i)
+      V[i] = cell.coordinates_xyz + i * 3;
 
    /* compute normal vector */
    edge[0][0] = V[0][0] - V[1][0];
@@ -321,7 +315,7 @@ double cell3d_area( struct grid_cell cell ) {
    edge[1][1] = V[0][1] - V[2][1];
    edge[1][2] = V[0][2] - V[2][2];
 
-   cross_product(edge[0], edge[1], Norm);
+   crossproduct_ld(edge[0], edge[1], Norm);
 
    /* select largest abs coordinate to ignore for projection */
    ax = (Norm[0]>0 ? Norm[0] : -Norm[0]);    // abs x-coord
@@ -405,20 +399,132 @@ double cell3d_area( struct grid_cell cell ) {
   * Prediction, Los Alamos National Laboratory, Argonne National Laboratory,
   * NASA Goddard Space Flight Center.
   * Licensed under the University of Illinois-NCSA License.
+  *
+  * \remark all edges are on great circle
   */
 static double
 tri_area(double u[3], double v[3], double w[3]) {
 
-  double a = get_vector_angle(u,v);
-  double b = get_vector_angle(u,w);
-  double c = get_vector_angle(w,v);
+  double a_ = get_vector_angle(u,v);
+  double b_ = get_vector_angle(u,w);
+  double c_ = get_vector_angle(w,v);
 
-  double s=0.5*(a+b+c);
+  double a, b, c;
 
-  double t = tan ( s / 2.0 ) * tan ( ( s - a ) / 2.0 ) *
-             tan ( ( s - b ) / 2.0 ) * tan ( ( s - c ) / 2.0 );
+  if (a_ < b_) {
+    if (a_ < c_) {
+      if (b_ < c_) {
+        a = a_, b = b_, c = c_;
+      } else {
+        a = a_, b = c_, c = b_;
+      }
+    } else {
+      a = c_, b = a_, c = b_;
+    }
+  } else {
+    if (b_ < c_) {
+      if (a_ < c_) {
+        a = b_, b = a_, c = c_;
+      } else {
+        a = b_, b = c_, c = a_;
+      }
+    } else {
+      a = c_, b = b_, c = a_;
+    }
+  }
 
-  return fabs ( 4.0 * atan ( sqrt (fabs ( t ) ) ) );;
+  // see: http://en.wikipedia.org/wiki/Heron%27s_formula#Numerical_stability
+  // see also: http://www.eecs.berkeley.edu/~wkahan/Triangle.pdf
+
+  // the tolerance value is determined empirically
+  if ((a + (b - c)) < c * 1e-14) return 0.0;
+
+  double t = tan(0.25 * (a + (b + c))) * tan(0.25 * (c - (a - b))) *
+             tan(0.25 * (c + (a - b))) * tan(0.25 * (a + (b - c)));
+
+  return fabs(4.0 * atan(sqrt(fabs(t))));
+}
+
+static inline int compute_norm_vector(double a[], double b[], double norm[]) {
+
+  crossproduct_ld(a, b, norm);
+
+  double scale = sqrt(norm[0] * norm[0] + norm[1] * norm[1] + norm[2] * norm[2]);
+
+  if (scale == 0) return 1;
+
+  scale = 1.0 / scale;
+
+  norm[0] *= scale;
+  norm[1] *= scale;
+  norm[2] *= scale;
+
+  return 0;
+}
+
+static double
+lat_edge_correction(double base_point[3], double a[3], double b[3],
+                    double lon_a, double lon_b) {
+
+  double const tol = 1e-8;
+
+  if (fabs(a[2] - b[2]) > tol)
+    abort_message("ERROR: latitude of both corners is not identical\n",
+                  __FILE__, __LINE__);
+
+  double h = fabs(a[2]);
+
+  // if we are at the equator or at a pole
+  if (h < tol || fabs(1.0 - h) < tol)
+    return 0.0;
+
+  double lat_area = fabs((1.0 - h) * get_angle(lon_a, lon_b));
+
+  double pole[3] = {0, 0, (a[2] >= 0.0)?1:-1};
+  double gc_area = tri_area(a, b, pole);
+
+  double correction = MAX(lat_area - gc_area, 0.0);
+
+  double middle_lat[3] = {a[0]+b[0], a[1]+b[1], a[2]};
+  double scale = sqrt(middle_lat[0]*middle_lat[0]+middle_lat[1]*middle_lat[1]);
+
+  if (scale == 0) abort_message("internal error", __FILE__, __LINE__);
+
+  scale = sqrt(1.0 - a[2]*a[2]) / scale;
+
+  middle_lat[0] *= scale;
+  middle_lat[1] *= scale;
+
+  double norm_ab[3];
+
+  // if the angle between a and b is to small to compute a norm vector
+  if (compute_norm_vector(a, b, norm_ab)) return 0.0;
+
+  double scalar_base = scalar_product(norm_ab, base_point);
+  double scalar_middle_lat = scalar_product(norm_ab, middle_lat);
+
+  // if the base point is on the same plane as a and b
+  if (fabs(scalar_base) < 1e-11) {
+
+    double norm_middle[3];
+    double pole[3] = {0,0,((a[2]>0)?1:-1)};
+
+    if (compute_norm_vector(middle_lat, pole, norm_middle)) return 0.0;
+
+    double scalar_a = scalar_product(norm_middle, a);
+
+    if (scalar_a > 0)
+      return correction;
+    else
+      return - correction;
+
+  } else {
+
+    if (scalar_middle_lat < 0)
+      return correction;
+    else
+      return - correction;
+  }
 }
 
 double pole_area ( struct grid_cell cell ) {
@@ -450,11 +556,11 @@ double pole_area ( struct grid_cell cell ) {
 
     if (cell.edge_type[i] == GREAT_CIRCLE || cell.edge_type[i] == LON_CIRCLE) {
 
-      double a[3];
-      double b[3];
+      double * a;
+      double * b;
 
-      LLtoXYZ(cell.coordinates_x[i], cell.coordinates_y[i], a);
-      LLtoXYZ(cell.coordinates_x[(i+1)%M], cell.coordinates_y[(i+1)%M], b);
+      a = cell.coordinates_xyz + i * 3;
+      b = cell.coordinates_xyz + ((i+1)%M) * 3;
 
       double edge_direction = a[0]*b[1]-a[1]*b[0]; // 3. component of cross product
 
@@ -495,109 +601,71 @@ double pole_area ( struct grid_cell cell ) {
   return fabs(area * EarthRadius * EarthRadius);
 }
 
-static double
-lat_edge_correction(double a[3], double b[3], double lon_a, double lon_b) {
-
-  double const tol = 1e-8;
-
-  if (fabs(a[2] - b[2]) > tol)
-    abort_message("ERROR: latitude of both corners is not identical\n",
-                  __FILE__, __LINE__);
-
-  double h = fabs(a[2]);
-
-  // if we are at the equator or at a pole
-  if (h < tol || fabs(1.0 - h) < tol)
-    return 0.0;
-
-  double lat_area = fabs((1.0 - h) * get_angle(lon_a, lon_b));
-
-  double pole[3] = {0, 0, (a[2] >= 0.0)?1:-1};
-  double gc_area = tri_area(a, b, pole);
-
-  double correction = lat_area - gc_area;
-
-  if (correction < 0) return 0;
-  else return correction;
-}
-
  /*
   * source code is originally based on code by Robert Oehmke of Earth System Modeling
   * Framework (www.earthsystemmodeling.org)
   *
   * it has be extended to support YAC data structures and two types of
   * grid cell edges (great circle and circle of latitude)
+  *
   */
 double huiliers_area(struct grid_cell cell) {
 
-  double tmp_points[cell.num_corners][3];
-  double const tol = 1e-8;
-
   if (cell.num_corners < 2) return 0;
 
-  // convert lon-lat to xyz
+  int lat_flag = 0;
+
   for (int i = 0; i < cell.num_corners; i++)
-    LLtoXYZ(cell.coordinates_x[i], cell.coordinates_y[i], tmp_points[i]);
+    lat_flag |= cell.edge_type[i] == LAT_CIRCLE;
+
+  if (cell.num_corners == 3 && !lat_flag)
+    return fabs(tri_area(cell.coordinates_xyz + 0*3,
+                         cell.coordinates_xyz + 1*3,
+                         cell.coordinates_xyz + 2*3) *
+                EarthRadius * EarthRadius);
 
   // sum areas around cell
   double sum = 0.0;
 
-  for (int i = 2; i < cell.num_corners; i++)
-    sum += tri_area(tmp_points[0], tmp_points[i-1], tmp_points[i]);
+  for (int i = 2; i < cell.num_corners; ++i) {
 
-  // check for edges of latitude
-  unsigned num_lat_circle_edges = 0;
-  for (unsigned i = 0; i < cell.num_corners; ++i)
-    if (cell.edge_type[i] == LAT_CIRCLE)
-      num_lat_circle_edges++;
+    double tmp_area = tri_area(cell.coordinates_xyz + 0*3,
+                               cell.coordinates_xyz + (i-1)*3,
+                               cell.coordinates_xyz + i * 3);
 
-  if (num_lat_circle_edges > 2)
-    abort_message("ERROR: invalid cell (has more than two edges that are "
-                  "latitude circles)\n", __FILE__, __LINE__);
+    double norm[3];
 
-  if (num_lat_circle_edges > 0) {
+    if (compute_norm_vector(cell.coordinates_xyz + (i-1) * 3,
+                            cell.coordinates_xyz + i * 3, norm)) continue;
 
-    // compute minimum and maximum height of cell
-    double min = cell.coordinates_y[0], max = cell.coordinates_y[0];
+    double scalar_base = scalar_product(norm, cell.coordinates_xyz + 0*3);
 
-    for (int i = 1; i < cell.num_corners; ++i)
-      if (cell.coordinates_y[i] < min) min = cell.coordinates_y[i];
-      else if (cell.coordinates_y[i] > max) max = cell.coordinates_y[i];
+    if (scalar_base > 0)
+      sum += tmp_area;
+    else
+      sum -= tmp_area;
+  }
 
-    double min_factor = 1.0;
-
-    if (max <= 0.0) {
-
-      double tmp = max;
-      max = min;
-      min = tmp;
-
-    } else if (signbit(min) != signbit(max))
-      min_factor = -1.0;
+  // if there is at least on latitude circle edge
+  if (lat_flag) {
 
     for (int i = 0; i < cell.num_corners; ++i) {
 
       if (cell.edge_type[i] == LAT_CIRCLE) {
 
-        double correction =
-          lat_edge_correction(tmp_points[i],
-                              tmp_points[(i+1)%cell.num_corners],
-                              cell.coordinates_x[i],
-                              cell.coordinates_x[(i+1)%cell.num_corners]);
+        int i_ = (i+1)%cell.num_corners;
 
-        if (fabs(cell.coordinates_y[i] - min) < tol)
-          sum += min_factor * correction;
-        else if (fabs(cell.coordinates_y[i] - max) < tol)
-          sum -= correction;
-        else
-          abort_message("ERROR: internal error...should have not occured\n",
-                        __FILE__, __LINE__);
+        sum += lat_edge_correction(cell.coordinates_xyz + 0 * 3,
+                                   cell.coordinates_xyz + i * 3,
+                                   cell.coordinates_xyz + i_ * 3,
+                                   cell.coordinates_x[i],
+                                   cell.coordinates_x[i_]);
       }
     }
   }
 
   // return area
-  return sum * EarthRadius * EarthRadius;
+  return fabs(sum * EarthRadius * EarthRadius);
 }
 
 /* ----------------------------------- */
@@ -622,7 +690,8 @@ double partial_area ( double a_lon, double a_lat,
 
 /* ----------------------------------- */
 
-double inner_angle ( double plat, double plon, double qlat, double qlon ) {
+static double inline inner_angle ( double plat, double plon,
+                                   double qlat, double qlon ) {
 
   double t = sin((qlon-plon))*cos(qlat);
 
@@ -634,14 +703,8 @@ double inner_angle ( double plat, double plon, double qlat, double qlon ) {
 
 /* ----------------------------------- */
 
-static double scalar_product(double a[], double b[]) {
+static inline double scalar_product(double a[], double b[]) {
   return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]);
 }
 
 /* ----------------------------------- */
-
-static void cross_product(double a[], double b[], double cross[]) {
-  cross[0] = a[1]*b[2] - a[2]*b[1];
-  cross[1] = a[2]*b[0] - a[0]*b[2];
-  cross[2] = a[0]*b[1] - a[1]*b[0];
-}

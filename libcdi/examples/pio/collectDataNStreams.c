@@ -2,6 +2,9 @@
 #  include "config.h"
 #endif
 
+#include <stdio.h>
+#include <string.h>
+
 #ifdef USE_MPI
 #include <mpi.h>
 #else
@@ -10,10 +13,11 @@ typedef int MPI_Comm;
 #endif
 
 #include "cdi.h"
-#include "pio_util.h"
+#include "error.h"
 
 #ifdef USE_MPI
 #include "cdipio.h"
+#include "pio_util.h"
 #endif
 
 static void hoursPassingHack ( int * vdate, int * vtime, int hoursPassed )
@@ -51,8 +55,8 @@ static void modelRun(MPI_Comm commModel)
   static int nlev[nStreams][nVars] =
     {{1,1,5,5,2},{3,5,2,2,1},{3,5,2,2,1},{5,2,2,2,1}, {3,3,3,3,3}};
 
-  static char nameExp[7]           = "example";
-  static int asciiA                = 65;
+  static char nameExp[] = "example";
+  static int asciiA     = 65;
   char filename[1024];
 
   int gridID, zaxisID[nStreams][nVars], taxisID;
@@ -126,7 +130,7 @@ static void modelRun(MPI_Comm commModel)
           maxChunkSize = varSize[i][j];
 #endif
       }
-    var = malloc(maxChunkSize * sizeof (var[0]));
+    var = (double*) malloc(maxChunkSize * sizeof (var[0]));
   }
   taxisID = taxisCreate ( TAXIS_ABSOLUTE );
   for ( i = 0; i < nStreams; i++ )
@@ -217,7 +221,6 @@ static void modelRun(MPI_Comm commModel)
       zaxisDestroy ( zaxisID[i][j] );
   gridDestroy ( gridID );
   free(var);
-  xdebug("%s", "RETURN");
 }
 
 

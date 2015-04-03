@@ -58,7 +58,12 @@
   * @param[in] overlap_buffer buffer for the overlaps between the target and
   *                           the source cells
   *
-  * \remark Valid for convex cells only!
+  * \remark source and target cells have to be convex
+  * \remark cells in overlap_buffer can be concave
+  * \remark overlap_buffer must contain valid grid_cells (have to be initialised
+  *         using \ref init_grid_cell; initialisation have to be done only once,
+  *         in consecutive calls, the cells can be reused with have to be
+  *         reinitialised)
   *
  **/
 void cell_clipping ( unsigned N,
@@ -82,17 +87,13 @@ void cell_clipping ( unsigned N,
   * covered by N source cells the N partial areas should add up to the area of
   * the target cell.
   *
-  * The vertices of source and target cells can be either provided in a clockwise
-  * or anticlockwise sense. However, the same sense must be used for source and
-  * target cells.
-  *
   * @param[in]  N             number of source cells
   * @param[in]  source_cell   list of source cells
   * @param[in]  target_cell   target cell
   * @param[out] partial_areas list of N partial weights, one weight for each
   *                           source-target intersection
   *
-  * \remark Valid for convex cells only!
+  * \remark source and target cell have to be convex
   *
  **/
 void compute_overlap_areas(unsigned N,

@@ -45,6 +45,7 @@
 #include "util.h"
 #include "namelist.h"
 
+int stringToParam(const char *paramstr);
 
 typedef enum {CODE_NUMBER, PARAMETER_ID, VARIABLE_NAME, STANDARD_NAME} pt_mode_t;
 
@@ -173,7 +174,7 @@ void *get_converter(char *src_unit_str, char *tgt_unit_str, int *rstatus)
 
 typedef struct
 {
-  int delete;
+  int remove;
   // missing value
   int changemissval;
   double missval_old;
@@ -257,6 +258,7 @@ void defineVarUnits(var_t *vars, int vlistID2, int varID, char *units, char *nam
 		}
 	    }
 #else
+	  UNUSED(name);
 	  if ( lwarn_udunits )
 	    {
 	      cdoWarning("Can't convert units, UDUNITS2 support not compiled in!");
@@ -276,23 +278,24 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 {
   FILE *fp;
   namelist_t *nml;
-  int nml_code, nml_out_code, nml_table, nml_param, nml_chunktype, nml_datatype, nml_type, nml_name, nml_out_name, nml_stdname;
+  int nml_code, nml_out_code, nml_table, nml_param, nml_out_param, nml_chunktype, nml_datatype, nml_type, nml_name, nml_out_name, nml_stdname;
   int nml_longname, nml_units, nml_comment, nml_ltype, nml_delete, nml_missval, nml_factor;
   int nml_cell_methods, nml_cell_measures;
   int nml_valid_min, nml_valid_max, nml_ok_min_mean_abs, nml_ok_max_mean_abs;
   int locc, i;
-  int code, out_code, table, ltype, delete;
+  int code, out_code, table, ltype, remove;
   int nml_index = 0;
   int codenum, tabnum, levtype, param;
   int varID, tableID;
   int num_pt_files;
-  double param_dp;
   double missval, factor;
   double valid_min, valid_max, ok_min_mean_abs, ok_max_mean_abs;
   char *partab = NULL;
   char *chunktypestr = NULL;
   char *datatypestr = NULL;
   char *typestr = NULL;
+  char *paramstr = NULL;
+  char *out_paramstr = NULL;
   char *name = NULL, *out_name = NULL, *stdname = NULL, longname[CDI_MAX_NAME] = "", units[CDI_MAX_NAME] = "";
   char cell_methods[CDI_MAX_NAME] = "", cell_measures[CDI_MAX_NAME] = "";
   char varname[CDI_MAX_NAME];
@@ -314,14 +317,15 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
       nml_out_code        = namelistAdd(nml, "out_code",        NML_INT,  0, &out_code, 1);
       nml_table           = namelistAdd(nml, "table",           NML_INT,  0, &table, 1);
       nml_ltype           = namelistAdd(nml, "ltype",           NML_INT,  0, &ltype, 1);
-      nml_delete          = namelistAdd(nml, "delete",          NML_INT,  0, &delete, 1);
+      nml_delete          = namelistAdd(nml, "delete",          NML_INT,  0, &remove, 1);
       nml_missval         = namelistAdd(nml, "missing_value",   NML_FLT,  0, &missval, 1);
       nml_factor          = namelistAdd(nml, "factor",          NML_FLT,  0, &factor, 1);
       nml_valid_min       = namelistAdd(nml, "valid_min",       NML_FLT,  0, &valid_min, 1);
       nml_valid_max       = namelistAdd(nml, "valid_max",       NML_FLT,  0, &valid_max, 1);
       nml_ok_min_mean_abs = namelistAdd(nml, "ok_min_mean_abs", NML_FLT,  0, &ok_min_mean_abs, 1);
       nml_ok_max_mean_abs = namelistAdd(nml, "ok_max_mean_abs", NML_FLT,  0, &ok_max_mean_abs, 1);
-      nml_param           = namelistAdd(nml, "param",           NML_FLT,  0, &param_dp, 1);
+      nml_param           = namelistAdd(nml, "param",           NML_WORD, 0, &paramstr, 1);
+      nml_out_param       = namelistAdd(nml, "out_param",       NML_WORD, 0, &out_paramstr, 1);
       nml_chunktype       = namelistAdd(nml, "chunktype",       NML_WORD, 0, &chunktypestr, 1);
       nml_datatype        = namelistAdd(nml, "datatype",        NML_WORD, 0, &datatypestr, 1);
       nml_type            = namelistAdd(nml, "type",            NML_WORD, 0, &typestr, 1);
@@ -333,12 +337,14 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
       nml_comment         = namelistAdd(nml, "comment",         NML_TEXT, 0, comment, sizeof(comment));
       nml_cell_methods    = namelistAdd(nml, "cell_methods",    NML_TEXT, 0, cell_methods, sizeof(cell_methods));
       nml_cell_measures   = namelistAdd(nml, "cell_measures",   NML_TEXT, 0, cell_measures, sizeof(cell_measures));
-	      
+
       while ( ! feof(fp) )
 	{
 	  namelistReset(nml);
 
 	  namelistRead(fp, nml);
+
+	  if ( cdoVerbose ) namelistPrint(nml);
 
 	  locc = FALSE;
 	  for ( i = 0; i < nml->size; i++ )
@@ -356,7 +362,7 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		{
 		  if ( nml->entry[nml_code]->occ == 0 )
 		    {
-		      cdoPrint("Parameter entry %d (table %d) skipped, code number not found!", nml_index, fileID+1);
+		      cdoPrint("Parameter entry %d (parameter table %d) skipped, code number not found!", nml_index, fileID+1);
 		      continue;
 		    }
 		}
@@ -364,7 +370,7 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		{
 		  if ( nml->entry[nml_param]->occ == 0 )
 		    {
-		      cdoWarning("Parameter entry %d (table %d) skipped, parameter ID not found!", nml_index, fileID+1);
+		      cdoWarning("Parameter entry %d (parameter table %d) skipped, parameter ID not found!", nml_index, fileID+1);
 		      continue;
 		    }
 		}
@@ -372,7 +378,7 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		{
 		  if ( nml->entry[nml_name]->occ == 0 )
 		    {
-		      cdoWarning("Parameter entry %d (table %d) skipped, variable name not found!", nml_index, fileID+1);
+		      cdoWarning("Parameter entry %d (parameter table %d) skipped, variable name not found!", nml_index, fileID+1);
 		      continue;
 		    }
 		}
@@ -386,7 +392,7 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		      tabnum  = tableInqNum(tableID);
 		      levtype = zaxisInqLtype(vlistInqVarZaxis(vlistID2, varID));
 		      
-		      //	printf("code = %d  tabnum = %d  ltype = %d\n", codenum, tabnum, levtype);
+		      // printf("code = %d  tabnum = %d  ltype = %d\n", codenum, tabnum, levtype);
 		      
 		      if ( nml->entry[nml_table]->occ == 0 ) table = tabnum;
 		      if ( nml->entry[nml_ltype]->occ == 0 ) ltype = levtype;
@@ -395,21 +401,14 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		    }
 		  else if ( ptmode == PARAMETER_ID )
 		    {
+		      int paramid = stringToParam(paramstr);
+
 		      param   = vlistInqVarParam(vlistID2, varID);
-		      codenum = vlistInqVarCode(vlistID2, varID);
-		      tableID = vlistInqVarTable(vlistID2, varID);
-		      tabnum  = tableInqNum(tableID);
 		      levtype = zaxisInqLtype(vlistInqVarZaxis(vlistID2, varID));
-		      
-		      //	printf("code = %d  tabnum = %d  ltype = %d\n", codenum, tabnum, levtype);
-		      code  = (int) param_dp;
-		      table = (param_dp-code)*1000;
-		      printf("code = %d  tabnum = %d  ltype = %d\n", code, table, levtype);
-		      
-		      if ( nml->entry[nml_table]->occ == 0 ) table = tabnum;
+
 		      if ( nml->entry[nml_ltype]->occ == 0 ) ltype = levtype;
 		  
-		      if ( codenum == code && tabnum == table && levtype == ltype ) break;
+		      if ( param == paramid && levtype == ltype ) break;
 		    }
 		  else if ( ptmode == VARIABLE_NAME )
 		    {
@@ -430,9 +429,11 @@ void read_partab(pt_mode_t ptmode, int nvars, int vlistID2, var_t *vars)
 		  if ( nml->entry[nml_longname]->occ ) vlistDefVarLongname(vlistID2, varID, longname);
 		  if ( nml->entry[nml_units]->occ    ) defineVarUnits(vars, vlistID2, varID, units, name);
 		  if ( nml->entry[nml_comment]->occ  ) defineVarAttText(vlistID2, varID, "comment", comment);
-		  if ( nml->entry[nml_cell_methods]->occ  )  defineVarAttText(vlistID2, varID, "cell_methods", cell_methods);
-		  if ( nml->entry[nml_cell_measures]->occ  ) defineVarAttText(vlistID2, varID, "cell_measures", cell_measures);
-		  if ( nml->entry[nml_delete]->occ && delete == 1 ) vars[varID].delete = TRUE;
+		  if ( nml->entry[nml_cell_methods]->occ  ) defineVarAttText(vlistID2, varID, "cell_methods", cell_methods);
+		  if ( nml->entry[nml_cell_measures]->occ ) defineVarAttText(vlistID2, varID, "cell_measures", cell_measures);
+		  if ( nml->entry[nml_delete]->occ && remove == 1 ) vars[varID].remove = TRUE;
+		  if ( nml->entry[nml_param]->occ )     vlistDefVarParam(vlistID2, varID, stringToParam(paramstr));
+		  if ( nml->entry[nml_out_param]->occ ) vlistDefVarParam(vlistID2, varID, stringToParam(out_paramstr));
 		  if ( nml->entry[nml_datatype]->occ )
 		    {
 		      int datatype = str2datatype(datatypestr);
@@ -613,7 +614,7 @@ void *Setpartab(void *argument)
 
   if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
 
-  if      ( operatorID == SETPARTAB )  ptmode = CODE_NUMBER;
+  if      ( operatorID == SETPARTAB  ) ptmode = CODE_NUMBER;
   else if ( operatorID == SETPARTABC ) ptmode = CODE_NUMBER;
   else if ( operatorID == SETPARTABP ) ptmode = PARAMETER_ID;
   else if ( operatorID == SETPARTABN ) ptmode = VARIABLE_NAME;
@@ -623,7 +624,6 @@ void *Setpartab(void *argument)
       FILE *fp;
       size_t fsize;
       char *parbuf = NULL;
-      size_t nbytes;
 
       partab = operatorArgv()[0];
       fp = fopen(partab, "r");
@@ -631,9 +631,9 @@ void *Setpartab(void *argument)
 	{
 	  fseek(fp, 0L, SEEK_END);
 	  fsize = (size_t) ftell(fp);
-	  parbuf = malloc(fsize+1);
+	  parbuf = (char*) malloc(fsize+1);
 	  fseek(fp, 0L, SEEK_SET);
-	  nbytes = fread(parbuf, fsize, 1, fp);
+	  fread(parbuf, fsize, 1, fp);
 	  parbuf[fsize] = 0;
 	  fseek(fp, 0L, SEEK_SET);
 
@@ -661,7 +661,7 @@ void *Setpartab(void *argument)
   /* vlistPrint(vlistID2);*/
 
   nvars = vlistNvars(vlistID2);
-  vars = malloc(nvars*sizeof(var_t));
+  vars = (var_t*) malloc(nvars*sizeof(var_t));
   memset(vars, 0, nvars*sizeof(var_t));
 
   if ( tableformat == 0 )
@@ -674,7 +674,7 @@ void *Setpartab(void *argument)
       read_partab(ptmode, nvars, vlistID2, vars);
 
       for ( varID = 0; varID < nvars; ++varID )
-	if ( vars[varID].delete ) break;
+	if ( vars[varID].remove ) break;
 
       if ( varID < nvars ) delvars = TRUE;
 
@@ -693,7 +693,7 @@ void *Setpartab(void *argument)
 		{
 		  vlistDefFlag(vlistID1, varID, levID, TRUE);
 		  vlistDefFlag(vlistID2, varID, levID, TRUE);
-		  if ( vars[varID].delete )
+		  if ( vars[varID].remove )
 		    {
 		      vlistDefFlag(vlistID1, varID, levID, FALSE);
 		      vlistDefFlag(vlistID2, varID, levID, FALSE);
@@ -721,7 +721,7 @@ void *Setpartab(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
@@ -739,7 +739,7 @@ void *Setpartab(void *argument)
 
 	  if ( delvars )
 	    {
-	      if ( vars[varID].delete ) continue;
+	      if ( vars[varID].remove ) continue;
 
 	      if ( vlistInqFlag(vlistID1, varID, levelID) == TRUE )
 		{

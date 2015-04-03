@@ -165,7 +165,7 @@ int SetMagicsParameterValue( char *param_name, char *param_type, char *param_val
 		split_str_count = StringSplitWithSeperator( param_value, sep_char, &split_str );
 		if( split_str_count )
 		  {
-			float_param_list = malloc ( sizeof( double ) * split_str_count );
+		    float_param_list = (double*) malloc(sizeof(double) * split_str_count );
 			for( i = 0; i < split_str_count; i++ )
 			  {
 #if 0
@@ -194,7 +194,7 @@ int SetMagicsParameterValue( char *param_name, char *param_type, char *param_val
 		split_str_count = StringSplitWithSeperator( param_value, sep_char, &split_str );
 		if( split_str_count )
 		  {
-			int_param_list = malloc ( sizeof( int ) * split_str_count );
+		    int_param_list = (double*) malloc(sizeof( int ) * split_str_count );
 			for( i = 0; i < split_str_count; i++ )
 			{
 				int_param_list[i] = atoi( split_str[i] );			

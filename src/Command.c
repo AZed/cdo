@@ -140,6 +140,8 @@ int com_list(char *arg)
 /* The user wishes to quit using this program. Just set DONE non-zero. */
 int com_quit(char *arg)
 {
+  UNUSED(arg);
+
   Done = 1;
 
   return (0);
@@ -150,6 +152,8 @@ int com_stat(char *arg)
 {
   int nrecs;
   int tsID;
+ 
+  UNUSED(arg);
 
   fprintf(stdout, "name=%s\n", all_vars[gl_varID].name);
 
@@ -301,11 +305,13 @@ void command_init()
   gl_vlistID = streamInqVlist(gl_streamID);
   taxisID = vlistInqTaxis(gl_vlistID);
 
+  UNUSED(taxisID);
+
   gridsize = vlistGridsizeMax(gl_vlistID);
-  gl_data = malloc(gridsize*sizeof(double));
+  gl_data = (double*) malloc(gridsize*sizeof(double));
 
   gl_nvars = vlistNvars(gl_vlistID);
-  all_vars = malloc(gl_nvars*sizeof(vars_t));
+  all_vars = (vars_t*) malloc(gl_nvars*sizeof(vars_t));
 
   for ( varID = 0; varID < gl_nvars; ++varID )
     {
@@ -319,9 +325,8 @@ void command_init()
 
 void *Command(void *argument)
 {
-  int nrecs;
-  int recID, varID, levelID;
-  int nmiss;
+  // int recID, varID, levelID;
+  // int nmiss;
   double s_utime, s_stime;
   double e_utime, e_stime;
   double c_cputime = 0, c_usertime = 0, c_systime = 0;

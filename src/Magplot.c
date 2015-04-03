@@ -549,9 +549,9 @@ void *Magplot(void *argument)
   nlat     = gridInqYsize(gridID);
   nlev     = zaxisInqSize(zaxisID);
 
-  array           = malloc(gridsize*sizeof(double));
-  grid_center_lat = malloc(gridsize*sizeof(double));
-  grid_center_lon = malloc(gridsize*sizeof(double));
+  array           = (double*) malloc(gridsize*sizeof(double));
+  grid_center_lat = (double*) malloc(gridsize*sizeof(double));
+  grid_center_lon = (double*) malloc(gridsize*sizeof(double));
 
   gridInqYvals(gridID, grid_center_lat);
   gridInqXvals(gridID, grid_center_lon);
@@ -931,7 +931,7 @@ void VerifyPlotParameters( int num_param, char **param_names, int opID )
 			  if( syntax == TRUE )
 			    {
 	                       NUM_LEVELS = split_str_count;
-	                       LEV_LIST = malloc( sizeof( double ) * split_str_count );
+	                       LEV_LIST = (double*) malloc( sizeof( double ) * split_str_count );
 			       for( k = 0; k < split_str_count; k++ )
 		                 {
 		                    LEV_LIST[k] = atof( split_str1[k] );
@@ -1096,12 +1096,12 @@ int ReadColourTable ( char *filepath )
       }
     
     USR_COLOUR_COUNT = 0;
-    USR_COLOUR_TABLE = malloc ( num_colors * sizeof( char * ) );
-    temp_table  = malloc ( num_colors * sizeof( char * ) );
+    USR_COLOUR_TABLE = ( char **) malloc( num_colors * sizeof( char* ));
+    temp_table  = ( char **) malloc( num_colors * sizeof( char* ));
     
     for( i =0; i < num_colors; i++ )
       {
-         temp_table[i] = malloc (  256 * sizeof( char ) );
+         temp_table[i] = ( char *) malloc(  256 * sizeof( char ));
 	 fscanf( fp, "%s", temp_table[i] );
 	 if( DBG )
 	   fprintf( stdout, "%s\n", temp_table[i] );

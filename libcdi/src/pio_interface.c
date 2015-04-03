@@ -7,31 +7,25 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#ifdef USE_MPI
 #include <mpi.h>
 #include <yaxt.h>
-#endif
 
 #include "cdi.h"
 #include "cdipio.h"
+#include "cdi_int.h"
 #include "dmemory.h"
-#include "pio_util.h"
-#include "vlist_var.h"
-
-#ifdef USE_MPI
 #include "namespace.h"
 #include "pio.h"
+#include "pio_client.h"
 #include "pio_serialize.h"
 #include "pio_interface.h"
 #include "pio_comm.h"
 #include "pio_rpc.h"
-#include "pio_client.h"
 #include "pio_server.h"
+#include "pio_util.h"
 #include "resource_handle.h"
-#include "cdi_int.h"
 #include "vlist.h"
-
-extern resOps streamOps;
+#include "vlist_var.h"
 
 
 static struct rdmaWin
@@ -184,7 +178,7 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 	weightsStreams[i] += * ( vSizes + offset++ );
     }
 
-  w = ( double * ) xmalloc ( nNodes * sizeof ( double ));
+  w = ( double * ) xmalloc( nNodes * sizeof ( double ));
   for ( j = 0; j < nNodes; j++ )
     nPEs += * ( nodeSizes + j );
 
@@ -201,9 +195,9 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 	if ( * ( streamMapping + j ) == i )
 	  nVarsNode += * ( sSizes + j );
 
-      weightsVarsNode = ( int * ) xmalloc ( nVarsNode * sizeof ( int ));
-      varMappingNode = ( int * ) xmalloc ( nVarsNode * sizeof ( int ));
-      w = ( double * ) xmalloc ( * ( nodeSizes + i ) * sizeof ( double ));
+      weightsVarsNode = ( int * ) xmalloc( nVarsNode * sizeof ( int ));
+      varMappingNode = ( int * ) xmalloc( nVarsNode * sizeof ( int ));
+      w = ( double * ) xmalloc( * ( nodeSizes + i ) * sizeof ( double ));
       offset = 0;
       offsetN = 0;
 
@@ -264,17 +258,17 @@ varsMapNDeco(int nNodes, int *nodeSizes)
 
   nStreams = streamSize ();
 
-  resHs       = xmalloc ( nStreams * sizeof ( resHs[0] ));
-  streamSizes = xmalloc ( nStreams * sizeof ( streamSizes[0] ));
-  collectsData = xmalloc ( nProcsColl * sizeof ( collectsData[0] ));
+  resHs       = (int*) xmalloc( nStreams * sizeof ( resHs[0] ));
+  streamSizes = (int*) xmalloc( nStreams * sizeof ( streamSizes[0] ));
+  collectsData = (int*) xmalloc( nProcsColl * sizeof ( collectsData[0] ));
   streamGetIndexList ( nStreams, resHs );
 
   for ( i = 0; i < nStreams; i++ )
     streamSizes[i] = streamInqNvars ( * ( resHs + i ));
 
   nVars = sum_int(nStreams, streamSizes);
-  varSizes   = xmalloc ( nVars * sizeof ( varSizes[0] ));
-  varMapping = xmalloc ( nVars * sizeof ( varMapping[0] ));
+  varSizes   = (int*) xmalloc( nVars * sizeof ( varSizes[0] ));
+  varMapping = (int*) xmalloc( nVars * sizeof ( varMapping[0] ));
 
   for ( i = 0; i < nStreams; i++ )
     for ( j = 0; j < * ( streamSizes + i ); j++ )
@@ -357,8 +351,8 @@ modelWinDefBufferSizes(void)
   xassert(txWin != NULL);
 
   nstreams = reshCountType ( &streamOps );
-  streamIndexList = xmalloc ( nstreams * sizeof ( streamIndexList[0] ));
-  collIndex = xcalloc(nProcsColl, sizeof (collIndex[0]));
+  streamIndexList = (int*) xmalloc( nstreams * sizeof ( streamIndexList[0] ));
+  collIndex = (struct collDesc*) xcalloc(nProcsColl, sizeof (collIndex[0]));
   reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
   for ( streamNo = 0; streamNo < nstreams; streamNo++ )
     {
@@ -458,7 +452,7 @@ void modelWinCreate ( void )
   int nProcsColl = commInqNProcsColl ();
 
   xdebug("%s", "START");
-  txWin = xmalloc(nProcsColl * sizeof (txWin[0]));
+  txWin = (struct rdmaWin*) xmalloc(nProcsColl * sizeof (txWin[0]));
 
   modelWinDefBufferSizes ();
   ranks[0] = commInqNProcsModel ();
@@ -732,8 +726,6 @@ void pioBufferFuncCall(struct winHeaderEntry header,
   xdebug("%s", "RETURN");
 }
 
-#endif
-
 
 void
 cdiPioNoPostCommSetup(void)
@@ -743,9 +735,6 @@ cdiPioNoPostCommSetup(void)
 /*****************************************************************************/
 
 /* pioInit definition must currently compile even in non-MPI configurations */
-#ifndef MPI_VERSION
-#  define MPI_Comm int
-#endif
 /**
    @brief initializes the MPI_Communicators needed for the
   communication between the calculator PEs and the I/O PEs and within the
@@ -771,17 +760,14 @@ cdiPioNoPostCommSetup(void)
   @return int indicating wether the calling PE is a calcutator (1) or not (0)
 */
 
-#ifdef USE_MPI
 static int pioNamespace_ = -1;
 static int xtInitByCDI = 0;
-#endif
 
 MPI_Comm
 pioInit(MPI_Comm commGlob, int nProcsIO, int IOMode,
         int *pioNamespace, float partInflate,
         void (*postCommSetupActions)(void))
 {
-#ifdef USE_MPI
   int sizeGlob;
 
   namespaceSwitchSet(NSSWITCH_WARNING, NSSW_FUNC(cdiPioWarning));
@@ -821,12 +807,11 @@ pioInit(MPI_Comm commGlob, int nProcsIO, int IOMode,
 
   if ( commInqIsProcIO ())
     {
-      serializeSetMPI();
+      cdiPioSerializeSetMPI();
       namespaceSwitchSet(NSSWITCH_ABORT, NSSW_FUNC(cdiAbortC_MPI));
       namespaceSwitchSet(NSSWITCH_FILE_OPEN, NSSW_FUNC(pioFileOpen));
       namespaceSwitchSet(NSSWITCH_FILE_CLOSE, NSSW_FUNC(pioFileClose));
-      IOServer(postCommSetupActions);
-      namespaceDelete(0);
+      cdiPioServer(postCommSetupActions);
       namespaceNew();
       commDestroy ();
       if (xtInitByCDI)
@@ -838,20 +823,12 @@ pioInit(MPI_Comm commGlob, int nProcsIO, int IOMode,
 
   xdebug ( "nProcsGlob=%d, RETURN", sizeGlob );
   return commInqCommModel ();
-#else
-  abort();
-#endif
 }
-
-#ifndef MPI_VERSION
-#  undef MPI_Comm
-#endif
 
 /*****************************************************************************/
 
 void  pioEndDef ( void )
 {
-#ifdef USE_MPI
   char   * buffer;
   int bufferSize;
   int rankGlob = commInqRankGlob ();
@@ -876,18 +853,15 @@ void  pioEndDef ( void )
   modelWinCreate ();
   namespaceDefResStatus ( STAGE_TIMELOOP );
   xdebug("%s", "RETURN");
-#endif
 }
 
 /************************************************************************/
 
 void  pioEndTimestepping ( void )
 {
-#ifdef USE_MPI
   xdebug("%s", "START");
   namespaceDefResStatus ( STAGE_CLEANUP );
   xdebug("%s", "RETURN");
-#endif
 }
 
 
@@ -905,7 +879,6 @@ void  pioEndTimestepping ( void )
 
 void pioFinalize ( void )
 {
-#ifdef USE_MPI
   int collID, ibuffer = 1111;
   xdebug("%s", "START");
 
@@ -924,14 +897,12 @@ void pioFinalize ( void )
   if (xtInitByCDI)
     xt_finalize();
   xdebug("%s", "RETURN");
-#endif
 }
 
  /************************************************************************/
 
 void pioWriteTimestep()
 {
-#ifdef USE_MPI
   int collID, iAssert = MPI_MODE_NOPUT;
   /* int tokenEnd = END; */
   int rankGlob = commInqRankGlob ();
@@ -966,11 +937,8 @@ void pioWriteTimestep()
     }
 
   xdebug("%s", "RETURN. messages sent, windows posted");
-
-#endif
 }
 
-#if defined USE_MPI
 void
 streamWriteVarPart(int streamID, int varID, const void *data,
                    int nmiss, Xt_idxlist partDesc)
@@ -1018,8 +986,6 @@ streamWriteScatteredVarPart(int streamID, int varID, const void *data,
                                 numBlocks, blocklengths, displacements,
                                 nmiss, partDesc);
 }
-#endif
-
 
 /*
  * Local Variables:

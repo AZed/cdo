@@ -18,16 +18,16 @@
 #ifndef _CONST_H
 #define _CONST_H
 
-#define  MIN_PS      20000
-#define  MAX_PS     120000
+#define  MIN_PS      20000.
+#define  MAX_PS     120000.
 
-#define  MIN_FIS   -100000
-#define  MAX_FIS    100000
+#define  MIN_FIS   -100000.
+#define  MAX_FIS    100000.
 
-#define  MIN_T         150
-#define  MAX_T         400
+#define  MIN_T         150.
+#define  MAX_T         400.
 
-#define  MIN_Q           0
+#define  MIN_Q         0.0
 #define  MAX_Q         0.1
 
 #endif  /* _CONST_H */

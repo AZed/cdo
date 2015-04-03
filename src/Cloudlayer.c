@@ -234,13 +234,13 @@ void *Cloudlayer(void *argument)
   nlevel = zaxisInqSize(zaxisID);
   nhlev  = nlevel+1;
 
-  aclcac = malloc(gridsize*nlevel*sizeof(double));
+  aclcac = (double*) malloc(gridsize*nlevel*sizeof(double));
   for ( varID = 0; varID < nvars2; ++varID )
-    cloud[varID] = malloc(gridsize*sizeof(double));
+    cloud[varID] = (double*) malloc(gridsize*sizeof(double));
 
   if ( zaxisInqType(zaxisID) == ZAXIS_PRESSURE )
     {
-      plevs = malloc(nlevel*sizeof(double));
+      plevs = (double*) malloc(nlevel*sizeof(double));
       zaxisInqLevels(zaxisID, plevs);
       if ( plevs[0] > plevs[nlevel-1] )
 	{
@@ -281,11 +281,11 @@ void *Cloudlayer(void *argument)
 	{
 	  double *vct;
 
-	  vct = malloc(nvct*sizeof(double));
+	  vct = (double*) malloc(nvct*sizeof(double));
 	  zaxisInqVct(zaxisID, vct);
 
 	  nlevs = nlevel + 1;
-	  plevs = malloc(nlevs*sizeof(double));
+	  plevs = (double*) malloc(nlevs*sizeof(double));
 	  vct2plev(vct, plevs, nlevs);
 	  free(vct);
 

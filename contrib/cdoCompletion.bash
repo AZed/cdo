@@ -1,4 +1,6 @@
 complete -W "
+-- \
+-- \
 -L \
 -M \
 -O \
@@ -60,10 +62,10 @@ complextorect -complextorect \
 consecsum -consecsum \
 consects -consects \
 const -const \
-contour -contour \
 conv_cmor_table -conv_cmor_table \
 copy -copy \
 cos -cos \
+coshill -coshill \
 covar0 -covar0 \
 covar0r -covar0r \
 dayavg -dayavg \
@@ -89,7 +91,6 @@ deltap_fl -deltap_fl \
 delvar -delvar \
 detrend -detrend \
 diff -diff \
-diff2 -diff2 \
 diffc -diffc \
 diffn -diffn \
 diffp -diffp \
@@ -207,21 +208,20 @@ genbic -genbic \
 genbil -genbil \
 gencon -gencon \
 gencon2 -gencon2 \
-gencons -gencons \
 gendis -gendis \
 gengrid -gengrid \
 genlaf -genlaf \
 gennn -gennn \
+genycon -genycon \
 geopotheight -geopotheight \
 ggstat -ggstat \
 ggstats -ggstats \
+gheight -gheight \
 globavg -globavg \
 gp2fc -gp2fc \
 gp2sp -gp2sp \
 gp2spl -gp2spl \
 gradsdes -gradsdes \
-graph -graph \
-grfill -grfill \
 gridarea -gridarea \
 gridboxavg -gridboxavg \
 gridboxmax -gridboxmax \
@@ -424,7 +424,6 @@ remapbil -remapbil \
 remapcon -remapcon \
 remapcon1 -remapcon1 \
 remapcon2 -remapcon2 \
-remapcons -remapcons \
 remapdis -remapdis \
 remapdis1 -remapdis1 \
 remapeta -remapeta \
@@ -433,6 +432,7 @@ remapeta_z -remapeta_z \
 remaplaf -remaplaf \
 remapnn -remapnn \
 remapsum -remapsum \
+remapycon -remapycon \
 replace -replace \
 retocomplex -retocomplex \
 rhopot -rhopot \
@@ -534,7 +534,6 @@ setvar -setvar \
 setvrange -setvrange \
 setyear -setyear \
 setzaxis -setzaxis \
-shaded -shaded \
 shifttime -shifttime \
 showcode -showcode \
 showdate -showdate \
@@ -596,7 +595,6 @@ ssopar -ssopar \
 stdatm -stdatm \
 stimelogo -stimelogo \
 strbre -strbre \
-stream -stream \
 strgal -strgal \
 strwin -strwin \
 studentt -studentt \
@@ -654,7 +652,6 @@ varquot2test -varquot2test \
 varrms -varrms \
 vct -vct \
 vct2 -vct2 \
-vector -vector \
 vertavg -vertavg \
 vertmax -vertmax \
 vertmean -vertmean \

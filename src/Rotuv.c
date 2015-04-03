@@ -46,8 +46,8 @@ void rot_uv_back(int gridID, double *us, double *vs)
   ypole = gridInqYpole(gridID);
   angle = gridInqAngle(gridID);
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);
@@ -137,11 +137,11 @@ void *Rotuv(void *argument)
   nvars = vlistNvars(vlistID1);
   nrecs = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecs*sizeof(int));
-  recLevelID = malloc(nrecs*sizeof(int));
+  recVarID   = (int*) malloc(nrecs*sizeof(int));
+  recLevelID = (int*) malloc(nrecs*sizeof(int));
 
-  varnmiss   = malloc(nvars*sizeof(int *));
-  vardata    = malloc(nvars*sizeof(double *));
+  varnmiss   = (int **) malloc(nvars*sizeof(int *));
+  vardata    = (double **) malloc(nvars*sizeof(double *));
 
   for ( i = 0; i < nch; i++ ) lfound[i] = FALSE;
 
@@ -176,8 +176,8 @@ void *Rotuv(void *argument)
 
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      varnmiss[varID] = malloc(nlevel*sizeof(int));
-      vardata[varID]  = malloc(gridsize*nlevel*sizeof(double));
+      varnmiss[varID] = (int*) malloc(nlevel*sizeof(int));
+      vardata[varID]  = (double*) malloc(gridsize*nlevel*sizeof(double));
     }
 
   taxisID1 = vlistInqTaxis(vlistID1);

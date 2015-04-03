@@ -8,8 +8,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -33,7 +31,7 @@ typedef struct
   struct dBuffer *db2;
   struct dBuffer *db;
   FILE *fp;
-  IO_Server_command command;
+  enum IO_Server_command command;
   int tsID, fileID;
   char name[];
 } aFiledataPF;
@@ -538,7 +536,6 @@ initPOSIXFPGUARDSENDRECV(void (*postCommSetupActions)(void))
     bibAFiledataPF = listSetNew( destroyAFiledataPF, compareNamesAPF );
 }
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

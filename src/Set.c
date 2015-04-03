@@ -147,7 +147,7 @@ void *Set(void *argument)
 	  zaxisID1 = vlistZaxis(vlistID2, index);
 	  zaxisID2 = zaxisDuplicate(zaxisID1);
 	  nlevs = zaxisInqSize(zaxisID2);
-	  levels = malloc(nlevs*sizeof(double));
+	  levels = (double*) malloc(nlevs*sizeof(double));
 	  zaxisInqLevels(zaxisID2, levels);
 	  levels[0] = newlevel;
 	  zaxisDefLevels(zaxisID2, levels);
@@ -163,10 +163,9 @@ void *Set(void *argument)
 	  zaxisID1 = vlistZaxis(vlistID2, index);
 	  zaxisID2 = zaxisDuplicate(zaxisID1);
 
-	  zaxistype = ltype2ztype(newval);
-
+	  zaxistype = ZAXIS_GENERIC;
 	  zaxisChangeType(zaxisID2, zaxistype);
-	  if ( zaxistype == ZAXIS_GENERIC ) zaxisDefLtype(zaxisID2, newval);
+	  zaxisDefLtype(zaxisID2, newval);
 	  vlistChangeZaxis(vlistID2, zaxisID1, zaxisID2);
 	}
     }
@@ -178,7 +177,7 @@ void *Set(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )

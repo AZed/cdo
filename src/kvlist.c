@@ -46,6 +46,10 @@
     valid_max:         1.119e+05
 */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600 /* strdup */
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -284,7 +288,7 @@ void *kvlParseFile(const char *filename)
   filesize = (size_t) ftell(fp);
   fseek(fp, 0L, SEEK_SET);
 
-  buffer = malloc(filesize);
+  buffer = (char*) malloc(filesize);
   nitems = fread(buffer, 1, filesize, fp);
 
   fclose(fp);
@@ -295,7 +299,7 @@ void *kvlParseFile(const char *filename)
       return (kvl);
     }
  
-  kvl = calloc(1, sizeof(kvl_t));
+  kvl = (kvl_t*) calloc(1, sizeof(kvl_t));
   kvl->buffer = buffer;
   kvl->buffersize = filesize;
   kvl->filename = strdup(filename);

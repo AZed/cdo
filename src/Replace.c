@@ -127,9 +127,9 @@ void *Replace(void *argument)
 
   if ( nchvars )
     {
-      vardata2  = malloc(nchvars*sizeof(double *));
-      varnmiss2 = malloc(nchvars*sizeof(int *));
-      varlevel  = malloc(nchvars*sizeof(int *));
+      vardata2  = (double **) malloc(nchvars*sizeof(double *));
+      varnmiss2 = (int **) malloc(nchvars*sizeof(int *));
+      varlevel  = (int **) malloc(nchvars*sizeof(int *));
       for ( idx = 0; idx < nchvars; idx++ )
 	{
 	  varID1 = varlist1[idx];
@@ -137,17 +137,17 @@ void *Replace(void *argument)
 	  nlevel1  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID1));
 	  nlevel2  = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID2));
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID2));
-	  vardata2[idx]  = malloc(nlevel2*gridsize*sizeof(double));
-	  varnmiss2[idx] = malloc(nlevel2*sizeof(int));
-	  varlevel[idx] = malloc(nlevel1*sizeof(int));
+	  vardata2[idx]  = (double*) malloc(nlevel2*gridsize*sizeof(double));
+	  varnmiss2[idx] = (int*) malloc(nlevel2*sizeof(int));
+	  varlevel[idx] = (int*) malloc(nlevel1*sizeof(int));
 	  /*
 	  for ( levelID = 0; levelID < nlevel1; levelID++ )
 	    varlevel[idx][levelID] = levelID;
 	  */
 	  if ( nlevel2 <= nlevel1 )
 	    {
-	      double *level1 = malloc(nlevel1*sizeof(double));
-	      double *level2 = malloc(nlevel2*sizeof(double));
+	      double *level1 = (double*) malloc(nlevel1*sizeof(double));
+	      double *level2 = (double*) malloc(nlevel2*sizeof(double));
 	      zaxisInqLevels(vlistInqVarZaxis(vlistID1, varID1), level1);
 	      zaxisInqLevels(vlistInqVarZaxis(vlistID2, varID2), level2);
 
@@ -181,7 +181,7 @@ void *Replace(void *argument)
   streamDefVlist(streamID3, vlistID3);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   nts2 = vlistNtsteps(vlistID2);
 

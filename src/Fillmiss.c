@@ -56,8 +56,8 @@ void fillmiss(field_t *field1, field_t *field2, int nfill)
   if ( !(gridtype == GRID_LONLAT || gridtype == GRID_GAUSSIAN ) )
     cdoAbort("Unsupported grid type: %s!", gridNamePtr(gridtype));
 
-  matrix1 = malloc(ny * sizeof(double *));
-  matrix2 = malloc(ny * sizeof(double *));
+  matrix1 = (double **) malloc(ny * sizeof(double *));
+  matrix2 = (double **) malloc(ny * sizeof(double *));
 
   for ( j = 0; j < ny; j++ )
     {
@@ -165,8 +165,8 @@ void fillmiss_one_step(field_t *field1, field_t *field2, int maxfill)
   nx  = gridInqXsize(gridID);
   ny  = gridInqYsize(gridID);
 
-  matrix1 = malloc(ny * sizeof(double *));
-  matrix2 = malloc(ny * sizeof(double *));
+  matrix1 = (double **) malloc(ny * sizeof(double *));
+  matrix2 = (double **) malloc(ny * sizeof(double *));
 
   for ( j = 0; j < ny; j++ ) { matrix1[j] = array1 + j*nx; matrix2[j] = array2 + j*nx; }
 
@@ -342,8 +342,8 @@ void *Fillmiss(void *argument)
 
   field_init(&field1);
   field_init(&field2);
-  field1.ptr   = malloc(gridsize*sizeof(double));
-  field2.ptr   = malloc(gridsize*sizeof(double));
+  field1.ptr   = (double*) malloc(gridsize*sizeof(double));
+  field2.ptr   = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -62,7 +62,7 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
       if ( nlev1 > mlev1 )
 	{
 	  mlev1 = nlev1;
-	  lev1 = realloc(lev1, mlev1*sizeof(double));
+	  lev1 = (double*) realloc(lev1, mlev1*sizeof(double));
 	}
       zaxisInqLevels(zaxisID1, lev1);
 
@@ -81,7 +81,7 @@ void checkDupEntry(int vlistID1, int vlistID2, const char *filename)
 	      if ( nlev2 > mlev2 )
 		{
 		  mlev2 = nlev2;
-		  lev2 = realloc(lev2, mlev2*sizeof(double));
+		  lev2 = (double*) realloc(lev2, mlev2*sizeof(double));
 		}
 	      zaxisInqLevels(zaxisID2, lev2);
 
@@ -168,8 +168,8 @@ void *Merge(void *argument)
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  streamIDs = malloc(nmerge*sizeof(int));
-  vlistIDs  = malloc(nmerge*sizeof(int));
+  streamIDs = (int*) malloc(nmerge*sizeof(int));
+  vlistIDs  = (int*) malloc(nmerge*sizeof(int));
 
   for ( index = 0; index < nmerge; index++ )
     {
@@ -208,7 +208,7 @@ void *Merge(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID2);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

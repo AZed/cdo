@@ -2,7 +2,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
 #include <ctype.h>
 
 #include <yaxt.h>
@@ -38,6 +37,7 @@ cdiPioClientStreamOpen(const char *filename, const char *filemode,
       switch ( nspStatus )
         {
         case STAGE_DEFINITION:
+          streamptr->filetype = filetype;
           break;
         case STAGE_TIMELOOP:
           filename_len = strlen(filename);
@@ -54,6 +54,7 @@ cdiPioClientStreamOpen(const char *filename, const char *filemode,
                  " filename=%s, filetype=%d",
                  funcMap[(-1 - STREAMOPEN)], filename_len + 1, filename,
                  filetype);
+          streamptr->filetype = filetype;
           break;
         case STAGE_CLEANUP:
           xabort ( "TRANSITION TO IO PROCESSES ALREADY FINISHED." );
@@ -249,7 +250,7 @@ cdiPioClientSetup(int *pioNamespace_, int *pioNamespace)
   *pioNamespace_ = *pioNamespace = namespaceNew();
   int callerCDINamespace = namespaceGetActive();
   namespaceSetActive(*pioNamespace_);
-  serializeSetMPI();
+  cdiPioSerializeSetMPI();
   namespaceSwitchSet(NSSWITCH_STREAM_OPEN_BACKEND,
                      NSSW_FUNC(cdiPioClientStreamOpen));
   namespaceSwitchSet(NSSWITCH_STREAM_DEF_VLIST_,
@@ -278,7 +279,6 @@ cdiPioClientSetup(int *pioNamespace_, int *pioNamespace)
 }
 
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

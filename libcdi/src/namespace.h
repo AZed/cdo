@@ -65,7 +65,7 @@ int              namespaceGetActive    ( void );
 int              namespaceIdxEncode    ( namespaceTuple_t );
 int              namespaceIdxEncode2   ( int, int );
 namespaceTuple_t namespaceResHDecode   ( int );
-int              namespaceAdaptKey     ( int, int );
+int              namespaceAdaptKey     ( int originResH, int originNamespace);
 int              namespaceAdaptKey2    ( int );
 void             namespaceDefResStatus ( statusCode );
 statusCode       namespaceInqResStatus ( void );

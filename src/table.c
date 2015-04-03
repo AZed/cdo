@@ -47,7 +47,7 @@ int defineTable(char *tablearg)
 	{
 	  char *tablefile = NULL;
 	  int len = sizeof(tablepath) + sizeof(tablename) + 3;
-	  tablefile = malloc(len);
+	  tablefile = (char*) malloc(len);
 	  strcpy(tablefile, tablepath);
 	  strcat(tablefile, "/");
 	  strcat(tablefile, tablename);

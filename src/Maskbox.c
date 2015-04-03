@@ -145,8 +145,8 @@ void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, int nof
   nlon = gridInqXsize(gridID);
   nlat = gridInqYsize(gridID);
 
-  xvals = malloc(nlon*sizeof(double));
-  yvals = malloc(nlat*sizeof(double));
+  xvals = (double*) malloc(nlon*sizeof(double));
+  yvals = (double*) malloc(nlat*sizeof(double));
 
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);  
@@ -304,7 +304,7 @@ void *Maskbox(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   nvars = vlistNvars(vlistID1);
-  vars  = malloc(nvars*sizeof(int));
+  vars  = (int*) malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( gridID == vlistInqVarGrid(vlistID1, varID) )
@@ -318,8 +318,8 @@ void *Maskbox(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = gridInqSize(gridID);
-  array = malloc ( gridsize*sizeof(double) );
-  mask  = malloc ( gridsize*sizeof(int) );
+  array = (double*) malloc( gridsize*sizeof(double));
+  mask  = (int*) malloc( gridsize*sizeof(int));
   for( i=0;  i < gridsize; i++) mask[i] = 1;
  
   if ( operatorID == MASKLONLATBOX )
@@ -334,8 +334,8 @@ void *Maskbox(void *argument)
     }
   if ( operatorID == MASKREGION )
     {
-      xcoords = malloc( MAX_VALS*sizeof(double) );
-      ycoords = malloc( MAX_VALS*sizeof(double) );
+      xcoords = (double*) malloc( MAX_VALS*sizeof(double));
+      ycoords = (double*) malloc( MAX_VALS*sizeof(double));
       nfiles = operatorArgc();
      
       for ( i2 = 0; i2 < nfiles; i2++ )

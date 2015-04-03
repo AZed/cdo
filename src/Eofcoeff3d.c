@@ -35,26 +35,25 @@ void *Eofcoeff3d(void * argument)
 {
   char eof_name[6], oname[1024], filesuffix[32];
   const char *refname;
-  double *w;
+  //double *w;
   double missval1 = -999, missval2 = -999;
   double *xvals, *yvals, *zvals;  
   field_t ***eof;  
   field_t in;  
   field_t **out;
-  int operatorID, operfunc;  
+  //int operatorID, operfunc;  
   int gridsize;
   int i, varID, recID, levelID, tsID, eofID, *varID3;    
-  int gridID1, gridID2, gridID3;
-  int nrecs, nvars, nlevs, neof, nchars, nmiss, ngrids; 
-  int reached_eof;
+  int gridID1,gridID3;
+  int nrecs, nvars, nlevs, neof, nchars, nmiss; 
   int streamID1, streamID2, *streamIDs;
-  int taxisID1, taxisID2, taxisID3;
+  int taxisID2, taxisID3;
   int vlistID1, vlistID2, vlistID3;
   int zaxisID3;
    
   cdoInitialize(argument);
   cdoOperatorAdd("eofcoeff3d",  0,       0, NULL);
-  operatorID = cdoOperatorID();
+  //  operatorID = cdoOperatorID();
   //  operfunc = cdoOperatorFunc(operatorID);
      
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -63,12 +62,12 @@ void *Eofcoeff3d(void * argument)
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   
-  taxisID1 = vlistInqTaxis(vlistID1);  
+  //taxisID1 = vlistInqTaxis(vlistID1);  
   taxisID2 = vlistInqTaxis(vlistID2); 
   taxisID3 = taxisDuplicate(taxisID2);
   
   gridID1 = vlistInqVarGrid(vlistID1, 0);
-  gridID2 = vlistInqVarGrid(vlistID2, 0);
+  //gridID2 = vlistInqVarGrid(vlistID2, 0);
   
   if ( vlistGridsizeMax(vlistID1)==vlistGridsizeMax(vlistID2) )
     gridsize = vlistGridsizeMax(vlistID1);  
@@ -85,8 +84,8 @@ void *Eofcoeff3d(void * argument)
   nvars = vlistNvars(vlistID1)==vlistNvars(vlistID2) ? vlistNvars(vlistID1) : -1;
   nrecs = vlistNrecs(vlistID1); 
   nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, 0));
-  w = malloc(gridsize*sizeof(double));
-  gridWeights(gridID2, &w[0]);
+  //w = (double*) malloc(gridsize*sizeof(double));
+  //gridWeights(gridID2, w);
   
   
   if (vlistGridsizeMax(vlistID2)   != gridsize ||
@@ -100,31 +99,28 @@ void *Eofcoeff3d(void * argument)
   filesuffix[0] = 0;
   cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
  
-  eof = malloc (nvars * sizeof(field_t**) );
+  eof = (field_t***) malloc(nvars * sizeof(field_t**));
   for ( varID=0; varID<nvars; varID++)
-    eof[varID] = malloc(nlevs*sizeof(field_t*));
-  reached_eof=0;
+    eof[varID] = (field_t**) malloc(nlevs*sizeof(field_t*));
+
   eofID = 0;
   while ( 1 )       
    {     
      nrecs = streamInqTimestep(streamID1, eofID);
-     if ( nrecs == 0)
-       {
-         reached_eof = 1;
-         break;
-       }
+     if ( nrecs == 0) break;
+
      for ( recID = 0; recID < nrecs; recID++ )
        {         
          streamInqRecord(streamID1, &varID, &levelID);
          missval1 = vlistInqVarMissval(vlistID1, varID);
          if ( eofID == 0 )
-           eof[varID][levelID] = malloc (1*sizeof(field_t));
+           eof[varID][levelID] = (field_t*) malloc(1*sizeof(field_t));
          else
-           eof[varID][levelID] = realloc (eof[varID][levelID], (eofID+1)*sizeof(field_t));
+           eof[varID][levelID] = (field_t*) realloc(eof[varID][levelID], (eofID+1)*sizeof(field_t));
          eof[varID][levelID][eofID].grid   = gridID1;
          eof[varID][levelID][eofID].nmiss  = 0;
          eof[varID][levelID][eofID].missval= missval1;
-         eof[varID][levelID][eofID].ptr    = malloc(gridsize*sizeof(double));
+         eof[varID][levelID][eofID].ptr    = (double*) malloc(gridsize*sizeof(double));
          memset(&eof[varID][levelID][eofID].ptr[0], missval1, gridsize*sizeof(double));
 
          if ( varID >= nvars )
@@ -144,14 +140,14 @@ void *Eofcoeff3d(void * argument)
   gridID3 = gridCreate(GRID_LONLAT, 1);
   gridDefXsize(gridID3, 1);
   gridDefYsize(gridID3, 1);
-  xvals=malloc(1*sizeof(double));
-  yvals=malloc(1*sizeof(double));
+  xvals= (double*) malloc(1*sizeof(double));
+  yvals= (double*) malloc(1*sizeof(double));
   xvals[0]=0;
   yvals[0]=0;
   gridDefXvals(gridID3, xvals);
   gridDefYvals(gridID3, yvals);
   
-  zvals = malloc ( 1* sizeof(double ) );
+  zvals = (double *) malloc( 1* sizeof(double ));
   zvals[0] = 0.;
   zaxisID3 = zaxisCreate(ZAXIS_GENERIC,1);
   zaxisDefLevels(zaxisID3,zvals);
@@ -160,12 +156,12 @@ void *Eofcoeff3d(void * argument)
   
   vlistID3 = vlistCreate();
   vlistDefTaxis(vlistID3,taxisID3);
-  varID3 = malloc ( nvars * sizeof(int) );
+  varID3 = (int*) malloc( nvars * sizeof(int));
   for ( varID=0; varID<nvars; varID++ )
     varID3[varID] = vlistDefVar(vlistID3, gridID3, zaxisID3, TSTEP_INSTANT);
   
   // open streams for eofcoeff output
-  streamIDs = malloc (neof*sizeof(int)); 
+  streamIDs = (int*) malloc(neof*sizeof(int)); 
   eofID = 0;
   for ( eofID = 0; eofID < neof; eofID++)
     {
@@ -187,28 +183,23 @@ void *Eofcoeff3d(void * argument)
     }
   
   // ALLOCATE temporary fields for data read and write
-  in.ptr = malloc(gridsize*sizeof(double));
+  in.ptr = (double*) malloc(gridsize*sizeof(double));
   in.grid = gridID1;  
-  out = malloc (nvars*sizeof(field_t*));
+  out = (field_t**) malloc(nvars*sizeof(field_t*));
   for ( varID = 0; varID < nvars; varID++ ) {
-    out[varID] = malloc ( neof * sizeof(field_t) );
+    out[varID] = (field_t*) malloc( neof * sizeof(field_t));
     for ( eofID=0; eofID<neof; eofID++ ) {
       out[varID][eofID].missval = missval1;
       out[varID][eofID].nmiss = 0;
-      out[varID][eofID].ptr = malloc (1*sizeof(double));
+      out[varID][eofID].ptr = (double*) malloc(1*sizeof(double));
     }
   }
 
-  reached_eof=0;
   tsID=0;
   while ( 1 )
     {      
       nrecs = streamInqTimestep(streamID2, tsID);
-      if ( nrecs == 0 )
-        {
-          reached_eof=1;
-          break;
-        }
+      if ( nrecs == 0 ) break;
 
       for ( varID = 0; varID < nvars; varID++ )
 	for ( eofID = 0; eofID < neof; eofID++ ) {
@@ -236,7 +227,8 @@ void *Eofcoeff3d(void * argument)
                   if (! DBL_IS_EQUAL(in.ptr[i],missval2) && 
                       ! DBL_IS_EQUAL(eof[varID][levelID][eofID].ptr[i],missval1 ) )
                     {
-                      double tmp = w[i]*in.ptr[i]*eof[varID][levelID][eofID].ptr[i];
+                      // double tmp = w[i]*in.ptr[i]*eof[varID][levelID][eofID].ptr[i];
+                      double tmp = in.ptr[i]*eof[varID][levelID][eofID].ptr[i];
                       out[varID][eofID].ptr[0] += tmp;                   
                     }
 		  else
