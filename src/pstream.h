@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,8 @@
 
 #define  streamCopyRecord         pstreamCopyRecord
 
+#define  streamInqGinfo           pstreamInqGinfo
+
 
 int     pstreamOpenWrite(const argument_t *argument, int filetype);
 int     pstreamOpenRead(const argument_t *argument);
@@ -63,5 +65,8 @@ void    pstreamWriteRecord(int pstreamID, double *data, int nmiss);
 void    pstreamWriteRecordF(int pstreamID, float *data, int nmiss);
 void    pstreamReadRecord(int pstreamID, double *data, int *nmiss);
 void    pstreamCopyRecord(int pstreamIDdest, int pstreamIDsrc);
+
+void    pstreamInqGinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum);
+
 
 #endif  /* _PSTREAM_H */

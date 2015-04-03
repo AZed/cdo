@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -210,7 +210,7 @@ void *Spectral(void *argument)
 	  maxntr = 1+gridInqTrunc(gridID1);
 	  ncut = args2intlist(operatorArgc(), operatorArgv(), ilist);
 	  wnums = (int *) listArrayPtr(ilist);
-	  waves = (int *) malloc(maxntr*sizeof(int));
+	  waves = malloc(maxntr*sizeof(int));
 	  for ( i = 0; i < maxntr; i++ ) waves[i] = 1;
 	  for ( i = 0; i < ncut; i++ )
 	    {
@@ -227,7 +227,7 @@ void *Spectral(void *argument)
     }
 
   nvars = vlistNvars(vlistID2);
-  vars  = (int *) malloc(nvars*sizeof(int));
+  vars  = malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( gridID1 == vlistInqVarGrid(vlistID1, varID) )
@@ -243,12 +243,12 @@ void *Spectral(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
 
   if ( gridID2 != -1 )
     {
       gridsize = gridInqSize(gridID2);
-      array2 = (double *) malloc(gridsize*sizeof(double));
+      array2 = malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

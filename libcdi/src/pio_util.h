@@ -26,6 +26,9 @@ cdiAbortC_MPI(const char * caller, const char * filename,
               const char *functionname, int line,
               const char * errorString, va_list ap)
   __attribute__((noreturn));
+
+void cdiPioWarning(const char *caller, const char *fmt, va_list ap);
+
 #endif
 
 #ifdef USE_MPI
@@ -84,34 +87,6 @@ getMPICommWorldRank()
   }
 #endif
 
-#ifdef USE_MPI
-#define xwarning(fmt, ...)						\
-  if ( ddebug ){							\
-    int rank = getMPICommWorldRank();                                   \
-    fprintf ( stderr, "WARNING: pe%d in %s, %s, line %d: " fmt "\n",	\
-              rank,  __func__, __FILE__,  __LINE__,			\
-              __VA_ARGS__ );						\
-  }
-#else
-#define xwarning(fmt, ...)					\
-  if ( ddebug ){                                                \
-    fprintf ( stderr, "WARNING: %s, %s, line %d: " fmt "\n",    \
-              __func__, __FILE__,  __LINE__,                    \
-              __VA_ARGS__ );                                 \
-  }
-#endif
-
-void * pcdiXmalloc ( size_t, const char *, const char *, int );
-#define xmalloc(size) pcdiXmalloc ( size, __FILE__, __func__,  __LINE__ )
-
-void * pcdiXcalloc ( size_t, size_t, const char *, const char *, int );
-#define xcalloc(nmemb,size) pcdiXcalloc(nmemb, size,            \
-                                        __FILE__, __func__, __LINE__)
-
-void * pcdiXrealloc ( void *, size_t, const char *, const char *, int );
-#define xrealloc(p,size) pcdiXrealloc(p, size,            \
-                                      __FILE__, __func__, __LINE__)
-
 void pcdiXMPI(int iret, const char *, int);
 #define xmpi(ret) do {                                  \
     int tmpIRet = (ret);                                   \
@@ -140,12 +115,16 @@ void pcdiDebugMsg2 ( const char *filename, const char *functionname, int line, \
 #define xdebugMsg2(tag,source,text) \
   if ( ddebug ) pcdiDebugMsg ( __FILE__, __func__,  __LINE__, tag, source, text )
 
-int xmaxInt ( int, int );
-int xminInt ( int, int );
-int xsum ( int, int * );
+static inline int
+sum_int(size_t n, int *a)
+{
+  int sum = 0;
+  for (size_t i = 0; i < n; ++i)
+    sum += a[i];
+  return sum;
+}
 
-double xchecksum ( int, int, void * );
- 
+
 void printArray ( const char *, char *, const void *, int, int, const char *, const char *, int );
 #define xprintArray(ps,array,n,datatype)                                \
   if ( ddebug )                                                         \

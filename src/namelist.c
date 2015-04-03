@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -74,7 +74,7 @@ namelist_t *namelistNew(const char *name)
 {
   namelist_t *namelist;
 
-  namelist = (namelist_t *) malloc(sizeof(namelist_t));
+  namelist = malloc(sizeof(namelist_t));
 
   namelist_init(namelist, name);
 
@@ -190,7 +190,7 @@ int namelistAdd(namelist_t *nml, const char *name, int type, int dis, void *ptr,
       return (-1);
     }
 
-  nml_entry = (nml_entry_t *) malloc(sizeof(nml_entry_t));
+  nml_entry = malloc(sizeof(nml_entry_t));
 
   nml_entry->name = strdup(name);
   nml_entry->type = type;
@@ -259,6 +259,8 @@ static void getnite(FILE *nmlfp, namelist_t *nml)
 		{
 		  if ( !(islower((int) nml->line.linelc[j]) ||
 			 (((int) nml->line.linelc[j]) == '_') ||
+			 (((int) nml->line.linelc[j]) == '-') ||
+			 (((int) nml->line.linelc[j]) == '+') ||
 			 isdigit((int) nml->line.linelc[j])) )
 		    {
 		      nml->line.namitl = j - 1;
@@ -381,7 +383,7 @@ static void rdnlsgl(namelist_t *nml, void *var, int ntyp, int nlen, int *nocc)
       if ( *nocc < nlen )
 	{
 	  len = nml->line.namitl - nml->line.namitf + 1;
-	  ((char **)var)[*nocc] = (char*) calloc((size_t)len+1, sizeof(char));
+	  ((char **)var)[*nocc] = calloc((size_t)len+1, sizeof(char));
 	  for ( i = 0; i < len; i++ )
 	    ((char **)var)[*nocc][i] = nml->line.lineac[nml->line.namitf+i];
 	  *nocc += 1;

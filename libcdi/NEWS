@@ -1,6 +1,15 @@
 CDI NEWS
 --------
 
+Version 1.6.3 (14 February 2014):
+
+   New features:
+     * streamInqGinfo: added support for GRIB files > 2GB
+   Fixed bugs:
+     * streamOpenA, streamOpen: parameter recordBufIsToBeCreated missing in call to cdiStreamOpenDefaultDelegate()
+     * streamOpenA: removed line "streamptr->record = record"; record is allocated in cdiStreamOpenDefaultDelegate()
+
+
 Version 1.6.2 (12 November 2013):
 
    New features:

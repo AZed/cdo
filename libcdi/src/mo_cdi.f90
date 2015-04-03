@@ -162,11 +162,6 @@ module mo_cdi
       integer :: CALENDAR_365DAYS = 3
       integer :: CALENDAR_366DAYS = 4
       integer :: CALENDAR_NONE = 5
-      integer :: PIO_NONE = 0
-      integer :: PIO_MPI = 1
-      integer :: PIO_WRITER = 2
-      integer :: PIO_ASYNCH = 3
-      integer :: PIO_FPGUARD = 4
 
       interface
         subroutine cdiReset() bind(c,name='cdiReset')
@@ -224,6 +219,26 @@ module mo_cdi
           character(c_char), dimension(*) :: string
           integer(c_int), value :: val
        end subroutine cdiDefGlobal
+      end interface
+  
+      interface
+        integer(c_int) function namespaceNew() bind(c,name='namespaceNew')
+          import :: c_int
+       end function namespaceNew
+      end interface
+  
+      interface
+        subroutine namespaceSetActive(namespaceID) bind(c,name='namespaceSetActive')
+          import :: c_int
+          integer(c_int), value :: namespaceID
+       end subroutine namespaceSetActive
+      end interface
+  
+      interface
+        subroutine namespaceDelete(namespaceID) bind(c,name='namespaceDelete')
+          import :: c_int
+          integer(c_int), value :: namespaceID
+       end subroutine namespaceDelete
       end interface
   
       interface
@@ -411,6 +426,13 @@ module mo_cdi
       end interface
   
       interface
+        integer(c_int) function streamInqCurTimestepID(streamID) bind(c,name='streamInqCurTimestepID')
+          import :: c_int
+          integer(c_int), value :: streamID
+       end function streamInqCurTimestepID
+      end interface
+  
+      interface
         integer(c_int) function streamInqTimestep(streamID,tsID) bind(c,name='streamInqTimestep')
           import :: c_int
           integer(c_int), value :: streamID
@@ -553,15 +575,6 @@ module mo_cdi
           integer(c_int), value :: streamIDdest
           integer(c_int), value :: streamIDsrc
        end subroutine streamCopyRecord
-      end interface
-  
-      interface
-        subroutine streamInqGinfo(streamID,intnum,fltnum) bind(c,name='streamInqGinfo')
-          import :: c_int,c_float
-          integer(c_int), value :: streamID
-          integer(c_int), intent(out) :: intnum
-          real(c_float), intent(out) :: fltnum
-       end subroutine streamInqGinfo
       end interface
   
       interface
@@ -2046,11 +2059,11 @@ module mo_cdi
       end interface
   
       interface
-        character(c_char) function gridInqUUID(gridID,uuid_cbuf) bind(c,name='gridInqUUID')
+        subroutine gridInqUUID(gridID,uuid_cbuf) bind(c,name='gridInqUUID')
           import :: c_int,c_char
           integer(c_int), value :: gridID
           character(c_char), dimension(*) :: uuid_cbuf
-       end function gridInqUUID
+       end subroutine gridInqUUID
       end interface
   
       interface
@@ -2370,11 +2383,11 @@ module mo_cdi
       end interface
   
       interface
-        character(c_char) function zaxisInqUUID(zaxisID,uuid_cbuf) bind(c,name='zaxisInqUUID')
+        subroutine zaxisInqUUID(zaxisID,uuid_cbuf) bind(c,name='zaxisInqUUID')
           import :: c_int,c_char
           integer(c_int), value :: zaxisID
           character(c_char), dimension(*) :: uuid_cbuf
-       end function zaxisInqUUID
+       end subroutine zaxisInqUUID
       end interface
   
       interface
@@ -3070,6 +3083,9 @@ module mo_cdi
       public :: cdiDefMissval
       public :: cdiInqMissval
       public :: cdiDefGlobal
+      public :: namespaceNew
+      public :: namespaceSetActive
+      public :: namespaceDelete
       public :: cdiParamToString
       public :: cdiDecodeParam
       public :: cdiEncodeParam
@@ -3093,6 +3109,7 @@ module mo_cdi
       public :: streamInqCompType
       public :: streamInqCompLevel
       public :: streamDefTimestep
+      public :: streamInqCurTimestepID
       public :: streamInqTimestep
       public :: streamFilename
       public :: streamFilesuffix
@@ -3109,7 +3126,6 @@ module mo_cdi
       public :: streamWriteRecord
       public :: streamWriteRecordF
       public :: streamCopyRecord
-      public :: streamInqGinfo
       public :: vlistCreate
       public :: vlistDestroy
       public :: vlistDuplicate
@@ -3574,11 +3590,6 @@ module mo_cdi
       public :: CALENDAR_365DAYS
       public :: CALENDAR_366DAYS
       public :: CALENDAR_NONE
-      public :: PIO_NONE
-      public :: PIO_MPI
-      public :: PIO_WRITER
-      public :: PIO_ASYNCH
-      public :: PIO_FPGUARD
 
 contains
 

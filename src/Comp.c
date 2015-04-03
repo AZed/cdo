@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -112,9 +112,9 @@ void *Comp(void *argument)
 
   gridsize = vlistGridsizeMax(vlistIDx1);
 
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize*sizeof(double));
-  array3 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize*sizeof(double));
+  array3 = malloc(gridsize*sizeof(double));
 
   arrayx1 = array1;
   arrayx2 = array2;
@@ -143,12 +143,12 @@ void *Comp(void *argument)
       if ( filltype == FILL_TS )
 	{
 	  nvars  = vlistNvars(vlistIDx2);
-	  vardata  = (double **) malloc(nvars*sizeof(double *));
+	  vardata  = malloc(nvars*sizeof(double *));
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridsize = gridInqSize(vlistInqVarGrid(vlistIDx2, varID));
 	      nlev     = zaxisInqSize(vlistInqVarZaxis(vlistIDx2, varID));
-	      vardata[varID]  = (double *) malloc(nlev*gridsize*sizeof(double));
+	      vardata[varID]  = malloc(nlev*gridsize*sizeof(double));
 	    }
 	}
     }

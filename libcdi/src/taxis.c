@@ -7,10 +7,11 @@
 #include "dmemory.h"
 
 #include "cdi.h"
+#include "error.h"
 #include "taxis.h"
+#include "cdi_cksum.h"
 #include "cdi_int.h"
 #include "calendar.h"
-#include "pio_util.h"
 #include "namespace.h"
 #include "serialize.h"
 #include "resource_handle.h"
@@ -294,7 +295,7 @@ void taxisDefType(int taxisID, int type)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -375,7 +376,7 @@ void taxisDefRdate(int taxisID, int rdate)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -406,7 +407,7 @@ void taxisDefRtime(int taxisID, int rtime)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -439,7 +440,7 @@ void taxisDefCalendar(int taxisID, int calendar)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -457,7 +458,7 @@ void taxisDefTunit(int taxisID, int unit)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -475,7 +476,7 @@ void taxisDefNumavg(int taxisID, int numavg)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -520,7 +521,7 @@ void taxisDeleteBounds(int taxisID)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -609,7 +610,7 @@ void taxisDefVdateBounds(int taxisID, int vdate_lb, int vdate_ub)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -670,7 +671,7 @@ void taxisDefVtimeBounds(int taxisID, int vtime_lb, int vtime_ub)
 
   if ( reshGetStatus ( taxisID, &taxisOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1310,7 +1311,7 @@ taxisGetPackSize(void *p, void *context)
   taxis_t *taxisptr = p;
   int packBufferSize
     = serializeGetSize(taxisNint, DATATYPE_INT, context)
-    + serializeGetSize(1, DATATYPE_FLT64, context)
+    + serializeGetSize(1, DATATYPE_UINT32, context)
     + (taxisptr->name ?
        serializeGetSize(strlen(taxisptr->name), DATATYPE_TXT, context) : 0)
     + (taxisptr->longname ?
@@ -1325,14 +1326,14 @@ taxisUnpack(char * unpackBuffer, int unpackBufferSize, int * unpackBufferPos,
 {
   taxis_t * taxisP;
   int intBuffer[taxisNint];
-  double d;
+  uint32_t d;
 
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   intBuffer, taxisNint, DATATYPE_INT, context);
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_FLT64, context);
+                  &d, 1, DATATYPE_UINT32, context);
 
-  xassert(xchecksum(DATATYPE_INT, taxisNint, intBuffer) == d);
+  xassert(cdiCheckSum(DATATYPE_INT, taxisNint, intBuffer) == d);
 
   taxisInit();
 
@@ -1387,7 +1388,7 @@ taxisPack(void * voidP, void * packBuffer, int packBufferSize, int * packBufferP
 {
   taxis_t *taxisP = (taxis_t *)voidP;
   int intBuffer[taxisNint];
-  double d;
+  uint32_t d;
 
   intBuffer[0]  = taxisP->self;
   intBuffer[1]  = taxisP->used;
@@ -1406,11 +1407,12 @@ taxisPack(void * voidP, void * packBuffer, int packBufferSize, int * packBufferP
   intBuffer[14] = taxisP->vtime_ub;
   intBuffer[15] = taxisP->name ? strlen(taxisP->name) : 0;
   intBuffer[16] = taxisP->longname ? strlen(taxisP->longname) : 0;
+  intBuffer[17] = taxisP->climatology;
 
   serializePack(intBuffer, taxisNint, DATATYPE_INT,
                 packBuffer, packBufferSize, packBufferPos, context);
-  d = xchecksum(DATATYPE_INT, taxisNint, intBuffer);
-  serializePack(&d, 1, DATATYPE_FLT64,
+  d = cdiCheckSum(DATATYPE_INT, taxisNint, intBuffer);
+  serializePack(&d, 1, DATATYPE_UINT32,
                 packBuffer, packBufferSize, packBufferPos, context);
   if (taxisP->name)
     serializePack(taxisP->name, intBuffer[15], DATATYPE_TXT,
@@ -1419,7 +1421,6 @@ taxisPack(void * voidP, void * packBuffer, int packBufferSize, int * packBufferP
     serializePack(taxisP->longname, intBuffer[16], DATATYPE_TXT,
                   packBuffer, packBufferSize, packBufferPos, context);
 
-  intBuffer[17] = taxisP->climatology;
 }
 
 /*

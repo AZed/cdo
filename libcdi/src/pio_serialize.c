@@ -4,6 +4,8 @@
 
 #ifdef USE_MPI
 
+#include <inttypes.h>
+
 #include <mpi.h>
 
 #include "cdi.h"
@@ -21,9 +23,11 @@ static struct
 #define CDI_DT_MATCH_NEEDED 1
   { DATATYPE_INT8, MPI_SIGNED_CHAR },
   { DATATYPE_INT16, MPI_SHORT },
+  { DATATYPE_UINT32, MPI_INT },
 #else
   { DATATYPE_INT8, MPI_INT8_T },
   { DATATYPE_INT16, MPI_INT16_T },
+  { DATATYPE_UINT32, MPI_UINT32_T },
 #endif
   { DATATYPE_INT, MPI_INT },
   { DATATYPE_FLT64, MPI_DOUBLE },
@@ -56,12 +60,15 @@ static inline void
 }
 
 static void
-  setupDtDict()
+setupDtDict()
 {
   dtDictFixMPIType(lookupDt(DATATYPE_INT8), MPI_TYPECLASS_INTEGER,
                    (int)sizeof (int8_t));
-  dtDictFixMPIType(lookupDt(DATATYPE_INT8), MPI_TYPECLASS_INTEGER,
+  dtDictFixMPIType(lookupDt(DATATYPE_INT16), MPI_TYPECLASS_INTEGER,
                    (int)sizeof (int16_t));
+  dtDictFixMPIType(lookupDt(DATATYPE_UINT32), MPI_TYPECLASS_INTEGER,
+                   (int)sizeof (uint32_t));
+  dtDictMatchComplete = 1;
 }
 #endif
 

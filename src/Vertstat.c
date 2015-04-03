@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -94,12 +94,12 @@ void *Vertstat(void *argument)
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field);
-  field.ptr = (double *) malloc(gridsize*sizeof(double));
+  field.ptr = malloc(gridsize*sizeof(double));
 
-  vars1 = (field_t *) malloc(nvars*sizeof(field_t));
-  samp1 = (field_t *) malloc(nvars*sizeof(field_t));
+  vars1 = malloc(nvars*sizeof(field_t));
+  samp1 = malloc(nvars*sizeof(field_t));
   if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (field_t *) malloc(nvars*sizeof(field_t));
+    vars2 = malloc(nvars*sizeof(field_t));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -113,7 +113,7 @@ void *Vertstat(void *argument)
       vars1[varID].nsamp   = 0;
       vars1[varID].nmiss   = 0;
       vars1[varID].missval = missval;
-      vars1[varID].ptr     = (double *) malloc(gridsize*sizeof(double));
+      vars1[varID].ptr     = malloc(gridsize*sizeof(double));
       samp1[varID].grid    = gridID;
       samp1[varID].nmiss   = 0;
       samp1[varID].missval = missval;
@@ -124,7 +124,7 @@ void *Vertstat(void *argument)
 	  vars2[varID].grid    = gridID;
 	  vars2[varID].nmiss   = 0;
 	  vars2[varID].missval = missval;
-	  vars2[varID].ptr     = (double *) malloc(gridsize*sizeof(double));
+	  vars2[varID].ptr     = malloc(gridsize*sizeof(double));
 	}
     }
 
@@ -151,7 +151,7 @@ void *Vertstat(void *argument)
 	      if ( nmiss > 0 || samp1[varID].ptr )
 		{
 		  if ( samp1[varID].ptr == NULL )
-		    samp1[varID].ptr = (double *) malloc(gridsize*sizeof(double));
+		    samp1[varID].ptr = malloc(gridsize*sizeof(double));
 
 		  for ( i = 0; i < gridsize; i++ )
 		    if ( DBL_IS_EQUAL(vars1[varID].ptr[i], vars1[varID].missval) )
@@ -170,7 +170,7 @@ void *Vertstat(void *argument)
 		{
 		  if ( samp1[varID].ptr == NULL )
 		    {
-		      samp1[varID].ptr = (double *) malloc(gridsize*sizeof(double));
+		      samp1[varID].ptr = malloc(gridsize*sizeof(double));
 		      for ( i = 0; i < gridsize; i++ )
 			samp1[varID].ptr[i] = vars1[varID].nsamp;
 		    }

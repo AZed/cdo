@@ -8,10 +8,10 @@
 
 #include "dmemory.h"
 #include "cdi.h"
+#include "cdi_cksum.h"
 #include "cdi_int.h"
 #include "grid.h"
 #include "gaussgrid.h"
-#include "pio_util.h"
 #include "resource_handle.h"
 #include "resource_unpack.h"
 #include "namespace.h"
@@ -129,7 +129,7 @@ void grid_init(grid_t *gridptr)
   gridptr->yunits[0]    = 0;
   gridptr->xstdname[0]  = 0;
   gridptr->ystdname[0]  = 0;
-  gridptr->uuid[0]      = 0;
+  memset(gridptr->uuid, 0, 16);
   gridptr->name         = NULL;
 }
 
@@ -571,7 +571,7 @@ void gridDefXname(int gridID, const char *xname)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning ("%s", "Operation not executed." );
+      Warning ("%s", "Operation not executed." );
       return;
     }
 
@@ -603,7 +603,7 @@ void gridDefXlongname(int gridID, const char *xlongname)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning ("%s", "Operation not executed." );
+      Warning ("%s", "Operation not executed." );
       return;
     }
 
@@ -633,7 +633,7 @@ void gridDefXunits(int gridID, const char *xunits)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -665,7 +665,7 @@ void gridDefYname(int gridID, const char *yname)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -697,7 +697,7 @@ void gridDefYlongname(int gridID, const char *ylongname)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -729,7 +729,7 @@ void gridDefYunits(int gridID, const char *yunits)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -747,8 +747,8 @@ void gridDefYunits(int gridID, const char *yunits)
 
 @Prototype void gridInqXname(int gridID, char *name)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  name     Name of the X-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  name     Name of the X-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -777,8 +777,8 @@ void gridInqXname(int gridID, char *xname)
 
 @Prototype void gridInqXlongname(int gridID, char *longname)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  longname Longname of the X-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  longname Longname of the X-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -807,8 +807,8 @@ void gridInqXlongname(int gridID, char *xlongname)
 
 @Prototype void gridInqXunits(int gridID, char *units)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  units    Units of the X-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  units    Units of the X-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -849,8 +849,8 @@ void gridInqXstdname(int gridID, char *xstdname)
 
 @Prototype void gridInqYname(int gridID, char *name)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  name     Name of the Y-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  name     Name of the Y-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -879,8 +879,8 @@ void gridInqYname(int gridID, char *yname)
 
 @Prototype void gridInqXlongname(int gridID, char *longname)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  longname Longname of the Y-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  longname Longname of the Y-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -909,8 +909,8 @@ void gridInqYlongname(int gridID, char *ylongname)
 
 @Prototype void gridInqYunits(int gridID, char *units)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
-    @Item  units    Units of the Y-axis. The caller must allocate space for the 
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
+    @Item  units    Units of the Y-axis. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
 
@@ -950,7 +950,7 @@ void gridInqYstdname(int gridID, char *ystdname)
 
 @Prototype int gridInqType(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqType} returns the type of a Grid.
@@ -982,7 +982,7 @@ int gridInqType(int gridID)
 
 @Prototype int gridInqSize(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqSize} returns the size of a Grid.
@@ -1066,7 +1066,7 @@ void gridDefTrunc(int gridID, int trunc)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1097,7 +1097,7 @@ void gridDefXsize(int gridID, int xsize)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1138,7 +1138,7 @@ void gridDefPrec(int gridID, int prec)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1176,7 +1176,7 @@ int gridInqPrec(int gridID)
 
 @Prototype int gridInqXsize(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqXsize} returns the number of values of a X-axis.
@@ -1217,7 +1217,7 @@ void gridDefYsize(int gridID, int ysize)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1248,7 +1248,7 @@ void gridDefYsize(int gridID, int ysize)
 
 @Prototype int gridInqYsize(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqYsize} returns the number of values of a Y-axis.
@@ -1290,7 +1290,7 @@ void gridDefNP(int gridID, int np)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning ("%s", "Operation not executed." );
+      Warning ("%s", "Operation not executed." );
       return;
     }
 
@@ -1307,7 +1307,7 @@ void gridDefNP(int gridID, int np)
 
 @Prototype int gridInqNP(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqNP} returns the number of parallels between a pole and the equator
@@ -1345,7 +1345,7 @@ void gridDefRowlon(int gridID, int nrowlon, const int *rowlon)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1414,7 +1414,7 @@ void gridDefMask(int gridID, const int *mask)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1477,7 +1477,7 @@ void gridDefMaskGME(int gridID, const int *mask)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1505,7 +1505,7 @@ void gridDefMaskGME(int gridID, const int *mask)
 
 @Prototype int gridInqXvals(int gridID, double *xvals)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
     @Item  xvals    Pointer to the location into which the X-values are read.
                     The caller must allocate space for the returned values.
 
@@ -1568,7 +1568,7 @@ void gridDefXvals(int gridID, const double *xvals)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1602,7 +1602,7 @@ void gridDefXvals(int gridID, const double *xvals)
 
 @Prototype int gridInqYvals(int gridID, double *yvals)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
     @Item  yvals    Pointer to the location into which the Y-values are read.
                     The caller must allocate space for the returned values.
 
@@ -1663,7 +1663,7 @@ void gridDefYvals(int gridID, const double *yvals)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1854,7 +1854,7 @@ void gridDefXpole(int gridID, double xpole)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1906,7 +1906,7 @@ void gridDefYpole(int gridID, double ypole)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -1958,7 +1958,7 @@ void gridDefAngle(int gridID, double angle)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -2007,7 +2007,7 @@ void gridDefGMEnd(int gridID, int nd)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -2055,7 +2055,7 @@ void gridDefGMEni(int gridID, int ni)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -2103,7 +2103,7 @@ void gridDefGMEni2(int gridID, int ni2)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
   gridptr = ( grid_t *) reshGetVal ( gridID, &gridOps );
@@ -2140,7 +2140,7 @@ void gridDefGMEni3(int gridID, int ni3)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -2920,8 +2920,7 @@ int gridGenerate(grid_t grid)
 
 @Prototype int gridDuplicate(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate},
-                    @fref{gridDuplicate} or @fref{vlistInqVarGrid}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridDuplicate} duplicates a horizontal Grid.
@@ -3121,7 +3120,7 @@ void gridDefArea(int gridID, const double *area)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -3192,7 +3191,7 @@ void gridDefNvertex(int gridID, int nvertex)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -3237,7 +3236,7 @@ void gridDefXbounds(int gridID, const double *xbounds)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning ("%s", "Operation not executed.");
+      Warning ("%s", "Operation not executed.");
       return;
     }
 
@@ -3274,7 +3273,7 @@ void gridDefXbounds(int gridID, const double *xbounds)
 
 @Prototype int gridInqXbounds(int gridID, double *xbounds)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
     @Item  xbounds  Pointer to the location into which the X-bounds are read.
                     The caller must allocate space for the returned values.
 
@@ -3352,7 +3351,7 @@ void gridDefYbounds(int gridID, const double *ybounds)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -3389,7 +3388,7 @@ void gridDefYbounds(int gridID, const double *ybounds)
 
 @Prototype int gridInqYbounds(int gridID, double *ybounds)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
     @Item  ybounds  Pointer to the location into which the Y-bounds are read.
                     The caller must allocate space for the returned values.
 
@@ -3914,7 +3913,7 @@ void gridDefLCC(int gridID, double originLon, double originLat, double lonParY,
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -3946,7 +3945,7 @@ void gridDefLCC(int gridID, double originLon, double originLat, double lonParY,
 
 @Prototype void gridInqLCC(int gridID, double *originLon, double *originLat, double *lonParY, double *lat1, double *lat2, double *xinc, double *yinc, int *projflag, int *scanflag)
 @Parameter
-    @Item  gridID    Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID    Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
     @Item  originLon Longitude of the first grid point.
     @Item  originLat Latitude of the first grid point.
     @Item  lonParY   The East longitude of the meridian which is parallel to the Y-axis.
@@ -4000,7 +3999,7 @@ void gridDefLcc2(int gridID, double earth_radius, double lon_0, double lat_0, do
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4055,7 +4054,7 @@ void gridDefLaea(int gridID, double earth_radius, double lon_0, double lat_0)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4107,7 +4106,7 @@ void gridDefComplexPacking(int gridID, int lcomplex)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4153,7 +4152,7 @@ void gridDefNumber(int gridID, const int number)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4170,7 +4169,7 @@ void gridDefNumber(int gridID, const int number)
 
 @Prototype int gridInqNumber(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqNumber} returns the reference number to an unstructured grid.
@@ -4210,7 +4209,7 @@ void gridDefPosition(int gridID, int position)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4227,7 +4226,7 @@ void gridDefPosition(int gridID, int position)
 
 @Prototype int gridInqPosition(int gridID)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqPosition} returns the position of grid in the reference file.
@@ -4267,7 +4266,7 @@ void gridDefReference(int gridID, const char *reference)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4293,7 +4292,7 @@ void gridDefReference(int gridID, const char *reference)
 
 @Prototype char *gridInqReference(int gridID, char *reference)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqReference} returns the reference URI to an unstructured grid.
@@ -4342,7 +4341,7 @@ void gridDefUUID(int gridID, const char *uuid)
 
   if ( reshGetStatus ( gridID, &gridOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -4359,18 +4358,18 @@ void gridDefUUID(int gridID, const char *uuid)
 @Function  gridInqUUID
 @Title     Get the UUID to an unstructured grid
 
-@Prototype char *gridInqUUID(int gridID, char *uuid)
+@Prototype void gridInqUUID(int gridID, char *uuid)
 @Parameter
-    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate}.
+    @Item  gridID   Grid ID, from a previous call to @fref{gridCreate} or @fref{vlistInqVarGrid}.
 
 @Description
 The function @func{gridInqUUID} returns the UUID to an unstructured grid.
 
 @Result
-@func{gridInqUUID} returns the UUID to an unstructured grid.
+@func{gridInqUUID} returns the UUID to an unstructured grid to the parameter uuid.
 @EndFunction
 */
-char *gridInqUUID(int gridID, char *uuid)
+void gridInqUUID(int gridID, char *uuid)
 {
   grid_t *gridptr;
 
@@ -4379,8 +4378,6 @@ char *gridInqUUID(int gridID, char *uuid)
   grid_check_ptr(gridID, gridptr);
 
   memcpy(uuid, gridptr->uuid, 16);
-
-  return (uuid);
 }
 
 
@@ -4397,7 +4394,7 @@ gridTxCode ()
 }
 
 enum { gridNint    = 27,
-       gridNdouble = 25,
+       gridNdouble = 24,
        gridNstrings= 8,
        gridHasMaskFlag = 1 << 0,
        gridHasGMEMaskFlag = 1 << 1,
@@ -4434,13 +4431,13 @@ gridGetPackSize(void * voidP, void *context)
   int packBuffSize = 0, count;
 
   packBuffSize += serializeGetSize(gridNint, DATATYPE_INT, context)
-    + serializeGetSize(1, DATATYPE_FLT64, context);
+    + serializeGetSize(1, DATATYPE_UINT32, context);
 
   if (gridP->rowlon)
     {
       xassert(gridP->nrowlon);
       packBuffSize += serializeGetSize(gridP->nrowlon, DATATYPE_INT, context)
-        + serializeGetSize( 1, DATATYPE_FLT64, context);
+        + serializeGetSize( 1, DATATYPE_UINT32, context);
     }
 
   packBuffSize += serializeGetSize(gridNdouble, DATATYPE_FLT64, context);
@@ -4452,7 +4449,8 @@ gridGetPackSize(void * voidP, void *context)
       else
 	count = gridP->xsize;
       xassert(count);
-      packBuffSize += serializeGetSize(count + 1, DATATYPE_FLT64, context);
+      packBuffSize += serializeGetSize(count, DATATYPE_FLT64, context)
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   if (gridP->yvals)
@@ -4462,14 +4460,16 @@ gridGetPackSize(void * voidP, void *context)
       else
 	count = gridP->ysize;
       xassert(count);
-      packBuffSize += serializeGetSize(count + 1, DATATYPE_FLT64, context);
+      packBuffSize += serializeGetSize(count, DATATYPE_FLT64, context)
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   if (gridP->area)
     {
       xassert(gridP->size);
       packBuffSize +=
-        serializeGetSize(gridP->size + 1, DATATYPE_FLT64, context);
+        serializeGetSize(gridP->size, DATATYPE_FLT64, context)
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   if (gridP->xbounds)
@@ -4481,7 +4481,8 @@ gridGetPackSize(void * voidP, void *context)
 	count = gridP->xsize;
       xassert(count);
       packBuffSize
-        += serializeGetSize(gridP->nvertex * count + 1, DATATYPE_FLT64, context);
+        += (serializeGetSize(gridP->nvertex * count, DATATYPE_FLT64, context)
+            + serializeGetSize(1, DATATYPE_UINT32, context));
     }
 
   if (gridP->ybounds)
@@ -4493,18 +4494,19 @@ gridGetPackSize(void * voidP, void *context)
 	count = gridP->ysize;
       xassert(count);
       packBuffSize
-        += serializeGetSize(gridP->nvertex * count + 1, DATATYPE_FLT64, context);
+        += (serializeGetSize(gridP->nvertex * count, DATATYPE_FLT64, context)
+            + serializeGetSize(1, DATATYPE_UINT32, context));
     }
 
   packBuffSize +=
     serializeGetSize(gridNstrings * CDI_MAX_NAME , DATATYPE_TXT, context)
-    + serializeGetSize(1, DATATYPE_FLT64, context);
+    + serializeGetSize(1, DATATYPE_UINT32, context);
 
   if (gridP->reference)
     {
       packBuffSize += serializeGetSize(1, DATATYPE_INT, context)
         + serializeGetSize(strlen(gridP->reference) + 1, DATATYPE_TXT, context)
-        + serializeGetSize(1, DATATYPE_FLT64, context);
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   if (gridP->mask)
@@ -4512,14 +4514,14 @@ gridGetPackSize(void * voidP, void *context)
       xassert(gridP->size);
       packBuffSize
         += serializeGetSize(gridP->size, DATATYPE_UCHAR, context)
-        + serializeGetSize(1, DATATYPE_FLT64, context);
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   if (gridP->mask_gme)
     {
       xassert(gridP->size);
       packBuffSize += serializeGetSize(gridP->size, DATATYPE_UCHAR, context)
-        + serializeGetSize( 1, DATATYPE_FLT64, context);
+        + serializeGetSize(1, DATATYPE_UINT32, context);
     }
 
   return packBuffSize;
@@ -4531,8 +4533,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
            int * unpackBufferPos, int nspTarget, void *context)
 {
   grid_t * gridP;
+  uint32_t d;
   int memberMask, size;
-  double d;
   char charBuffer[gridNstrings * CDI_MAX_NAME];
 
   gridInit();
@@ -4544,9 +4546,9 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
     serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                     intBuffer, gridNint, DATATYPE_INT, context);
     serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                    &d, 1, DATATYPE_FLT64, context);
+                    &d, 1, DATATYPE_UINT32, context);
 
-    xassert(xchecksum(DATATYPE_INT, gridNint, intBuffer) == d);
+    xassert(cdiCheckSum(DATATYPE_INT, gridNint, intBuffer) == d);
     xassert(namespaceAdaptKey(intBuffer[0], nspTarget) == gridP->self);
 
     gridP->type          =   intBuffer[1];
@@ -4584,16 +4586,17 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->rowlon, gridP->nrowlon , DATATYPE_INT, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_INT, gridP->nrowlon, gridP->rowlon) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_INT, gridP->nrowlon, gridP->rowlon) == d);
     }
 
   {
     double doubleBuffer[gridNdouble];
     serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                     doubleBuffer, gridNdouble, DATATYPE_FLT64, context);
-    xassert(doubleBuffer[24]
-            == xchecksum(DATATYPE_FLT, gridNdouble, doubleBuffer));
+    serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
+                    &d, 1, DATATYPE_UINT32, context);
+    xassert(d == cdiCheckSum(DATATYPE_FLT, gridNdouble, doubleBuffer));
 
     gridP->xfirst = doubleBuffer[0];
     gridP->yfirst = doubleBuffer[1];
@@ -4632,8 +4635,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->xvals, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_FLT, size, gridP->xvals) == d );
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->xvals) == d );
     }
 
   if (memberMask & gridHasYValsFlag)
@@ -4647,8 +4650,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->yvals, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_FLT, size, gridP->yvals ) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->yvals) == d);
     }
 
   if (memberMask & gridHasAreaFlag)
@@ -4658,8 +4661,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->area, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_FLT, size, gridP->area) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->area) == d);
     }
 
   if (memberMask & gridHasXBoundsFlag)
@@ -4674,8 +4677,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->xbounds, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_FLT, size, gridP->xbounds ) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->xbounds) == d);
     }
 
   if (memberMask & gridHasYBoundsFlag)
@@ -4690,16 +4693,16 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
 			  gridP->ybounds, size, DATATYPE_FLT64, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_FLT, size, gridP->ybounds ) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->ybounds) == d);
     }
 
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   charBuffer, gridNstrings * CDI_MAX_NAME, DATATYPE_TXT, context);
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_FLT64, context);
+                  &d, 1, DATATYPE_UINT32, context);
 
-  xassert(d == xchecksum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer));
+  xassert(d == cdiCheckSum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer));
 
   memcpy ( gridP->xname    , &charBuffer[CDI_MAX_NAME * 0], CDI_MAX_NAME );
   memcpy ( gridP->yname    , &charBuffer[CDI_MAX_NAME * 1], CDI_MAX_NAME );
@@ -4719,8 +4722,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->reference, referenceSize, DATATYPE_TXT, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_TXT, referenceSize, gridP->reference ) == d );
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_TXT, referenceSize, gridP->reference) == d);
     }
 
   if (memberMask & gridHasMaskFlag)
@@ -4730,8 +4733,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->mask, gridP->size, DATATYPE_UCHAR, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_TXT, gridP->size, gridP->mask ) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_UCHAR, gridP->size, gridP->mask) == d);
     }
 
   if (memberMask & gridHasGMEMaskFlag)
@@ -4741,8 +4744,8 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       gridP->mask_gme, gridP->size, DATATYPE_UCHAR, context);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                      &d, 1, DATATYPE_FLT64, context);
-      xassert(xchecksum(DATATYPE_TXT, gridP->size, gridP->mask_gme ) == d);
+                      &d, 1, DATATYPE_UINT32, context);
+      xassert(cdiCheckSum(DATATYPE_UCHAR, gridP->size, gridP->mask_gme) == d);
     }
 }
 
@@ -4753,7 +4756,7 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 {
   grid_t   * gridP = ( grid_t * )   voidP;
   int size;
-  double d;
+  uint32_t d;
   char charBuffer[gridNstrings * CDI_MAX_NAME];
 
   {
@@ -4789,8 +4792,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
     serializePack(intBuffer, gridNint, DATATYPE_INT,
                   packBuffer, packBufferSize, packBufferPos, context);
-    d = xchecksum(DATATYPE_INT, gridNint, intBuffer);
-    serializePack(&d, 1, DATATYPE_FLT64,
+    d = cdiCheckSum(DATATYPE_INT, gridNint, intBuffer);
+    serializePack(&d, 1, DATATYPE_UINT32,
                   packBuffer, packBufferSize, packBufferPos, context);
   }
 
@@ -4799,8 +4802,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
       xassert((size = gridP->nrowlon));
       serializePack(gridP->rowlon, size, DATATYPE_INT,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_INT , size, gridP->rowlon);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_INT , size, gridP->rowlon);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4831,9 +4834,11 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
     doubleBuffer[21] = gridP->xpole;
     doubleBuffer[22] = gridP->ypole;
     doubleBuffer[23] = gridP->angle;
-    doubleBuffer[24] = xchecksum(DATATYPE_FLT, gridNdouble - 1, doubleBuffer);
 
     serializePack(doubleBuffer, gridNdouble, DATATYPE_FLT64,
+                  packBuffer, packBufferSize, packBufferPos, context);
+    d = cdiCheckSum(DATATYPE_FLT, gridNdouble, doubleBuffer);
+    serializePack(&d, 1, DATATYPE_UINT32,
                   packBuffer, packBufferSize, packBufferPos, context);
   }
 
@@ -4847,8 +4852,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
       serializePack(gridP->xvals, size, DATATYPE_FLT64,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_FLT, size, gridP->xvals);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_FLT, size, gridP->xvals);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4861,8 +4866,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
       xassert(size);
       serializePack(gridP->yvals, size, DATATYPE_FLT64,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_FLT, size, gridP->yvals);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_FLT, size, gridP->yvals);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4872,8 +4877,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
       serializePack(gridP->area, gridP->size, DATATYPE_FLT64,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_FLT, gridP->size, gridP->area);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_FLT, gridP->size, gridP->area);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4888,8 +4893,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
       serializePack(gridP->xbounds, size, DATATYPE_FLT64,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_FLT, size, gridP->xbounds);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_FLT, size, gridP->xbounds);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4904,8 +4909,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
       serializePack(gridP->ybounds, size, DATATYPE_FLT64,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_FLT, size, gridP->ybounds);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_FLT, size, gridP->ybounds);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4920,8 +4925,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
   serializePack( charBuffer, gridNstrings * CDI_MAX_NAME, DATATYPE_TXT,
 		    packBuffer, packBufferSize, packBufferPos, context);
-  d = xchecksum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer);
-  serializePack(&d, 1, DATATYPE_FLT64,
+  d = cdiCheckSum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer);
+  serializePack(&d, 1, DATATYPE_UINT32,
                 packBuffer, packBufferSize, packBufferPos, context);
 
   if ( gridP->reference )
@@ -4931,8 +4936,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
                     packBuffer, packBufferSize, packBufferPos, context);
       serializePack(gridP->reference, size, DATATYPE_TXT,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_TXT, size, gridP->reference);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_TXT, size, gridP->reference);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4941,8 +4946,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
       xassert((size = gridP->size));
       serializePack(gridP->mask, size, DATATYPE_UCHAR,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_TXT, size, gridP->mask);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_UCHAR, size, gridP->mask);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 
@@ -4952,8 +4957,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
       serializePack(gridP->mask_gme, size, DATATYPE_UCHAR,
                     packBuffer, packBufferSize, packBufferPos, context);
-      d = xchecksum(DATATYPE_TXT, size, gridP->mask);
-      serializePack(&d, 1, DATATYPE_FLT64,
+      d = cdiCheckSum(DATATYPE_UCHAR, size, gridP->mask_gme);
+      serializePack(&d, 1, DATATYPE_UINT32,
                     packBuffer, packBufferSize, packBufferPos, context);
     }
 }

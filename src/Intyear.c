@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -60,7 +60,7 @@ void *Intyear(void *argument)
 
   iyears = (int *) listArrayPtr(ilist);
 
-  streamIDs = (int *) malloc(nyears*sizeof(int));
+  streamIDs = malloc(nyears*sizeof(int));
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
@@ -72,9 +72,9 @@ void *Intyear(void *argument)
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize*sizeof(double));
-  array3 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize*sizeof(double));
+  array3 = malloc(gridsize*sizeof(double));
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);

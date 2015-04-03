@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 #include "gradsdeslib.h"
 
@@ -85,8 +86,8 @@ int y_is_gauss(double *gridyvals, int ysize)
   if ( ysize > 2 )
     {
       double *yvals, *yw;
-      yvals = (double *) malloc(ysize*sizeof(double));
-      yw    = (double *) malloc(ysize*sizeof(double));
+      yvals = malloc(ysize*sizeof(double));
+      yw    = malloc(ysize*sizeof(double));
       gaussaw(yvals, yw, ysize);
       free(yw);
       for ( i = 0; i < (int) ysize; i++ )
@@ -125,8 +126,8 @@ int define_grid(dsets_t *pfi)
   nx = pfi->dnum[0];
   ny = pfi->dnum[1];
 
-  xvals = (double *) malloc(nx*sizeof(double));
-  yvals = (double *) malloc(ny*sizeof(double));
+  xvals = malloc(nx*sizeof(double));
+  yvals = malloc(ny*sizeof(double));
 
   get_dim_vals(pfi, xvals, nx, 0);
   get_dim_vals(pfi, yvals, ny, 1);
@@ -163,7 +164,7 @@ int define_level(dsets_t *pfi, int nlev)
     {
       double *zvals = NULL;
 
-      zvals = (double *) malloc(nz*sizeof(double));
+      zvals = malloc(nz*sizeof(double));
 
       get_dim_vals(pfi, zvals, nz, 2);
 
@@ -251,10 +252,10 @@ void *Importbinary(void *argument)
 
   vlistID = vlistCreate();
 
-  var_zaxisID = (int *) malloc(nvars*sizeof(int));
-  recVarID    = (int *) malloc(nrecs*sizeof(int));
-  recLevelID  = (int *) malloc(nrecs*sizeof(int));
-  var_dfrm    = (int *) malloc(nrecs*sizeof(int));
+  var_zaxisID = malloc(nvars*sizeof(int));
+  recVarID    = malloc(nrecs*sizeof(int));
+  recLevelID  = malloc(nrecs*sizeof(int));
+  var_dfrm    = malloc(nrecs*sizeof(int));
 
   recID = 0;
   for ( ivar = 0; ivar < nvars; ++ivar )
@@ -365,9 +366,9 @@ void *Importbinary(void *argument)
 
   //recsize = pfi.gsiz*4;
   recsize = pfi.gsiz*8;
-  rec = (char *) malloc(recsize);
+  rec = malloc(recsize);
 
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   /*
   if (pfi.tmplat)

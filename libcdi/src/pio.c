@@ -14,6 +14,7 @@
 
 #include "pio.h"
 #include "cdi.h"
+#include "cdipio.h"
 #include "pio_comm.h"
 #include "pio_impl.h"
 #include "pio_interface.h"
@@ -142,7 +143,7 @@ int pioFileOpen(const char *filename, const char *mode)
 
 /***************************************************************/
 
-void backendInit ( void )
+void backendInit(void (*postCommSetupActions)(void))
 {
   int IOMode = commInqIOMode ();
 
@@ -159,16 +160,16 @@ void backendInit ( void )
       commDefCommsIO ();
       break;
     case PIO_MPI:
-      initMPINONB ();
+      initMPINONB(postCommSetupActions);
       break;
 #ifndef _SX
     case PIO_ASYNCH:
 #endif
     case PIO_WRITER:
-      pioSendInitialize();
+      pioSendInitialize(postCommSetupActions);
       break;
     case PIO_FPGUARD:
-      initPOSIXFPGUARDSENDRECV ();
+      initPOSIXFPGUARDSENDRECV(postCommSetupActions);
       break;
     }
 }
@@ -201,12 +202,6 @@ void backendCleanup ( void )
 
 /***************************************************************/
 
-void backendFinalize ( void )
-{
-  commDestroy ();
-  MPI_Finalize ();
-  exit ( EXIT_SUCCESS );
-}
 #endif
 /*
  * Local Variables:

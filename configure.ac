@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([cdo], [1.6.2], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.3], [http://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -69,6 +69,7 @@ case "$CC" in
   *gcc*)  COMP_VERSION=`$CC --version | head -n 1`;;
   g++*)   COMP_VERSION=`$CC --version | head -n 1`;;
   clang*) COMP_VERSION=`$CC --version | head -n 1`;;
+  icc*)   COMP_VERSION=`$CC --version | head -n 1`;;
   sxc*)   COMP_VERSION=`$CC -V 2>&1   | tail -n 1`;;
   xlc*)   COMP_VERSION=`$CC -qversion 2>&1   | head -n 1`;;
   *)      COMP_VERSION=`$CC -V 2>&1   | head -n 1` | grep -v error;;

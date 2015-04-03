@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -68,8 +68,8 @@ void *Subtrend(void *argument)
 
   field_init(&field1);
   field_init(&field4);
-  field1.ptr = (double *) malloc(gridsize*sizeof(double));
-  field4.ptr = (double *) malloc(gridsize*sizeof(double));
+  field1.ptr = malloc(gridsize*sizeof(double));
+  field4.ptr = malloc(gridsize*sizeof(double));
 
   vars2 = field_malloc(vlistID1, FIELD_PTR);
   vars3 = field_malloc(vlistID1, FIELD_PTR);

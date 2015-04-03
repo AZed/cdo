@@ -1,3 +1,74 @@
+2014-02-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.6.3
+	* Version 1.6.3 released
+
+2014-01-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridFromH5file: skipped if attribute >bounds< is defined [Bug #4411]
+
+2014-01-24  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* expr: select variables by name
+
+2014-01-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: added support for GRIB files >2GB [request: Ingo Kirchner]
+
+2014-01-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: added overloading of streamInqGinfo() (bug fix for GRIB1)
+
+2014-01-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* settaxis: added support for negativ time increment
+
+2014-01-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added test/test_Select.sh
+
+2014-01-02 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: changed LCC to LCCR in PDEF definition [Bug #4344]
+
+2013-12-09 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* cat: "Segmentation fault" if the output file already exist [Bug #4291]
+
+2013-12-04 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridFromH5file: set fclose degree to H5F_CLOSE_STRONG [Bug #4272]
+	* cdoDefineGrid: first call gridFromH5file() for HDF tags
+
+2013-11-29 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eca_csu: added number of csu periods with more than 5days per time period [request: Moritz Maneke]
+	* eca_cfd: added number of cfd periods with more than 5days per time period  [request: Moritz Maneke]
+
+2013-11-29 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapdis: optimization for regular 2D source grids
+
+2013-11-28 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapbic: optimization for regular 2D source grids
+
+2013-11-27 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapbil: optimization for regular 2D source grids
+
+2013-11-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapbil: skip explicitly call to sort_add() (weights are sorted implicitly)
+
+2013-11-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplib: cleanup and preparation for opt. reg2d grids
+
+2013-11-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* delete: parameter level does not work [Bug #4216]
+
 2013-11-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.6.2

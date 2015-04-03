@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -261,12 +261,12 @@ void *Mrotuv(void *argument)
   nlon    = gridInqXsize(gridID1);
   nlat    = gridInqYsize(gridID1);
 
-  grid1x  = (double *) malloc(gridsize*sizeof(double));
-  grid1y  = (double *) malloc(gridsize*sizeof(double));
-  gridux  = (double *) malloc(gridsize*sizeof(double));
-  griduy  = (double *) malloc(gridsize*sizeof(double));
-  gridvx  = (double *) malloc(gridsize*sizeof(double));
-  gridvy  = (double *) malloc(gridsize*sizeof(double));
+  grid1x  = malloc(gridsize*sizeof(double));
+  grid1y  = malloc(gridsize*sizeof(double));
+  gridux  = malloc(gridsize*sizeof(double));
+  griduy  = malloc(gridsize*sizeof(double));
+  gridvx  = malloc(gridsize*sizeof(double));
+  gridvy  = malloc(gridsize*sizeof(double));
 
   gridsizex = (nlon+2)*nlat;
 
@@ -331,19 +331,19 @@ void *Mrotuv(void *argument)
   missval1 = vlistInqVarMissval(vlistID1, uid);
   missval2 = vlistInqVarMissval(vlistID1, vid);
 
-  ufield  = (double *) malloc(gridsize*sizeof(double));
-  vfield  = (double *) malloc(gridsize*sizeof(double));
+  ufield  = malloc(gridsize*sizeof(double));
+  vfield  = malloc(gridsize*sizeof(double));
 
-  urfield  = (double **) malloc(nlevs*sizeof(double*));
-  vrfield  = (double **) malloc(nlevs*sizeof(double*));
+  urfield  = malloc(nlevs*sizeof(double*));
+  vrfield  = malloc(nlevs*sizeof(double*));
   for ( lid = 0; lid < nlevs; lid++ )
     {
-      urfield[lid] = (double *) malloc(gridsize*sizeof(double));
-      vrfield[lid] = (double *) malloc(gridsize*sizeof(double));
+      urfield[lid] = malloc(gridsize*sizeof(double));
+      vrfield[lid] = malloc(gridsize*sizeof(double));
     }
 
-  uhelp   = (double *) malloc(gridsizex*sizeof(double));
-  vhelp   = (double *) malloc(gridsizex*sizeof(double));
+  uhelp   = malloc(gridsizex*sizeof(double));
+  vhelp   = malloc(gridsizex*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -234,13 +234,13 @@ void *Cloudlayer(void *argument)
   nlevel = zaxisInqSize(zaxisID);
   nhlev  = nlevel+1;
 
-  aclcac = (double *) malloc(gridsize*nlevel*sizeof(double));
+  aclcac = malloc(gridsize*nlevel*sizeof(double));
   for ( varID = 0; varID < nvars2; ++varID )
-    cloud[varID] = (double *) malloc(gridsize*sizeof(double));
+    cloud[varID] = malloc(gridsize*sizeof(double));
 
   if ( zaxisInqType(zaxisID) == ZAXIS_PRESSURE )
     {
-      plevs = (double *) malloc(nlevel*sizeof(double));
+      plevs = malloc(nlevel*sizeof(double));
       zaxisInqLevels(zaxisID, plevs);
       if ( plevs[0] > plevs[nlevel-1] )
 	{
@@ -281,11 +281,11 @@ void *Cloudlayer(void *argument)
 	{
 	  double *vct;
 
-	  vct = (double *) malloc(nvct*sizeof(double));
+	  vct = malloc(nvct*sizeof(double));
 	  zaxisInqVct(zaxisID, vct);
 
 	  nlevs = nlevel + 1;
-	  plevs = (double *) malloc(nlevs*sizeof(double));
+	  plevs = malloc(nlevs*sizeof(double));
 	  vct2plev(vct, plevs, nlevs);
 	  free(vct);
 

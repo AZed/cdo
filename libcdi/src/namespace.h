@@ -22,6 +22,7 @@ enum namespaceSwitch
 {
   NSSWITCH_NO_SUCH_SWITCH = -1,
   NSSWITCH_ABORT,
+  NSSWITCH_WARNING,
   NSSWITCH_SERIALIZE_GET_SIZE,
   NSSWITCH_SERIALIZE_PACK,
   NSSWITCH_SERIALIZE_UNPACK,
@@ -33,6 +34,7 @@ enum namespaceSwitch
   NSSWITCH_STREAM_WRITE_VAR_,
   NSSWITCH_STREAM_WRITE_VAR_CHUNK_,
   NSSWITCH_STREAM_WRITE_VAR_PART_,
+  NSSWITCH_STREAM_WRITE_SCATTERED_VAR_PART_,
   NSSWITCH_STREAM_CLOSE_BACKEND,
   NSSWITCH_STREAM_DEF_TIMESTEP_,
   NSSWITCH_STREAM_SYNC,
@@ -58,6 +60,7 @@ int              namespaceNew();
 void             namespaceDelete(int namespaceID);
 void             namespaceCleanup      ( void );
 int              namespaceGetNumber    ( void );
+void namespaceSetActive(int namespaceID);
 int              namespaceGetActive    ( void );
 int              namespaceIdxEncode    ( namespaceTuple_t );
 int              namespaceIdxEncode2   ( int, int );

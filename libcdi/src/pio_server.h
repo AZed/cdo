@@ -9,7 +9,7 @@
 
 #include <mpi.h>
 
-void IOServer ();
+void IOServer(void (*postCommSetupActions)(void));
 
 #endif
 

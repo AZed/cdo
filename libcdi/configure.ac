@@ -1,6 +1,6 @@
 #  Process this file with autoconf to produce a configure script.
 
-AC_INIT([cdi], [1.6.2], [http://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.3], [http://code.zmaw.de/projects/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
@@ -22,6 +22,7 @@ LT_INIT([pic-only])
 # Check building environment
 AC_CHECK_TOOL([CC],[gcc],[:])
 AC_PROG_CC_C99
+AM_PROG_CC_C_O
 AC_PROG_FC
 AS_IF([test -n "$FC" && test "X$FC" != "Xno"],
   [AC_FC_SRCEXT([f90])
@@ -42,6 +43,9 @@ AC_CHECK_TOOL([DLLTOOL],[dlltool],[:])
 AC_CHECK_TOOL([OBJDUMP],[objdump],[:])
 AC_CHECK_TOOL([STRIP],[strip],[:])
 AC_CHECK_TOOL([RANLIB],[ranlib],[:])
+# -----------------------------------------------------------------------
+# Check endianess of system
+AC_C_BIGENDIAN
 #  ----------------------------------------------------------------------
 # Check large file support on 32 bit systems
 AC_SYS_LARGEFILE
@@ -65,6 +69,10 @@ AC_CHECK_FUNCS([getline])
 # Checks for the availability of ANSI-C99 functions
 AC_CHECK_DECLS([isnan],,,[AC_INCLUDES_DEFAULT
 @%:@include <math.h>])
+
+#
+# Check for non-standard builtin
+AC_CHECK_DECLS([__builtin_ctz])
 
 # Check compiler version
 case "$CC" in
@@ -109,6 +117,7 @@ AC_ARG_ENABLE(mpi,AS_HELP_STRING([--enable-mpi],[Compile with MPI compiler [defa
 AS_IF([test x"${enable_mpi}" = x"yes"],
       [USE_MPI=yes])
 HAVE_PARALLEL_NC4=0
+enable_ppm=no
 AS_IF([test x"$USE_MPI" = xyes],
   [AC_DEFINE([USE_MPI],[1],[parallel I/O requested and available])
    AC_PATH_PROGS([MPI_LAUNCH],[mpirun mpiexec],[true])
@@ -172,14 +181,12 @@ main(int argc, char **argv)
 ])
       dnl parallel netCDF support still requires ScalES-PPM and YAXT to
       dnl re-arrange the data when running with more than one collector
-      AS_IF([test $HAVE_PARALLEL_NC4 = 1],
-        [PKG_CHECK_MODULES([PPM_CORE],[scales-ppm-core],
-           [enable_ppm=yes
-            AC_DEFINE([HAVE_PPM_CORE],,
-              [ScalES PPM C core library is available])
-           ],
-           [enable_ppm=no])
-        ])
+      PKG_CHECK_MODULES([PPM_CORE],[scales-ppm-core],
+        [enable_ppm=yes
+         AC_DEFINE([HAVE_PPM_CORE],,
+           [ScalES PPM C core library is available])
+        ],
+        [enable_ppm=no])
       dnl if not both scales-ppm and yaxt are available, netcdf can only be
       dnl used in serial mode
       AS_IF([test x$enable_ppm != xyes],
@@ -193,6 +200,7 @@ AS_IF([test $HAVE_PARALLEL_NC4 -gt 0],
              [netCDF library does support MPI parallel invocations])])
 AC_SUBST([HAVE_PARALLEL_NC4])
 AM_CONDITIONAL([USE_MPI],[test x"$USE_MPI" = xyes])
+AM_CONDITIONAL([USE_PPM_CORE],[test $enable_ppm = yes])
 AC_SUBST([USE_MPI])
 #  ----------------------------------------------------------------------
 #  Create the Fortran Interface via iso_c_binding module (Fortran 2003 Standard)
@@ -275,31 +283,38 @@ AM_CONDITIONAL(CREATE_INTERFACES, [test  "x$enable_ruby" = "xyes" -o "x$enable_p
 #  ----------------------------------------------------------------------
 #  Check C / Fortran interface
 ACX_CHECK_CFINT([$srcdir/src/cfortran.h])
-AM_CONDITIONAL([USE_FC],[test -n "$FC" && test "X$FC" != "Xno" && test x$acx_cv_check_cfint = "xyes"])
-
-AC_SUBST([CPPFLAGS])
-
+AM_CONDITIONAL([USE_FC],[test -n "$FC" && test "X$FC" != "Xno" && test x$acx_cv_check_cfint = "xyes"])dnl
+dnl
+AC_SUBST([CPPFLAGS])dnl
+dnl
 AC_ARG_VAR([BUILD_CFLAGS],
-  [append to CFLAGS during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([CFLAGS="$CFLAGS${BUILD_CFLAGS+ $BUILD_CFLAGS}"])
+  [append to CFLAGS during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([CFLAGS="$CFLAGS${BUILD_CFLAGS+ $BUILD_CFLAGS}"])dnl
+AM_SUBST_NOTMAKE([BUILD_CFLAGS])dnl
 AC_ARG_VAR([BUILD_FCFLAGS],
-  [append to FCFLAGS during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([FCFLAGS="$FCFLAGS${BUILD_FCFLAGS+ $BUILD_FCFLAGS}"])
+  [append to FCFLAGS during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([FCFLAGS="$FCFLAGS${BUILD_FCFLAGS+ $BUILD_FCFLAGS}"])dnl
+AM_SUBST_NOTMAKE([BUILD_FCFLAGS])dnl
 AC_ARG_VAR([BUILD_LDFLAGS],
-  [append to LDFLAGS during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([LDFLAGS="$LDFLAGS${BUILD_LDFLAGS+ $BUILD_LDFLAGS}"])
+  [append to LDFLAGS during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([LDFLAGS="$LDFLAGS${BUILD_LDFLAGS+ $BUILD_LDFLAGS}"])dnl
+AM_SUBST_NOTMAKE([BUILD_LDFLAGS])dnl
 AC_ARG_VAR([BUILD_CC],
-  [replace CC with expansion of $BUILD_CC during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([CC="${BUILD_CC-$CC}"])
+  [replace CC with expansion of $BUILD_CC during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([CC="${BUILD_CC-$CC}"])dnl
+AM_SUBST_NOTMAKE([BUILD_CC])dnl
 AC_ARG_VAR([BUILD_CXX],
-  [replace CXX with expansion of $BUILD_CXX during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([CXX="${BUILD_CXX-$CXX}"])
+  [replace CXX with expansion of $BUILD_CXX during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([CXX="${BUILD_CXX-$CXX}"])dnl
+AM_SUBST_NOTMAKE([BUILD_CXX])dnl
 AC_ARG_VAR([BUILD_FC],
-  [replace FC with expansion of $BUILD_FC during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([FC="${BUILD_FC-$FC}"])
+  [replace FC with expansion of $BUILD_FC during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([FC="${BUILD_FC-$FC}"])dnl
+AM_SUBST_NOTMAKE([BUILD_FC])dnl
 AC_ARG_VAR([BUILD_F77],
-  [replace F77 with expansion of $BUILD_F77 during build but not in configure phase])
-AC_CONFIG_COMMANDS_PRE([F77="${BUILD_F77-$F77}"])
+  [replace F77 with expansion of $BUILD_F77 during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([F77="${BUILD_F77-$F77}"])dnl
+AM_SUBST_NOTMAKE([BUILD_F77])dnl
 
 
 # Checks for compiler
@@ -315,16 +330,18 @@ AC_CONFIG_FILES([tests/test_cksum_grib \
                  tests/test_cksum_ieg \
                  tests/test_chunk_cksum \
                  tests/pio_write_run \
+                 tests/pio_write_deco2d_run \
                  tests/pio_cksum_mpinonb \
                  tests/pio_cksum_fpguard \
                  tests/pio_cksum_asynch \
                  tests/pio_cksum_writer \
                  tests/pio_cksum_cdf \
+                 tests/test_resource_copy_mpi_run \
                  util/serialrun],[chmod a+x "$ac_file"])
 
 AC_OUTPUT([Makefile src/Makefile interfaces/Makefile app/Makefile \
 	tests/Makefile examples/Makefile cdi.settings \
-	examples/pio/Makefile src/pkgconfig/cdi.pc])
+	examples/pio/Makefile src/pkgconfig/cdi.pc src/pkgconfig/cdipio.pc])
 
 #  ----------------------------------------------------------------------
 #  Show configuration

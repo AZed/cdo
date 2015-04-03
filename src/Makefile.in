@@ -134,14 +134,20 @@ am__cdo_SOURCES_DIST = cdo.c Adisit.c Arith.c Arithc.c Arithdays.c \
 	percentiles.h pipe.c pipe.h printinfo.h process.c process.h \
 	pstream.c pstream.h pstream_int.h pthread_debug.c \
 	pthread_debug.h readline.c realtime.c remap.h remaplib.c \
-	remapsort.c remap_scrip_io.c specspace.c specspace.h \
+	remapsort.c remap_scrip_io.c remap_search_latbins.c \
+	stdnametable.c stdnametable.h specspace.c specspace.h \
 	statistic.c statistic.h table.c timebase.h timer.c userlog.c \
-	util.c util.h vinterp.c vinterp.h zaxis.c Magplot.c \
-	Magvector.c Maggraph.c template_parser.h template_parser.c \
-	results_template_parser.h results_template_parser.c \
-	magics_template_parser.h magics_template_parser.c \
-	StringUtilities.h StringUtilities.c CdoMagicsMapper.h \
-	CdoMagicsMapper.c
+	util.c util.h vinterp.c vinterp.h zaxis.c clipping/clipping.c \
+	clipping/clipping.h clipping/area.c clipping/area.h \
+	clipping/ensure_array_size.c clipping/ensure_array_size.h \
+	clipping/geometry_tools.c clipping/geometry.h clipping/grid.h \
+	clipping/points.h clipping/dep_list.h clipping/grid_cell.c \
+	clipping/grid_cell.h clipping/intersection.c clipping/utils.c \
+	clipping/utils.h Magplot.c Magvector.c Maggraph.c \
+	template_parser.h template_parser.c results_template_parser.h \
+	results_template_parser.c magics_template_parser.h \
+	magics_template_parser.c StringUtilities.h StringUtilities.c \
+	CdoMagicsMapper.h CdoMagicsMapper.c
 @ENABLE_MAGICS_TRUE@am__objects_1 = cdo-Magplot.$(OBJEXT) \
 @ENABLE_MAGICS_TRUE@	cdo-Magvector.$(OBJEXT) \
 @ENABLE_MAGICS_TRUE@	cdo-Maggraph.$(OBJEXT) \
@@ -257,10 +263,14 @@ am_cdo_OBJECTS = cdo-cdo.$(OBJEXT) cdo-Adisit.$(OBJEXT) \
 	cdo-pthread_debug.$(OBJEXT) cdo-readline.$(OBJEXT) \
 	cdo-realtime.$(OBJEXT) cdo-remaplib.$(OBJEXT) \
 	cdo-remapsort.$(OBJEXT) cdo-remap_scrip_io.$(OBJEXT) \
+	cdo-remap_search_latbins.$(OBJEXT) cdo-stdnametable.$(OBJEXT) \
 	cdo-specspace.$(OBJEXT) cdo-statistic.$(OBJEXT) \
 	cdo-table.$(OBJEXT) cdo-timer.$(OBJEXT) cdo-userlog.$(OBJEXT) \
 	cdo-util.$(OBJEXT) cdo-vinterp.$(OBJEXT) cdo-zaxis.$(OBJEXT) \
-	$(am__objects_1)
+	cdo-clipping.$(OBJEXT) cdo-area.$(OBJEXT) \
+	cdo-ensure_array_size.$(OBJEXT) cdo-geometry_tools.$(OBJEXT) \
+	cdo-grid_cell.$(OBJEXT) cdo-intersection.$(OBJEXT) \
+	cdo-utils.$(OBJEXT) $(am__objects_1)
 cdo_OBJECTS = $(am_cdo_OBJECTS)
 cdo_DEPENDENCIES = $(top_builddir)/libcdi/src/libcdi.la
 cdo_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
@@ -507,9 +517,16 @@ cdo_SOURCES = cdo.c Adisit.c Arith.c Arithc.c Arithdays.c Arithlat.c \
 	pipe.c pipe.h printinfo.h process.c process.h pstream.c \
 	pstream.h pstream_int.h pthread_debug.c pthread_debug.h \
 	readline.c realtime.c remap.h remaplib.c remapsort.c \
-	remap_scrip_io.c specspace.c specspace.h statistic.c \
-	statistic.h table.c timebase.h timer.c userlog.c util.c util.h \
-	vinterp.c vinterp.h zaxis.c $(am__append_1)
+	remap_scrip_io.c remap_search_latbins.c stdnametable.c \
+	stdnametable.h specspace.c specspace.h statistic.c statistic.h \
+	table.c timebase.h timer.c userlog.c util.c util.h vinterp.c \
+	vinterp.h zaxis.c clipping/clipping.c clipping/clipping.h \
+	clipping/area.c clipping/area.h clipping/ensure_array_size.c \
+	clipping/ensure_array_size.h clipping/geometry_tools.c \
+	clipping/geometry.h clipping/grid.h clipping/points.h \
+	clipping/dep_list.h clipping/grid_cell.c clipping/grid_cell.h \
+	clipping/intersection.c clipping/utils.c clipping/utils.h \
+	$(am__append_1)
 cdo_CPPFLAGS = -I$(top_srcdir)/libcdi/src
 cdo_LDADD = $(top_builddir)/libcdi/src/libcdi.la
 cdo_LDFLAGS = $(am__append_2)
@@ -820,13 +837,16 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-Yseaspctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-Yseasstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-Zonstat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-area.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-cdo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-cdo_pthread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-cdo_vlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-clipping.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-color.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-commandline.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-ecacore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-ecautil.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-ensure_array_size.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-exception.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-expr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-expr_lex.Po@am__quote@
@@ -839,9 +859,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-fieldmer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-fieldzon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-fouriertrans.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-geometry_tools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-gradsdeslib.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid_area.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid_cell.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid_gme.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid_lcc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-grid_rot.Po@am__quote@
@@ -853,6 +875,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-history.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-institution.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-interpol.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-intersection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-job.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-juldate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-kvlist.Po@am__quote@
@@ -873,16 +896,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-readline.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-realtime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-remap_scrip_io.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-remap_search_latbins.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-remaplib.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-remapsort.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-results_template_parser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-specspace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-statistic.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-stdnametable.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-table.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-template_parser.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-timer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-userlog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-utils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-vinterp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdo-zaxis.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdotest-cdotest.Po@am__quote@
@@ -4128,6 +4154,34 @@ cdo-remap_scrip_io.obj: remap_scrip_io.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-remap_scrip_io.obj `if test -f 'remap_scrip_io.c'; then $(CYGPATH_W) 'remap_scrip_io.c'; else $(CYGPATH_W) '$(srcdir)/remap_scrip_io.c'; fi`
 
+cdo-remap_search_latbins.o: remap_search_latbins.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-remap_search_latbins.o -MD -MP -MF $(DEPDIR)/cdo-remap_search_latbins.Tpo -c -o cdo-remap_search_latbins.o `test -f 'remap_search_latbins.c' || echo '$(srcdir)/'`remap_search_latbins.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-remap_search_latbins.Tpo $(DEPDIR)/cdo-remap_search_latbins.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='remap_search_latbins.c' object='cdo-remap_search_latbins.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-remap_search_latbins.o `test -f 'remap_search_latbins.c' || echo '$(srcdir)/'`remap_search_latbins.c
+
+cdo-remap_search_latbins.obj: remap_search_latbins.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-remap_search_latbins.obj -MD -MP -MF $(DEPDIR)/cdo-remap_search_latbins.Tpo -c -o cdo-remap_search_latbins.obj `if test -f 'remap_search_latbins.c'; then $(CYGPATH_W) 'remap_search_latbins.c'; else $(CYGPATH_W) '$(srcdir)/remap_search_latbins.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-remap_search_latbins.Tpo $(DEPDIR)/cdo-remap_search_latbins.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='remap_search_latbins.c' object='cdo-remap_search_latbins.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-remap_search_latbins.obj `if test -f 'remap_search_latbins.c'; then $(CYGPATH_W) 'remap_search_latbins.c'; else $(CYGPATH_W) '$(srcdir)/remap_search_latbins.c'; fi`
+
+cdo-stdnametable.o: stdnametable.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-stdnametable.o -MD -MP -MF $(DEPDIR)/cdo-stdnametable.Tpo -c -o cdo-stdnametable.o `test -f 'stdnametable.c' || echo '$(srcdir)/'`stdnametable.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-stdnametable.Tpo $(DEPDIR)/cdo-stdnametable.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stdnametable.c' object='cdo-stdnametable.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-stdnametable.o `test -f 'stdnametable.c' || echo '$(srcdir)/'`stdnametable.c
+
+cdo-stdnametable.obj: stdnametable.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-stdnametable.obj -MD -MP -MF $(DEPDIR)/cdo-stdnametable.Tpo -c -o cdo-stdnametable.obj `if test -f 'stdnametable.c'; then $(CYGPATH_W) 'stdnametable.c'; else $(CYGPATH_W) '$(srcdir)/stdnametable.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-stdnametable.Tpo $(DEPDIR)/cdo-stdnametable.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='stdnametable.c' object='cdo-stdnametable.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-stdnametable.obj `if test -f 'stdnametable.c'; then $(CYGPATH_W) 'stdnametable.c'; else $(CYGPATH_W) '$(srcdir)/stdnametable.c'; fi`
+
 cdo-specspace.o: specspace.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-specspace.o -MD -MP -MF $(DEPDIR)/cdo-specspace.Tpo -c -o cdo-specspace.o `test -f 'specspace.c' || echo '$(srcdir)/'`specspace.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-specspace.Tpo $(DEPDIR)/cdo-specspace.Po
@@ -4232,6 +4286,104 @@ cdo-zaxis.obj: zaxis.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='zaxis.c' object='cdo-zaxis.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-zaxis.obj `if test -f 'zaxis.c'; then $(CYGPATH_W) 'zaxis.c'; else $(CYGPATH_W) '$(srcdir)/zaxis.c'; fi`
+
+cdo-clipping.o: clipping/clipping.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-clipping.o -MD -MP -MF $(DEPDIR)/cdo-clipping.Tpo -c -o cdo-clipping.o `test -f 'clipping/clipping.c' || echo '$(srcdir)/'`clipping/clipping.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-clipping.Tpo $(DEPDIR)/cdo-clipping.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/clipping.c' object='cdo-clipping.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-clipping.o `test -f 'clipping/clipping.c' || echo '$(srcdir)/'`clipping/clipping.c
+
+cdo-clipping.obj: clipping/clipping.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-clipping.obj -MD -MP -MF $(DEPDIR)/cdo-clipping.Tpo -c -o cdo-clipping.obj `if test -f 'clipping/clipping.c'; then $(CYGPATH_W) 'clipping/clipping.c'; else $(CYGPATH_W) '$(srcdir)/clipping/clipping.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-clipping.Tpo $(DEPDIR)/cdo-clipping.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/clipping.c' object='cdo-clipping.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-clipping.obj `if test -f 'clipping/clipping.c'; then $(CYGPATH_W) 'clipping/clipping.c'; else $(CYGPATH_W) '$(srcdir)/clipping/clipping.c'; fi`
+
+cdo-area.o: clipping/area.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-area.o -MD -MP -MF $(DEPDIR)/cdo-area.Tpo -c -o cdo-area.o `test -f 'clipping/area.c' || echo '$(srcdir)/'`clipping/area.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-area.Tpo $(DEPDIR)/cdo-area.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/area.c' object='cdo-area.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-area.o `test -f 'clipping/area.c' || echo '$(srcdir)/'`clipping/area.c
+
+cdo-area.obj: clipping/area.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-area.obj -MD -MP -MF $(DEPDIR)/cdo-area.Tpo -c -o cdo-area.obj `if test -f 'clipping/area.c'; then $(CYGPATH_W) 'clipping/area.c'; else $(CYGPATH_W) '$(srcdir)/clipping/area.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-area.Tpo $(DEPDIR)/cdo-area.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/area.c' object='cdo-area.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-area.obj `if test -f 'clipping/area.c'; then $(CYGPATH_W) 'clipping/area.c'; else $(CYGPATH_W) '$(srcdir)/clipping/area.c'; fi`
+
+cdo-ensure_array_size.o: clipping/ensure_array_size.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-ensure_array_size.o -MD -MP -MF $(DEPDIR)/cdo-ensure_array_size.Tpo -c -o cdo-ensure_array_size.o `test -f 'clipping/ensure_array_size.c' || echo '$(srcdir)/'`clipping/ensure_array_size.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-ensure_array_size.Tpo $(DEPDIR)/cdo-ensure_array_size.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/ensure_array_size.c' object='cdo-ensure_array_size.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-ensure_array_size.o `test -f 'clipping/ensure_array_size.c' || echo '$(srcdir)/'`clipping/ensure_array_size.c
+
+cdo-ensure_array_size.obj: clipping/ensure_array_size.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-ensure_array_size.obj -MD -MP -MF $(DEPDIR)/cdo-ensure_array_size.Tpo -c -o cdo-ensure_array_size.obj `if test -f 'clipping/ensure_array_size.c'; then $(CYGPATH_W) 'clipping/ensure_array_size.c'; else $(CYGPATH_W) '$(srcdir)/clipping/ensure_array_size.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-ensure_array_size.Tpo $(DEPDIR)/cdo-ensure_array_size.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/ensure_array_size.c' object='cdo-ensure_array_size.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-ensure_array_size.obj `if test -f 'clipping/ensure_array_size.c'; then $(CYGPATH_W) 'clipping/ensure_array_size.c'; else $(CYGPATH_W) '$(srcdir)/clipping/ensure_array_size.c'; fi`
+
+cdo-geometry_tools.o: clipping/geometry_tools.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-geometry_tools.o -MD -MP -MF $(DEPDIR)/cdo-geometry_tools.Tpo -c -o cdo-geometry_tools.o `test -f 'clipping/geometry_tools.c' || echo '$(srcdir)/'`clipping/geometry_tools.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-geometry_tools.Tpo $(DEPDIR)/cdo-geometry_tools.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/geometry_tools.c' object='cdo-geometry_tools.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-geometry_tools.o `test -f 'clipping/geometry_tools.c' || echo '$(srcdir)/'`clipping/geometry_tools.c
+
+cdo-geometry_tools.obj: clipping/geometry_tools.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-geometry_tools.obj -MD -MP -MF $(DEPDIR)/cdo-geometry_tools.Tpo -c -o cdo-geometry_tools.obj `if test -f 'clipping/geometry_tools.c'; then $(CYGPATH_W) 'clipping/geometry_tools.c'; else $(CYGPATH_W) '$(srcdir)/clipping/geometry_tools.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-geometry_tools.Tpo $(DEPDIR)/cdo-geometry_tools.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/geometry_tools.c' object='cdo-geometry_tools.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-geometry_tools.obj `if test -f 'clipping/geometry_tools.c'; then $(CYGPATH_W) 'clipping/geometry_tools.c'; else $(CYGPATH_W) '$(srcdir)/clipping/geometry_tools.c'; fi`
+
+cdo-grid_cell.o: clipping/grid_cell.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-grid_cell.o -MD -MP -MF $(DEPDIR)/cdo-grid_cell.Tpo -c -o cdo-grid_cell.o `test -f 'clipping/grid_cell.c' || echo '$(srcdir)/'`clipping/grid_cell.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-grid_cell.Tpo $(DEPDIR)/cdo-grid_cell.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/grid_cell.c' object='cdo-grid_cell.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-grid_cell.o `test -f 'clipping/grid_cell.c' || echo '$(srcdir)/'`clipping/grid_cell.c
+
+cdo-grid_cell.obj: clipping/grid_cell.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-grid_cell.obj -MD -MP -MF $(DEPDIR)/cdo-grid_cell.Tpo -c -o cdo-grid_cell.obj `if test -f 'clipping/grid_cell.c'; then $(CYGPATH_W) 'clipping/grid_cell.c'; else $(CYGPATH_W) '$(srcdir)/clipping/grid_cell.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-grid_cell.Tpo $(DEPDIR)/cdo-grid_cell.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/grid_cell.c' object='cdo-grid_cell.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-grid_cell.obj `if test -f 'clipping/grid_cell.c'; then $(CYGPATH_W) 'clipping/grid_cell.c'; else $(CYGPATH_W) '$(srcdir)/clipping/grid_cell.c'; fi`
+
+cdo-intersection.o: clipping/intersection.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-intersection.o -MD -MP -MF $(DEPDIR)/cdo-intersection.Tpo -c -o cdo-intersection.o `test -f 'clipping/intersection.c' || echo '$(srcdir)/'`clipping/intersection.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-intersection.Tpo $(DEPDIR)/cdo-intersection.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/intersection.c' object='cdo-intersection.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-intersection.o `test -f 'clipping/intersection.c' || echo '$(srcdir)/'`clipping/intersection.c
+
+cdo-intersection.obj: clipping/intersection.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-intersection.obj -MD -MP -MF $(DEPDIR)/cdo-intersection.Tpo -c -o cdo-intersection.obj `if test -f 'clipping/intersection.c'; then $(CYGPATH_W) 'clipping/intersection.c'; else $(CYGPATH_W) '$(srcdir)/clipping/intersection.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-intersection.Tpo $(DEPDIR)/cdo-intersection.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/intersection.c' object='cdo-intersection.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-intersection.obj `if test -f 'clipping/intersection.c'; then $(CYGPATH_W) 'clipping/intersection.c'; else $(CYGPATH_W) '$(srcdir)/clipping/intersection.c'; fi`
+
+cdo-utils.o: clipping/utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-utils.o -MD -MP -MF $(DEPDIR)/cdo-utils.Tpo -c -o cdo-utils.o `test -f 'clipping/utils.c' || echo '$(srcdir)/'`clipping/utils.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-utils.Tpo $(DEPDIR)/cdo-utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/utils.c' object='cdo-utils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-utils.o `test -f 'clipping/utils.c' || echo '$(srcdir)/'`clipping/utils.c
+
+cdo-utils.obj: clipping/utils.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-utils.obj -MD -MP -MF $(DEPDIR)/cdo-utils.Tpo -c -o cdo-utils.obj `if test -f 'clipping/utils.c'; then $(CYGPATH_W) 'clipping/utils.c'; else $(CYGPATH_W) '$(srcdir)/clipping/utils.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/cdo-utils.Tpo $(DEPDIR)/cdo-utils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='clipping/utils.c' object='cdo-utils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cdo-utils.obj `if test -f 'clipping/utils.c'; then $(CYGPATH_W) 'clipping/utils.c'; else $(CYGPATH_W) '$(srcdir)/clipping/utils.c'; fi`
 
 cdo-Magplot.o: Magplot.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(cdo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cdo-Magplot.o -MD -MP -MF $(DEPDIR)/cdo-Magplot.Tpo -c -o cdo-Magplot.o `test -f 'Magplot.c' || echo '$(srcdir)/'`Magplot.c

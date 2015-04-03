@@ -154,8 +154,8 @@ void writeNcFile(const char path[], const double array[], int length)
 static
 double **createVars(int nvars, int nts)
 {  
-  double *array = (double *) malloc(nvars*nts*sizeof(double));
-  double **vars = (double **) malloc(nvars*sizeof(double));
+  double *array = malloc(nvars*nts*sizeof(double));
+  double **vars = malloc(nvars*sizeof(double));
   
   int i;
   
@@ -204,7 +204,7 @@ static
 int submitCdoCommand(const char *argument)
 {  
   const char *cdoPath = getCdoPath();
-  char *cdoCommand = (char *) malloc(strlen(cdoPath) + strlen(argument) + 8);
+  char *cdoCommand = malloc(strlen(cdoPath) + strlen(argument) + 8);
   
   int status;
   

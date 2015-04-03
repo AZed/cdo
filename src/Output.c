@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -112,7 +112,7 @@ void *Output(void *argument)
 	for ( i = 0; i < npar; i++ )
 	  printf("key %d = %s\n", i+1, parnames[i]);
 
-      keys = (int *) malloc(npar*sizeof(int));
+      keys = malloc(npar*sizeof(int));
       nkeys = 0;
       nKeys = sizeof(Keynames)/sizeof(char *);
       for ( i = 0; i < npar; i++ )
@@ -156,7 +156,7 @@ void *Output(void *argument)
       gridsize = gridInqSize(gridID);
       gridtype = gridInqType(gridID);
 
-      array = (double *) malloc(gridsize*sizeof(double));
+      array = malloc(gridsize*sizeof(double));
 
       if ( operatorID == OUTPUTFLD || operatorID == OUTPUTXYZ || operatorID == OUTPUTTAB )
 	{
@@ -167,8 +167,8 @@ void *Output(void *argument)
 
 	  gridtype = gridInqType(gridID);
 
-	  grid_center_lon = (double *) malloc(gridsize*sizeof(double));
-	  grid_center_lat = (double *) malloc(gridsize*sizeof(double));
+	  grid_center_lon = malloc(gridsize*sizeof(double));
+	  grid_center_lat = malloc(gridsize*sizeof(double));
 	  gridInqXvals(gridID, grid_center_lon);
 	  gridInqYvals(gridID, grid_center_lat);
 

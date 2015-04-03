@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -121,7 +121,7 @@ void read_amsr(FILE *fp, int vlistID, int nvars, double *data[], int *nmiss)
   for ( varID = 0; varID < nvars; ++varID )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID, varID));
-      amsr_data = (unsigned char *) realloc(amsr_data, gridsize);
+      amsr_data = realloc(amsr_data, gridsize);
       size = fread(amsr_data, 1, gridsize, fp);
       if ( (int)size != gridsize ) cdoAbort("Read error!");
 
@@ -228,7 +228,7 @@ void *Importamsr(void *argument)
   if ( fsize == 12441600 )
     {
       nvars = 6;
-      for ( i = 0; i < nvars; ++i ) data[i] = (double *) malloc(gridsize*sizeof(double));
+      for ( i = 0; i < nvars; ++i ) data[i] = malloc(gridsize*sizeof(double));
 
       init_amsr_day(vlistID, gridID, zaxisID, nvars);
 
@@ -253,7 +253,7 @@ void *Importamsr(void *argument)
   else if ( fsize == 5184000 )
     {
       nvars = 5;
-      for ( i = 0; i < nvars; ++i ) data[i] = (double *) malloc(gridsize*sizeof(double));
+      for ( i = 0; i < nvars; ++i ) data[i] = malloc(gridsize*sizeof(double));
 
       init_amsr_averaged(vlistID, gridID, zaxisID, nvars);
 

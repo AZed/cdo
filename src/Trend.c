@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -73,16 +73,16 @@ void *Trend(void *argument)
   streamDefVlist(streamID2, vlistID2);
   streamDefVlist(streamID3, vlistID2);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field1);
   field_init(&field2);
 
-  field1.ptr = (double *) malloc(gridsize*sizeof(double));
-  field2.ptr = (double *) malloc(gridsize*sizeof(double));
+  field1.ptr = malloc(gridsize*sizeof(double));
+  field2.ptr = malloc(gridsize*sizeof(double));
 
   for ( w = 0; w < nwork; w++ )
     work[w] = field_calloc(vlistID1, FIELD_PTR);

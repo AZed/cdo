@@ -52,11 +52,17 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_CDI_LIB_TRUE@am__append_1 = pkgconfig/cdi.pc
-@CREATE_ISOC_TRUE@am__append_2 = mo_cdi.o mo_cdi.$(FCMODEXT)
-#CLEANFILES += cdilib.c
-@CREATE_ISOC_TRUE@am__append_3 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.o
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_1 = libcdipio.la
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_2 = cdipio.h cdipio.inc
+@ENABLE_CDI_LIB_FALSE@@USE_MPI_TRUE@am__append_3 = libcdipio.la
 @ENABLE_CDI_LIB_TRUE@am__append_4 = pkgconfig/cdi.pc
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_5 = pkgconfig/cdipio.pc
+@CREATE_ISOC_TRUE@am__append_6 = mo_cdi.o mo_cdi.$(FCMODEXT)
+#CLEANFILES += cdilib.c
+@CREATE_ISOC_TRUE@am__append_7 = $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.o
+@ENABLE_CDI_LIB_TRUE@am__append_8 = pkgconfig/cdi.pc
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_9 = pkgconfig/cdipio.pc
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_10 = pkgconfig/cdipio.pc
 subdir = src
 DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in
@@ -70,7 +76,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/asx_unset.m4 $(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/m4/starlink_fpp.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -108,27 +114,34 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
-am__DEPENDENCIES_1 =
-libcdi_la_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+libcdi_la_DEPENDENCIES =
 am_libcdi_la_OBJECTS = basetime.lo binary.lo calendar.lo cdf.lo \
 	cdf_int.lo cdi_error.lo cdi_util.lo cdiFortran.lo \
-	cgribexlib.lo dmemory.lo error.lo extralib.lo file.lo \
-	gaussgrid.lo gribapi.lo grid.lo ieglib.lo institution.lo \
-	model.lo namespace.lo serialize.lo pio.lo pio_comm.lo \
-	pio_dbuffer.lo pio_interface.lo pio_mpinonb.lo \
-	pio_record_send.lo pio_posixasynch.lo \
-	pio_posixfpguardsendrecv.lo pio_posixnonb.lo pio_list_set.lo \
-	resource_unpack.lo pio_client.lo pio_server.lo pio_util.lo \
-	pio_serialize.lo pio_cdf_int.lo resource_handle.lo \
-	servicelib.lo stream_cdf.lo stream_cgribex.lo stream_ext.lo \
-	stream_grb.lo stream_gribapi.lo stream_history.lo \
-	stream_ieg.lo cdi_int.lo stream_record.lo stream_srv.lo \
-	stream_var.lo table.lo taxis.lo timebase.lo tsteps.lo util.lo \
-	varscan.lo version.lo vlist.lo vlist_att.lo vlist_var.lo \
-	zaxis.lo stream.lo swap.lo
+	cgribexlib.lo dmemory.lo cksum.lo cdi_cksum.lo pio_util.lo \
+	error.lo extralib.lo file.lo gaussgrid.lo gribapi.lo grid.lo \
+	ieglib.lo institution.lo model.lo namespace.lo serialize.lo \
+	resource_handle.lo servicelib.lo stream_cdf.lo \
+	stream_cgribex.lo stream_ext.lo stream_grb.lo \
+	stream_gribapi.lo stream_history.lo stream_ieg.lo cdi_int.lo \
+	stream_record.lo stream_srv.lo stream_var.lo table.lo taxis.lo \
+	timebase.lo tsteps.lo util.lo varscan.lo version.lo vlist.lo \
+	vlist_att.lo vlist_var.lo zaxis.lo stream.lo swap.lo
 libcdi_la_OBJECTS = $(am_libcdi_la_OBJECTS)
 @ENABLE_CDI_LIB_FALSE@am_libcdi_la_rpath =
 @ENABLE_CDI_LIB_TRUE@am_libcdi_la_rpath = -rpath $(libdir)
+am__DEPENDENCIES_1 =
+libcdipio_la_DEPENDENCIES = libcdi.la $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_libcdipio_la_OBJECTS = cdipioFortran.lo pio.lo pio_comm.lo \
+	pio_dbuffer.lo pio_interface.lo pio_mpinonb.lo \
+	pio_record_send.lo pio_posixasynch.lo \
+	pio_posixfpguardsendrecv.lo pio_posixnonb.lo pio_list_set.lo \
+	resource_unpack.lo pio_client.lo pio_server.lo \
+	pio_serialize.lo pio_cdf_int.lo
+libcdipio_la_OBJECTS = $(am_libcdipio_la_OBJECTS)
+@ENABLE_CDI_LIB_FALSE@@USE_MPI_TRUE@am_libcdipio_la_rpath =
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am_libcdipio_la_rpath = -rpath \
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@	$(libdir)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -142,14 +155,14 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libcdi_la_SOURCES)
-DIST_SOURCES = $(libcdi_la_SOURCES)
+SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES)
+DIST_SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__include_HEADERS_DIST = cdi.h cdi.inc
+am__include_HEADERS_DIST = cdi.h cdi.inc cdipio.h cdipio.inc
 HEADERS = $(include_HEADERS)
 ETAGS = etags
 CTAGS = ctags
@@ -162,13 +175,6 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-BUILD_CC = @BUILD_CC@
-BUILD_CFLAGS = @BUILD_CFLAGS@
-BUILD_CXX = @BUILD_CXX@
-BUILD_F77 = @BUILD_F77@
-BUILD_FC = @BUILD_FC@
-BUILD_FCFLAGS = @BUILD_FCFLAGS@
-BUILD_LDFLAGS = @BUILD_LDFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDI_F90_INTERFACE_FCFLAGS = @CDI_F90_INTERFACE_FCFLAGS@
@@ -349,9 +355,9 @@ top_srcdir = @top_srcdir@
 
 #
 EXTRA_DIST = cdilib.c mo_cdi.f90
-@ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la
-@ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc
-@ENABLE_CDI_LIB_FALSE@noinst_LTLIBRARIES = libcdi.la
+@ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la $(am__append_1)
+@ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc $(am__append_2)
+@ENABLE_CDI_LIB_FALSE@noinst_LTLIBRARIES = libcdi.la $(am__append_3)
 AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
 libcdi_la_SOURCES = \
 	basetime.c     	 \
@@ -369,13 +375,18 @@ libcdi_la_SOURCES = \
 	cdi_limits.h	 \
 	cdi_util.c       \
 	cdiFortran.c     \
-	cdiFortran.h     \
 	cfortran.h       \
 	cgribex.h	 \
 	cgribexlib.c  	 \
 	datetime.h	 \
 	dmemory.c      	 \
 	dmemory.h	 \
+	cksum.c		\
+	cksum.h		\
+	cdi_cksum.c	\
+	cdi_cksum.h	\
+	pio_util.c							\
+	pio_util.h							\
 	dtypes.h	 \
 	error.c        	 \
 	error.h	 	 \
@@ -399,33 +410,6 @@ libcdi_la_SOURCES = \
 	namespace.h      \
 	serialize.h	\
 	serialize.c	\
-	pio.c            \
-	pio.h            \
-	pio_comm.c       \
-	pio_comm.h       \
-	pio_dbuffer.c    \
-	pio_impl.h 	 \
-	pio_interface.c  \
-	pio_interface.h	 \
-	pio_mpinonb.c    \
-	pio_record_send.c\
-	pio_posixasynch.c\
-	pio_posixfpguardsendrecv.c \
-	pio_posixnonb.c  \
-	pio_list_set.c	 \
-	resource_unpack.h \
-	resource_unpack.c \
-	pio_rpc.h        \
-	pio_client.c	\
-	pio_client.h	\
-	pio_server.c     \
-	pio_server.h     \
-	pio_util.c       \
-	pio_util.h       \
-	pio_serialize.h	\
-	pio_serialize.c	\
-	pio_cdf_int.c	\
-	pio_cdf_int.h	\
 	resource_handle.c\
 	resource_handle.h\
 	service.h	 \
@@ -473,18 +457,51 @@ libcdi_la_SOURCES = \
         stream.c         \
         swap.c
 
+libcdipio_la_SOURCES = \
+	cdipio.h							\
+	cdipioFortran.c							\
+	cfortran.h							\
+	pio.c								\
+	pio.h								\
+	pio_comm.c							\
+	pio_comm.h							\
+	pio_dbuffer.c							\
+	pio_impl.h							\
+	pio_interface.c							\
+	pio_interface.h							\
+	pio_mpinonb.c							\
+	pio_record_send.c						\
+	pio_posixasynch.c						\
+	pio_posixfpguardsendrecv.c					\
+	pio_posixnonb.c							\
+	pio_list_set.c							\
+	resource_unpack.h						\
+	resource_unpack.c						\
+	pio_rpc.h							\
+	pio_client.c							\
+	pio_client.h							\
+	pio_server.c							\
+	pio_server.h							\
+	pio_serialize.h							\
+	pio_serialize.c							\
+	pio_cdf_int.c							\
+	pio_cdf_int.h
+
+libcdipio_la_LIBADD = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS)
 
 #libcdi_la_CPPFLAGS  = @CPPFLAGS@
-libcdi_la_LIBADD = $(PPM_CORE_LIBS) $(YAXT_LIBS)
+libcdi_la_LIBADD = 
 #
 #cdilib.c:
 #	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src
 #
 #cdilib.o: cdilib.c
 #	$(COMPILE) -c $<
-LOCALTARGETS = $(am__append_1) $(am__append_2)
+LOCALTARGETS = $(am__append_4) $(am__append_5) $(am__append_6)
 #
-CLEANFILES = `ls *~` $(am__append_3) $(am__append_4)
+CLEANFILES = `ls *~` $(am__append_7) $(am__append_8) $(am__append_9)
+@ENABLE_CDI_LIB_TRUE@PKGCONFIG_FILES = pkgconfig/cdi.pc \
+@ENABLE_CDI_LIB_TRUE@	$(am__append_10)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -578,6 +595,8 @@ clean-noinstLTLIBRARIES:
 	done
 libcdi.la: $(libcdi_la_OBJECTS) $(libcdi_la_DEPENDENCIES) $(EXTRA_libcdi_la_DEPENDENCIES) 
 	$(LINK) $(am_libcdi_la_rpath) $(libcdi_la_OBJECTS) $(libcdi_la_LIBADD) $(LIBS)
+libcdipio.la: $(libcdipio_la_OBJECTS) $(libcdipio_la_DEPENDENCIES) $(EXTRA_libcdipio_la_DEPENDENCIES) 
+	$(LINK) $(am_libcdipio_la_rpath) $(libcdipio_la_OBJECTS) $(libcdipio_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -591,10 +610,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdf_int.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdiFortran.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_cksum.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_int.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdi_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdipioFortran.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgribexlib.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cksum.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dmemory.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/extralib.Plo@am__quote@
@@ -925,16 +947,27 @@ mo_cdi.$(FCMODEXT): mo_cdi.f90
 
 pkgconfig/cdi.pc: pkgconfig/cdi.pc.in ../config.status
 	(cd .. ; ./config.status src/pkgconfig/cdi.pc)
-#
-all-local: $(LOCALTARGETS) 
 
-@ENABLE_CDI_LIB_TRUE@install-exec-local: pkgconfig/cdi.pc
+pkgconfig/cdipio.pc: pkgconfig/cdipio.pc.in ../config.status
+	(cd .. ; ./config.status src/pkgconfig/cdipio.pc)
+#
+all-local: $(LOCALTARGETS)
+
+@ENABLE_CDI_LIB_TRUE@install-exec-local: $(PKGCONFIG_FILES)
 @ENABLE_CDI_LIB_TRUE@	$(mkinstalldirs) "$(DESTDIR)$(libdir)/pkgconfig"
-@ENABLE_CDI_LIB_TRUE@	$(install_sh_DATA) pkgconfig/cdi.pc "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
+@ENABLE_CDI_LIB_TRUE@	@for pkgconfigfile in $(PKGCONFIG_FILES) ; do \
+@ENABLE_CDI_LIB_TRUE@		echo $(install_sh_DATA) $$pkgconfigfile \
+@ENABLE_CDI_LIB_TRUE@		"$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+@ENABLE_CDI_LIB_TRUE@		$(install_sh_DATA) $$pkgconfigfile \
+@ENABLE_CDI_LIB_TRUE@		"$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+@ENABLE_CDI_LIB_TRUE@	done
 
 @ENABLE_CDI_LIB_TRUE@uninstall-local:
-@ENABLE_CDI_LIB_TRUE@	rm -f "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
-@ENABLE_CDI_LIB_TRUE@	rmdir "$(DESTDIR)$(libdir)/pkgconfig"
+@ENABLE_CDI_LIB_TRUE@	@for pkgconfigfile in $(PKGCONFIG_FILES) ; do \
+@ENABLE_CDI_LIB_TRUE@		echo rm -f "$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+@ENABLE_CDI_LIB_TRUE@		rm -f "$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+@ENABLE_CDI_LIB_TRUE@	done
+@ENABLE_CDI_LIB_TRUE@	-@rmdir "$(DESTDIR)$(libdir)/pkgconfig"
 
 install-exec-hook:
 	-@rmdir "$(DESTDIR)$(libdir)"

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -133,12 +133,12 @@ void *Merstat(void *argument)
   field_init(&field2);
 
   lim = vlistGridsizeMax(vlistID1);
-  field1.ptr    = (double *) malloc(lim*sizeof(double));
+  field1.ptr    = malloc(lim*sizeof(double));
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = (double *) malloc(lim*sizeof(double));
+    field1.weight = malloc(lim*sizeof(double));
 
-  field2.ptr  = (double *) malloc(nlonmax*sizeof(double));
+  field2.ptr  = malloc(nlonmax*sizeof(double));
   field2.grid = gridID2;
 
   tsID = 0;

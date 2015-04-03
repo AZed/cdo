@@ -67,7 +67,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/asx_unset.m4 $(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/m4/starlink_fpp.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -161,13 +161,6 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-BUILD_CC = @BUILD_CC@
-BUILD_CFLAGS = @BUILD_CFLAGS@
-BUILD_CXX = @BUILD_CXX@
-BUILD_F77 = @BUILD_F77@
-BUILD_FC = @BUILD_FC@
-BUILD_FCFLAGS = @BUILD_FCFLAGS@
-BUILD_LDFLAGS = @BUILD_LDFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDI_F90_INTERFACE_FCFLAGS = @CDI_F90_INTERFACE_FCFLAGS@
@@ -366,8 +359,10 @@ cdi_read_LDADD = $(top_builddir)/src/libcdi.la
 #
 cdi_copy_SOURCES = cdi_copy.c
 cdi_copy_LDADD = $(top_builddir)/src/libcdi.la
+#
 cdi_read_f2003_SOURCES = cdi_read_f2003.f90
 cdi_read_f2003_LDADD = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
+#
 cdi_write_f2003_SOURCES = cdi_write_f2003.f90
 cdi_write_f2003_LDADD = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
 #

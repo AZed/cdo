@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 #include "cdo_int.h"
 #include "pstream.h"
 #include "list.h"
+#include "stdnametable.h"
 
 
 #if defined(ENABLE_DATA)
@@ -243,7 +244,7 @@ void *Vargen(void *argument)
       vlistDefVarUnits(vlistID   , varID , "hPa");
       vlistDefVarName(vlistID    , varID2, "T");
       vlistDefVarCode(vlistID    , varID2, 130);
-      vlistDefVarStdname(vlistID , varID2, "air_temperature");
+      vlistDefVarStdname(vlistID , varID2, var_stdname(air_temperature));
       vlistDefVarLongname(vlistID, varID2, "temperature");
       vlistDefVarUnits(vlistID   , varID2, "K");
     }
@@ -268,7 +269,7 @@ void *Vargen(void *argument)
   streamDefVlist(streamID, vlistID);
 
   gridsize = gridInqSize(gridID);
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   if ( operatorID == FOR )
     ntimesteps = 1.001 + ((rstop-rstart)/rinc);

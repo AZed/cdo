@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -121,7 +121,7 @@ void *Input(void *argument)
 	  time     = 0;
 	  
 	  if ( nrecs == 0 )
-	    array = (double *) malloc(gridsize*sizeof(double));
+	    array = malloc(gridsize*sizeof(double));
 	  
 	  cdoPrint("Enter all %d elements of record %d!", gridsize, nrecs+1);
 	  
@@ -164,7 +164,7 @@ void *Input(void *argument)
 	      if ( gridsize < 0 )
 		cdoAbort("Gridsize must not be negative!", gridsize);
 
-	      array = (double *) malloc(gridsize*sizeof(double));
+	      array = malloc(gridsize*sizeof(double));
 
 	      gridID = gridCreate(GRID_GENERIC, gridsize);
 	    }
@@ -211,7 +211,7 @@ void *Input(void *argument)
 	      if ( gridsize < 0 )
 		cdoAbort("Gridsize must not be negative!", gridsize);
 
-	      array = (double *) malloc(gridsize*sizeof(double));
+	      array = malloc(gridsize*sizeof(double));
 
 	      gridID = gridCreate(GRID_GENERIC, gridsize);
 	      gridDefXsize(gridID, nlon);

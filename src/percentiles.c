@@ -77,7 +77,7 @@ static void histBin(HISTOGRAM *hist)
   
   assert( hist->nsamp == DBL_CAPACITY(hist->nbins) );
 
-  values = (double *) malloc(hist->nsamp * sizeof(double));
+  values = malloc(hist->nsamp * sizeof(double));
 
   for ( i = 0; i < hist->nsamp; i++ )
     values[i] = DBL_PTR(hist->ptr)[i];
@@ -164,14 +164,14 @@ HISTOGRAM_SET *hsetCreate(int nvars)
   
   assert( nvars > 0);
   
-  hset = (HISTOGRAM_SET *) malloc(sizeof(HISTOGRAM_SET));
+  hset = malloc(sizeof(HISTOGRAM_SET));
   if ( hset == NULL )
     cdoAbort("Not enough memory (%s)", __func__);
     
   hset->nvars   = nvars;
-  hset->nlevels = (int *) malloc(nvars * sizeof(int));
-  hset->grids   = (int *) malloc(nvars * sizeof(int));
-  hset->histograms = (HISTOGRAM ***) malloc(nvars * sizeof(HISTOGRAM **));
+  hset->nlevels = malloc(nvars * sizeof(int));
+  hset->grids   = malloc(nvars * sizeof(int));
+  hset->histograms = malloc(nvars * sizeof(HISTOGRAM **));
   if ( hset->histograms == NULL )
     cdoAbort("Not enough memory (%s)", __func__);
   
@@ -211,13 +211,13 @@ void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
   hset->nlevels[varID] = nlevels;
   hset->grids[varID]   = grid;
 
-  hset->histograms[varID] = (HISTOGRAM **) malloc(nlevels * sizeof(HISTOGRAM *));
+  hset->histograms[varID] = malloc(nlevels * sizeof(HISTOGRAM *));
   if ( hset->histograms[varID] == NULL )
     cdoAbort("Not enough memory (%s)", __func__);
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
-      hists = hset->histograms[varID][levelID] = (HISTOGRAM *) malloc(nhists * sizeof(HISTOGRAM));
+      hists = hset->histograms[varID][levelID] = malloc(nhists * sizeof(HISTOGRAM));
       if ( hists == NULL )
         cdoAbort("Not enough memory (%s)", __func__);
         

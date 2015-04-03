@@ -6,7 +6,6 @@
 #include "cdi.h"
 #include "cdi_int.h"
 #include "resource_handle.h"
-#include "pio_util.h"
 #include "resource_handle.h"
 #include "resource_unpack.h"
 #include "namespace.h"
@@ -73,24 +72,25 @@ institute_t * instituteNewEntry ( void )
 static
 void instituteDefaultEntries ( void )
 {
-  cdiResH resH[12];
-  int i;
+  cdiResH resH[64];
+  int i, n=0;
 
-  resH[0]  = ECMWF   = institutDef( 98,   0, "ECMWF",     "European Centre for Medium-Range Weather Forecasts");
-  resH[1]  = MPIMET  = institutDef( 98, 232, "MPIMET",    "Max-Planck-Institute for Meteorology");
-  resH[2]  =           institutDef( 98, 255, "MPIMET",    "Max-Planck-Institute for Meteorology");
-  resH[3]  =           institutDef( 98, 232, "MPIMET",    "Max-Planck Institute for Meteorology");
-  resH[4]  =           institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst");
-  resH[5]  = MCH     = institutDef(215, 255, "MCH",       "MeteoSwiss");
-  resH[6]  =           institutDef(  7,   0, "NCEP",      "National Centers for Environmental Prediction");
-  resH[7]  =           institutDef(  7,   1, "NCEP",      "National Centers for Environmental Prediction");
-  resH[8]  =           institutDef( 60,   0, "NCAR",      "National Center for Atmospheric Research");
-  resH[9]  =           institutDef( 74,   0, "METOFFICE", "U.K. Met Office");
-  resH[10] =           institutDef( 97,   0, "ESA",       "European Space Agency ");
-  resH[11] =           institutDef( 99,   0, "KNMI",      "Royal Netherlands Meteorological Institute");
+  resH[n++]  = ECMWF   = institutDef( 98,   0, "ECMWF",     "European Centre for Medium-Range Weather Forecasts");
+  resH[n++]  = MPIMET  = institutDef( 98, 232, "MPIMET",    "Max-Planck-Institute for Meteorology");
+  resH[n++]  =           institutDef( 98, 255, "MPIMET",    "Max-Planck-Institute for Meteorology");
+  resH[n++]  =           institutDef( 98, 232, "MPIMET",    "Max-Planck Institute for Meteorology");
+  resH[n++]  =           institutDef( 78,   0, "DWD",       "Deutscher Wetterdienst");
+  resH[n++]  =           institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst");
+  resH[n++]  = MCH     = institutDef(215, 255, "MCH",       "MeteoSwiss");
+  resH[n++]  =           institutDef(  7,   0, "NCEP",      "National Centers for Environmental Prediction");
+  resH[n++]  =           institutDef(  7,   1, "NCEP",      "National Centers for Environmental Prediction");
+  resH[n++]  =           institutDef( 60,   0, "NCAR",      "National Center for Atmospheric Research");
+  resH[n++]  =           institutDef( 74,   0, "METOFFICE", "U.K. Met Office");
+  resH[n++]  =           institutDef( 97,   0, "ESA",       "European Space Agency");
+  resH[n++]  =           institutDef( 99,   0, "KNMI",      "Royal Netherlands Meteorological Institute");
   /*     (void) institutDef(  0,   0, "IPSL", "IPSL (Institut Pierre Simon Laplace, Paris, France)"); */
 
-  for ( i = 0; i < 12 ; i++ )
+  for ( i = 0; i < n ; i++ )
     reshSetStatus(resH[i], &instituteOps, SUSPENDED);
 }
 
@@ -132,7 +132,7 @@ int instituteCount ( void )
 int instituteCompareKernel ( institute_t *  ip1, institute_t * ip2 )
 {
   int differ = 0;
-  size_t len;
+  size_t len1, len2;
 
   if ( ip1->name )
     {
@@ -143,8 +143,9 @@ int instituteCompareKernel ( institute_t *  ip1, institute_t * ip2 )
         {
           if ( ip2->name )
             {
-              len = strlen(ip2->name);
-              if ( memcmp(ip2->name, ip1->name, len)) differ = 1;
+              len1 = strlen(ip1->name);
+              len2 = strlen(ip2->name);
+              if ( (len1 != len2) || memcmp(ip2->name, ip1->name, len2) ) differ = 1;
             }
         }
     }
@@ -152,8 +153,9 @@ int instituteCompareKernel ( institute_t *  ip1, institute_t * ip2 )
     {
       if ( ip2->longname )
         {
-          len = strlen(ip2->longname);
-          if ( memcmp(ip2->longname, ip1->longname, len)) differ = 1;
+          len1 = strlen(ip1->longname);
+          len2 = strlen(ip2->longname);
+          if ( (len1 < len2) || memcmp(ip2->longname, ip1->longname, len2) ) differ = 1;
         }
     }
   else

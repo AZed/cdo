@@ -42,10 +42,10 @@ void data_treat(double *zdata, double *xdata, double *ydata, long nx, long ny)
   int *iscale = NULL;
   long i, j;
 
-  zwork = (double *) malloc(3*nx*ny*sizeof(double));
-  xwork = (double *) malloc(3*nx*sizeof(double));
-  xscale = (double *) malloc(ny*sizeof(double));
-  iscale = (int *) malloc(ny*sizeof(int));
+  zwork = malloc(3*nx*ny*sizeof(double));
+  xwork = malloc(3*nx*sizeof(double));
+  xscale = malloc(ny*sizeof(double));
+  iscale = malloc(ny*sizeof(int));
 
   double pi2 = 2*acos(-1.);
   for ( i = 0; i < nx; ++i )
@@ -784,7 +784,7 @@ void *SSOpar(void *argument)
                       if ( cdoVerbose )
                         cdoPrint("lhavevct=TRUE  zaxisIDh = %d, nhlevf   = %d", zaxisIDh, nlevel);
  
-		      vct = (double *) malloc(nvct*sizeof(double));
+		      vct = malloc(nvct*sizeof(double));
 		      zaxisInqVct(zaxisID, vct);
 
 		      if ( cdoVerbose )
@@ -866,18 +866,18 @@ void *SSOpar(void *argument)
 
   if ( tempID == -1 ) cdoAbort("Temperature not found!");
 
-  array  = (double *) malloc(ngp*sizeof(double));
+  array  = malloc(ngp*sizeof(double));
 
-  geop   = (double *) malloc(ngp*sizeof(double));
-  ps     = (double *) malloc(ngp*sizeof(double));
+  geop   = malloc(ngp*sizeof(double));
+  ps     = malloc(ngp*sizeof(double));
 
-  temp   = (double *) malloc(ngp*nhlevf*sizeof(double));
-  hum    = (double *) malloc(ngp*nhlevf*sizeof(double));
-  lwater = (double *) malloc(ngp*nhlevf*sizeof(double));
-  iwater = (double *) malloc(ngp*nhlevf*sizeof(double));
+  temp   = malloc(ngp*nhlevf*sizeof(double));
+  hum    = malloc(ngp*nhlevf*sizeof(double));
+  lwater = malloc(ngp*nhlevf*sizeof(double));
+  iwater = malloc(ngp*nhlevf*sizeof(double));
 
-  half_press   = (double *) malloc(ngp*(nhlevf+1)*sizeof(double));
-  geopotheight = (double *) malloc(ngp*(nhlevf+1)*sizeof(double));
+  half_press   = malloc(ngp*(nhlevf+1)*sizeof(double));
+  geopotheight = malloc(ngp*(nhlevf+1)*sizeof(double));
 
   if ( zaxisIDh != -1 && geopID == -1 )
     {
@@ -902,7 +902,7 @@ void *SSOpar(void *argument)
   varID = vlistDefVar(vlistID2, gridID, zaxisIDh, TSTEP_INSTANT);
   vlistDefVarParam(vlistID2, varID, cdiEncodeParam(156, 128, 255));
   vlistDefVarName(vlistID2, varID, "geopotheight");
-  vlistDefVarStdname(vlistID2, varID, "geopotental_height");
+  vlistDefVarStdname(vlistID2, varID, "geopotential_height");
   vlistDefVarUnits(vlistID2, varID, "m");
 
   taxisID1 = vlistInqTaxis(vlistID1);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -130,7 +130,7 @@ pml_t *pmlNew(const char *name)
 {
   pml_t *pml;
 
-  pml = (pml_t *) malloc(sizeof(pml_t));
+  pml = malloc(sizeof(pml_t));
 
   pml_init(pml, name);
 
@@ -196,7 +196,7 @@ int pmlAdd(pml_t *pml, const char *name, int type, int dis, void *ptr, size_t si
       return (-1);
     }
 
-  pml_entry = (pml_entry_t *) malloc(sizeof(pml_entry_t));
+  pml_entry = malloc(sizeof(pml_entry_t));
 
   pml_entry->name = strdup(name);
   pml_entry->len  = strlen(name);
@@ -328,7 +328,7 @@ int pmlRead(pml_t *pml, int argc, char **argv)
       bufsize += len+1;
     }
 
-  parbuf = (char *) malloc(bufsize*sizeof(char));
+  parbuf = malloc(bufsize*sizeof(char));
   memset(parbuf, 0, bufsize*sizeof(char));
 
   istart = 0;
@@ -463,7 +463,7 @@ void *Select(void *argument)
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int tsID1, tsID2, nrecs;
-  int nvars, nlevs;
+  int nvars, nvars2, nlevs;
   int zaxisID, levID;
   int varID2, levelID2;
   int recID, varID, levelID;
@@ -589,9 +589,11 @@ void *Select(void *argument)
 
       if ( indf == 0 )
 	{
+	  // vlistID0 = vlistDuplicate(vlistID1);
+
 	  vlistClearFlag(vlistID1);
 	  nvars = vlistNvars(vlistID1);
-	  vars  = (int *) malloc(nvars*sizeof(int));
+	  vars  = malloc(nvars*sizeof(int));
 
 	  if ( operatorID == DELETE )
 	    {
@@ -744,7 +746,7 @@ void *Select(void *argument)
 		}
 	    }
 
-	  // if ( cdoVerbose ) vlistPrint(vlistID1);
+	  //if ( cdoVerbose ) vlistPrint(vlistID1);
 
 	  vlistID0 = vlistDuplicate(vlistID1);
 	  for ( varID = 0; varID < nvars; varID++ )
@@ -755,16 +757,18 @@ void *Select(void *argument)
 		vlistDefFlag(vlistID0, varID, levID, vlistInqFlag(vlistID1, varID, levID));
 	    }
 
-	  // if ( cdoVerbose ) vlistPrint(vlistID0);
+	  //if ( cdoVerbose ) vlistPrint(vlistID0);
 
 	  vlistID2 = vlistCreate();
-	  vlistCopyFlag(vlistID2, vlistID1);
+	  vlistCopyFlag(vlistID2, vlistID0);
 
-	  // if ( cdoVerbose ) vlistPrint(vlistID2);
-	  nvars = vlistNvars(vlistID2);
-	  for ( varID = 0; varID < nvars; ++varID )
+	  //if ( cdoVerbose ) vlistPrint(vlistID2);
+
+	  nvars2 = vlistNvars(vlistID2);
+
+	  for ( varID = 0; varID < nvars2; ++varID )
 	    if ( vlistInqVarTsteptype(vlistID2, varID) != TSTEP_CONSTANT ) break;
-	  if ( varID == nvars ) vlistDefNtsteps(vlistID2, 0);
+	  if ( varID == nvars2 ) vlistDefNtsteps(vlistID2, 0);
 
 	  taxisID2 = taxisDuplicate(taxisID1);
 	  vlistDefTaxis(vlistID2, taxisID2);
@@ -773,15 +777,15 @@ void *Select(void *argument)
 
 	  if ( ntsteps == 1 )
 	    {
-	      for ( varID = 0; varID < nvars; ++varID )
+	      for ( varID = 0; varID < nvars2; ++varID )
 		if ( vlistInqVarTsteptype(vlistID1, varID) != TSTEP_CONSTANT ) break;
 	      
-	      if ( varID == nvars ) ntsteps = 0;
+	      if ( varID == nvars2 ) ntsteps = 0;
 	    }
 
 	  if ( ntsteps == 0 && nfiles > 1 )
 	    {	      
-	      for ( varID = 0; varID < nvars; ++varID )
+	      for ( varID = 0; varID < nvars2; ++varID )
 		vlistDefVarTsteptype(vlistID2, varID, TSTEP_INSTANT);
 	    }
 
@@ -789,7 +793,7 @@ void *Select(void *argument)
 	    {
 	      gridsize = vlistGridsizeMax(vlistID1);
 	      if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-	      array = (double *) malloc(gridsize*sizeof(double));
+	      array = malloc(gridsize*sizeof(double));
 	    }
 	}
       else
@@ -797,6 +801,12 @@ void *Select(void *argument)
 	  vlistCompare(vlistID0, vlistID1, CMP_ALL);
 	}
 
+
+      if ( nvars2 == 0 )
+	{
+	  cdoWarning("No resulting variables available!");
+	  goto END_LABEL;
+	}
 
       tsID1 = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
@@ -883,6 +893,8 @@ void *Select(void *argument)
       
       streamClose(streamID1);
     }
+
+ END_LABEL:
 
   PAR_CHECK_INT_FLAG(timestep_of_year);
   PAR_CHECK_INT_FLAG(timestep);

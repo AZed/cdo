@@ -55,7 +55,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
   /* determine current path */
 
   size = pathconf(".", _PC_PATH_MAX);
-  if ( (dir = (char *)malloc((size_t)size)) != NULL )
+  if ( (dir = malloc((size_t)size)) != NULL )
     {
       ptr = getcwd(dir, (size_t)size);
     }
@@ -67,7 +67,7 @@ static drmaa_job_template_t *create_job_template(const char *expname, const char
   len2 = strlen(GRID_TMPDIR);
   len = len1+len2+2;
 
-  output_path = (char *) malloc(len*sizeof(char));
+  output_path = malloc(len*sizeof(char));
   /*
   strcpy(output_path, host);
   strcat(output_path, ":");
@@ -348,9 +348,7 @@ int job_submit(const char *expname, const char *jobfilename, const char *jobname
 
 
 #if defined(HAVE_LIBCURL)
-#  include <curl/curl.h>
-#  include <curl/types.h>
-#  include <curl/easy.h>
+#include <curl/curl.h>
 #endif
 
 struct FtpFile {
@@ -359,7 +357,7 @@ struct FtpFile {
 };
 
 
-int my_fwrite(void *buffer, size_t size, size_t nmemb, void *stream)
+size_t my_fwrite(void *buffer, size_t size, size_t nmemb, void *stream)
 {
   struct FtpFile *out=(struct FtpFile *)stream;
   if(out && !out->stream) {
@@ -371,13 +369,13 @@ int my_fwrite(void *buffer, size_t size, size_t nmemb, void *stream)
 }
 
 
-int my_progress_func(int *stdout_is_tty,
-                     double t, /* dltotal */
-                     double d, /* dlnow */
-                     double ultotal,
-                     double ulnow)
+int my_progress_func(void *stdout_is_tty,
+			double t, /* dltotal */
+			double d, /* dlnow */
+			double ultotal,
+			double ulnow)
 {
-  if ( *stdout_is_tty )
+  if ( *(char*)stdout_is_tty )
     {
       fprintf(stdout, "\b\b\b\b\b%4d%%", (int) (d*100/t));
       fflush(stdout);

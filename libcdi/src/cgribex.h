@@ -246,7 +246,7 @@ int   gribFileSeek(int fileID, long *offset);
 int   gribReadSize(int fileID);
 int   gribVersion(unsigned char *buffer, size_t buffersize);
 
-int   gribGinfo(long recpos, long recsize, unsigned char *gribbuffer, int *intnum, float *fltnum);
+int   gribGinfo(off_t recpos, long recsize, unsigned char *gribbuffer, int *intnum, float *fltnum, off_t *bignum);
 
 double calculate_pfactor(const double* spectralField, long fieldTruncation, long subsetTruncation);
 

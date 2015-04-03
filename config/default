@@ -45,8 +45,8 @@ case "${HOSTNAME}" in
                     --with-curl=/opt/local \
                     --with-libxml2=/usr \
                     --with-magics=/Users/m214003/local/magics-2.14.9 \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp -DHAVE_LIBYAC -I/Users/m214003/cdt/work/YAC/src" \
-                    LIBS="-L/opt/local/lib -lopenjpeg -L/Users/m214003/cdt/work/YAC/src -lyac"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp" \
+                    LIBS="-L/opt/local/lib -lopenjpeg"
 #                    --with-libxml2=/usr
 #                    --with-magics=/Users/m214003/local/magics-2.14.9
 	;;
@@ -56,13 +56,13 @@ case "${HOSTNAME}" in
                     --with-jasper=/opt/local \
                     --with-grib_api=$HOME/local/gribapi-1.9.16 \
                     --with-netcdf=/opt/local \
+                    --with-hdf5=/opt/local \
                     --with-szlib=$HOME/local \
                     --with-proj=/opt/local \
                     --with-curl=/opt/local \
                     --with-libxml2=/usr \
                     --with-magics=/Users/m214003/local/Magics-2.18.14nio \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp -DHAVE_LIBYAC -I/Users/m214003/cdt/work/YAC/src" \
-                    LIBS="-L/Users/m214003/cdt/work/YAC/src -lyac"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp"
 	;;
 # ia64-xxx-linux
     ds*)
@@ -75,16 +75,6 @@ case "${HOSTNAME}" in
 	${CONFPATH}configure --prefix=$HOME/local \
                     --with-netcdf=/home/dkrz/m214089/local/ia64 \
                     CC=icc CFLAGS="-g -O2 -Wall -fno-alias"
-	;;
-# x86_64-suse-linux
-    tornado*)
- 	${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/sles10-x64 \
-                    --enable-all-static \
-	            --with-netcdf=/sw/sles10-x64/netcdf-4.2-static \
-	            --with-hdf5=/sw/sles10-x64/hdf5-1.8.8-static \
-                    --with-szlib=/sw/sles10-x64/szip-2.1 \
-	            CC=gcc CFLAGS='-g -Wall -O2 -fopenmp'
-#	            CC=suncc CFLAGS="-g -fast -xopenmp"
 	;;
 # x86_64-squeeze-x64-linux
     thunder*)
@@ -220,6 +210,7 @@ case "${HOSTNAME}" in
                     --with-szlib=/sw/aix61/szip-2.1-threadsafe \
                     --with-udunits2=/sw/aix61/udunits-2.1.14 \
                     --with-proj=/sw/aix53/proj-4.6.1 \
+                    --with-curl=/sw/aix61/curl-7.21.3 \
                     AR="ar -X 64"  LDFLAGS="-brtl" \
  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
 	;;

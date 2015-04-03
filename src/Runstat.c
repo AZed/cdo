@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -227,15 +227,15 @@ void *Runstat(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
-  dtinfo = (dtinfo_t *) malloc((ndates+1)*sizeof(dtinfo_t));
-  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+  dtinfo = malloc((ndates+1)*sizeof(dtinfo_t));
+  vars1 = malloc((ndates+1)*sizeof(field_t **));
   if ( !runstat_nomiss )
-    samp1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+    samp1 = malloc((ndates+1)*sizeof(field_t **));
   if ( lvarstd )
-    vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+    vars2 = malloc((ndates+1)*sizeof(field_t **));
 
   for ( its = 0; its < ndates; its++ )
     {
@@ -247,7 +247,7 @@ void *Runstat(void *argument)
     }
 
   gridsizemax = vlistGridsizeMax(vlistID1);
-  imask = (int *) malloc(gridsizemax*sizeof(int));
+  imask = malloc(gridsizemax*sizeof(int));
 
   for ( tsID = 0; tsID < ndates; tsID++ )
     {

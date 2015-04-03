@@ -12,8 +12,7 @@
 #include "cdi_int.h"
 
 void   backendCleanup  ( void );
-void   backendInit     ( void );
-void   backendFinalize ( void );
+void backendInit(void (*postCommSetupActions)(void));
 int pioFileOpen(const char *filename, const char *mode);
 int    pioFileClose    ( int );
 size_t cdiPioFileWrite(int fileID, const void *restrict buffer, size_t len,

@@ -549,9 +549,9 @@ void *Magplot(void *argument)
   nlat     = gridInqYsize(gridID);
   nlev     = zaxisInqSize(zaxisID);
 
-  array           = (double *) malloc(gridsize*sizeof(double));
-  grid_center_lat = (double *) malloc(gridsize*sizeof(double));
-  grid_center_lon = (double *) malloc(gridsize*sizeof(double));
+  array           = malloc(gridsize*sizeof(double));
+  grid_center_lat = malloc(gridsize*sizeof(double));
+  grid_center_lon = malloc(gridsize*sizeof(double));
 
   gridInqYvals(gridID, grid_center_lat);
   gridInqXvals(gridID, grid_center_lon);
@@ -931,7 +931,7 @@ void VerifyPlotParameters( int num_param, char **param_names, int opID )
 			  if( syntax == TRUE )
 			    {
 	                       NUM_LEVELS = split_str_count;
-	                       LEV_LIST = ( double *) malloc( sizeof( double ) * split_str_count );
+	                       LEV_LIST = malloc( sizeof( double ) * split_str_count );
 			       for( k = 0; k < split_str_count; k++ )
 		                 {
 		                    LEV_LIST[k] = atof( split_str1[k] );

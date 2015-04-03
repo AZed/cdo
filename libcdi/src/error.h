@@ -19,6 +19,8 @@ extern int _Debug;        /* If set to 1, debuggig (default 0)            */
 void SysError_(const char *caller, const char *fmt, ...);
 void    Error_(const char *caller, const char *fmt, ...);
 void  Warning_(const char *caller, const char *fmt, ...);
+/* delegate used by Warning_ unless mode is PIO */
+void cdiWarning(const char *caller, const char *fmt, va_list ap);
 void  Message_(const char *caller, const char *fmt, ...);
 
 #if  defined  WITH_CALLER_NAME

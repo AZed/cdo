@@ -9,6 +9,7 @@
 #include <stdarg.h>
 
 #include "cdi.h"
+#include "dmemory.h"
 
 #ifdef USE_MPI
 #include "pio_impl.h"

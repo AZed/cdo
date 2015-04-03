@@ -74,10 +74,16 @@
 static const char CFD_NAME[]         = "consecutive_frost_days_index_per_time_period";
 static const char CFD_LONGNAME[]     = "Consecutive frost days index is the greatest number of consecutive frost days in a given time period. Frost days is the number of days where minimum of temperature is below 0 degree Celsius. The time period should be defined by the bounds of the time coordinate.";
 static const char CFD_UNITS[]        = "No.";
+static const char CFD_NAME2[]        = "number_of_cfd_periods_with_more_than_5days_per_time_period";
+static const char CFD_LONGNAME2[]    = "Number of cfd periods in given time period with more than 5 days. The time period should be defined by the bounds of the time coordinate.";
+static const char CFD_UNITS2[]       = "No.";
 
 static const char CSU_NAME[]         = "consecutive_summer_days_index_per_time_period";
 static const char CSU_LONGNAME[]     = "Consecutive summer days index is the greatest number of consecutive summer days in a given time period. Summer days is the number of days where maximum of temperature is above 25 degree Celsius. The time period should be defined by the bounds of the time coordinate.";
 static const char CSU_UNITS[]        = "No.";
+static const char CSU_NAME2[]        = "number_of_csu_periods_with_more_than_5days_per_time_period";
+static const char CSU_LONGNAME2[]    = "Number of csu periods in given time period with more than 5 days. The time period should be defined by the bounds of the time coordinate.";
+static const char CSU_UNITS2[]       = "No.";
 
 static const char CWDI_NAME[]        = "cold_wave_duration_index_wrt_mean_of_reference_period";
 static const char CWDI_LONGNAME[]    = "This is the number of days per time period where in intervals of at least %d consecutive days the daily minimum temperature is more than %1.0f degrees below a reference value. The reference value is calculated  as the mean of minimum temperatures of a five day window centred on each calendar day of a given 30 year climate reference period. The time period should be defined by the bounds of the time coordinate.";
@@ -286,8 +292,13 @@ void *EcaCfd(void *argument)
   request.var1.mulc     = 0.0;
   request.var1.addc     = 0.0;
   request.var1.epilog   = NONE;
+  request.var2.name     = CFD_NAME2;
+  request.var2.longname = CFD_LONGNAME2;
+  request.var2.units    = CFD_UNITS2;
+  request.var2.h1       = farseleqc;
+  request.var2.h1arg    = 6;
   request.var2.h2       = NULL;
-  request.var2.h3       = NULL;
+  request.var2.h3       = farnum;
    
   eca1(&request);
   cdoFinish();
@@ -316,8 +327,13 @@ void *EcaCsu(void *argument)
   request.var1.mulc     = 0.0;
   request.var1.addc     = 0.0;
   request.var1.epilog   = NONE;
+  request.var2.name     = CSU_NAME2;
+  request.var2.longname = CSU_LONGNAME2;
+  request.var2.units    = CSU_UNITS2;
+  request.var2.h1       = farseleqc;
+  request.var2.h1arg    = 6;
   request.var2.h2       = NULL;
-  request.var2.h3       = NULL;
+  request.var2.h3       = farnum;
   
   eca1(&request);
   cdoFinish();
@@ -339,7 +355,7 @@ void *EcaCwdi(void *argument)
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   
-  longname = (char *) malloc(strlen(CWDI_LONGNAME) + 80);
+  longname = malloc(strlen(CWDI_LONGNAME) + 80);
   sprintf(longname, CWDI_LONGNAME, argN, argT);
 
   request.var1.name     = CWDI_NAME;
@@ -380,7 +396,7 @@ void *EcaCwfi(void *argument)
 
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
 
-  longname = (char *) malloc(strlen(CWFI_LONGNAME) + 40);
+  longname = malloc(strlen(CWFI_LONGNAME) + 40);
   sprintf(longname, CWFI_LONGNAME, argN);
 
   request.var1.name     = CWFI_NAME;
@@ -482,7 +498,7 @@ void *EcaGsl(void *argument)
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   if ( operatorArgc() > 2 ) minLandFraction = atof(operatorArgv()[2]);
 
-  longname = (char *) malloc(strlen(GSL_LONGNAME) + 160);
+  longname = malloc(strlen(GSL_LONGNAME) + 160);
   sprintf(longname, GSL_LONGNAME, argN, argT, argN, argT);
   
   request.name      = GSL_NAME;
@@ -560,7 +576,7 @@ void *EcaHwdi(void *argument)
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
   if ( operatorArgc() > 1 ) argT = atof(operatorArgv()[1]);
   
-  longname = (char *) malloc(strlen(HWDI_LONGNAME) + 80);
+  longname = malloc(strlen(HWDI_LONGNAME) + 80);
   sprintf(longname, HWDI_LONGNAME, argN, argT);
   
   request.var1.name     = HWDI_NAME;
@@ -601,7 +617,7 @@ void *EcaHwfi(void *argument)
 
   if ( operatorArgc() > 0 ) argN = atoi(operatorArgv()[0]);
 
-  longname = (char *) malloc(strlen(HWFI_LONGNAME) + 40);
+  longname = malloc(strlen(HWFI_LONGNAME) + 40);
   sprintf(longname, HWFI_LONGNAME, argN);
 
   request.var1.name     = HWFI_NAME;
@@ -667,7 +683,7 @@ void *EcaSu(void *argument)
   cdoOperatorAdd("eca_su", 0, 31, NULL);
 
   if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
-  longname = (char *) malloc(strlen(SU_LONGNAME) + 40);
+  longname = malloc(strlen(SU_LONGNAME) + 40);
   sprintf(longname, SU_LONGNAME, argT);
 
   request.var1.name     = SU_NAME;
@@ -802,7 +818,7 @@ void *EcaTr(void *argument)
   cdoOperatorAdd("eca_tr", 0, 31, NULL);
 
   if ( operatorArgc() > 0 ) argT = atof(operatorArgv()[0]);
-  longname = (char *) malloc(strlen(TR_LONGNAME) + 40);
+  longname = malloc(strlen(TR_LONGNAME) + 40);
   sprintf(longname, TR_LONGNAME, argT);
  
   request.var1.name     = TR_NAME;
@@ -1311,7 +1327,7 @@ void *EcaRx5day(void *argument)
   cdoInitialize(argument);
   if ( operatorArgc() > 0 ) argX = atof(operatorArgv()[0]);
   
-  longname = (char *) malloc(strlen(RX5DAY_LONGNAME2) + 40);
+  longname = malloc(strlen(RX5DAY_LONGNAME2) + 40);
   sprintf(longname, RX5DAY_LONGNAME2, argX);
   
   cdoOperatorAdd("eca_rx5day", 0, 31, NULL);
@@ -1415,7 +1431,7 @@ void *Strwin(void *argument)
   if ( operatorArgc() > 0 )
     maxWind = atof(operatorArgv()[0]);
 
-  longname = (char *) malloc(strlen(STRWIN_LONGNAME) + 40);
+  longname = malloc(strlen(STRWIN_LONGNAME) + 40);
   sprintf(longname, STRWIN_LONGNAME, maxWind);
          
   request.var1.name     = STRWIN_NAME;

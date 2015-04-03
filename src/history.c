@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -64,7 +64,7 @@ void cdoInqHistory(int fileID)
   if ( ghistorysize > 0 )
     {
       size_t len;
-      ghistory = (char *) malloc(ghistorysize+1);
+      ghistory = malloc(ghistorysize+1);
       ghistory[ghistorysize] = 0;
       streamInqHistoryString(fileID, ghistory);
       len = strlen(ghistory);
@@ -87,7 +87,7 @@ void cdoDefHistory(int fileID, char *histstring)
   strtimeptr = get_strtimeptr();
   
   historysize = ghistorysize+strlen(strtimeptr)+strlen(histstring)+2;
-  history = (char *) malloc(historysize);
+  history = malloc(historysize);
 
   strcpy(history, strtimeptr);
   strcat(history, histstring);

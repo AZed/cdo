@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@ void *Histogram(void *argument)
 
   /* create zaxis for output bins */
   zaxisID2 = zaxisCreate(ZAXIS_GENERIC, nbins);
-  bins = (double *) malloc(nbins*sizeof(double));
+  bins = malloc(nbins*sizeof(double));
   /* for ( i = 0; i < nbins; i++ ) bins[i] = (fltarr[i]+fltarr[i+1])/2; */
   for ( i = 0; i < nbins; i++ ) bins[i] = fltarr[i];
   zaxisDefLevels(zaxisID2, bins);
@@ -112,22 +112,22 @@ void *Histogram(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   nvars = vlistNvars(vlistID2);
-  vardata   = (double **) malloc(nvars*sizeof(double *));
-  varcount  = (double **) malloc(nvars*sizeof(double *));
-  vartcount = (double **) malloc(nvars*sizeof(double *));
+  vardata   = malloc(nvars*sizeof(double *));
+  varcount  = malloc(nvars*sizeof(double *));
+  vartcount = malloc(nvars*sizeof(double *));
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
-      vardata[varID]  = (double *) malloc(nbins*gridsize*sizeof(double));
-      varcount[varID] = (double *) malloc(nbins*gridsize*sizeof(double));
-      vartcount[varID] = (double *) malloc(gridsize*sizeof(double));
+      vardata[varID]  = malloc(nbins*gridsize*sizeof(double));
+      varcount[varID] = malloc(nbins*gridsize*sizeof(double));
+      vartcount[varID] = malloc(gridsize*sizeof(double));
       memset(vardata[varID], 0, nbins*gridsize*sizeof(double));
       memset(varcount[varID], 0, nbins*gridsize*sizeof(double));
       memset(vartcount[varID], 0, gridsize*sizeof(double));
     }
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )

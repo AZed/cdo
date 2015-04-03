@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -77,8 +77,8 @@ void *Enlarge(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
-  array1 = (double *) malloc(gridsize2*sizeof(double));
-  array2 = (double *) malloc(gridsize2*sizeof(double));
+  array1 = malloc(gridsize2*sizeof(double));
+  array2 = malloc(gridsize2*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

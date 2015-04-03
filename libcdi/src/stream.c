@@ -4,10 +4,11 @@
 
 #include <ctype.h>
 
-#include "dmemory.h"
 #include "cdi.h"
 #include "cdi_int.h"
 #include "cdf.h"
+#include "dmemory.h"
+#include "error.h"
 #include "stream_grb.h"
 #include "stream_cdf.h"
 #include "stream_srv.h"
@@ -22,12 +23,8 @@
 #include "ieg.h"
 #include "vlist.h"
 #include "resource_handle.h"
-#include "pio_util.h"
 
 #include "namespace.h"
-#include "pio_interface.h"
-#include "pio_rpc.h"
-#include "pio_comm.h"
 
 #include <string.h>
 
@@ -454,7 +451,7 @@ void streamDefByteorder(int streamID, int byteorder)
 
   if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -750,10 +747,11 @@ int streamOpen(const char *filename, const char *filemode, int filetype)
 
   {
     int (*streamOpenDelegate)(const char *filename, const char *filemode,
-                              int filetype, stream_t *streamptr)
-      = (int (*)(const char *, const char *, int, stream_t *))
+                              int filetype, stream_t *streamptr, int recordBufIsToBeCreated)
+      = (int (*)(const char *, const char *, int, stream_t *, int))
       namespaceSwitchGet(NSSWITCH_STREAM_OPEN_BACKEND).func;
-    fileID = streamOpenDelegate(filename, filemode, filetype, streamptr);
+
+    fileID = streamOpenDelegate(filename, filemode, filetype, streamptr, 1);
   }
 
   if (fileID < 0)
@@ -798,51 +796,45 @@ static int streamOpenA(const char *filename, const char *filemode, int filetype)
   int fileID = CDI_UNDEFID;
   int streamID = CDI_ESYSTEM;
   int status;
-  Record *record = NULL;
   stream_t *streamptr = stream_new_entry();
+  vlist_t *vlistptr;
 
   if ( CDI_Debug )
-    Message("Open %s mode %c file %s", strfiletype(filetype), (int) *filemode, filename);
+    Message("Open %s file (mode=%c); filename: %s", strfiletype(filetype), (int) *filemode, filename);
+  if ( CDI_Debug ) printf("streamOpenA: %s\n", filename); // seg fault without this line on thunder/squall with "cdo cat x y"
 
   if ( ! filename || ! filemode || filetype < 0 ) return (CDI_EINVAL);
 
   {
     int (*streamOpenDelegate)(const char *filename, const char *filemode,
-                              int filetype, stream_t *streamptr)
-      = (int (*)(const char *, const char *, int, stream_t *))
+                              int filetype, stream_t *streamptr, int recordBufIsToBeCreated)
+      = (int (*)(const char *, const char *, int, stream_t *, int))
       namespaceSwitchGet(NSSWITCH_STREAM_OPEN_BACKEND).func;
-    fileID = streamOpenDelegate(filename, "r", filetype, streamptr);
+
+    fileID = streamOpenDelegate(filename, "r", filetype, streamptr, 1);
   }
 
-  if (fileID == CDI_UNDEFID || fileID == CDI_ELIBNAVAIL
-      || fileID == CDI_ESYSTEM )
-    {
-      streamID = fileID;
-      return (streamID);
-    }
-  else
-    {
-      vlist_t *vlistptr;
-      streamID = streamptr->self;
+  if ( fileID == CDI_UNDEFID || fileID == CDI_ELIBNAVAIL || fileID == CDI_ESYSTEM ) return (fileID);
 
-      streamptr->record   = record;
-      streamptr->filetype = filetype;
-      streamptr->filemode = tolower(*filemode);
-      streamptr->filename = strdupx(filename);
-      streamptr->fileID   = fileID;
+  streamID = streamptr->self;
 
-      streamptr->vlistID = vlistCreate();
-      /* cdiReadByteorder(streamID); */
-      status = cdiInqContents(streamptr);
-      if ( status < 0 ) return (status);
-      vlistptr = vlist_to_pointer(streamptr->vlistID);
-      vlistptr->ntsteps = cdiInqTimeSize(streamID);
-    }
+  streamptr->filetype = filetype;
+  streamptr->filemode = tolower(*filemode);
+  streamptr->filename = strdupx(filename);
+  streamptr->fileID   = fileID;
+
+  streamptr->vlistID = vlistCreate();
+  /* cdiReadByteorder(streamID); */
+  status = cdiInqContents(streamptr);
+  if ( status < 0 ) return (status);
+  vlistptr = vlist_to_pointer(streamptr->vlistID);
+  vlistptr->ntsteps = cdiInqTimeSize(streamID);
 
   {
     void (*streamCloseDelegate)(stream_t *streamptr, int recordBufIsToBeDeleted)
       = (void (*)(stream_t *, int))
       namespaceSwitchGet(NSSWITCH_STREAM_CLOSE_BACKEND).func;
+
     streamCloseDelegate(streamptr, 0);
   }
 
@@ -908,7 +900,7 @@ static int streamOpenA(const char *filename, const char *filemode, int filetype)
   if ( fileID == CDI_UNDEFID )
     streamID = CDI_UNDEFID;
   else
-    streamptr->fileID   = fileID;
+    streamptr->fileID = fileID;
 
   return (streamID);
 }
@@ -1128,7 +1120,7 @@ cdiStreamCloseDefaultDelegate(stream_t *streamptr, int recordBufIsToBeDeleted)
 #endif
       default:
         {
-          Error("%s support not compiled in!", strfiletype(filetype));
+          Error("%s support not compiled in (fileID = %d)!", strfiletype(filetype), fileID);
           break;
         }
       }
@@ -1167,15 +1159,15 @@ void streamClose(int streamID)
     = (void (*)(stream_t *, int))
     namespaceSwitchGet(NSSWITCH_STREAM_CLOSE_BACKEND).func;
 
-  streamCloseDelegate(streamptr, 1);
+  if ( streamptr->filetype != -1 ) streamCloseDelegate(streamptr, 1);
 
   if ( streamptr->record )
-      {
-	  if ( streamptr->record->buffer )
-              free(streamptr->record->buffer);
+    {
+      if ( streamptr->record->buffer )
+        free(streamptr->record->buffer);
 
-	  free(streamptr->record);
-      }
+      free(streamptr->record);
+    }
 
   streamptr->filetype = 0;
   if ( streamptr->filename ) free(streamptr->filename);
@@ -1382,6 +1374,13 @@ int streamDefTimestep(int streamID, int tsID)
     namespaceSwitchGet(NSSWITCH_STREAM_DEF_TIMESTEP_).func;
   return myStreamDefTimestep_(streamptr, tsID);
 }
+
+int streamInqCurTimestepID(int streamID)
+{
+  stream_t *streamptr = stream_to_pointer(streamID);
+  return streamptr->curTsID;
+}
+
 
 /*
 @Function  streamInqTimestep
@@ -1620,7 +1619,8 @@ cdiStreamWriteVar_(int streamID, int varID, int memtype, const void *data,
 
   stream_check_ptr(__func__, streamptr);
 
-  // streamDefineTaxis(streamID);
+  // check taxis
+  if ( streamptr->curTsID == CDI_UNDEFID ) streamDefTimestep(streamID, 0);
 
   filetype = streamptr->filetype;
 
@@ -1802,6 +1802,9 @@ void stream_write_var_slice(int streamID, int varID, int levelID, int memtype, c
   streamptr = stream_to_pointer(streamID);
 
   stream_check_ptr(__func__, streamptr);
+
+  // check taxis
+  if ( streamptr->curTsID == CDI_UNDEFID ) streamDefTimestep(streamID, 0);
 
   filetype = streamptr->filetype;
 
@@ -2228,7 +2231,7 @@ void streamDefCompType(int streamID, int comptype)
 
   if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 
@@ -2246,7 +2249,7 @@ void streamDefCompLevel(int streamID, int complevel)
 
   if ( reshGetStatus ( streamID, &streamOps ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed.");
+      Warning("%s", "Operation not executed.");
       return;
     }
 

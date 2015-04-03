@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -177,10 +177,10 @@ int defLonLatGrid(int nx, int ny, double c0, double lts, double re)
       return(-1);
     }
 
-  xvals = (double *) malloc(nx*sizeof(double));
-  yvals = (double *) malloc(ny*sizeof(double));
-  xbounds = (double *) malloc(nx*2*sizeof(double));
-  ybounds = (double *) malloc(nx*2*sizeof(double));
+  xvals = malloc(nx*sizeof(double));
+  yvals = malloc(ny*sizeof(double));
+  xbounds = malloc(nx*2*sizeof(double));
+  ybounds = malloc(nx*2*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -231,8 +231,8 @@ int defSinusoidalGrid(int nx, int ny, double xmin, double xmax, double ymin, dou
   int i;
   double *xvals, *yvals;
 
-  xvals = (double *) malloc(nx*sizeof(double));
-  yvals = (double *) malloc(ny*sizeof(double));
+  xvals = malloc(nx*sizeof(double));
+  yvals = malloc(ny*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -266,8 +266,8 @@ int defLaeaGrid(int nx, int ny, double xmin, double xmax, double ymin, double ym
   int i;
   double *xvals, *yvals;
 
-  xvals = (double *) malloc(nx*sizeof(double));
-  yvals = (double *) malloc(ny*sizeof(double));
+  xvals = malloc(nx*sizeof(double));
+  yvals = malloc(ny*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -1061,7 +1061,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
       
       offset = gridsize*(nz-1);
       array  = ((datasets_t *) opdata)->obj[nset].array;
-      array  = (double *) realloc(array, gridsize*nz*nt*sizeof(double));
+      array  = realloc(array, gridsize*nz*nt*sizeof(double));
       ((datasets_t *) opdata)->obj[nset].array    = array;
       array  = array+offset;
 
@@ -1071,7 +1071,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	    {
 	      float *farray;
 	      int i;
-	      farray = (float *) malloc(gridsize*nt*sizeof(float));
+	      farray = malloc(gridsize*nt*sizeof(float));
 	      status = H5Dread(dset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, farray);
 	      if ( status < 0 )
 		cdoAbort("Reading of NATIVE_FLOAT variable %s failed!", varname);
@@ -1088,7 +1088,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
       else
 	{
 	  int *iarray, i;
-	  iarray = (int *) malloc(gridsize*nt*sizeof(int));
+	  iarray = malloc(gridsize*nt*sizeof(int));
 	  status = H5Dread(dset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
 	  if ( status < 0 )
 	    cdoAbort("Reading of NATIVE_INT variable %s failed!", varname);
@@ -1120,7 +1120,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 
       if ( nz == 1 ) ((datasets_t *) opdata)->nsets++;
 
-      mask = (short *) malloc(gridsize*nt*sizeof(short));
+      mask = malloc(gridsize*nt*sizeof(short));
       memset(mask, 0, gridsize*nt*sizeof(short));
 
       nmiss  = 0;
@@ -1457,7 +1457,7 @@ void *Importcmsaf(void *argument)
 
   if ( nt > 1 )
     {
-      vtimes = (int *) malloc(nt*sizeof(int));
+      vtimes = malloc(nt*sizeof(int));
       
       for ( i = 0; i < nt; ++i ) vtimes[i] = i*10000 + 45*100;
 
@@ -1513,7 +1513,7 @@ void *Importcmsaf(void *argument)
   else
     {
       double *levels;
-      levels = (double *) malloc(nz*sizeof(double));
+      levels = malloc(nz*sizeof(double));
       for ( i = 0; i < nz; ++i ) levels[i] = i+1;
       zaxisID = zaxisCreate(ZAXIS_GENERIC, nz);
       zaxisDefLevels(zaxisID, levels);

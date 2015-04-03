@@ -14,7 +14,7 @@ char *strdup(const char *s);
 ({					      	  \
    const char *__old = (s);			  \
    size_t __len = strlen(__old) + 1;		  \
-   char *__new = (char *) malloc(__len);	  \
+   char *__new = malloc(__len);	  \
    (char *) memcpy(__new, __old, __len);	  \
 })
 */

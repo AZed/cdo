@@ -290,22 +290,30 @@ void correct_sinxvals(int xsize, int ysize, double *xvals)
 
 int gridFromH5file(const char *gridfile)
 {
-  int gridID = -1;
+  int       gridID = -1;
 #if defined(HAVE_LIBHDF5)
-  hid_t	  file_id;	/* HDF5 File ID	        	*/
-  hid_t	  lon_id = -1;	/* Dataset ID	        	*/
-  hid_t	  lat_id = -1;	/* Dataset ID	        	*/
-  hid_t   dataspace;   
-  hsize_t dims_out[9];  /* dataset dimensions           */
-  herr_t  status;	/* Generic return value		*/
-  int     rank;
-  griddes_t    grid;
+  hid_t     fapl_id = H5P_DEFAULT;
+  hid_t	    file_id;	    /* HDF5 File ID	        	*/
+  hid_t	    lon_id = -1;    /* Dataset ID	        	*/
+  hid_t	    lat_id = -1;    /* Dataset ID	        	*/
+  hid_t     att_id;
+  hid_t     dataspace;   
+  hsize_t   dims_out[9];    /* dataset dimensions               */
+  herr_t    status;	    /* Generic return value		*/
+  int       rank;
+  griddes_t grid;
 
 
   gridInit(&grid);
 
+  fapl_id = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fclose_degree(fapl_id, H5F_CLOSE_STRONG);
+
   /* Open an existing file. */
-  file_id = H5Fopen(gridfile, H5F_ACC_RDONLY, H5P_DEFAULT);
+  file_id = H5Fopen(gridfile, H5F_ACC_RDONLY, fapl_id);
+
+  H5Pclose(fapl_id);
+
   if ( file_id < 0 ) return(gridID);
 
   if ( h5find_object(file_id, "lon") > 0 && 
@@ -333,9 +341,24 @@ int gridFromH5file(const char *gridfile)
 
       if ( rank != 2 )
 	{
-	  cdoWarning("Unexpected rank = %d!", rank);
+	  //if ( cdoVerbose ) cdoWarning("Unexpected rank = %d!", rank);
 	  goto RETURN;
 	}
+
+      att_id = H5Aopen_name(lon_id, "bounds");
+      if ( att_id >= 0 )
+	{
+	  H5Aclose(att_id);
+	  goto RETURN;
+	}
+
+      att_id = H5Aopen_name(lat_id, "bounds");
+      if ( att_id >= 0 )
+	{
+	  H5Aclose(att_id);
+	  goto RETURN;
+	}
+
       /*
       printf("\nRank: %d\nDimensions: %lu x %lu \n", rank,
 	     (unsigned long)(dims_out[1]), (unsigned long)(dims_out[0]));
@@ -363,8 +386,8 @@ int gridFromH5file(const char *gridfile)
       grid.ysize = (int)dims_out[0];
       grid.size  = grid.xsize*grid.ysize;
 
-      grid.xvals = (double *) malloc(grid.size*sizeof(double));
-      grid.yvals = (double *) malloc(grid.size*sizeof(double));
+      grid.xvals = malloc(grid.size*sizeof(double));
+      grid.yvals = malloc(grid.size*sizeof(double));
 
       if ( ftype )
 	{
@@ -374,7 +397,7 @@ int gridFromH5file(const char *gridfile)
       else
 	{
 	  int *iarray, i;
-	  iarray = (int *) malloc(grid.size*sizeof(int));
+	  iarray = malloc(grid.size*sizeof(int));
 	  status = H5Dread(lon_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
 	  for ( i = 0; i < grid.size; ++i ) grid.xvals[i] = iarray[i];
 	  status = H5Dread(lat_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
@@ -400,7 +423,6 @@ int gridFromH5file(const char *gridfile)
       double xscale = 1, yscale = 1;
       double xoffset = 0, yoffset = 0;
       hid_t grp_id;
-      hid_t att_id;
       int i;
 
       grp_id = H5Gopen(file_id, "/where/lon/what");
@@ -460,7 +482,7 @@ int gridFromH5file(const char *gridfile)
 
 	  if ( rank != 2 )
 	    {
-	      cdoWarning("Unexpected rank = %d!", rank);
+	      //if ( cdoVerbose ) cdoWarning("Unexpected rank = %d!", rank);
 	      goto RETURN;
 	    }
 	  /*
@@ -490,8 +512,8 @@ int gridFromH5file(const char *gridfile)
 	  grid.ysize = (int)dims_out[0];
 	  grid.size  = grid.xsize*grid.ysize;
 
-	  grid.xvals = (double *) malloc(grid.size*sizeof(double));
-	  grid.yvals = (double *) malloc(grid.size*sizeof(double));
+	  grid.xvals = malloc(grid.size*sizeof(double));
+	  grid.yvals = malloc(grid.size*sizeof(double));
 
 	  if ( ftype )
 	    {
@@ -501,7 +523,7 @@ int gridFromH5file(const char *gridfile)
 	  else
 	    {
 	      int *iarray, i;
-	      iarray = (int *) malloc(grid.size*sizeof(int));
+	      iarray = malloc(grid.size*sizeof(int));
 	      status = H5Dread(lon_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
 	      for ( i = 0; i < grid.size; ++i ) grid.xvals[i] = iarray[i];
 	      status = H5Dread(lat_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
@@ -525,10 +547,10 @@ int gridFromH5file(const char *gridfile)
 	}
     }
 
-  /* Close file */
-  status = H5Fclose(file_id);
-
  RETURN:
+
+  /* Close file */
+  if ( file_id >= 0 )  status = H5Fclose(file_id);
 
 #else
   cdoWarning("HDF5 support not compiled in!");

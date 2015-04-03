@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -76,8 +76,8 @@ void *Diff(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize*sizeof(double));
 
   indg = 0;
   tsID = 0;
@@ -161,9 +161,9 @@ void *Diff(void *argument)
 
 		      fprintf(stdout, ": S Z  Max_Absdiff Max_Reldiff");
 
-		      if ( operatorID == DIFFN )
+		      if ( operatorID == DIFFN || operatorID == DIFF2 )
 			fprintf(stdout, " : Parameter name");
-		      else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
+		      else if ( operatorID == DIFF || operatorID == DIFFP )
 			fprintf(stdout, " : Parameter ID");
 		      else if ( operatorID == DIFFC )
 			fprintf(stdout, " : Code number");

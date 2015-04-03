@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -101,7 +101,7 @@ void pstream_list_new(void)
 {
   assert(_pstreamList == NULL);
 
-  _pstreamList = (pstreamPtrToIdx *) malloc(_pstream_max*sizeof(pstreamPtrToIdx));
+  _pstreamList = malloc(_pstream_max*sizeof(pstreamPtrToIdx));
 }
 
 static
@@ -213,7 +213,7 @@ pstream_t *pstream_new_entry(void)
 {
   pstream_t *pstreamptr;
 
-  pstreamptr = (pstream_t *) malloc(sizeof(pstream_t));
+  pstreamptr = malloc(sizeof(pstream_t));
 
   if ( pstreamptr ) pstream_init_entry(pstreamptr);
 
@@ -325,7 +325,7 @@ int pstreamOpenRead(const argument_t *argument)
       char *operatorArg;
       char *operatorName;
       char *newarg;
-      char *pipename = (char *) malloc(16);
+      char *pipename = malloc(16);
       int rval;
       pthread_t thrID;
       pthread_attr_t attr;
@@ -333,17 +333,17 @@ int pstreamOpenRead(const argument_t *argument)
       size_t len;
       size_t stacksize;
       int status;
-      argument_t *newargument = (argument_t *) malloc(sizeof(argument_t));
+      argument_t *newargument = malloc(sizeof(argument_t));
 
       newargument->argc = argument->argc + 1;
-      newargument->argv = (char **) malloc(newargument->argc*sizeof(char *));
+      newargument->argv = malloc(newargument->argc*sizeof(char *));
       memcpy(newargument->argv, argument->argv, argument->argc*sizeof(char *));
 
       operatorArg  = argument->argv[0];
       operatorName = getOperatorName(operatorArg);
 
       len = strlen(argument->args);
-      newarg = (char *) malloc(len+16);
+      newarg = malloc(len+16);
       strcpy(newarg, argument->args);
       sprintf(pipename, "(pipe%d.%d)", processSelf() + 1, processInqChildNum() + 1);
       newarg[len] = ' ';
@@ -455,7 +455,7 @@ int pstreamOpenRead(const argument_t *argument)
 		  if ( nfiles == 0 ) cdoAbort("No imput file found in %s", pch);
 
 		  pstreamptr->mfiles = nfiles;
-		  pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
+		  pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
 		  
 		  rewind(fp);
 
@@ -476,7 +476,7 @@ int pstreamOpenRead(const argument_t *argument)
 		  char line[65536];
 
 		  pstreamptr->mfiles = nfiles;
-		  pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
+		  pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
 		  
 		  strcpy(line, pch);
 		  for ( i = 0; i < len; i++ ) if ( line[i] == ',' ) line[i] = 0;
@@ -513,7 +513,7 @@ int pstreamOpenRead(const argument_t *argument)
 	      pclose(pfp);
 
 	      pstreamptr->mfiles = nfiles;
-	      pstreamptr->mfnames = (char **) malloc(nfiles*sizeof(char *));
+	      pstreamptr->mfnames = malloc(nfiles*sizeof(char *));
 
 	      for ( j = 0; j < nfiles; j++ )
 		pstreamptr->mfnames[j] = fnames[j];
@@ -523,14 +523,14 @@ int pstreamOpenRead(const argument_t *argument)
       if ( pstreamptr->mfiles )
 	{
 	  len = strlen(pstreamptr->mfnames[0]);
-	  filename = (char *) malloc(len+1);
+	  filename = malloc(len+1);
 	  strcpy(filename, pstreamptr->mfnames[0]);
 	  pstreamptr->nfiles = 1;
 	}
       else
 	{
 	  len = strlen(argument->args);
-	  filename = (char *) malloc(len+1);
+	  filename = malloc(len+1);
 	  strcpy(filename, argument->args);
 	}
 
@@ -656,7 +656,7 @@ int pstreamOpenWrite(const argument_t *argument, int filetype)
   else
     {
       /* extern int cdoDefaultInstID; */
-      char *filename = (char *) malloc(strlen(argument->args)+1);
+      char *filename = malloc(strlen(argument->args)+1);
 
       pstreamptr = pstream_new_entry();
       if ( ! pstreamptr ) Error("No memory");
@@ -759,7 +759,7 @@ int pstreamOpenAppend(const argument_t *argument)
     }
   else
     {
-      char *filename = (char *) malloc(strlen(argument->args)+1);
+      char *filename = malloc(strlen(argument->args)+1);
 
       pstreamptr = pstream_new_entry();
       if ( ! pstreamptr ) Error("No memory");
@@ -1008,7 +1008,7 @@ void pstreamDefVarlist(pstream_t *pstreamptr, int vlistID)
     cdoAbort("Internal problem, varlist already allocated!");
 
   nvars = vlistNvars(vlistID);
-  varlist = (varlist_t *) malloc(nvars*sizeof(varlist_t));
+  varlist = malloc(nvars*sizeof(varlist_t));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -1383,7 +1383,7 @@ int pstreamInqTimestep(int pstreamID, int tsID)
 	  streamClose(pstreamptr->fileID);
 
 	  len = strlen(pstreamptr->mfnames[nfile]);
-	  filename = (char *) malloc(len+1);
+	  filename = malloc(len+1);
 	  strcpy(filename, pstreamptr->mfnames[nfile]);
 	  pstreamptr->nfiles++;
 
@@ -1704,6 +1704,15 @@ int pstreamInqByteorder(int pstreamID)
     byteorder = streamInqByteorder(pstreamptr->fileID);
 
   return (byteorder);
+}
+
+void pstreamInqGinfo(int pstreamID, int *intnum, float *fltnum, off_t *bignum)
+{
+  pstream_t *pstreamptr;
+
+  pstreamptr = pstream_to_pointer(pstreamID);
+
+  streamInqGinfo(pstreamptr->fileID, intnum, fltnum, bignum);
 }
 
 

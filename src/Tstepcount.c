@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@ void *Tstepcount(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
+	  vars  = realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate = taxisInqVdate(taxisID1);
@@ -124,7 +124,7 @@ void *Tstepcount(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 	}
@@ -134,10 +134,10 @@ void *Tstepcount(void *argument)
 
   nts = tsID;
 
-  mem = (memory_t *) malloc(ompNumThreads*sizeof(memory_t));
+  mem = malloc(ompNumThreads*sizeof(memory_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
-      mem[i].array1 = (double *) malloc(nts*sizeof(double));
+      mem[i].array1 = malloc(nts*sizeof(double));
     }
 
   for ( varID = 0; varID < nvars; varID++ )

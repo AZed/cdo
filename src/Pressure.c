@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,7 @@
 #include "pstream.h"
 #include "vinterp.h"
 #include "list.h"
+#include "stdnametable.h"
 
 
 void *Pressure(void *argument)
@@ -115,7 +116,7 @@ void *Pressure(void *argument)
 	{
 	  double *level;
 	  int l;
-	  level = (double *) malloc(nlevel*sizeof(double));
+	  level = malloc(nlevel*sizeof(double));
 	  zaxisInqLevels(zaxisID, level);
 	  for ( l = 0; l < nlevel; l++ )
 	    {
@@ -139,7 +140,7 @@ void *Pressure(void *argument)
 		  nhlevf   = nhlev;
 		  nhlevh   = nhlevf + 1;
 	      
-		  vct = (double *) malloc(nvct*sizeof(double));
+		  vct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 		}
 	    }
@@ -153,7 +154,7 @@ void *Pressure(void *argument)
 		  nhlevf   = nhlev - 1;
 		  nhlevh   = nhlev;
 	      
-		  vct = (double *) malloc(nvct*sizeof(double));
+		  vct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 		}
 	    }
@@ -165,7 +166,7 @@ void *Pressure(void *argument)
 		  int voff = 4;
 		  double *rvct = NULL;
 
-		  rvct = (double *) malloc(nvct*sizeof(double));
+		  rvct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID,rvct);
 
 		  if ( (int)(rvct[0]+0.5) == 100000 && rvct[voff] < rvct[voff+1] )
@@ -177,7 +178,7 @@ void *Pressure(void *argument)
 		      nhlevh   = nhlev + 1;
 
 		      vctsize = 2*nhlevh;
-		      vct = (double *) malloc(vctsize*sizeof(double));
+		      vct = malloc(vctsize*sizeof(double));
 
 		      /* calculate VCT for LM */
 
@@ -212,10 +213,10 @@ void *Pressure(void *argument)
 
   if ( zaxisIDh != -1 && ngp > 0 )
     {
-      ps_prog    = (double *) malloc(ngp*sizeof(double));
-      deltap     = (double *) malloc(ngp*nhlevf*sizeof(double));
-      full_press = (double *) malloc(ngp*nhlevf*sizeof(double));
-      half_press = (double *) malloc(ngp*nhlevh*sizeof(double));
+      ps_prog    = malloc(ngp*sizeof(double));
+      deltap     = malloc(ngp*nhlevf*sizeof(double));
+      full_press = malloc(ngp*nhlevf*sizeof(double));
+      half_press = malloc(ngp*nhlevh*sizeof(double));
     }
   else
     cdoAbort("No data on hybrid model level found!");
@@ -228,7 +229,7 @@ void *Pressure(void *argument)
   {
     double *level;
     int l;
-    level = (double *) malloc(nhlevh*sizeof(double));
+    level = malloc(nhlevh*sizeof(double));
     for ( l = 0; l < nhlevh; l++ ) level[l] = l+1;
     zaxisDefLevels(zaxisIDp, level);
     free(level);
@@ -334,7 +335,7 @@ void *Pressure(void *argument)
       if ( gridInqType(gridID) == GRID_SPECTRAL )
 	{
 	  lnpsID = -1;
-	  cdoWarning("Spectral LOG surface pressure not supported - using surface pressure!");
+	  cdoWarning("Spectral LOG(%s) not supported - using %s!", var_stdname(surface_air_pressure), var_stdname(surface_air_pressure));
 	}
     }
 
@@ -342,22 +343,21 @@ void *Pressure(void *argument)
     {
       pvarID = psID;
       if ( psID == -1 )
-	cdoAbort("Surface pressure not found!");
+	cdoAbort("%s not found!", var_stdname(surface_air_pressure));
     }
 
   gridID = vlistInqVarGrid(vlistID1, pvarID);
   if ( gridInqType(gridID) == GRID_SPECTRAL )
-    cdoAbort("Surface pressure on spectral representation not supported!");
+    cdoAbort("%s on spectral representation not supported!", var_stdname(surface_air_pressure));
 
   gridsize = gridInqSize(gridID);
-  pdata = (double *) malloc(gridsize*sizeof(double));
+  pdata = malloc(gridsize*sizeof(double));
 
 
   vlistID2 = vlistCreate();
   varID = vlistDefVar(vlistID2, gridID, zaxisIDp, TSTEP_INSTANT);
   vlistDefVarCode(vlistID2, varID, 1);
   vlistDefVarName(vlistID2, varID, "pressure");
-  vlistDefVarLongname(vlistID2, varID, "Air pressure");
   vlistDefVarStdname(vlistID2, varID, "air_pressure");
   vlistDefVarUnits(vlistID2, varID, "Pa");
 

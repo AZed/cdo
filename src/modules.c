@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -293,7 +293,7 @@ void *Maggraph(void *argument);
 #define  ConsecstatOperators    {"consects", "consecsum"}
 #define  CopyOperators          {"copy", "selall", "szip"}
 #define  DeltimeOperators       {"delday", "del29feb"}
-#define  DeriveparOperators     {"geopotheight"}
+#define  DeriveparOperators     {"geopotheight", "sealevelpressure"}
 #define  DetrendOperators       {"detrend"}
 #define  DiffOperators          {"diff", "diff2", "diffp", "diffn", "diffc"}
 #define  DuplicateOperators     {"duplicate"}
@@ -321,7 +321,7 @@ void *Maggraph(void *argument);
 #define  FourierOperators       {"fourier"}
 #define  GatherOperators        {"gather"}
 #define  GengridOperators       {"gengrid"}
-#define  GradsdesOperators      {"gradsdes1", "gradsdes2", "dumpmap"}
+#define  GradsdesOperators      {"gradsdes", "dumpmap"}
 #define  GridboxstatOperators   {"gridboxmin", "gridboxmax", "gridboxsum", "gridboxmean", "gridboxavg", "gridboxvar", "gridboxstd"}
 #define  GridcellOperators      {"gridarea", "gridweights", "gridmask", "griddx", "griddy"}
 #define  HarmonicOperators      {"harmonic"}
@@ -369,8 +369,8 @@ void *Maggraph(void *argument);
 #define  PressureOperators      {"pressure_fl", "pressure_hl", "deltap"}
 #define  RegresOperators        {"regres"}
 #define  RemapOperators         {"remap"}
-#define    RemapgridOperators   {"remapcon", "remapbil", "remapbic", "remapdis", "remapnn", "remaplaf", "remapcon2", "remapsum"}
-#define    GenweightsOperators  {"gencon", "genbil", "genbic", "gendis", "gennn", "genlaf", "gencon2"}
+#define    RemapgridOperators   {"remapcons", "remapcon", "remapbil", "remapbic", "remapdis", "remapnn", "remaplaf", "remapcon2", "remapsum"}
+#define    GenweightsOperators  {"gencons", "gencon", "genbil", "genbic", "gendis", "gennn", "genlaf", "gencon2"}
 #define  RemapetaOperators      {"remapeta", "remapeta_s", "remapeta_z"}
 #define  ReplaceOperators       {"replace"}
 #define  ReplacevaluesOperators {"setvals", "setrtoc", "setrtoc2"}
@@ -793,7 +793,6 @@ static char *opalias[][2] =
   {"ggstat",              "info"       },
   {"ggstats",             "sinfo"      },
   {"globavg",             "fldavg"     },
-  {"gradsdes",            "gradsdes2"  },
   {"infos",               "sinfo"      },
   {"infov",               "infon"      },
   {"intgrid",             "intgridbil" },

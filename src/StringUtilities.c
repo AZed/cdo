@@ -25,7 +25,7 @@ int StringSplitWithSeperator(  char *source_string, char *seperator, char*** ptr
 		   sep_count++;
 	  }	
  
-	temp_list  = ( char** )malloc ( sizeof( char* ) * (sep_count+1) );
+	temp_list  = malloc ( sizeof( char* ) * (sep_count+1) );
 	
 	if( DBG )
 	  fprintf(stderr, "Input str %s , seperator %s  sep count %d\n", duplicate_src, seperator, sep_count );

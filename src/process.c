@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -406,7 +406,7 @@ char *getOperatorArg(const char *xoperator)
 	  len = strlen(commapos+1);
 	  if ( len )
 	    {
-	      operatorArg = (char *) malloc(len+1);
+	      operatorArg = malloc(len+1);
 	      strcpy(operatorArg, commapos+1);
 	    }
 	}
@@ -512,7 +512,7 @@ void setStreamNames(int argc, char *argv[])
 	  globArgc = getGlobArgc(argc, argv, globArgc);
 	  len = 0;
 	  for ( i = globArgcStart; i < globArgc; i++ ) len += strlen(argv[i]) + 1;
-	  streamname = (char *) calloc(1, len);
+	  streamname = calloc(1, len);
 	  for ( i = globArgcStart; i < globArgc; i++ )
 	    {
 	      strcat(streamname, argv[i]);
@@ -522,7 +522,7 @@ void setStreamNames(int argc, char *argv[])
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
 	  ac = globArgc - globArgcStart;
 	  //printf("setStreamNames:  ac %d  streamname1: %s\n", ac, streamname);
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = malloc(ac*sizeof(char *));
 	  for ( i = 0; i < ac; ++i )
 	    Process[processID].streamNames[Process[processID].streamCnt].argv[i] = argv[i+globArgcStart];
 	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
@@ -532,11 +532,11 @@ void setStreamNames(int argc, char *argv[])
       else
 	{
 	  len = strlen(argv[globArgc]) + 1;
-	  streamname = (char *) malloc(len);
+	  streamname = malloc(len);
 	  strcpy(streamname, argv[globArgc]);
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
 	  ac = 1;
-	  Process[processID].streamNames[Process[processID].streamCnt].argv = (char **) malloc(ac*sizeof(char *));
+	  Process[processID].streamNames[Process[processID].streamCnt].argv = malloc(ac*sizeof(char *));
 	  Process[processID].streamNames[Process[processID].streamCnt].argv[0] = argv[globArgc];
 	  Process[processID].streamNames[Process[processID].streamCnt].argc = ac;
 	  Process[processID].streamNames[Process[processID].streamCnt].args = streamname;
@@ -567,7 +567,7 @@ int expand_wildcards(int processID, int streamCnt)
 	  free(Process[processID].streamNames[0].argv);
 	  free(Process[processID].streamNames[0].args);
 
-	  Process[processID].streamNames = (argument_t *) realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
+	  Process[processID].streamNames = realloc(Process[processID].streamNames, streamCnt*sizeof(argument_t));
 	      
 	  // move output streams to the end
 	  for ( i = 1; i < Process[processID].streamCnt; ++i )
@@ -576,7 +576,7 @@ int expand_wildcards(int processID, int streamCnt)
 	  for ( i = 0; i < glob_arg->argc; ++i )
 	    {
 	      // printf("add %d %s\n", i, glob_arg->argv[i]);
-	      Process[processID].streamNames[i].argv    = (char **) malloc(sizeof(char *));
+	      Process[processID].streamNames[i].argv    = malloc(sizeof(char *));
 	      Process[processID].streamNames[i].argc    = 1;
 	      Process[processID].streamNames[i].argv[0] = strdupx(glob_arg->argv[i]);
 	      Process[processID].streamNames[i].args    = strdupx(glob_arg->argv[i]);
@@ -688,7 +688,7 @@ void setStreams(int argc, char *argv[])
 
   Process[processID].streamCnt  = 0; /* filled in setStreamNames */
   if ( streamCnt )
-    Process[processID].streamNames = (argument_t *) malloc(streamCnt*sizeof(argument_t));
+    Process[processID].streamNames = malloc(streamCnt*sizeof(argument_t));
   for ( i = 0; i < streamCnt; i++ )
     {
       Process[processID].streamNames[i].argc = 0;
@@ -874,7 +874,7 @@ void operatorInputArg(const char *enter)
 		  while ( pline[len] != ' '  && pline[len] != ',' &&
 			  pline[len] != '\\' && len < linelen ) len++;
 
-		  Process[processID].oargv[oargc] = (char *) malloc(len+1);
+		  Process[processID].oargv[oargc] = malloc(len+1);
 		  memcpy(Process[processID].oargv[oargc], pline, len);
 		  Process[processID].oargv[oargc][len] = '\0';
 		  oargc++;

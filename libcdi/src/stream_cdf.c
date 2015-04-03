@@ -1955,6 +1955,26 @@ void cdfDefGridUUID(stream_t *streamptr, int gridID)
 }
 
 static
+void cdfDefZaxisUUID(stream_t *streamptr, int zaxisID)
+{
+  char uuidOfVGrid[17];
+  zaxisInqUUID(zaxisID, uuidOfVGrid);
+
+  if ( uuidOfVGrid[0] != 0 )
+    {
+      char uuidOfVGridStr[37];
+      uuid2str(uuidOfVGrid, uuidOfVGridStr);
+      if ( uuidOfVGridStr[0] != 0 && strlen(uuidOfVGridStr) == 36 )
+        {
+          int fileID  = streamptr->fileID;
+          if ( streamptr->ncmode == 2 ) cdf_redef(fileID);
+          cdf_put_att_text(fileID, NC_GLOBAL, "uuidOfVGrid", 36, uuidOfVGridStr);
+          if ( streamptr->ncmode == 2 ) cdf_enddef(fileID);
+        }
+    }
+}
+
+static
 void cdfDefUnstructured(stream_t *streamptr, int gridID)
 {
   char xunits[CDI_MAX_NAME];
@@ -2323,6 +2343,9 @@ void cdfDefZaxis(stream_t *streamptr, int zaxisID)
         }
 
       if ( ilevel ) sprintf(&axisname[strlen(axisname)], "_%1d", ilevel+1);
+
+      if ( type == ZAXIS_REFERENCE )
+	cdfDefZaxisUUID(streamptr, zaxisID);
 
       if ( type == ZAXIS_HYBRID || type == ZAXIS_HYBRID_HALF )
         {
@@ -3716,6 +3739,55 @@ void cdf_write_var_chunk(stream_t *streamptr, int varID, int memtype,
 }
 #endif
 
+static
+int set_validrange(long gridsize, double *data, double missval, double validmin, double validmax)
+{
+  long i;
+  int nmiss = 0;
+  /*
+  for ( i = 0; i < gridsize; i++, data++ )
+    {
+      if ( IS_NOT_EQUAL(validmin, VALIDMISS) && (*data) < validmin ) *data = missval;
+      if ( IS_NOT_EQUAL(validmax, VALIDMISS) && (*data) > validmax ) *data = missval;
+      if ( DBL_IS_EQUAL((*data), missval) ) nmiss++;
+    }
+  */
+  // 21/01/2014 Florian Prill: SX-9 vectorization
+
+  if ( IS_NOT_EQUAL(validmin, VALIDMISS) && !IS_NOT_EQUAL(validmax, VALIDMISS) )
+    {
+      for ( i = 0; i < gridsize; i++, data++ )
+        {
+          if ( (*data) < validmin )  { (*data) = missval; nmiss++; }
+          else if ( DBL_IS_EQUAL((*data), missval) )  nmiss++;
+        } // i
+    }
+  else if ( IS_NOT_EQUAL(validmax, VALIDMISS) && !IS_NOT_EQUAL(validmin, VALIDMISS))
+    {
+      for ( i = 0; i < gridsize; i++, data++ )
+        {
+          if ( (*data) > validmax )  { (*data) = missval; nmiss++; }
+          else if ( DBL_IS_EQUAL((*data), missval) )  nmiss++;
+        } // i
+    }
+  else if ( IS_NOT_EQUAL(validmin, VALIDMISS) && IS_NOT_EQUAL(validmax, VALIDMISS))
+    {
+      for ( i = 0; i < gridsize; i++, data++ )
+        {
+          if      ( (*data) < validmin )  { (*data) = missval; nmiss++; }
+          else if ( (*data) > validmax )  { (*data) = missval; nmiss++; }
+          else if ( DBL_IS_EQUAL((*data), missval) )  nmiss++;
+        } // i
+    }
+  else
+    {
+      for ( i = 0; i < gridsize; i++, data++ )
+        if ( DBL_IS_EQUAL((*data), missval) ) nmiss++;
+    }
+
+  return (nmiss);
+}
+
 
 int cdfReadVarSliceDP(stream_t *streamptr, int varID, int levelID, double *data, int *nmiss)
 {
@@ -3875,15 +3947,15 @@ int cdfReadVarSliceDP(stream_t *streamptr, int varID, int levelID, double *data,
       lvalidrange = vlistInqVarValidrange(vlistID, varID, validrange);
       // printf("readvarslice: validrange %d %g %g\n", lvalidrange, validrange[0], validrange[1]);
       if ( lvalidrange )
-        for ( i = 0; i < gridsize; i++ )
-          {
-            if ( IS_NOT_EQUAL(validrange[0], VALIDMISS) && data[i] < validrange[0] ) data[i] = missval;
-            if ( IS_NOT_EQUAL(validrange[1], VALIDMISS) && data[i] > validrange[1] ) data[i] = missval;
-          }
-
-      // printf("XXX %31.0f %31.0f %31.0f %31.0f\n", missval, (float)data[0]);
-      for ( i = 0; i < gridsize; i++ )
-        if ( DBL_IS_EQUAL(data[i], missval) ) *nmiss += 1;
+        {
+          *nmiss = set_validrange(gridsize, data, missval, validrange[0], validrange[1]);
+        }
+      else
+        {
+          double *data_ptr = data; 
+          for ( i = 0; i < gridsize; i++, data_ptr++ )
+            if ( DBL_IS_EQUAL((*data_ptr), missval) ) (*nmiss)++;
+        }
     }
 
   addoffset    = vlistInqVarAddoffset(vlistID, varID);
@@ -5595,8 +5667,7 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 		{
 		  if ( ncvars[xvarid].ndims != ncvars[yvarid].ndims )
 		    {
-		      Warning("Inconsistent grid structure for variable %s!",
-			      ncvars[ncvarid].name);
+		      Warning("Inconsistent grid structure for variable %s!", ncvars[ncvarid].name);
 		      ncvars[ncvarid].xvarid = UNDEFID;
 		      ncvars[ncvarid].yvarid = UNDEFID;
 		      xvarid = UNDEFID;
@@ -5772,7 +5843,7 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 
 	      if      ( (int) ysize == 0 ) size = xsize;
 	      else if ( (int) xsize == 0 ) size = ysize;
-	      else if ( ncvars[ncvarid].gridtype == GRID_UNSTRUCTURED ) size = xsize; 
+	      else if ( ncvars[ncvarid].gridtype == GRID_UNSTRUCTURED ) size = xsize;
 	      else                         size = xsize*ysize;
 	    }
 
@@ -5986,6 +6057,46 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 		}
 	    }
 
+          if ( grid.type == GRID_UNSTRUCTURED )
+            {
+              int zdimid = UNDEFID;
+              int xdimidx = -1, ydimidx = -1;
+
+              for ( i = 0; i < ndims; i++ )
+                {
+                  if      ( ncvars[ncvarid].dimtype[i] == X_AXIS ) xdimidx = i;
+                  else if ( ncvars[ncvarid].dimtype[i] == Y_AXIS ) ydimidx = i;
+                  else if ( ncvars[ncvarid].dimtype[i] == Z_AXIS ) zdimid = ncvars[ncvarid].dimids[i];
+                }
+
+              if ( xdimid != UNDEFID && ydimid != UNDEFID && zdimid == UNDEFID )
+                {
+                  if ( grid.xsize > grid.ysize && grid.ysize < 1000 )
+                    {
+                      ncvars[ncvarid].dimtype[ydimidx] = Z_AXIS;
+                      ydimid = UNDEFID;
+                      grid.size  = grid.xsize;
+                      grid.ysize = 0;
+                    }
+                  else if ( grid.ysize > grid.xsize && grid.xsize < 1000 )
+                    {
+                      ncvars[ncvarid].dimtype[xdimidx] = Z_AXIS;
+                      xdimid = ydimid;
+                      ydimid = UNDEFID;
+                      grid.size  = grid.ysize;
+                      grid.xsize = grid.ysize;
+                      grid.ysize = 0;
+                    }
+                }
+
+              if ( grid.size != grid.xsize )
+                {
+                  Warning("Unsupported array structure, skipped variable %s!", ncvars[ncvarid].name);
+                  ncvars[ncvarid].isvar = -1;
+                  continue;
+                }
+            }
+
 #if defined (PROJECTION_TEST)
 	  if ( proj.type == GRID_PROJECTION )
 	    {
@@ -6025,10 +6136,16 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 
           if ( grid.type == GRID_UNSTRUCTURED )
             {
+              if ( CDI_Debug)
+                {
+                  if ( grid.number != UNDEFID ) printf("number : %d\n", grid.number);
+                  if ( ncvars[ncvarid].position > 0 ) printf("position : %d\n", ncvars[ncvarid].position);
+                  if ( gridfile[0] != 0 ) printf("gridfile: %s\n", gridfile);
+                  if ( uuidOfHGrid[0] != 0 ) printf("uuidOfHGrid: defined\n");
+                }
+
               if ( ncvars[ncvarid].position > 0 ) gridDefPosition(ncvars[ncvarid].gridID, ncvars[ncvarid].position);
-
               if ( gridfile[0] != 0 ) gridDefReference(ncvars[ncvarid].gridID, gridfile);
-
               if ( uuidOfHGrid[0] != 0 ) gridDefUUID(ncvars[ncvarid].gridID, uuidOfHGrid);
             }
 
@@ -6060,26 +6177,43 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 	  streamptr->xdimID[gridindex] = xdimid;
 	  streamptr->ydimID[gridindex] = ydimid;
 
-	  grid_free(&grid);
-	  grid_free(&proj);
-
 	  if ( CDI_Debug )
 	    Message("gridID %d %d %s", ncvars[ncvarid].gridID, ncvarid, ncvars[ncvarid].name);
 
 	  for ( ncvarid2 = ncvarid+1; ncvarid2 < nvars; ncvarid2++ )
 	    if ( ncvars[ncvarid2].isvar == TRUE && ncvars[ncvarid2].gridID == UNDEFID )
 	      {
-		int xdimid2 = -1, ydimid2 = -1;
-		ndims = ncvars[ncvarid2].ndims;
-		for ( i = 0; i < ndims; i++ )
+		int xdimid2 = UNDEFID, ydimid2 = UNDEFID, zdimid2 = UNDEFID;
+                int xdimidx = -1, ydimidx = -1;
+		int ndims2 = ncvars[ncvarid2].ndims;
+
+		for ( i = 0; i < ndims2; i++ )
 		  {
 		    if ( ncvars[ncvarid2].dimtype[i] == X_AXIS )
-		      xdimid2 = ncvars[ncvarid2].dimids[i];
+		      { xdimid2 = ncvars[ncvarid2].dimids[i]; xdimidx = i; }
 		    else if ( ncvars[ncvarid2].dimtype[i] == Y_AXIS )
-		      ydimid2 = ncvars[ncvarid2].dimids[i];
+		      { ydimid2 = ncvars[ncvarid2].dimids[i]; ydimidx = i; }
+		    else if ( ncvars[ncvarid2].dimtype[i] == Z_AXIS )
+		      { zdimid2 = ncvars[ncvarid2].dimids[i]; }
 		  }
 
-		if ( xdimid == xdimid2 &&
+                if ( ncvars[ncvarid2].gridtype == UNDEFID && grid.type == GRID_UNSTRUCTURED )
+                  {
+                    if ( xdimid == xdimid2 && ydimid2 != UNDEFID && zdimid2 == UNDEFID )
+                      {
+                        ncvars[ncvarid2].dimtype[ydimidx] = Z_AXIS;
+                        ydimid2 = UNDEFID;
+                      }
+
+                    if ( xdimid == ydimid2 && xdimid2 != UNDEFID && zdimid2 == UNDEFID )
+                      {
+                        ncvars[ncvarid2].dimtype[xdimidx] = Z_AXIS;
+                        xdimid2 = ydimid2;
+                        ydimid2 = UNDEFID;
+                      }
+                  }
+
+                if ( xdimid == xdimid2 &&
 		    (ydimid == ydimid2 || (xdimid == ydimid && ydimid2 == UNDEFID)) )
 		  {
 		    int same_grid = TRUE;
@@ -6098,13 +6232,15 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
 		    if ( same_grid )
 		      {
 			if ( CDI_Debug )
-			  Message("Same gridID %d %d %s",
-				  ncvars[ncvarid].gridID, ncvarid2, ncvars[ncvarid2].name);
+			  Message("Same gridID %d %d %s", ncvars[ncvarid].gridID, ncvarid2, ncvars[ncvarid2].name);
 			ncvars[ncvarid2].gridID = ncvars[ncvarid].gridID;
 			ncvars[ncvarid2].chunktype = ncvars[ncvarid].chunktype;
 		      }
 		  }
 	      }
+
+	  grid_free(&grid);
+	  grid_free(&proj);
 	}
     }
 }

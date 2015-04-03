@@ -100,13 +100,13 @@ void *Timselpctl(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field);
-  field.ptr = (double *) malloc(gridsize * sizeof(double));
+  field.ptr = malloc(gridsize * sizeof(double));
 
   vars1 = field_malloc(vlistID1, FIELD_PTR);
   hset = hsetCreate(nvars);

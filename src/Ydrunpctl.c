@@ -109,16 +109,16 @@ void *Ydrunpctl(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
   field_init(&field);
-  field.ptr = (double *) malloc(gridsize*sizeof(double));
+  field.ptr = malloc(gridsize*sizeof(double));
 
-  datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
+  datetime = malloc((ndates+1)*sizeof(datetime_t));
   
-  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+  vars1 = malloc((ndates+1)*sizeof(field_t **));
   
   for ( its = 0; its < ndates; its++ )
     {

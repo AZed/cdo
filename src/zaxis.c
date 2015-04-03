@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -237,7 +237,7 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	    {
 	      pline = skipSeparator(pline + 6);
 	  
-	      zaxis.vals = (double *) malloc(zaxis.size*sizeof(double));
+	      zaxis.vals = malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
 		{
 		  pline = skipSeparator(pline);
@@ -271,7 +271,7 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	    {
 	      pline = skipSeparator(pline + 3);
 	  
-	      zaxis.vct = (double *) malloc(zaxis.vctsize*sizeof(double));
+	      zaxis.vct = malloc(zaxis.vctsize*sizeof(double));
 	      for ( i = 0; i < zaxis.vctsize; i++ )
 		{
 		  pline = skipSeparator(pline);
@@ -305,7 +305,7 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	    {
 	      pline = skipSeparator(pline + 7);
 	  
-	      zaxis.lbounds = (double *) malloc(zaxis.size*sizeof(double));
+	      zaxis.lbounds = malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
 		{
 		  pline = skipSeparator(pline);
@@ -339,7 +339,7 @@ int zaxisFromFile(FILE *gfp, const char *dname)
 	    {
 	      pline = skipSeparator(pline + 7);
 	  
-	      zaxis.ubounds = (double *) malloc(zaxis.size*sizeof(double));
+	      zaxis.ubounds = malloc(zaxis.size*sizeof(double));
 	      for ( i = 0; i < zaxis.size; i++ )
 		{
 		  pline = skipSeparator(pline);
@@ -387,7 +387,7 @@ int zaxisFromName(const char *zaxisname)
     {
       zaxis.type = ZAXIS_SURFACE;
       zaxis.size = 1;
-      zaxis.vals = (double *) malloc(zaxis.size*sizeof(double));
+      zaxis.vals = malloc(zaxis.size*sizeof(double));
       zaxis.vals[0] = 0;
     }
 

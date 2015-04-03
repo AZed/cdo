@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,8 +41,8 @@ static
 int cmpdatetime(const void *s1, const void *s2)
 {
   int cmp = 0;
-  timeinfo_t *x = (timeinfo_t *) s1;
-  timeinfo_t *y = (timeinfo_t *) s2;
+  const timeinfo_t *x = s1;
+  const timeinfo_t *y = s2;
   /*
   printf("%g %g  %d %d\n", x->datetime, y->datetime, x, y);
   */
@@ -105,9 +105,9 @@ void *Sorttimestamp(void *argument)
 	  if ( xtsID >= nalloc )
 	    {
 	      nalloc += NALLOC_INC;
-	      vdate = (int *) realloc(vdate, nalloc*sizeof(int));
-	      vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	      vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
+	      vdate = realloc(vdate, nalloc*sizeof(int));
+	      vtime = realloc(vtime, nalloc*sizeof(int));
+	      vars  = realloc(vars, nalloc*sizeof(field_t **));
 	    }
 
 	  vdate[xtsID] = taxisInqVdate(taxisID1);
@@ -120,7 +120,7 @@ void *Sorttimestamp(void *argument)
 	      streamInqRecord(streamID1, &varID, &levelID);
 	      gridID   = vlistInqVarGrid(vlistID1, varID);
 	      gridsize = gridInqSize(gridID);
-	      vars[xtsID][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
+	      vars[xtsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
 	      streamReadRecord(streamID1, vars[xtsID][varID][levelID].ptr, &nmiss);
 	      vars[xtsID][varID][levelID].nmiss = nmiss;
 	    }
@@ -134,7 +134,7 @@ void *Sorttimestamp(void *argument)
 
   nts = xtsID;
 
-  timeinfo= (timeinfo_t *) malloc(nts*sizeof(timeinfo_t));
+  timeinfo= malloc(nts*sizeof(timeinfo_t));
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {

@@ -1,6 +1,21 @@
 CDO NEWS
 --------
 
+Version 1.6.3 (18 February 2014):
+
+   New features:
+     * remapbil, remapbic, remapdis: performance optimization for regular 2D source grids
+     * gradsdes: added support for GRIB files >2GB
+     * eca_csu: added number of csu periods with more than 5days per time period
+     * eca_cfd: added number of cfd periods with more than 5days per time period
+     * expr: select variables by name
+   Changed operators:
+     * gradsdes: added parameter map_version and removed specific operators gradsdes1 and gradsdes2
+   Fixed bugs:
+     * gradsdes: changed LCC to LCCR in PDEF definition [Bug #4344]
+     * cat: "Segmentation fault" if the output file already exist [Bug #4291]
+     * delete: parameter level does not work [Bug #4216]
+
 Version 1.6.2 (12 November 2013):
 
    New features:

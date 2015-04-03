@@ -495,7 +495,7 @@ void dumplogs(const char *logfilename)
 
   if ( bufsize > 0 )
     {
-      buffer = (unsigned char *) malloc(bufsize);
+      buffer = malloc(bufsize);
 
       status = (int) read(logfileno, buffer, bufsize);
 
@@ -568,7 +568,7 @@ void daylogs(const char *logfilename)
 
   if ( bufsize > 0 )
     {
-      buffer = (unsigned char *) malloc(bufsize);
+      buffer = malloc(bufsize);
 
       status = (int) read(logfileno, buffer, bufsize);
 
@@ -640,7 +640,7 @@ void monlogs(const char *logfilename)
 
   if ( bufsize > 0 )
     {
-      buffer = (unsigned char *) malloc(bufsize);
+      buffer = malloc(bufsize);
 
       status = (int) read(logfileno, buffer, bufsize);
 
@@ -769,7 +769,7 @@ void cdologo(int noper)
   bufsize = (size_t) filestat.st_size;
 
   newbufsize = bufsize + noper*logsize;
-  buffer = (unsigned char *) malloc(newbufsize);
+  buffer = malloc(newbufsize);
   if ( bufsize > 0 )
     status = (int) read(logfileno, buffer, bufsize);
 
@@ -846,14 +846,14 @@ typedef struct
   double   perc;
   char     name[128];
 }
-LogInfo;
+loginfo_t;
 
 static
 int cmplognocc(const void *s1, const void *s2)
 {
   int cmp = 0;
-  LogInfo *x = (LogInfo *) s1;
-  LogInfo *y = (LogInfo *) s2;
+  const loginfo_t *x = s1;
+  const loginfo_t *y = s2;
 
   if      ( x->nocc < y->nocc ) cmp =  1;
   else if ( x->nocc > y->nocc ) cmp = -1;
@@ -865,8 +865,8 @@ static
 int cmplognvals(const void *s1, const void *s2)
 {
   int cmp = 0;
-  LogInfo *x = (LogInfo *) s1;
-  LogInfo *y = (LogInfo *) s2;
+  const loginfo_t *x = s1;
+  const loginfo_t *y = s2;
 
   if      ( x->nvals < y->nvals ) cmp =  1;
   else if ( x->nvals > y->nvals ) cmp = -1;
@@ -878,8 +878,8 @@ static
 int cmplogtime(const void *s1, const void *s2)
 {
   int cmp = 0;
-  LogInfo *x = (LogInfo *) s1;
-  LogInfo *y = (LogInfo *) s2;
+  const loginfo_t *x = s1;
+  const loginfo_t *y = s2;
 
   if      ( x->time < y->time ) cmp =  1;
   else if ( x->time > y->time ) cmp = -1;
@@ -891,8 +891,8 @@ static
 int cmplogperc(const void *s1, const void *s2)
 {
   int cmp = 0;
-  LogInfo *x = (LogInfo *) s1;
-  LogInfo *y = (LogInfo *) s2;
+  const loginfo_t *x = s1;
+  const loginfo_t *y = s2;
 
   if      ( x->perc < y->perc ) cmp =  1;
   else if ( x->perc > y->perc ) cmp = -1;
@@ -903,8 +903,8 @@ int cmplogperc(const void *s1, const void *s2)
 static
 int cmplogname(const void *s1, const void *s2)
 {
-  LogInfo *x = (LogInfo *) s1;
-  LogInfo *y = (LogInfo *) s2;
+  const loginfo_t *x = s1;
+  const loginfo_t *y = s2;
 
   return (strcmp(x->name, y->name));
 }
@@ -933,7 +933,7 @@ void dumplogo(const char *logfilename, int dumptype)
   size_t bufsize;
   struct flock mylock;
   struct stat filestat;
-  LogInfo **logInfo;
+  loginfo_t **logInfo;
 
   errno = 0;
   logfileno = open(logfilename, O_RDONLY);
@@ -957,14 +957,14 @@ void dumplogo(const char *logfilename, int dumptype)
   if ( bufsize > 0 )
     {
       fprintf(stdout, "# num name                     call        mem [GB]    time [h]     perc [s]\n");
-      buffer = (unsigned char *) malloc(bufsize);
+      buffer = malloc(bufsize);
 
       status = (int) read(logfileno, buffer, bufsize);
 
       nlogs = bufsize / logsize;
 
-      logInfo    = (LogInfo **) malloc(nlogs*sizeof(LogInfo *));
-      logInfo[0] = (LogInfo *) malloc(nlogs*sizeof(LogInfo));
+      logInfo    = malloc(nlogs*sizeof(loginfo_t *));
+      logInfo[0] = malloc(nlogs*sizeof(loginfo_t));
       for ( i = 1; i < nlogs; i++ ) logInfo[i] = logInfo[0] + i;
 
       for ( i = 0; i < nlogs; i++ )
@@ -983,15 +983,15 @@ void dumplogo(const char *logfilename, int dumptype)
 	}
 
       if      ( dumptype == 1 )
-	qsort(logInfo[0], nlogs, sizeof(LogInfo), cmplogname);
+	qsort(logInfo[0], nlogs, sizeof(loginfo_t), cmplogname);
       else if ( dumptype == 2 )
-	qsort(logInfo[0], nlogs, sizeof(LogInfo), cmplognocc);
+	qsort(logInfo[0], nlogs, sizeof(loginfo_t), cmplognocc);
       else if ( dumptype == 3 )
-	qsort(logInfo[0], nlogs, sizeof(LogInfo), cmplognvals);
+	qsort(logInfo[0], nlogs, sizeof(loginfo_t), cmplognvals);
       else if ( dumptype == 4 )
-	qsort(logInfo[0], nlogs, sizeof(LogInfo), cmplogtime);
+	qsort(logInfo[0], nlogs, sizeof(loginfo_t), cmplogtime);
       else if ( dumptype == 5 )
-	qsort(logInfo[0], nlogs, sizeof(LogInfo), cmplogperc);
+	qsort(logInfo[0], nlogs, sizeof(loginfo_t), cmplogperc);
 
       for ( i = 0; i < nlogs; i++ )
 	{

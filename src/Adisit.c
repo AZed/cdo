@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -256,7 +256,7 @@ void *Adisit(void *argument)
   if ( nlevel1 != nlevel2 ) cdoAbort("temperature and salinity have different number of levels!");
   nlevel = nlevel1;
 
-  pressure = (double *) malloc(nlevel*sizeof(double));
+  pressure = malloc(nlevel*sizeof(double));
   zaxisInqLevels(zaxisID, pressure);
 
   if ( pin >= 0 ) 
@@ -274,9 +274,9 @@ void *Adisit(void *argument)
   field_init(&tho);
   field_init(&sao);
   field_init(&tis);
-  tho.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
-  sao.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
-  tis.ptr = (double *) malloc(gridsize*nlevel*sizeof(double));
+  tho.ptr = malloc(gridsize*nlevel*sizeof(double));
+  sao.ptr = malloc(gridsize*nlevel*sizeof(double));
+  tis.ptr = malloc(gridsize*nlevel*sizeof(double));
 
   tho.nmiss = 0;
   sao.nmiss = 0;

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -84,8 +84,8 @@ void yar_store_link_cnsrv(remapvars_t *rv, long add1, long add2, double weight)
   if ( rv->num_links >= rv->max_links )
     resize_remap_vars(rv, rv->resize_increment);
 
-  rv->grid1_add[nlink] = add1;
-  rv->grid2_add[nlink] = add2;
+  rv->src_grid_add[nlink] = add1;
+  rv->tgt_grid_add[nlink] = add2;
 
   rv->wts[nlink] = weight;
 }
@@ -142,12 +142,8 @@ void set_source_data(double * source_data, double init_value,
 static
 long find_ij_weights(double plon, double plat, double *restrict src_lats, double *restrict src_lons, double *ig, double *jg)
 {
-#define  TWO      2.0
 #define  THREE    3.0
 #define  HALF     0.5
-#define  PI       M_PI
-#define  PI2      TWO*PI
-#define  PIH      HALF*PI
   long    Max_Iter = 100;
   double  converge = 1.e-10;            /* Convergence criterion */
   long iter;                     /*  iteration counters   */
@@ -245,14 +241,13 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   if ( ! (gridInqXvals(gridIDin, NULL) && gridInqYvals(gridIDin, NULL)) )
     cdoAbort("Source grid has no values");
 
-  remap.grid.restrict_type = 0;
-  remap.grid.num_srch_bins = 0;
-  remap.grid.pinit = FALSE;
+  remap.src_grid.num_srch_bins = 0;
+  remap.tgt_grid.num_srch_bins = 0;
   remap.vars.pinit = FALSE;
 
   if ( cdoTimer ) timer_start(timer_yar_remap_init);
-  remapGridInit(MAP_TYPE_BILINEAR, 0, gridIDin, gridIDout, &remap.grid);
-  remapVarsInit(MAP_TYPE_BILINEAR, &remap.grid, &remap.vars);
+  remap_grids_init(MAP_TYPE_BILINEAR, 0, gridIDin, &remap.src_grid, gridIDout, &remap.tgt_grid);
+  remap_vars_init(MAP_TYPE_BILINEAR, remap.src_grid.size, remap.tgt_grid.size, &remap.vars);
   if ( cdoTimer ) timer_stop(timer_yar_remap_init);
 
 
@@ -260,15 +255,15 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   nlonIn = gridInqXsize(gridIDin);
   nlatIn = gridInqYsize(gridIDin);
   gridsize1 = gridInqSize(gridIDin);
-  lonIn = (double *) malloc(nlonIn*sizeof(double));
-  latIn = (double *) malloc(nlatIn*sizeof(double));
+  lonIn = malloc(nlonIn*sizeof(double));
+  latIn = malloc(nlatIn*sizeof(double));
   gridInqXvals(gridIDin, lonIn);
   gridInqYvals(gridIDin, latIn);
   for ( int i = 0; i < nlonIn; ++i ) lonIn[i] *= DEG2RAD;
   for ( int i = 0; i < nlatIn; ++i ) latIn[i] *= DEG2RAD;
 
-  xlonIn = (double *) malloc((nlonIn+1)*sizeof(double));
-  xlatIn = (double *) malloc((nlatIn+1)*sizeof(double));
+  xlonIn = malloc((nlonIn+1)*sizeof(double));
+  xlatIn = malloc((nlatIn+1)*sizeof(double));
   gridInqXvals(gridIDin, xlonIn);
   gridInqYvals(gridIDin, xlatIn);
   dxIn = xlonIn[1] - xlonIn[0];
@@ -285,15 +280,15 @@ void yar_remap_bil(field_t *field1, field_t *field2)
   nlonOut = gridInqXsize(gridIDout);
   nlatOut = gridInqYsize(gridIDout);
   gridsize2 = gridInqSize(gridIDout);
-  lonOut = (double *) malloc(nlonOut*sizeof(double));
-  latOut = (double *) malloc(nlatOut*sizeof(double));
+  lonOut = malloc(nlonOut*sizeof(double));
+  latOut = malloc(nlatOut*sizeof(double));
   gridInqXvals(gridIDout, lonOut);
   gridInqYvals(gridIDout, latOut);
   for ( int i = 0; i < nlonOut; ++i ) lonOut[i] *= DEG2RAD;
   for ( int i = 0; i < nlatOut; ++i ) latOut[i] *= DEG2RAD;
 
-  xlonOut = (double *) malloc((nlonOut+1)*sizeof(double));
-  xlatOut = (double *) malloc((nlatOut+1)*sizeof(double));
+  xlonOut = malloc((nlonOut+1)*sizeof(double));
+  xlatOut = malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, xlonOut);
   gridInqYvals(gridIDout, xlatOut);
   dxOut = xlonOut[1] - xlonOut[0];
@@ -441,7 +436,7 @@ void yar_remap_bil(field_t *field1, field_t *field2)
 
   if ( cdoTimer ) timer_start(timer_yar_remap);
   yar_remap(array2, missval, gridInqSize(gridIDout), remap.vars.num_links, remap.vars.wts,
-	    remap.vars.num_wts, remap.vars.grid2_add, remap.vars.grid1_add, array1);
+	    remap.vars.num_wts, remap.vars.tgt_grid_add, remap.vars.src_grid_add, array1);
   if ( cdoTimer ) timer_stop(timer_yar_remap);
 
   nmiss = 0;
@@ -489,14 +484,13 @@ void yar_remap_con(field_t *field1, field_t *field2)
   if ( ! (gridInqXvals(gridIDin, NULL) && gridInqYvals(gridIDin, NULL)) )
     cdoAbort("Source grid has no values");
 
-  remap.grid.restrict_type = 0;
-  remap.grid.num_srch_bins = 0;
-  remap.grid.pinit = FALSE;
+  remap.src_grid.num_srch_bins = 0;
+  remap.tgt_grid.num_srch_bins = 0;
   remap.vars.pinit = FALSE;
 
   if ( cdoTimer ) timer_start(timer_yar_remap_init);
-  remapGridInit(MAP_TYPE_CONSERV, 0, gridIDin, gridIDout, &remap.grid);
-  remapVarsInit(MAP_TYPE_CONSERV, &remap.grid, &remap.vars);
+  remap_grids_init(MAP_TYPE_CONSERV, 0, gridIDin, &remap.src_grid, gridIDout, &remap.tgt_grid);
+  remap_vars_init(MAP_TYPE_CONSERV, remap.src_grid.size, remap.tgt_grid.size, &remap.vars);
   if ( cdoTimer ) timer_stop(timer_yar_remap_init);
 
 
@@ -504,12 +498,12 @@ void yar_remap_con(field_t *field1, field_t *field2)
   nlonIn = gridInqXsize(gridIDin);
   nlatIn = gridInqYsize(gridIDin);
   gridsize1 = gridInqSize(gridIDin);
-  lonIn = (double *) malloc((nlonIn+1)*sizeof(double));
-  latIn = (double *) malloc((nlatIn+1)*sizeof(double));
+  lonIn = malloc((nlonIn+1)*sizeof(double));
+  latIn = malloc((nlatIn+1)*sizeof(double));
   gridInqXvals(gridIDin, lonIn);
   gridInqYvals(gridIDin, latIn);
-  xlonIn = (double *) malloc((nlonIn)*sizeof(double));
-  xlatIn = (double *) malloc((nlatIn)*sizeof(double));
+  xlonIn = malloc((nlonIn)*sizeof(double));
+  xlatIn = malloc((nlatIn)*sizeof(double));
   gridInqXvals(gridIDin, xlonIn);
   gridInqYvals(gridIDin, xlatIn);
   dxIn = lonIn[1] - lonIn[0];
@@ -526,12 +520,12 @@ void yar_remap_con(field_t *field1, field_t *field2)
   nlonOut = gridInqXsize(gridIDout);
   nlatOut = gridInqYsize(gridIDout);
   gridsize2 = gridInqSize(gridIDout);
-  lonOut = (double *) malloc((nlonOut+1)*sizeof(double));
-  latOut = (double *) malloc((nlatOut+1)*sizeof(double));
+  lonOut = malloc((nlonOut+1)*sizeof(double));
+  latOut = malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, lonOut);
   gridInqYvals(gridIDout, latOut);
-  xlonOut = (double *) malloc((nlonOut+1)*sizeof(double));
-  xlatOut = (double *) malloc((nlatOut+1)*sizeof(double));
+  xlonOut = malloc((nlonOut+1)*sizeof(double));
+  xlatOut = malloc((nlatOut+1)*sizeof(double));
   gridInqXvals(gridIDout, xlonOut);
   gridInqYvals(gridIDout, xlatOut);
   dxOut = lonOut[1] - lonOut[0];
@@ -611,11 +605,11 @@ void yar_remap_con(field_t *field1, field_t *field2)
   double const epsilon = 1.0e-10; // relative precision 
 
   double *weight;
-  weight = (double *) malloc(gridsize1*sizeof(double));
+  weight = malloc(gridsize1*sizeof(double));
 
   double tgt_area;
   double *area;
-  area = (double *) malloc(gridsize1*sizeof(double));
+  area = malloc(gridsize1*sizeof(double));
 
   struct grid_cell *SourceCell;
   SourceCell = malloc (gridsize1  * sizeof(*SourceCell) );
@@ -746,7 +740,7 @@ void yar_remap_con(field_t *field1, field_t *field2)
 
   if ( cdoTimer ) timer_start(timer_yar_remap);
   yar_remap(array2, missval, gridInqSize(gridIDout), remap.vars.num_links, remap.vars.wts,
-	    remap.vars.num_wts, remap.vars.grid2_add, remap.vars.grid1_add, array1);
+	    remap.vars.num_wts, remap.vars.tgt_grid_add, remap.vars.src_grid_add, array1);
   if ( cdoTimer ) timer_stop(timer_yar_remap);
 
   nmiss = 0;
@@ -844,10 +838,10 @@ void *YAR(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1   = (double *) malloc(gridsize*sizeof(double));
+  array1   = malloc(gridsize*sizeof(double));
 
   gridsize = gridInqSize(gridID2);
-  array2   = (double *) malloc(gridsize*sizeof(double));
+  array2   = malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -3,7 +3,7 @@
 #endif
 
 #include "cdi.h"
-#include "pio_util.h"
+#include "dmemory.h"
 #include "institution.h"
 #include "model.h"
 #include "cdi_int.h"

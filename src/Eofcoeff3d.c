@@ -2,7 +2,7 @@
  This file is part of CDO. CDO is a collection of Operators to
  manipulate and analyse Climate model Data.
  
- Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+ Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
  See COPYING file for copying and redistribution conditions.
  
  This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
 // NO MISSING VALUE SUPPORT ADDED SO FAR
@@ -84,7 +85,7 @@ void *Eofcoeff3d(void * argument)
   nvars = vlistNvars(vlistID1)==vlistNvars(vlistID2) ? vlistNvars(vlistID1) : -1;
   nrecs = vlistNrecs(vlistID1); 
   nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, 0));
-  w = (double*)malloc(gridsize*sizeof(double));
+  w = malloc(gridsize*sizeof(double));
   gridWeights(gridID2, &w[0]);
   
   
@@ -99,9 +100,9 @@ void *Eofcoeff3d(void * argument)
   filesuffix[0] = 0;
   cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
  
-  eof = (field_t ***) malloc (nvars * sizeof(field_t**) );
+  eof = malloc (nvars * sizeof(field_t**) );
   for ( varID=0; varID<nvars; varID++)
-    eof[varID] = (field_t **) malloc(nlevs*sizeof(field_t*));
+    eof[varID] = malloc(nlevs*sizeof(field_t*));
   reached_eof=0;
   eofID = 0;
   while ( 1 )       
@@ -117,13 +118,13 @@ void *Eofcoeff3d(void * argument)
          streamInqRecord(streamID1, &varID, &levelID);
          missval1 = vlistInqVarMissval(vlistID1, varID);
          if ( eofID == 0 )
-           eof[varID][levelID] = (field_t*) malloc (1*sizeof(field_t));
+           eof[varID][levelID] = malloc (1*sizeof(field_t));
          else
-           eof[varID][levelID] = (field_t*) realloc (eof[varID][levelID], (eofID+1)*sizeof(field_t));
+           eof[varID][levelID] = realloc (eof[varID][levelID], (eofID+1)*sizeof(field_t));
          eof[varID][levelID][eofID].grid   = gridID1;
          eof[varID][levelID][eofID].nmiss  = 0;
          eof[varID][levelID][eofID].missval= missval1;
-         eof[varID][levelID][eofID].ptr    = (double*)malloc(gridsize*sizeof(double));
+         eof[varID][levelID][eofID].ptr    = malloc(gridsize*sizeof(double));
          memset(&eof[varID][levelID][eofID].ptr[0], missval1, gridsize*sizeof(double));
 
          if ( varID >= nvars )
@@ -143,14 +144,14 @@ void *Eofcoeff3d(void * argument)
   gridID3 = gridCreate(GRID_LONLAT, 1);
   gridDefXsize(gridID3, 1);
   gridDefYsize(gridID3, 1);
-  xvals=(double*)malloc(1*sizeof(double));
-  yvals=(double*)malloc(1*sizeof(double));
+  xvals=malloc(1*sizeof(double));
+  yvals=malloc(1*sizeof(double));
   xvals[0]=0;
   yvals[0]=0;
   gridDefXvals(gridID3, xvals);
   gridDefYvals(gridID3, yvals);
   
-  zvals = (double *) malloc ( 1* sizeof(double ) );
+  zvals = malloc ( 1* sizeof(double ) );
   zvals[0] = 0.;
   zaxisID3 = zaxisCreate(ZAXIS_GENERIC,1);
   zaxisDefLevels(zaxisID3,zvals);
@@ -159,12 +160,12 @@ void *Eofcoeff3d(void * argument)
   
   vlistID3 = vlistCreate();
   vlistDefTaxis(vlistID3,taxisID3);
-  varID3 = (int *) malloc ( nvars * sizeof(int) );
+  varID3 = malloc ( nvars * sizeof(int) );
   for ( varID=0; varID<nvars; varID++ )
     varID3[varID] = vlistDefVar(vlistID3, gridID3, zaxisID3, TSTEP_INSTANT);
   
   // open streams for eofcoeff output
-  streamIDs = (int *) malloc (neof*sizeof(int)); 
+  streamIDs = malloc (neof*sizeof(int)); 
   eofID = 0;
   for ( eofID = 0; eofID < neof; eofID++)
     {
@@ -186,15 +187,15 @@ void *Eofcoeff3d(void * argument)
     }
   
   // ALLOCATE temporary fields for data read and write
-  in.ptr = (double*) malloc(gridsize*sizeof(double));
+  in.ptr = malloc(gridsize*sizeof(double));
   in.grid = gridID1;  
-  out = (field_t **) malloc (nvars*sizeof(field_t*));
+  out = malloc (nvars*sizeof(field_t*));
   for ( varID = 0; varID < nvars; varID++ ) {
-    out[varID] = (field_t*) malloc ( neof * sizeof(field_t) );
+    out[varID] = malloc ( neof * sizeof(field_t) );
     for ( eofID=0; eofID<neof; eofID++ ) {
       out[varID][eofID].missval = missval1;
       out[varID][eofID].nmiss = 0;
-      out[varID][eofID].ptr = (double *) malloc (1*sizeof(double));
+      out[varID][eofID].ptr = malloc (1*sizeof(double));
     }
   }
 

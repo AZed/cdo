@@ -8,6 +8,8 @@
 #include <mpi.h>
 #include <yaxt.h>
 #include "cdi.h"
+#include "cdipio.h"
+#include "dmemory.h"
 #include "pio_util.h"
 #include "resource_handle.h"
 #include "resource_unpack.h"
@@ -190,7 +192,7 @@ static void modelRun ( MPI_Comm comm )
   int bufferSize, differ;
   MPI_Status status;
 
-  pioNamespaceSetActive ( 0 );
+  namespaceSetActive ( 0 );
 
   gridID  = defineGrid      ();
   zaxisID = defineZaxis     ();
@@ -208,7 +210,7 @@ static void modelRun ( MPI_Comm comm )
   xmpi ( MPI_Recv ( recvBuffer, bufferSize, MPI_PACKED, 0,
 		    0, comm, &status ));
 
-  pioNamespaceSetActive ( 1 );
+  namespaceSetActive ( 1 );
   reshUnpackResources(recvBuffer, bufferSize, &comm);
   free ( recvBuffer );
   reshPackBufferDestroy ( &sendBuffer );
@@ -217,7 +219,7 @@ static void modelRun ( MPI_Comm comm )
   printf ( "The resource arrays %s.\n", differ ? "differ" : "are equal" );
   printResources();
 
-  pioNamespaceSetActive ( 0 );
+  namespaceSetActive ( 0 );
   streamClose(streamID);
   return;
 }
@@ -242,8 +244,9 @@ int main (int argc, char *argv[])
   if ( nProcsIO != 1 )
     xabort ( "bad distribution of tasks on PEs" );
 
-  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f);
-  pioNamespaceSetActive(pioNamespace);
+  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f,
+                      cdiPioNoPostCommSetup);
+  namespaceSetActive(pioNamespace);
 
   modelRun ( commModel );
 

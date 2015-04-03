@@ -2,22 +2,18 @@
 #  include "config.h"
 #endif
 
-#include <stdio.h>
 #include <stdarg.h>
-#include <string.h>
-#include <errno.h>
-#include <math.h>
 #include <ctype.h>
 
 #include "dmemory.h"
 
 #include "cdi.h"
+#include "cdi_cksum.h"
 #include "cdi_int.h"
 #include "gribapi.h"
 #ifdef HAVE_LIBNETCDF
 #include "stream_cdf.h"
 #endif
-#include "pio_util.h"
 #include "namespace.h"
 #include "serialize.h"
 #include "resource_handle.h"
@@ -716,7 +712,7 @@ streamGetPackSize(void * voidP, void *context)
   stream_t * streamP = ( stream_t * ) voidP;
   int packBufferSize
     = serializeGetSize(streamNint, DATATYPE_INT, context)
-    + serializeGetSize(2, DATATYPE_FLT64, context)
+    + serializeGetSize(2, DATATYPE_UINT32, context)
     + serializeGetSize((int)strlen(streamP->filename) + 1,
                        DATATYPE_TXT, context)
     + serializeGetSize(1, DATATYPE_FLT64, context);
@@ -730,7 +726,6 @@ streamPack(void * streamptr, void * packBuffer, int packBufferSize,
 {
   stream_t * streamP = ( stream_t * ) streamptr;
   int intBuffer[streamNint];
-  double d;
 
   intBuffer[0]  = streamP->self;
   intBuffer[1]  = streamP->filetype;
@@ -745,13 +740,13 @@ streamPack(void * streamptr, void * packBuffer, int packBufferSize,
   intBuffer[10] = cdiHaveMissval;
 
   serializePack(intBuffer, streamNint, DATATYPE_INT, packBuffer, packBufferSize, packBufferPos, context);
-  d = xchecksum(DATATYPE_INT, streamNint, intBuffer);
-  serializePack(&d, 1, DATATYPE_FLT64, packBuffer, packBufferSize, packBufferPos, context);
+  uint32_t d = cdiCheckSum(DATATYPE_INT, streamNint, intBuffer);
+  serializePack(&d, 1, DATATYPE_UINT32, packBuffer, packBufferSize, packBufferPos, context);
 
   serializePack(&cdiDefaultMissval, 1, DATATYPE_FLT64, packBuffer, packBufferSize, packBufferPos, context);
   serializePack(streamP->filename, intBuffer[2], DATATYPE_TXT, packBuffer, packBufferSize, packBufferPos, context);
-  d = xchecksum(DATATYPE_TXT, intBuffer[2], &streamP->filename);
-  serializePack(&d, 1, DATATYPE_FLT64, packBuffer, packBufferSize, packBufferPos, context);
+  d = cdiCheckSum(DATATYPE_TXT, intBuffer[2], streamP->filename);
+  serializePack(&d, 1, DATATYPE_UINT32, packBuffer, packBufferSize, packBufferPos, context);
 }
 
 struct streamAssoc
@@ -759,22 +754,22 @@ streamUnpack(char * unpackBuffer, int unpackBufferSize,
              int * unpackBufferPos, int nspTarget, void *context)
 {
   int intBuffer[streamNint], streamID;
-  double d;
+  uint32_t d;
   char filename[CDI_MAX_NAME];
 
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   intBuffer, streamNint, DATATYPE_INT, context);
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_FLT64, context);
-  xassert(xchecksum(DATATYPE_INT, streamNint, intBuffer ) == d);
+                  &d, 1, DATATYPE_UINT32, context);
+  xassert(cdiCheckSum(DATATYPE_INT, streamNint, intBuffer) == d);
 
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   &cdiDefaultMissval, 1, DATATYPE_FLT64, context);
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   &filename, intBuffer[2], DATATYPE_TXT, context);
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_FLT64, context);
-  xassert(d == xchecksum(DATATYPE_TXT, intBuffer[2], filename));
+                  &d, 1, DATATYPE_UINT32, context);
+  xassert(d == cdiCheckSum(DATATYPE_TXT, intBuffer[2], filename));
   streamID = streamOpenWrite ( filename, intBuffer[1] );
   xassert ( streamID >= 0 &&
             namespaceAdaptKey ( intBuffer[0], nspTarget ) == streamID );

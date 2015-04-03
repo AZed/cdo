@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -149,15 +149,15 @@ void cdo_version(void)
   char *typenames[] = {        "srv",        "ext",        "ieg",        "grb",        "grb2",        "nc",        "nc2",        "nc4",        "nc4c"};
 
   fprintf(stderr, "%s\n", CDO_Version);
+#if defined(USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
+  fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
+	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
+#endif
 #if defined(COMPILER)
   fprintf(stderr, "Compiler: %s\n", COMPILER);
 #endif
 #if defined(COMP_VERSION)
   fprintf(stderr, " version: %s\n", COMP_VERSION);
-#endif
-#if defined(USER_NAME) && defined(HOST_NAME) && defined(SYSTEM_TYPE)
-  fprintf(stderr, "Compiled: by %s on %s (%s) %s %s\n",
-	  USER_NAME, HOST_NAME, SYSTEM_TYPE, __DATE__, __TIME__);
 #endif
 
   printFeatures();
@@ -233,7 +233,7 @@ void usage(void)
   operatorPrintAll();
 
   fprintf(stderr, "\n");
-  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2013 Uwe Schulzweida\n", VERSION);
+  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2014 Uwe Schulzweida\n", VERSION);
   //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
   fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
@@ -427,6 +427,10 @@ void setDefaultDataType(char *datatypestr)
   else if ( *datatypestr == 'c' || *datatypestr == 'C' )
     {
       dtype = D_CPX;
+      datatypestr++;
+    }
+  else if ( *datatypestr == 'p' || *datatypestr == 'P' )
+    {
       datatypestr++;
     }
 
@@ -733,7 +737,7 @@ void defineVarnames(const char *arg)
     {
       char *commapos;
       
-      cdoVarnames = (char **) malloc(MAX_NUM_VARNAMES*sizeof(char *));
+      cdoVarnames = malloc(MAX_NUM_VARNAMES*sizeof(char *));
 
       pbuf = strdup(arg+istart);
       cdoVarnames[cdoNumVarnames++] = pbuf;    
@@ -769,7 +773,7 @@ void get_env_vars(void)
       if ( len > 0 )
 	{
 	  len += 2;
-	  cdoGridSearchDir = (char *) malloc(len);
+	  cdoGridSearchDir = malloc(len);
 	  memcpy(cdoGridSearchDir, envstr, len-1);
 	  if ( cdoGridSearchDir[len-3] != '/' )
 	    {

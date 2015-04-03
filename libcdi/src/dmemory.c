@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#include "error.h"
 
 #if ! defined (HAVE_CONFIG_H)
 #if ! defined (HAVE_MALLOC_H)
@@ -530,6 +531,35 @@ void Free(const char *caller, const char *file, int line, void *ptr)
   free(ptr);
 }
 
+void *cdiXmalloc(size_t size, const char *filename, const char *functionname,
+                 int line)
+{
+  void * value = calloc (1, size );
+  if ( value == NULL )
+    cdiAbort(filename, functionname, line, "malloc failed: %s",
+             strerror(errno));
+  return value;
+}
+
+void *cdiXcalloc(size_t nmemb, size_t size, const char *filename,
+                 const char *functionname, int line)
+{
+  void * value = calloc ( nmemb, size );
+  if ( value == NULL )
+    cdiAbort(filename, functionname, line, "calloc failed: %s",
+             strerror(errno) );
+  return value;
+}
+
+void *cdiXrealloc(void *p, size_t size, const char *functionname,
+                  const char *filename, int line)
+{
+  void *value = realloc(p, size);
+  if ( value == NULL )
+    cdiAbort(filename, functionname, line, "realloc failed: %s",
+             strerror(errno));
+  return value;
+}
 
 size_t memTotal(void)
 {

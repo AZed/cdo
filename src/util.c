@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -52,7 +52,7 @@ char *getOperator(const char *argument)
     {
       len = 1 + strlen(argument);
 
-      operatorArg = (char *) malloc(len);
+      operatorArg = malloc(len);
 
       memcpy(operatorArg, argument, len);
     }
@@ -79,7 +79,7 @@ char *getOperatorName(const char *operatorArg)
       else
 	len = strlen(operatorArg);
 
-      operatorName = (char *) malloc(len+1);
+      operatorName = malloc(len+1);
 
       memcpy(operatorName, operatorArg, len);
       operatorName[len] = '\0';
@@ -94,10 +94,10 @@ argument_t *file_argument_new(const char *filename)
 {
   argument_t *argument;
 
-  argument = (argument_t *) calloc(1, sizeof(argument_t));
+  argument = calloc(1, sizeof(argument_t));
 
   argument->argc = 1;
-  argument->argv = (char **) calloc(1, sizeof(char *));
+  argument->argv = calloc(1, sizeof(char *));
   argument->argv[0] = (char *) filename;
   argument->args = (char *) filename;
 
@@ -123,16 +123,16 @@ argument_t *argument_new(size_t argc, size_t len)
 {
   argument_t *argument;
 
-  argument = (argument_t *) calloc(1, sizeof(argument_t));
+  argument = calloc(1, sizeof(argument_t));
 
   if ( argc > 0 )
     {
       argument->argc = argc;
-      argument->argv = (char **) calloc(argc, sizeof(char *));
+      argument->argv = calloc(argc, sizeof(char *));
     }
 
   if ( len > 0 )
-    argument->args = (char *) calloc(len, sizeof(char));
+    argument->args = calloc(len, sizeof(char));
 
   return (argument);
 }
@@ -195,7 +195,7 @@ char *getFileArg(char *argument)
 	{
 	  parg = blankpos + 1;
 	  len = strlen(parg);
-	  fileArg = (char *) malloc(len+1);
+	  fileArg = malloc(len+1);
 	  strcpy(fileArg, parg);
 	}
     }
@@ -331,7 +331,7 @@ int ps_cval  = -1;
 void progressInit(void)
 {
   ps_lhead = FALSE;
-  ps_nch   = 0;;
+  ps_nch   = 0;
   ps_cval  = -1;
 }
 
@@ -426,4 +426,30 @@ int str2datatype(const char *datatypestr)
     }
 
   return (datatype);
+}
+
+
+off_t filesize(const char *filename)
+{
+  FILE *fp;
+  off_t pos = 0;
+
+  if ( filename[0] == '(' && filename[1] == 'p' )
+    {
+    }
+  else
+    {
+      fp = fopen(filename, "r");
+      if ( fp == NULL )
+	{
+	  fprintf(stderr, "Open failed on %s\n", filename);
+	}
+      else
+	{
+	  fseek(fp, 0L, SEEK_END);
+	  pos = ftello(fp);
+	}
+    }
+  
+  return pos;
 }

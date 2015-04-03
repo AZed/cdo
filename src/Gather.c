@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -42,8 +42,8 @@ static
 int cmpx(const void *s1, const void *s2)
 {
   int cmp = 0;
-  xyinfo_t *xy1 = (xyinfo_t *) s1;
-  xyinfo_t *xy2 = (xyinfo_t *) s2;
+  const xyinfo_t *xy1 = s1;
+  const xyinfo_t *xy2 = s2;
 
   if      ( xy1->x < xy2->x ) cmp = -1;
   else if ( xy1->x > xy2->x ) cmp =  1;
@@ -55,8 +55,8 @@ static
 int cmpxy_lt(const void *s1, const void *s2)
 {
   int cmp = 0;
-  xyinfo_t *xy1 = (xyinfo_t *) s1;
-  xyinfo_t *xy2 = (xyinfo_t *) s2;
+  const xyinfo_t *xy1 = s1;
+  const xyinfo_t *xy2 = s2;
 
   if      ( xy1->y < xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x < xy2->x) ) cmp = -1;
   else if ( xy1->y > xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x > xy2->x) ) cmp =  1;
@@ -68,8 +68,8 @@ static
 int cmpxy_gt(const void *s1, const void *s2)
 {
   int cmp = 0;
-  xyinfo_t *xy1 = (xyinfo_t *) s1;
-  xyinfo_t *xy2 = (xyinfo_t *) s2;
+  const xyinfo_t *xy1 = s1;
+  const xyinfo_t *xy2 = s2;
 
   if      ( xy1->y > xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x < xy2->x) ) cmp = -1;
   else if ( xy1->y < xy2->y || (!(fabs(xy1->y - xy2->y) > 0) && xy1->x > xy2->x) ) cmp =  1;
@@ -99,11 +99,11 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
   if ( gridtype == GRID_GENERIC && gridInqXsize(gridID) == 0 && gridInqYsize(gridID) == 0 )
     return (gridID2);
 
-  xsize = (int *) malloc(nfiles*sizeof(int));
-  ysize = (int *) malloc(nfiles*sizeof(int));
-  xyinfo = (xyinfo_t *) malloc(nfiles*sizeof(xyinfo_t));
-  xvals = (double **) malloc(nfiles*sizeof(double));
-  yvals = (double **) malloc(nfiles*sizeof(double));
+  xsize = malloc(nfiles*sizeof(int));
+  ysize = malloc(nfiles*sizeof(int));
+  xyinfo = malloc(nfiles*sizeof(xyinfo_t));
+  xvals = malloc(nfiles*sizeof(double));
+  yvals = malloc(nfiles*sizeof(double));
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
@@ -121,8 +121,8 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
       if ( xsize != gridInqXsize(gridID) ) cdoAbort("xsize differ!");
       if ( ysize != gridInqYsize(gridID) ) cdoAbort("ysize differ!");
       */
-      xvals[fileID] = (double *) malloc(xsize[fileID]*sizeof(double));
-      yvals[fileID] = (double *) malloc(ysize[fileID]*sizeof(double));
+      xvals[fileID] = malloc(xsize[fileID]*sizeof(double));
+      yvals[fileID] = malloc(ysize[fileID]*sizeof(double));
       gridInqXvals(gridID, xvals[fileID]);
       gridInqYvals(gridID, yvals[fileID]);
 
@@ -172,11 +172,11 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
   for ( j = 0; j < ny; ++j ) ysize2 += ysize[xyinfo[j*nx].id];
   if ( cdoVerbose ) cdoPrint("xsize2 %d  ysize2 %d", xsize2, ysize2);
 
-  xvals2 = (double *) malloc(xsize2*sizeof(double));
-  yvals2 = (double *) malloc(ysize2*sizeof(double));
+  xvals2 = malloc(xsize2*sizeof(double));
+  yvals2 = malloc(ysize2*sizeof(double));
 
-  xoff = (int *) malloc((nx+1)*sizeof(int));
-  yoff = (int *) malloc((ny+1)*sizeof(int));
+  xoff = malloc((nx+1)*sizeof(int));
+  yoff = malloc((ny+1)*sizeof(int));
 
   xoff[0] = 0;
   for ( i = 0; i < nx; ++i )
@@ -297,7 +297,7 @@ void *Gather(void *argument)
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  ef = (ens_file_t *) malloc(nfiles*sizeof(ens_file_t));
+  ef = malloc(nfiles*sizeof(ens_file_t));
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
@@ -310,7 +310,7 @@ void *Gather(void *argument)
     }
 
   nvars = vlistNvars(ef[0].vlistID);
-  vars  = (int *) malloc(nvars*sizeof(int));
+  vars  = malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ ) vars[varID] = FALSE;
 
   /* check that the contents is always the same */
@@ -332,13 +332,13 @@ void *Gather(void *argument)
   gridsize = gridsizemax;
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    ef[fileID].array = (double *) malloc(gridsizemax*sizeof(double));
+    ef[fileID].array = malloc(gridsizemax*sizeof(double));
 
   ngrids = vlistNgrids(ef[0].vlistID);
-  gridIDs = (int *) malloc(ngrids*sizeof(int));
-  gridindex = (int **) malloc(nfiles*sizeof(int *));
+  gridIDs = malloc(ngrids*sizeof(int));
+  gridindex = malloc(nfiles*sizeof(int *));
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    gridindex[fileID] = (int *) malloc(gridsizemax*sizeof(int));
+    gridindex[fileID] = malloc(gridsizemax*sizeof(int));
 
   int ginit = FALSE;
   for ( i = 0; i < ngrids; ++i )
@@ -387,7 +387,7 @@ void *Gather(void *argument)
       
   streamDefVlist(streamID2, vlistID2);
 	  
-  array2 = (double *) malloc(gridsize2*sizeof(double));
+  array2 = malloc(gridsize2*sizeof(double));
 
   tsID = 0;
   do

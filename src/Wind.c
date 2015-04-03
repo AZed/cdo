@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -304,19 +304,19 @@ void *Wind(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
 
   if ( varID1 != -1 && varID2 != -1 )
     {
       nlev     = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID1));
 
       gridsize = gridInqSize(gridID1);
-      ivar1 = (double *) malloc(nlev*gridsize*sizeof(double));
-      ivar2 = (double *) malloc(nlev*gridsize*sizeof(double));
+      ivar1 = malloc(nlev*gridsize*sizeof(double));
+      ivar2 = malloc(nlev*gridsize*sizeof(double));
   
       gridsize = gridInqSize(gridID2);
-      ovar1 = (double *) malloc(nlev*gridsize*sizeof(double));
-      ovar2 = (double *) malloc(nlev*gridsize*sizeof(double));
+      ovar1 = malloc(nlev*gridsize*sizeof(double));
+      ovar2 = malloc(nlev*gridsize*sizeof(double));
     }
 
   tsID = 0;

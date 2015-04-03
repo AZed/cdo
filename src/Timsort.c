@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -38,11 +38,9 @@ static
 int cmpdarray(const void *s1, const void *s2)
 {
   int cmp = 0;
-  double *x = (double *) s1;
-  double *y = (double *) s2;
-  /*
-  printf("%d %d  %d %d\n", x->code, y->code, x, y);
-  */
+  const double *x = s1;
+  const double *y = s2;
+
   if      ( *x < *y ) cmp = -1;
   else if ( *x > *y ) cmp =  1;
 
@@ -91,9 +89,9 @@ void *Timsort(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vdate = (int *) realloc(vdate, nalloc*sizeof(int));
-	  vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
+	  vdate = realloc(vdate, nalloc*sizeof(int));
+	  vtime = realloc(vtime, nalloc*sizeof(int));
+	  vars  = realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
@@ -106,7 +104,7 @@ void *Timsort(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 	}
@@ -116,9 +114,9 @@ void *Timsort(void *argument)
 
   nts = tsID;
 
-  sarray = (double **) malloc(ompNumThreads*sizeof(double *));
+  sarray = malloc(ompNumThreads*sizeof(double *));
   for ( i = 0; i < ompNumThreads; i++ )
-    sarray[i] = (double *) malloc(nts*sizeof(double));
+    sarray[i] = malloc(nts*sizeof(double));
 
   for ( varID = 0; varID < nvars; varID++ )
     {

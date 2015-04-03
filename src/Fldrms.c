@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
 void *Fldrms(void *argument)
@@ -100,12 +101,12 @@ void *Fldrms(void *argument)
   field_init(&field3);
 
   lim = vlistGridsizeMax(vlistID1);
-  field1.ptr    = (double *) malloc(lim*sizeof(double));
+  field1.ptr    = malloc(lim*sizeof(double));
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = (double *) malloc(lim*sizeof(double));
+    field1.weight = malloc(lim*sizeof(double));
 
-  field2.ptr    = (double *) malloc(lim*sizeof(double));
+  field2.ptr    = malloc(lim*sizeof(double));
   field2.weight = NULL;
 
   field3.ptr  = &sglval;

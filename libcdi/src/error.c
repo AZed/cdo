@@ -85,6 +85,9 @@ cdiAbortC_serial(const char *caller, const char *filename,
   exit(EXIT_FAILURE);
 }
 
+typedef void (*cdiWarningFunc)(const char * caller, const char * fmt,
+                               va_list ap);
+
 void Warning_(const char *caller, const char *fmt, ...)
 {
   va_list args;
@@ -93,12 +96,19 @@ void Warning_(const char *caller, const char *fmt, ...)
 
   if ( _Verbose )
     {
-       fprintf(stderr, "Warning (%s) : ", caller);
-      vfprintf(stderr, fmt, args);
-       fprintf(stderr, "\n");
+      cdiWarningFunc cdiWarning_p
+        = (cdiWarningFunc)namespaceSwitchGet(NSSWITCH_WARNING).func;
+      cdiWarning_p(caller, fmt, args);
     }
 
   va_end(args);
+}
+
+void cdiWarning(const char *caller, const char *fmt, va_list ap)
+{
+  fprintf(stderr, "Warning (%s) : ", caller);
+  vfprintf(stderr, fmt, ap);
+  fputc('\n', stderr);
 }
 
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,8 +20,6 @@
 
 #if defined(HAVE_LIBCURL)
 #include <curl/curl.h>
-#include <curl/types.h>
-#include <curl/easy.h>
 #include <errno.h>
 #endif
 
@@ -33,7 +31,8 @@
  * callback function for curl for writing the network retrieved grid file
  */
 static
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
   size_t written;
   written = fwrite(ptr, size, nmemb, stream);
   return written;

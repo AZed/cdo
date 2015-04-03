@@ -11,6 +11,7 @@
 #include <mpi.h>
 
 #include "cdi.h"
+#include "dmemory.h"
 #include "pio.h"
 #include "pio_comm.h"
 #include "pio_impl.h"
@@ -323,13 +324,14 @@ void finalizeMPINONB(void)
 
 /***************************************************************/
 
-void initMPINONB ( void )
+void
+initMPINONB(void (*postCommSetupActions)(void))
 {
   commDefCommColl ( 1 );
   commSendNodeInfo ();
   commRecvNodeMap ();
   commDefCommsIO ();
-
+  postCommSetupActions();
   bibAFiledataM = listSetNew( destroyAFiledataMPINONB, compareNamesMPINONB );
   
   if ( bibAFiledataM == NULL )

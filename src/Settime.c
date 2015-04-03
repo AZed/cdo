@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -182,7 +182,8 @@ void *Settime(void *argument)
       if ( operatorArgc() == 3 )
 	{
 	  const char *timeunits = operatorArgv()[2];
-	  incperiod = (int)strtol(timeunits, NULL, 10);;
+	  incperiod = (int)strtol(timeunits, NULL, 10);
+	  if ( timeunits[0] == '-' || timeunits[0] == '+' ) timeunits++;
 	  while ( isdigit((int) *timeunits) ) timeunits++;
 
 	  get_tunits(timeunits, &incperiod, &incunit, &tunit);
@@ -224,7 +225,7 @@ void *Settime(void *argument)
   else if ( operatorID == SHIFTTIME )
     {
       const char *timeunits = operatorArgv()[0];
-      incperiod = (int)strtol(timeunits, NULL, 10);;
+      incperiod = (int)strtol(timeunits, NULL, 10);
       if ( timeunits[0] == '-' || timeunits[0] == '+' ) timeunits++;
       while ( isdigit((int) *timeunits) ) timeunits++;
 
@@ -373,7 +374,7 @@ void *Settime(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )

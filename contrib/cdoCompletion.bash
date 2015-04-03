@@ -207,6 +207,7 @@ genbic -genbic \
 genbil -genbil \
 gencon -gencon \
 gencon2 -gencon2 \
+gencons -gencons \
 gendis -gendis \
 gengrid -gengrid \
 genlaf -genlaf \
@@ -219,8 +220,6 @@ gp2fc -gp2fc \
 gp2sp -gp2sp \
 gp2spl -gp2spl \
 gradsdes -gradsdes \
-gradsdes1 -gradsdes1 \
-gradsdes2 -gradsdes2 \
 graph -graph \
 grfill -grfill \
 gridarea -gridarea \
@@ -425,6 +424,7 @@ remapbil -remapbil \
 remapcon -remapcon \
 remapcon1 -remapcon1 \
 remapcon2 -remapcon2 \
+remapcons -remapcons \
 remapdis -remapdis \
 remapdis1 -remapdis1 \
 remapeta -remapeta \
@@ -449,6 +449,7 @@ runvar -runvar \
 runvar1 -runvar1 \
 scalllogo -scalllogo \
 scatter -scatter \
+sealevelpressure -sealevelpressure \
 seasavg -seasavg \
 seascount -seascount \
 seasmax -seasmax \

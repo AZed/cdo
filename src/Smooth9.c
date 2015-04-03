@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -67,7 +67,7 @@ void *Smooth9(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   nvars = vlistNvars(vlistID1);
-  varIDs  = (int *) malloc(nvars*sizeof(int)); 
+  varIDs  = malloc(nvars*sizeof(int)); 
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -87,9 +87,9 @@ void *Smooth9(void *argument)
     }
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize *sizeof(double));
-  mask   = (  int  *) malloc(gridsize *sizeof(int));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize *sizeof(double));
+  mask   = malloc(gridsize *sizeof(int));
  
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
