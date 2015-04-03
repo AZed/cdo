@@ -50,8 +50,8 @@ void *Timselpctl(void *argument)
   int ndates = 0, noffset = 0, nskip = 0, nargc;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD **vars1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL;
+  field_t field;
   int pn;
   HISTOGRAM_SET *hset = NULL;
 
@@ -113,7 +113,7 @@ void *Timselpctl(void *argument)
 
   field.ptr = (double *) malloc(gridsize * sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars * sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars * sizeof(field_t *));
   hset = hsetCreate(nvars);
 
   for ( varID = 0; varID < nvars; varID++ )
@@ -123,7 +123,7 @@ void *Timselpctl(void *argument)
       nlevels   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *)  malloc(nlevels * sizeof(FIELD));
+      vars1[varID] = (field_t *)  malloc(nlevels * sizeof(field_t));
       hsetCreateVarLevels(hset, varID, nlevels, gridID);
 
       for ( levelID = 0; levelID < nlevels; levelID++ )

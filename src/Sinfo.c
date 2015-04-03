@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,6 @@
       Sinfo      sinfo           Short dataset information
 */
 
-
-#include <stdio.h>
-#include <string.h>
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -39,7 +36,7 @@ void *Sinfo(void *argument)
   int indf;
   int varID;
   int gridsize = 0;
-  int gridID, zaxisID, code;
+  int gridID, zaxisID, code, tabnum, param;
   int zaxistype, ltype;
   int vdate, vtime;
   int nrecs, nvars, nzaxis, ntsteps;
@@ -51,12 +48,13 @@ void *Sinfo(void *argument)
   char varname[128];
   char longname[128];
   char units[128];
+  char paramstr[32];
+  char vdatestr[32], vtimestr[32];
   double level;
   char *modelptr, *instptr;
   int streamID = 0;
   int vlistID;
-  int prec;
-  int year, month, day, hour, minute, second;
+  int datatype;
   char pstr[4];
 
   cdoInitialize(argument);
@@ -79,21 +77,25 @@ void *Sinfo(void *argument)
 
       if ( operatorID == SINFOV )
 	fprintf(stdout,
-		"%6d : Institut Source   Varname      Time   Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source   Varname     Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
       else if ( operatorID == SINFOP )
 	fprintf(stdout,
-		"%6d : Institut Source   Param     Time   Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source   Param       Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
       else
 	fprintf(stdout,
-		"%6d : Institut Source  Table Code   Time   Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source  Table Code   Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
 
       nvars = vlistNvars(vlistID);
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
+	  param   = vlistInqVarParam(vlistID, varID);
 	  code    = vlistInqVarCode(vlistID, varID);
+	  tabnum  = tableInqNum(vlistInqVarTable(vlistID, varID));
 	  gridID  = vlistInqVarGrid(vlistID, varID);
 	  zaxisID = vlistInqVarZaxis(vlistID, varID);
+
+	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
 	  if ( operatorID == SINFOV ) vlistInqVarName(vlistID, varID, varname);
 
@@ -114,30 +116,34 @@ void *Sinfo(void *argument)
 	    fprintf(stdout, "unknown  ");
 
 	  if ( operatorID == SINFOV )
-	    fprintf(stdout, "%-10s", varname);
+	    fprintf(stdout, "%-11s ", varname);
 	  else if ( operatorID == SINFOP )
-	    fprintf(stdout, "%03d.%03d ", tableInqNum(vlistInqVarTable(vlistID, varID)), code);
+	    fprintf(stdout, "%-11s ", paramstr);
 	  else
-	    fprintf(stdout, "%4d %4d", tableInqNum(vlistInqVarTable(vlistID, varID)), code);
+	    fprintf(stdout, "%4d %4d   ", tabnum, code);
 
 	  timeID = vlistInqVarTime(vlistID, varID);
-	  if ( timeID == TIME_CONSTANT )
-	    fprintf(stdout, " constant");
-	  else
-	    fprintf(stdout, " variable");
 
-	  prec = vlistInqVarDatatype(vlistID, varID);
-	  if      ( prec == DATATYPE_PACK   ) strcpy(pstr, "P0");
-	  else if ( prec > 0 && prec <= 32  ) sprintf(pstr, "P%d", prec);
-	  else if ( prec == DATATYPE_FLT32  ) strcpy(pstr, "F32");
-	  else if ( prec == DATATYPE_FLT64  ) strcpy(pstr, "F64");
-	  else if ( prec == DATATYPE_INT8   ) strcpy(pstr, "I8");
-	  else if ( prec == DATATYPE_INT16  ) strcpy(pstr, "I16");
-	  else if ( prec == DATATYPE_INT32  ) strcpy(pstr, "I32");
-	  else if ( prec == DATATYPE_UINT8  ) strcpy(pstr, "U8");
-	  else if ( prec == DATATYPE_UINT16 ) strcpy(pstr, "U16");
-	  else if ( prec == DATATYPE_UINT32 ) strcpy(pstr, "U32");
-	  else                                strcpy(pstr, "-1");
+	  if ( timeID == TIME_CONSTANT )
+	    fprintf(stdout, "con ");
+	  else
+	    fprintf(stdout, "var ");
+
+	  datatype = vlistInqVarDatatype(vlistID, varID);
+
+	  if      ( datatype == DATATYPE_PACK   ) strcpy(pstr, "P0");
+	  else if ( datatype > 0 && datatype <= 32  ) sprintf(pstr, "P%d", datatype);
+	  else if ( datatype == DATATYPE_CPX32  ) strcpy(pstr, "C32");
+	  else if ( datatype == DATATYPE_CPX64  ) strcpy(pstr, "C64");
+	  else if ( datatype == DATATYPE_FLT32  ) strcpy(pstr, "F32");
+	  else if ( datatype == DATATYPE_FLT64  ) strcpy(pstr, "F64");
+	  else if ( datatype == DATATYPE_INT8   ) strcpy(pstr, "I8");
+	  else if ( datatype == DATATYPE_INT16  ) strcpy(pstr, "I16");
+	  else if ( datatype == DATATYPE_INT32  ) strcpy(pstr, "I32");
+	  else if ( datatype == DATATYPE_UINT8  ) strcpy(pstr, "U8");
+	  else if ( datatype == DATATYPE_UINT16 ) strcpy(pstr, "U16");
+	  else if ( datatype == DATATYPE_UINT32 ) strcpy(pstr, "U32");
+	  else                                    strcpy(pstr, "-1");
 
 	  fprintf(stdout, " %-3s", pstr);
 
@@ -230,11 +236,10 @@ void *Sinfo(void *argument)
 		  vdate = taxisInqRdate(taxisID);
 		  vtime = taxisInqRtime(taxisID);
 
-		  decode_date(vdate, &year, &month, &day);
-		  decode_time(vtime, &hour, &minute, &second);
+		  date2str(vdate, vdatestr, sizeof(vdatestr));
+		  time2str(vtime, vtimestr, sizeof(vtimestr));
 
-		  fprintf(stdout, "     RefTime = "DATE_FORMAT" "TIME_FORMAT,
-			  year, month, day, hour, minute, second);
+		  fprintf(stdout, "     RefTime = %s %s", vdatestr, vtimestr);
 		      
 		  unit = taxisInqTunit(taxisID);
 		  if ( unit != CDI_UNDEFID )
@@ -245,6 +250,12 @@ void *Sinfo(void *argument)
 			fprintf(stdout, "  Units = months");
 		      else if ( unit == TUNIT_DAY )
 			fprintf(stdout, "  Units = days");
+		      else if ( unit == TUNIT_12HOURS )
+			fprintf(stdout, "  Units = 12hours");
+		      else if ( unit == TUNIT_6HOURS )
+			fprintf(stdout, "  Units = 6hours");
+		      else if ( unit == TUNIT_3HOURS )
+			fprintf(stdout, "  Units = 3hours");
 		      else if ( unit == TUNIT_HOUR )
 			fprintf(stdout, "  Units = hours");
 		      else if ( unit == TUNIT_MINUTE )
@@ -291,11 +302,11 @@ void *Sinfo(void *argument)
 	      vdate = taxisInqVdate(taxisID);
 	      vtime = taxisInqVtime(taxisID);
 
-	      decode_date(vdate, &year, &month, &day);
-	      decode_time(vtime, &hour, &minute, &second);
+	      date2str(vdate, vdatestr, sizeof(vdatestr));
+	      time2str(vtime, vtimestr, sizeof(vtimestr));
 
-	      fprintf(stdout, " "DATE_FORMAT" "TIME_FORMAT,
-		      year, month, day, hour, minute, second);
+	      fprintf(stdout, " %s %s", vdatestr, vtimestr);
+
 	      ntimeout++;
 	      tsID++;
 	    }

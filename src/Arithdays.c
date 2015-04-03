@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2006 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -47,7 +47,7 @@ void *Arithdays(void *argument)
   int year, month, day;
   int calendar;
   double rconst;
-  FIELD field;
+  field_t field;
 
   cdoInitialize(argument);
 
@@ -72,9 +72,6 @@ void *Arithdays(void *argument)
 
   calendar = taxisInqCalendar(taxisID1);
 
-  if ( operfunc == func_mul || operfunc == func_div )
-    nospec(vlistID1);
-
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
   if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
@@ -94,7 +91,7 @@ void *Arithdays(void *argument)
 
       streamDefTimestep(streamID2, tsID);
 
-      decode_date(vdate, &year, &month, &day);
+      cdiDecodeDate(vdate, &year, &month, &day);
 
       if ( operfunc2 == func_month )
 	rconst = days_per_month(calendar, year, month);

@@ -2,7 +2,7 @@
  This file is part of CDO. CDO is a collection of Operators to
  manipulate and analyse Climate model Data.
  
- Copyright (C) 2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+ Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
  See COPYING file for copying and redistribution conditions.
  
  This program is free software; you can redistribute it and/or modify
@@ -22,8 +22,6 @@
 */
 #define WEIGHTS 1
 
-#include <string.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -40,9 +38,9 @@ void *Eofcoeff(void * argument)
   double *w;
   double missval1=-999, missval2;
   double *xvals, *yvals;  
-  FIELD ***eof;  
-  FIELD in;  
-  FIELD out;
+  field_t ***eof;  
+  field_t in;  
+  field_t out;
   int operatorID, operfunc;  
   int gridsize;
   int i, varID, recID, levelID, tsID, eofID;    
@@ -112,9 +110,9 @@ void *Eofcoeff(void * argument)
     }
  
   
-  eof = (FIELD ***) malloc (nvars * sizeof(FIELD**) );
+  eof = (field_t ***) malloc (nvars * sizeof(field_t**) );
   for ( varID=0; varID<nvars; varID++)
-    eof[varID] = (FIELD **) malloc(nlevs*sizeof(FIELD*));
+    eof[varID] = (field_t **) malloc(nlevs*sizeof(field_t*));
   reached_eof=0;
   eofID = 0;
   while ( 1 )       
@@ -130,9 +128,9 @@ void *Eofcoeff(void * argument)
          streamInqRecord(streamID1, &varID, &levelID);
          missval1 = vlistInqVarMissval(vlistID1, varID);
          if ( eofID == 0 )
-           eof[varID][levelID] = (FIELD*) malloc (1*sizeof(FIELD));
+           eof[varID][levelID] = (field_t*) malloc (1*sizeof(field_t));
          else
-           eof[varID][levelID] = (FIELD*) realloc (eof[varID][levelID], (eofID+1)*sizeof(FIELD));
+           eof[varID][levelID] = (field_t*) realloc (eof[varID][levelID], (eofID+1)*sizeof(field_t));
          eof[varID][levelID][eofID].grid   = gridID1;
          eof[varID][levelID][eofID].nmiss  = 0;
          eof[varID][levelID][eofID].missval= missval1;

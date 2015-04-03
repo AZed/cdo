@@ -1,6 +1,73 @@
 CDO NEWS
 --------
 
+Version 1.4.5 (28 June 2010):
+
+   New operators:
+     * eof: Calculate EOFs in spatial or time space
+     * eoftime: Calculate EOFs in time space
+     * eofspatial: Calculate EOFs in spatial space
+     * eofcoeff: Principal coefficients of EOFs
+     * consecsum: Consecutive Sum
+     * consects: Consecutive Timesteps
+     * setvals: Set list of old values to new values
+
+Version 1.4.4 (29 April 2010):
+
+   New operators:
+
+     * fldcor: correlation in grid space
+     * timcor: correlation over time
+     * gridbox<stat>: computes statistical values over surrounding grid boxes
+
+   Changed operators:
+
+     * import_binary: added support for variables with different number of levels
+     * random: added optional parameter 'seed'
+
+   Fixed bugs:
+
+     * standard deviation: changed the result from missval to zero, if variance is zero
+     * fldsum: change result from 0 to missval, if only missing values found
+     * intyear: set the interpolation result always to missval, if missing values found
+     * Added support for netCDF time bounds
+     * sellonlatbox: parameter lon2 was not inclusiv
+     * expr: added support for calculations of const/var
+     * setday: writes sometimes wrong date information with GRIB result from afterburner
+     * inputsrv: added level information
+     * merge: added support to merge levels with datasets in netCDF format
+
+Version 1.4.3 (22 February 2010):
+
+   * New features:
+      o using CDI library version 1.4.3
+        improved GRIB1 support and performance
+      o changed GRIB1 default packing type of spherical harmonics to complex
+
+Version 1.4.2 (8 February 2010):
+
+   * Changed operators:
+      o remapcon, remaplaf: speed up by fast store of links
+      o replace: added support for time constant fields
+      o module Genweights: use netCDF2 (64bit) for large remap weights files
+      o module Zonstat, Merstat: added support for generic grids
+      o module Ensstat: don't overwrite existing files
+      o import_cmsaf: added more corrections for wrong projection parameter
+
+Version 1.4.1 (15 December 2009):
+
+   * New features:
+      o using CDI library version 1.4.1
+        improved GRIB and netCDF support and performance
+   * New operators:
+      o splittabnum - Split parameter table numbers
+      o sethalo - Set the left and right bounds of a field
+   * Changed operators:
+      o merge, mergetime: don't overwrite existing files
+      o showtime: removed output of date, only print time string hh:mm:ss
+   * Fixed bugs:
+      o remap: bug fix for weights from gennn (set remap_extrapolate = TRUE)
+
 Version 1.4.0.1 (21 October 2009):
 
    * Fixed bugs:

@@ -6,6 +6,8 @@ int gridToZonal(int gridID);
 int gridToMeridional(int gridID);
 int gridToCell(int gridID);
 int gridToCurvilinear(int gridID);
+int gridToRegular(int gridID);
+void field2regular(int gridID1, int gridID2, double missval, double *array, int nmiss);
 
 /* GME grid */
 struct cart {
@@ -19,7 +21,6 @@ struct geo {
 
 void correct_sinxvals(int xsize, int ysize, double *xvals);
 
-double areas(struct cart *dv1, struct cart *dv2, struct cart *dv3);
 struct cart gc2cc(struct geo *position);
 void factorni(int kni, int *kni2, int *kni3);
 void gme_grid_restore(double *p, int ni, int nd);

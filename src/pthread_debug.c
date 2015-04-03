@@ -79,6 +79,7 @@ void print_pthread_attr(const char *caller, pthread_attr_t *attr)
 
 void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
 {
+  /*
 #if defined (_POSIX_THREAD_PRIO_PROTECT) && defined (_POSIX_THREAD_PRIO_INHERIT)
   {
   int protocol;
@@ -86,7 +87,7 @@ void print_pthread_mutexattr(const char *caller,  pthread_mutexattr_t *m_attr)
   POUT3(caller, protocol, PTHREAD_PRIO_INHERIT, PTHREAD_PRIO_PROTECT, PTHREAD_PRIO_NONE);
   }
 #endif
-
+  */
 #if defined (PTHREAD_MUTEX_FAST_NP)
   {
   int kind;
@@ -145,8 +146,7 @@ int Pthread_create(const char *caller, pthread_t *th,
 
   status = pthread_create(th, attr, start_routine, arg);
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)",
-			       func, (long) *th, status);
+  //if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)", func, (long) *th, status);
 
   return (status);
 }
@@ -157,12 +157,11 @@ int Pthread_join(const char *caller, pthread_t th, void **thread_return)
   static char func[] = "Pthread_join";
   int status;
 
-  if ( PTHREAD_Debug ) Message(caller, "+%s (thID = %ld)", func, (void *) th);
+  //  if ( PTHREAD_Debug ) Message(caller, "+%s (thID = %ld)", func, (void *) th);
 
   status = pthread_join(th, thread_return);
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)", func, (void *) th,
-			       status);
+  // if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)", func, (void *) th, status);
 
   return (status);
 }

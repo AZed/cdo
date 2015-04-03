@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,9 +21,6 @@
         Timstat2        timcor      correlates two data files on the same grid
 */
 
-
-#include <string.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -37,10 +34,9 @@ void *Timstat2(void *argument)
   int operatorID;
   int operfunc;
   int streamID1, streamID2, streamID3;
-  int gridsize;
   int vdate = 0, vtime = 0;
   int nrecs, nrecs2, nrecs3, nvars, *nlevs ;
-  int i;
+  long i, gridsize;
   int tsID;
   int varID, recID, levelID, gridID;
   int nmiss1, nmiss2;
@@ -49,11 +45,11 @@ void *Timstat2(void *argument)
   int taxisID1, taxisID2, taxisID3;
   int nvals2;
   double missval, missval1, missval2;
-  FIELD **vars1 = NULL;
-  FIELD **vars2 = NULL, ***work;
+  field_t **vars1 = NULL;
+  field_t **vars2 = NULL, ***work;
   double temp0, temp1, temp2, temp3, temp4, temp5, temp6;
   int ***nofvals;
-  FIELD field1, field2;
+  field_t field1, field2;
 
 
   cdoInitialize(argument);
@@ -65,6 +61,7 @@ void *Timstat2(void *argument)
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
+
   streamID2 = streamOpenRead(cdoStreamName(1));
   if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
@@ -74,7 +71,6 @@ void *Timstat2(void *argument)
 
   vlistCompare(vlistID1, vlistID2, func_sft);
  
-  gridsize = vlistGridsizeMax(vlistID1);
   nvars = vlistNvars(vlistID1);
   nrecs = vlistNrecs(vlistID1);
   nrecs3 = nrecs;
@@ -90,14 +86,16 @@ void *Timstat2(void *argument)
 
   streamDefVlist(streamID3, vlistID3);
  
+  gridsize = vlistGridsizeMax(vlistID1);
+
   field1.ptr = (double *) malloc(gridsize*sizeof(double));
   memset(field1.ptr, 0, gridsize*sizeof(double));
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
   				 
 
-  vars1  = (FIELD **)  malloc(nvars*sizeof(FIELD *));
-  vars2  = (FIELD **)  malloc(nvars*sizeof(FIELD *));
-  work   = (FIELD ***) malloc(nvars*sizeof(FIELD **));
+  vars1  = (field_t **)  malloc(nvars*sizeof(field_t *));
+  vars2  = (field_t **)  malloc(nvars*sizeof(field_t *));
+  work   = (field_t ***) malloc(nvars*sizeof(field_t **));
   nofvals= (int ***)   malloc(nvars*sizeof(int **));
   nlevs  = (int *)     malloc(nvars*sizeof(int)); 
 
@@ -108,9 +106,9 @@ void *Timstat2(void *argument)
       missval = missval1 = vlistInqVarMissval(vlistID1, varID);
       missval2 = vlistInqVarMissval(vlistID1, varID); 
 
-      vars1[varID] = (FIELD *)   malloc(nlevs[varID]*sizeof(FIELD));
-      vars2[varID] = (FIELD *)   malloc(nlevs[varID]*sizeof(FIELD));
-      work[varID]  = (FIELD **)  malloc(nlevs[varID]*sizeof(FIELD*));
+      vars1[varID] = (field_t *)   malloc(nlevs[varID]*sizeof(field_t));
+      vars2[varID] = (field_t *)   malloc(nlevs[varID]*sizeof(field_t));
+      work[varID]  = (field_t **)  malloc(nlevs[varID]*sizeof(field_t*));
       nofvals[varID] = (int **)  malloc(nlevs[varID]*sizeof(int*));  
 
       for ( levelID = 0; levelID < nlevs[varID]; levelID++ )
@@ -128,7 +126,7 @@ void *Timstat2(void *argument)
 	  vars2[varID][levelID].missval = missval2;
 	  vars2[varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
-	  work[varID][levelID] = (FIELD *) malloc(7*sizeof(FIELD));
+	  work[varID][levelID] = (field_t *) malloc(7*sizeof(field_t));
 	  for ( i = 0; i < NWORK; i++ )
 	    {
 	      work[varID][levelID][i].grid    = gridID;

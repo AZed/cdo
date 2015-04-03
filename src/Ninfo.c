@@ -79,7 +79,7 @@ void *Ninfo(void *argument)
 	  {
 	    vdate = taxisInqVdate(taxisID);
 
-	    decode_date(vdate, &year, &mon, &day);
+	    cdiDecodeDate(vdate, &year, &mon, &day);
 	 
 	    if ( tsID == 0 || year0 != year )
 	      {
@@ -99,7 +99,7 @@ void *Ninfo(void *argument)
 	  {
 	    vdate = taxisInqVdate(taxisID);
 	    
-	    decode_date(vdate, &year, &mon, &day);
+	    cdiDecodeDate(vdate, &year, &mon, &day);
 	 
 	    if ( tsID == 0 || mon0 != mon )
 	      {

@@ -1,3 +1,36 @@
+#define DATE_FORMAT "%5.4d-%2.2d-%2.2d"
+#define TIME_FORMAT "%2.2d:%2.2d:%2.2d"
+
+void date2str(int date, char *datestr, int maxlen)
+{
+  static char func[] = "date2str";
+  int year, month, day;
+  int len;
+
+  cdiDecodeDate(date, &year, &month, &day);
+
+  len = sprintf(datestr, DATE_FORMAT, year, month, day);
+
+  if ( len > ( maxlen-1) )
+    fprintf(stderr, "Internal problem (%s): sizeof input string is too small!\n", func);
+}
+
+
+void time2str(int time, char *timestr, int maxlen)
+{
+  static char func[] = "time2str";
+  int hour, minute, second;
+  int len;
+
+  cdiDecodeTime(time, &hour, &minute, &second);
+
+  len = sprintf(timestr, TIME_FORMAT, hour, minute, second);
+
+  if ( len > ( maxlen-1) )
+    fprintf(stderr, "Internal problem (%s): sizeof input string is too small!\n", func);
+}
+
+
 void printFiletype(int streamID, int vlistID)
 {
   int filetype;
@@ -63,6 +96,26 @@ void printFiletype(int streamID, int vlistID)
 		printf(" SZIP");
 	      else if ( ztype == COMPRESS_ZIP )
 		printf(" ZIP");
+
+	      break;
+	    }
+	}
+    }
+
+  if ( filetype == FILETYPE_GRB2 )
+    {
+      int nvars, varID;
+      int ztype;
+
+      nvars = vlistNvars(vlistID);
+
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  ztype = vlistInqVarZtype(vlistID, varID);
+	  if ( ztype )
+	    {
+	      if ( ztype == COMPRESS_JPEG )
+		printf(" JPEG");
 
 	      break;
 	    }
@@ -199,6 +252,8 @@ static void printGridInfo(int vlistID)
 	{
 	  fprintf(stdout, "size      : dim = %d  truncation = %d  spc = %d\n",
 		  gridsize, trunc, gridsize/2);
+	  fprintf(stdout, "%*s", nbyte0, "");
+	  fprintf(stdout, "            complexPacking = %d\n", gridInqComplexPacking(gridID));
 	}
       else if ( gridtype == GRID_GME )
 	{

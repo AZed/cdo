@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,8 +24,6 @@
 
 
 #include <ctype.h>
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -64,7 +62,7 @@ void *Vertint(void *argument)
   int code;
   int **varnmiss = NULL, *pnmiss = NULL;
   int *varinterp = NULL;
-  char varname[128];
+  char varname[128], stdname[128];
   int *vars = NULL;
   double missval;
   double *plev = NULL, *phlev = NULL, *vct = NULL;
@@ -357,7 +355,7 @@ void *Vertint(void *argument)
 	      temp_code  =  11;
 	      ps_code    =   1;
 	    }
-	  else if ( tableNum == 128 )
+	  else if ( tableNum == 128 || tableNum == 0 )
 	    {
 	      mode = ECHAM_MODE;
 	      geop_code  = 129;
@@ -383,23 +381,29 @@ void *Vertint(void *argument)
       if ( code <= 0 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
-
 	  strtolower(varname);
 
-	  /*                        ECHAM                            ECMWF       */
-	  if      ( strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0 ) code = 129;
-	  else if ( strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0 ) code = 130;
-	  else if ( strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0 ) code = 134;
-	  else if ( strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0 ) code = 152;
-	  /* else if ( strcmp(varname, "geopoth") == 0 ) code = 156; */
+	  vlistInqVarStdname(vlistID1, varID, stdname);
+	  strtolower(stdname);
+
+	  if ( strcmp(stdname, "surface_air_pressure") == 0 ) code = 134;
+	  else
+	    {
+	      /*                        ECHAM                            ECMWF       */
+	      if      ( strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0 ) code = 129;
+	      else if ( strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0 ) code = 130;
+	      else if ( strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0 ) code = 134;
+	      else if ( strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0 ) code = 152;
+	      /* else if ( strcmp(varname, "geopoth") == 0 ) code = 156; */
+	    }
 	}
 
       if ( mode == ECHAM_MODE )
 	{
-	  if      ( code == geop_code  && nlevel == 1     ) geopID  = varID;
-	  else if ( code == temp_code  && nlevel == nhlev ) tempID  = varID;
-	  else if ( code == ps_code    && nlevel == 1     ) psID    = varID;
-	  else if ( code == lsp_code   && nlevel == 1     ) lnpsID  = varID;
+	  if      ( code == geop_code  && nlevel == 1     ) geopID    = varID;
+	  else if ( code == temp_code  && nlevel == nhlev ) tempID    = varID;
+	  else if ( code == ps_code    && nlevel == 1     ) psID      = varID;
+	  else if ( code == lsp_code   && nlevel == 1     ) lnpsID    = varID;
 	  else if ( code == 156        && nlevel == nhlev ) gheightID = varID;
 	}
       else if ( mode == WMO_MODE )
@@ -507,7 +511,7 @@ void *Vertint(void *argument)
 		if ( minval < -9000 || maxval > 90000 )
 		  cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
 		if ( minval >= 0 && maxval <= 1000 )
-		  cdoWarning("Surface geopotential has unexpected range (min=%g max=%g)!", minval, maxval);
+		  cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
 	      }
 	    }
 

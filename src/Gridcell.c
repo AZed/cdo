@@ -128,10 +128,10 @@ void *Gridcell(void *argument)
 	   gridtype != GRID_CELL )
 	{
 	  if ( gridInqType(gridID) == GRID_GAUSSIAN_REDUCED )
-	    cdoAbort("Gridarea for %s data failed! Use CDO option -R to convert reduced to regular grid!",
+	    cdoAbort("Unsupported grid type: %s, use CDO option -R to convert reduced to regular grid!",
 		     gridNamePtr(gridtype));
 	  else
-	    cdoAbort("Gridarea for %s data failed!", gridNamePtr(gridtype));
+	    cdoAbort("Unsupported grid type: %s", gridNamePtr(gridtype));
 	}
       else
 	{

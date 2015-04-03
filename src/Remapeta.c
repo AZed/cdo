@@ -2,9 +2,8 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2007-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
-
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation; version 2 of the License.
@@ -21,10 +20,7 @@
       Remapeta     remapeta          Model to model level interpolation
 */
 
-
 #include <ctype.h>
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -33,22 +29,7 @@
 #include "functs.h"
 #include "vinterp.h"
 #include "list.h"
-
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-
-void hetaeta(int ltq, int ngp, const int *imiss,
-	     int nlev1, const double *ah1, const double *bh1,
-             const double *fis1, const double *ps1, 
-             const double *t1, const double *q1,
-             int nlev2, const double *ah2, const double *bh2, 
-             const double *fis2, double * restrict ps2, 
-             double * restrict t2, double * restrict q2,
-	     int nvars, double **vars1, double ** restrict vars2,
-	     double * restrict tscor, double * restrict pscor,
-	     double * restrict secor);
+#include "hetaeta.h"
 
 
 static 
@@ -150,12 +131,92 @@ void minmax(int nvals, double *array, int *imiss, double *minval, double *maxval
 }
 
 
+double *vctFromFile(const char *filename, int *nvct)
+{
+  static char func[] = "vctFromFile";
+  char line[1024], *pline;
+  int num, i = 0;
+  int nlevh2, nvct2;
+  int maxvct = 8192;
+  double *vct2;
+  FILE *fp;
+
+
+  fp = fopen(filename, "r");
+  if ( fp == NULL ) { perror(filename); exit(EXIT_FAILURE); }
+
+  vct2 = (double *) malloc(maxvct*sizeof(double));
+
+  while ( readline(fp, line, 1024) )
+    {
+      if ( line[0] == '#' ) continue;
+      if ( line[0] == '\0' ) continue;
+
+      pline = line;
+      num = (int) strtod(pline, &pline);
+      if ( pline == NULL ) cdoAbort("Format error in VCT file %s!", filename);
+      if ( num != i ) cdoWarning("Inconsistent VCT file, entry %d is %d.", i, num);
+      
+      if ( i+maxvct/2 >= maxvct-1 ) cdoAbort("Too many values in VCT file!");
+
+      vct2[i] = strtod(pline, &pline);
+      if ( pline == NULL ) cdoAbort("Format error in VCT file %s!", filename);
+
+      vct2[i+maxvct/2] = strtod(pline, &pline);
+
+      i++;
+    }
+
+  fclose(fp);
+
+  nvct2 = 2*i;
+  nlevh2 = i - 1;
+
+  for ( i = 0; i < nlevh2+1; ++i )
+    vct2[i+nvct2/2] = vct2[i+maxvct/2];
+  
+  vct2 = (double *) realloc(vct2, nvct2*sizeof(double));
+
+  *nvct = nvct2;
+
+  return (vct2);
+}
+
+static
+void vert_sum(double *sum, double *var3d, long gridsize, long nlevel)
+{
+  long i, k;
+
+  for ( i = 0; i < gridsize; ++i ) sum[i] = 0;
+
+  for ( k = 0; k < nlevel; ++k )
+    for ( i = 0; i < gridsize; ++i )
+      {
+	sum[i] += var3d[k*gridsize + i];
+      }
+}
+
+static
+void vert_sumw(double *sum, double *var3d, long gridsize, long nlevel, double *deltap)
+{
+  long i, k;
+
+  for ( i = 0; i < gridsize; ++i ) sum[i] = 0;
+
+  for ( k = 0; k < nlevel; ++k )
+    for ( i = 0; i < gridsize; ++i )
+      {
+	sum[i] += var3d[k*gridsize + i]*deltap[k*gridsize + i];
+      }
+}
+
+
 #define  MAX_VARS3D  1024
 
 void *Remapeta(void *argument)
 {
   static char func[] = "Remapeta";
-  int REMAPETA;
+  int REMAPETA, REMAPETAS, REMAPETAZ;
   int operatorID;
   int streamID1, streamID2;
   int vlistID1, vlistID2;
@@ -164,7 +225,7 @@ void *Remapeta(void *argument)
   int i, offset, iv;
   int tsID, varID, levelID;
   int nvars, nvars3D = 0;
-  int zaxisID2, zaxisIDh = -1, nzaxis;
+  int zaxisID2, zaxisIDh = -1, nzaxis, surfaceID;
   int ngrids, gridID, zaxisID;
   int nlevel;
   int nvct1, nvct2 = 0;
@@ -186,8 +247,12 @@ void *Remapeta(void *argument)
   int lfis2 = FALSE;
   int varids[MAX_VARS3D];
   int *imiss = NULL;
+  int timer_hetaeta = 0;
   long nctop;
   double *array = NULL;
+  double *deltap1 = NULL, *deltap2 = NULL;
+  double *half_press1 = NULL, *half_press2 = NULL;
+  double *sum1 = NULL, *sum2 = NULL;
   double **vars1 = NULL, **vars2 = NULL;
   double minval, maxval;
   double missval = 0;
@@ -196,62 +261,31 @@ void *Remapeta(void *argument)
   double t_min = 170, t_max = 320;
   double q_min = 0, q_max = 0.1;
   double cconst = 1.E-6;
+  const char *fname;
+
+  if ( cdoTimer ) timer_hetaeta = timer_new("Remapeta_hetaeta");
 
   cdoInitialize(argument);
 
-  REMAPETA = cdoOperatorAdd("remapeta", 0, 0, "VCT file name");
+  REMAPETA  = cdoOperatorAdd("remapeta",   0, 0, "VCT file name");
+  REMAPETAS = cdoOperatorAdd("remapeta_s", 0, 0, "VCT file name");
+  REMAPETAZ = cdoOperatorAdd("remapeta_z", 0, 0, "VCT file name");
 
   operatorID = cdoOperatorID();
 
   operatorInputArg(cdoOperatorEnter(operatorID));
 
-  if ( operatorID == REMAPETA )
     {
-      const char *fname = operatorArgv()[0];
-      char line[1024], *pline;
-      int num, i = 0;
-      int maxvct = 8192;
-      
-      FILE *fp;
 
-      fp = fopen(fname, "r");
-      if ( fp == NULL ) { perror(fname); exit(EXIT_FAILURE); }
-
-      vct2 = (double *) malloc(maxvct*sizeof(double));
-
-      while ( readline(fp, line, 1024) )
-	{
-          if ( line[0] == '#' ) continue;
-          if ( line[0] == '\0' ) continue;
-
-	  pline = line;
-	  num = (int) strtod(pline, &pline);
-	  if ( pline == NULL ) cdoAbort("Format error in VCT file %s!", fname);
-	  if ( num != i ) cdoWarning("Inconsistent VCT file, entry %d is %d.", i, num);
-
-	  vct2[i] = strtod(pline, &pline);
-	  if ( pline == NULL ) cdoAbort("Format error in VCT file %s!", fname);
-
-	  vct2[i+maxvct/2] = strtod(pline, &pline);
-
-	  i++;
-	}
-
-      fclose(fp);
+      vct2 = vctFromFile(operatorArgv()[0], &nvct2);
+      nlevh2 = nvct2/2 - 1;
 
       a2 = vct2;
-      b2 = vct2 + i;
-      nvct2 = 2*i;
-      nlevh2 = i - 1;
-
-      for ( i = 0; i < nlevh2+1; ++i )
-	vct2[i+nvct2/2] = vct2[i+maxvct/2];
-
-      vct2 = (double *) realloc(vct2, 2*i*sizeof(double));
+      b2 = vct2 + nvct2/2;
 
       if ( cdoVerbose )
 	for ( i = 0; i < nlevh2+1; ++i )
-	  fprintf(stdout, "vct2: %5d %25.17f %25.17f\n", i, vct2[i], vct2[nvct2/2+i]);
+	  cdoPrint("vct2: %5d %25.17f %25.17f", i, vct2[i], vct2[nvct2/2+i]);
 
       if ( operatorArgc() == 2 )
 	{
@@ -259,7 +293,7 @@ void *Remapeta(void *argument)
 	  fname = operatorArgv()[1];
 
 	  streamID1 = streamOpenRead(fname);
-	  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
+	  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", fname);
 
 	  vlistID1 = streamInqVlist(streamID1);
 
@@ -345,41 +379,71 @@ void *Remapeta(void *argument)
   if ( nvct2 == 0 ) cdoAbort("Internal problem, vct2 undefined!");
   zaxisDefVct(zaxisID2, nvct2, vct2);
 
+  surfaceID = zaxisFromName("surface");
+
   nzaxis  = vlistNzaxis(vlistID1);
   lhavevct = FALSE;
+
+  if ( cdoVerbose )
+    cdoPrint("nzaxis: %d", nzaxis);
+
   for ( i = 0; i < nzaxis; i++ )
     {
       zaxisID = vlistZaxis(vlistID1, i);
       nlevel  = zaxisInqSize(zaxisID);
-      if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && nlevel > 1 )
+      if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID )
 	{
-	  nvct1 = zaxisInqVctSize(zaxisID);
-	  if ( nlevel == (nvct1/2 - 1) )
+	  if ( nlevel > 1 )
 	    {
-	      if ( lhavevct == FALSE )
+	      nvct1 = zaxisInqVctSize(zaxisID);
+
+              if ( cdoVerbose )
+                cdoPrint("i: %d, vct1 size of zaxisID %d = %d", i, zaxisID, nvct1);
+
+	      if ( nlevel == (nvct1/2 - 1) )
 		{
-		  lhavevct = TRUE;
-		  zaxisIDh = zaxisID;
-		  nlevh1    = nlevel;
+		  if ( lhavevct == FALSE )
+		    {
+		      lhavevct = TRUE;
+		      zaxisIDh = zaxisID;
+		      nlevh1   = nlevel;
 	      
-		  vct1 = (double *) malloc(nvct1*sizeof(double));
-		  memcpy(vct1, zaxisInqVctPtr(zaxisID), nvct1*sizeof(double));
+                      if ( cdoVerbose )
+                        cdoPrint("lhavevct=TRUE  zaxisIDh = %d, nlevh1   = %d", zaxisIDh, nlevel);
+ 
+		      vct1 = (double *) malloc(nvct1*sizeof(double));
+		      memcpy(vct1, zaxisInqVctPtr(zaxisID), nvct1*sizeof(double));
+		      
+		      vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
 
-		  vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
-
-		  a1 = vct1;
-		  b1 = vct1 + nvct1/2;
+		      a1 = vct1;
+		      b1 = vct1 + nvct1/2;
+		      if ( cdoVerbose )
+			for ( i = 0; i < nvct1/2; ++i )
+			  cdoPrint("vct1: %5d %25.17f %25.17f", i, vct1[i], vct1[nvct1/2+i]);
+		    }
+		  else
+		    {
+		      if ( memcmp(vct1, zaxisInqVctPtr(zaxisID), nvct1*sizeof(double)) == 0 )
+			vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
+		    }
+		}
+              else 
+                {
 		  if ( cdoVerbose )
-		    for ( i = 0; i < nvct1/2; ++i )
-		      fprintf(stdout, "vct1: %5d %25.17f %25.17f\n", i, vct1[i], vct1[nvct1/2+i]);
-		}
-	      else
-		{
-		  if ( memcmp(vct1, zaxisInqVctPtr(zaxisID), nvct1*sizeof(double)) == 0 )
-		    vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
-		}
+		    cdoPrint("nlevel /= (nvct1/2 - 1): nlevel = %d", nlevel);
+                }
+	    }
+	  else
+	    {
+	      vlistChangeZaxisIndex(vlistID2, i, surfaceID);
 	    }
 	}
+      else
+        {
+	  if ( cdoVerbose )
+	    cdoPrint("i: %d, type of zaxisID %d not ZAXIS_HYBRID", i, zaxisID);
+        }
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -456,6 +520,20 @@ void *Remapeta(void *argument)
       if ( sqID   != -1 ) cdoAbort("Humidity without temperature unsupported!");
     }
 
+  if ( operatorID == REMAPETAS || operatorID == REMAPETAZ)
+    {
+      sum1 = (double *) malloc(ngp*sizeof(double));
+      sum2 = (double *) malloc(ngp*sizeof(double));
+    }
+
+  if ( operatorID == REMAPETAZ )
+    {
+      deltap1 = (double *) malloc(ngp*nlevh1*sizeof(double));
+      deltap2 = (double *) malloc(ngp*nlevh2*sizeof(double));
+      half_press1 = (double *) malloc(ngp*(nlevh1+1)*sizeof(double));
+      half_press2 = (double *) malloc(ngp*(nlevh2+1)*sizeof(double));
+    }
+
   array = (double *) malloc(ngp*sizeof(double));
 
   fis1  = (double *) malloc(ngp*sizeof(double));
@@ -493,7 +571,9 @@ void *Remapeta(void *argument)
 
   if ( zaxisIDh != -1 && geopID == -1 )
     {
-      cdoWarning("Orography (geosp) not found - using zero orography!");
+      if ( ltq )
+	cdoWarning("Orography (geosp) not found - using zero orography!");
+
       memset(fis1, 0, ngp*sizeof(double));
     }
 
@@ -621,15 +701,19 @@ void *Remapeta(void *argument)
 	}
 
       if ( nvars3D || ltq )
-	hetaeta(ltq, ngp, imiss,
-		nlevh1, a1, b1,
-		fis1, ps1,
-		t1, q1,
-		nlevh2, a2, b2,
-		fis2, ps2,
-		t2, q2,
-		nvars3D, vars1, vars2,
-		tscor, pscor, secor);
+	{
+	  if ( cdoTimer ) timer_start(timer_hetaeta);
+	  hetaeta(ltq, ngp, imiss,
+		  nlevh1, a1, b1,
+		  fis1, ps1,
+		  t1, q1,
+		  nlevh2, a2, b2,
+		  fis2, ps2,
+		  t2, q2,
+		  nvars3D, vars1, vars2,
+		  tscor, pscor, secor);
+	  if ( cdoTimer ) timer_stop(timer_hetaeta);
+	}
 
       nctop = ncctop((long) nlevh2, (long) nlevh2+1, a2, b2);
 
@@ -701,12 +785,65 @@ void *Remapeta(void *argument)
       for ( iv = 0; iv < nvars3D; ++iv )
 	{
 	  varID = varids[iv];
-	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+
+	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+
+	  if ( operatorID == REMAPETAS )
+	    {
+	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	      vert_sum(sum1, vars1[iv], gridsize, nlevh1);
+
+	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+	      vert_sum(sum2, vars2[iv], gridsize, nlevh2);
+	    }
+	  else if ( operatorID == REMAPETAZ )
+	    {
+	      int k;
+
+	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
+	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+
+	      presh(NULL, half_press1, vct1, ps1, nlevh1, gridsize);
+	      for ( k = 0; k < nlevh1; ++k )
+		for ( i = 0; i < ngp; ++i )
+		  {
+		    deltap1[k*ngp+i] = half_press1[(k+1)*ngp+i] - half_press1[k*ngp+i];
+		    deltap1[k*ngp+i] = log(deltap1[k*ngp+i]);
+		  }
+	      vert_sumw(sum1, vars1[iv], gridsize, nlevh1, deltap1);
+
+
+	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
+	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
+
+	      presh(NULL, half_press2, vct2, ps1, nlevh2, gridsize);
+	      for ( k = 0; k < nlevh2; ++k )
+		for ( i = 0; i < ngp; ++i )
+		  {
+		    deltap2[k*ngp+i] = half_press2[(k+1)*ngp+i] - half_press2[k*ngp+i];
+		    deltap2[k*ngp+i] = log(deltap2[k*ngp+i]);
+		  }
+	      vert_sumw(sum2, vars2[iv], gridsize, nlevh2, deltap2);
+	    }
+
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	      offset   = gridsize*levelID;
 	      single2  = vars2[iv] + offset;
+
+	      if ( operatorID == REMAPETAS || operatorID == REMAPETAZ )
+		{
+		  /*
+		  for ( i = 0; i < gridsize; ++i )
+		    if ( i %100 == 0 )
+		      printf("%d %g %g %g %g %g\n",i, single2[i], sum1[i], sum2[i], sum1[i]/sum2[i], single2[i]*sum1[i]/sum2[i]);
+		  */
+		  for ( i = 0; i < gridsize; ++i )
+		    single2[i] = single2[i]*sum1[i]/sum2[i];
+		}
 
 	      if ( gridsize == ngp ) setmissval(ngp, imiss, missval, single2);
 	      streamDefRecord(streamID2, varID, levelID);
@@ -749,7 +886,18 @@ void *Remapeta(void *argument)
   free(ps1);
   free(fis1);
 
+  if ( sum1 ) free(sum1);
+  if ( sum2 ) free(sum2);
+
+  if ( deltap1 ) free(deltap1);
+  if ( deltap2 ) free(deltap2);
+
+  if ( half_press1 ) free(half_press1);
+  if ( half_press2 ) free(half_press2);
+
   free(array);
+  free(vct2);
+  if ( vct1 ) free(vct1);
 
   cdoFinish();
 

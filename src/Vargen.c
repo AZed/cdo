@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,18 +22,15 @@
       Vargen     random          Field with random values
 */
 
-
-#include <string.h>
-#include <math.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 
+
 #if defined (__GNUC__)
 #if __GNUC__ > 2
-#define WITH_ETOPO 1
+#  define WITH_ETOPO 1
 #endif
 #endif
 
@@ -63,7 +60,7 @@ void *Vargen(void *argument)
 
   cdoInitialize(argument);
 
-  RANDOM = cdoOperatorAdd("random", 0, 0, "grid description file or name");
+  RANDOM = cdoOperatorAdd("random", 0, 0, "grid description file or name, <seed>");
   CONST  = cdoOperatorAdd("const",  0, 0, "constant value, grid description file or name");
   TOPO   = cdoOperatorAdd("topo",   0, 0, "");
   FOR    = cdoOperatorAdd("for",    0, 0, "start, end<, increment>");
@@ -72,10 +69,20 @@ void *Vargen(void *argument)
 
   if ( operatorID == RANDOM )
     {
+      unsigned int seed = 1;
       operatorInputArg(cdoOperatorEnter(operatorID));
-      operatorCheckArgc(1);
+      if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
+      if ( operatorArgc() > 2 ) cdoAbort("Too many arguments!");
       gridfile = operatorArgv()[0];
       gridID   = cdoDefineGrid(gridfile);
+      if ( operatorArgc() == 2 )
+	{
+	  long idum;
+	  idum = atol(operatorArgv()[1]);
+	  if ( idum >= 0 && idum < 0x7FFFFFFF )
+	    seed = idum;
+	}
+      srand(seed);
     }
   else if ( operatorID == CONST )
     {
@@ -133,6 +140,9 @@ void *Vargen(void *argument)
 
   taxisID = taxisCreate(TAXIS_RELATIVE);
   vlistDefTaxis(vlistID, taxisID);
+
+  if ( operatorID == RANDOM || operatorID == CONST || operatorID == TOPO )
+    vlistDefNtsteps(vlistID, 1);
 
   streamID = streamOpenWrite(cdoStreamName(0), cdoFiletype());
   if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));

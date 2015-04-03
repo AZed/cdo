@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -220,31 +220,37 @@ void printMap(int nlon, int nlat, double *array, double missval, double min, dou
 void *Info(void *argument)
 {
   static char func[] = "Info";
-  int INFO, INFOV, MAP;
+  int INFO, INFOV, INFOP, MAP;
   int operatorID;
   int i;
   int indf, indg;
   int varID, recID;
   int gridsize = 0;
-  int gridID, zaxisID, code, vdate, vtime;
+  int gridID, zaxisID;
+  int code, param;
+  int vdate, vtime;
   int nrecs;
   int levelID;
   int tsID, taxisID;
   int streamID = 0;
   int vlistID;
   int nmiss;
-  int ivals = 0, imiss = 0;
-  int year, month, day, hour, minute, second;
+  int number;
+  int ivals = 0, nvals = 0;
+  int imiss = 0;
   char varname[128];
+  char paramstr[32];
+  char vdatestr[32], vtimestr[32];
   double missval;
   double *array = NULL;
   double level;
-  double arrmin, arrmax, arrmean, arrvar;
+  double arrmin = 0, arrmax = 0, arrmean = 0, arrvar = 0;
 
   cdoInitialize(argument);
 
   INFO  = cdoOperatorAdd("info",  0, 0, NULL);
   INFOV = cdoOperatorAdd("infov", 0, 0, NULL);
+  INFOP = cdoOperatorAdd("infop", 0, 0, NULL);
   MAP   = cdoOperatorAdd("map",   0, 0, NULL);
 
   operatorID = cdoOperatorID();
@@ -260,6 +266,7 @@ void *Info(void *argument)
 
       gridsize = vlistGridsizeMax(vlistID);
 
+      if ( vlistNumber(vlistID) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
 
       indg = 0;
@@ -270,15 +277,18 @@ void *Info(void *argument)
 	  vdate = taxisInqVdate(taxisID);
 	  vtime = taxisInqVtime(taxisID);
 
-	  decode_date(vdate, &year, &month, &day);
-	  decode_time(vtime, &hour, &minute, &second);
+	  date2str(vdate, vdatestr, sizeof(vdatestr));
+	  time2str(vtime, vtimestr, sizeof(vtimestr));
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
 	      if ( (tsID == 0 && recID == 0) || operatorID == MAP )
 		{
 		  if ( operatorID == INFOV )
-		    fprintf(stdout, "%6d :       Date  Time    Varname     Level    Size    Miss :"
+		    fprintf(stdout, "%6d :       Date  Time    Varname      Level    Size    Miss :"
+			    "     Minimum        Mean     Maximum\n",  -(indf+1));
+		  else if ( operatorID == INFOP )
+		    fprintf(stdout, "%6d :       Date  Time    Param        Level    Size    Miss :"
 			    "     Minimum        Mean     Maximum\n",  -(indf+1));
 		  else
 		    fprintf(stdout, "%6d :       Date  Time    Code  Level    Size    Miss :"
@@ -289,78 +299,117 @@ void *Info(void *argument)
 	      streamReadRecord(streamID, array, &nmiss);
 
 	      indg += 1;
+	      param    = vlistInqVarParam(vlistID, varID);
 	      code     = vlistInqVarCode(vlistID, varID);
 	      gridID   = vlistInqVarGrid(vlistID, varID);
 	      zaxisID  = vlistInqVarZaxis(vlistID, varID);
 	      missval  = vlistInqVarMissval(vlistID, varID);
 	      gridsize = gridInqSize(gridID);
+	      number   = vlistInqVarNumber(vlistID, varID);
+
+	      cdiParamToString(param, paramstr, sizeof(paramstr));
 
 	      if ( operatorID == INFOV ) vlistInqVarName(vlistID, varID, varname);
 
 	      if ( operatorID == INFOV )
-		fprintf(stdout, "%6d :"DATE_FORMAT" "TIME_FORMAT" %-8s ",
-			indg, year, month, day, hour, minute, second, varname);
+		fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, varname);
+	      else if ( operatorID == INFOP )
+		fprintf(stdout, "%6d :%s %s %-10s ", indg, vdatestr, vtimestr, paramstr);
 	      else
-		fprintf(stdout, "%6d :"DATE_FORMAT" "TIME_FORMAT" %3d",
-			indg, year, month, day, hour, minute, second, code);
+		fprintf(stdout, "%6d :%s %s %3d ", indg, vdatestr, vtimestr, code);
 
 	      level = zaxisInqLevel(zaxisID, levelID);
-	      fprintf(stdout, " %7g ", level);
+	      fprintf(stdout, "%7g ", level);
 
 	      fprintf(stdout, "%7d %7d :", gridsize, nmiss);
 
 	      if ( /* gridInqType(gridID) == GRID_SPECTRAL || */
-		   (gridsize == 1 && nmiss == 0) )
+		   (gridsize == 1 && nmiss == 0 && number == CDI_REAL) )
 		{
 		  fprintf(stdout, "            %#12.5g\n", array[0]);
 		}
 	      else
 		{
-		  if ( nmiss > 0 )
+		  if ( number == CDI_REAL )
 		    {
-		      ivals = 0;
-		      arrmean = 0;
-		      arrvar  = 0;
-		      arrmin  =  1e50;
-		      arrmax  = -1e50;
-		      for ( i = 0; i < gridsize; i++ )
+		      if ( nmiss > 0 )
 			{
-			  if ( !DBL_IS_EQUAL(array[i], missval) )
+			  ivals   = 0;
+			  arrmean = 0;
+			  arrvar  = 0;
+			  arrmin  =  1.e300;
+			  arrmax  = -1.e300;
+			  for ( i = 0; i < gridsize; ++i )
 			    {
+			      if ( !DBL_IS_EQUAL(array[i], missval) )
+				{
+				  if ( array[i] < arrmin ) arrmin = array[i];
+				  if ( array[i] > arrmax ) arrmax = array[i];
+				  arrmean += array[i];
+				  arrvar  += array[i]*array[i];
+				  ivals++;
+				}
+			    }
+			  imiss = gridsize - ivals;
+			  nvals = ivals;
+			}
+		      else
+			{
+			  arrmean = array[0];
+			  arrvar  = array[0];
+			  arrmin  = array[0];
+			  arrmax  = array[0];
+			  /*
+#pragma omp parallel for default(none) shared(arrmin, arrmax, array, gridsize)	\
+                                       reduction(+:arrmean, arrvar)
+			  */
+			  for ( i = 1; i < gridsize; i++ )
+			    {
+			      /* #pragma omp critical */
 			      if ( array[i] < arrmin ) arrmin = array[i];
+			      /* #pragma omp critical */
 			      if ( array[i] > arrmax ) arrmax = array[i];
 			      arrmean += array[i];
 			      arrvar  += array[i]*array[i];
-			      ivals++;
+			    }
+			  nvals = gridsize;
+			}
+
+		      if ( nvals )
+			{
+			  arrmean = arrmean/nvals;
+			  arrvar  = arrvar/nvals - arrmean*arrmean;
+			  fprintf(stdout, "%#12.5g%#12.5g%#12.5g\n", arrmin, arrmean, arrmax);
+			}
+		      else
+			{
+			  fprintf(stdout, "                     nan\n");
+			}
+		    }
+		  else
+		    {
+		      int nvals_r = 0, nvals_i = 0;
+		      double arrsum_r, arrsum_i, arrmean_r = 0, arrmean_i = 0;
+		      arrsum_r = 0;
+		      arrsum_i = 0;
+		      
+		      for ( i = 0; i < gridsize; i++ )
+			{
+			  if ( !DBL_IS_EQUAL(array[i*2],   missval) && 
+			       !DBL_IS_EQUAL(array[i*2+1], missval) )
+			    {
+			      arrsum_r += array[i*2];
+			      arrsum_i += array[i*2+1];
+			      nvals_r++;
+			      nvals_i++;
 			    }
 			}
-		      imiss = gridsize - ivals;
-		      gridsize = ivals;
-		    }
-		  else
-		    {
-		      arrmean = array[0];
-		      arrvar  = array[0];
-		      arrmin  = array[0];
-		      arrmax  = array[0];
-		      for ( i = 1; i < gridsize; i++ )
-			{
-			  if ( array[i] < arrmin ) arrmin = array[i];
-			  if ( array[i] > arrmax ) arrmax = array[i];
-			  arrmean += array[i];
-			  arrvar  += array[i]*array[i];
-			}
-		    }
 
-		  if ( gridsize )
-		    {
-		      arrmean = arrmean/gridsize;
-		      arrvar  = arrvar/gridsize - arrmean*arrmean;
-		      fprintf(stdout, "%#12.5g%#12.5g%#12.5g\n", arrmin, arrmean, arrmax);
-		    }
-		  else
-		    {
-		      fprintf(stdout, "                     nan\n");
+		      imiss = gridsize - nvals_r;
+
+		      if ( nvals_r > 0 ) arrmean_r = arrsum_r / nvals_r;
+		      if ( nvals_i > 0 ) arrmean_i = arrsum_i / nvals_i;
+		      fprintf(stdout, "  -  (%#12.5g,%#12.5g)  -\n", arrmean_r, arrmean_i);
 		    }
 
 		  if ( imiss != nmiss && nmiss > 0 )

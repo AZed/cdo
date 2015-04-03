@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -51,6 +51,8 @@ extern int cdoDefaultByteorder;
 extern int cdoDefaultTableID;
 extern int cdoDefaultInstID;
 
+extern int cdoCheckDatarange;
+
 extern int cdoSilentMode;
 extern int cdoRegulargrid;
 extern int cdoBenchmark;
@@ -79,13 +81,6 @@ void timer_report(void);
 void timer_start(int it);
 void timer_stop(int it);
 
-void    timerStart(int timer);
-void    timerStop(int timer);
-void    timerClear(int timer);
-void    timerPrint(int timer);
-void    timersPrint(void);
-void    timersInit(void);
-
 void    operatorInputArg(const char *enter);
 int     operatorArgc(void);
 char  **operatorArgv(void);
@@ -96,6 +91,7 @@ const char *cdoStreamName(int cnt);
 void    cdoInitialize(void *argument);
 void    cdoFinish(void);
 
+int     cdoStreamNumber(void);
 int     cdoStreamCnt(void);
 int     cdoOperatorAdd(const char *name, int func, int intval, const char *enter);
 int     cdoOperatorID(void);
@@ -118,8 +114,10 @@ void    vlistCompare(int vlistID1, int vlistID2, int function);
 int  gridWeights(int gridID, double *weights);
 int  gridGenArea(int gridID, double *area);
 void gaussaw(double pa[], double pw[], int nlat);
-void genXbounds(long xsize, long ysize, const double *grid_center_lon, double *grid_corner_lon, double dlon);
-void genYbounds(long xsize, long ysize, const double *grid_center_lat, double *grid_corner_lat);
+void genXbounds(long xsize, long ysize, const double * restrict grid_center_lon, 
+		double * restrict grid_corner_lon, double dlon);
+void genYbounds(long xsize, long ysize, const double * restrict grid_center_lat,
+		double * restrict grid_corner_lat);
 void writeNCgrid(const char *gridfile, int gridID, int *imask);
 void defineZaxis(const char *zaxisarg);
 void cdiDefTableID(int tableID);
@@ -127,5 +125,6 @@ void gridGenXvals(int xsize, double xfirst, double xlast, double xinc, double *x
 void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double yinc, double *yvals);
 
 int gridFromName(const char *gridname);
+int zaxisFromName(const char *zaxisname);
 
 #endif  /* _CDO_H */

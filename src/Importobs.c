@@ -31,7 +31,6 @@ void init_vars(int vlistID, int gridID, int zaxisID, int nvars)
 static
 void init_data(int vlistID, int nvars, double *data[])
 {
-  static char func[] = "initdata";
   int varID, i, gridsize;
   double missval;
 
@@ -98,7 +97,7 @@ void *Importobs(void *argument)
   char line[MAX_LINE_LEN];
   int streamID;
   int tsID;
-  int varID, gridID, zaxisID, taxisID, vlistID;
+  int gridID, zaxisID, taxisID, vlistID;
   int i, j;
   int nvars = MAX_VARS;
   int vdate = 0, vtime = 0;
@@ -106,12 +105,9 @@ void *Importobs(void *argument)
   int gridsize, xsize, ysize;
   double *xvals = NULL, *yvals = NULL;
   double *data[MAX_VARS];
-  int nmiss;
   FILE *fp;
-  size_t fsize;
   char dummy[32], station[32], datetime[32];
   float lat, lon, height1, pressure, height2, value;
-  double missval;
   double latmin = 90, latmax = -90, lonmin = 360, lonmax = -360;
   int code;
   int index;
@@ -129,7 +125,7 @@ void *Importobs(void *argument)
   gridID = cdoDefineGrid(operatorArgv()[0]);
 
   if ( gridInqType(gridID) != GRID_LONLAT ) 
-    cdoAbort("%s grid unsupported!", gridNamePtr(gridInqType(gridID)));
+    cdoAbort("Unsupported grid type: %s", gridNamePtr(gridInqType(gridID)));
 
   gridsize = gridInqSize(gridID);
   xsize = gridInqXsize(gridID);

@@ -57,8 +57,8 @@ void eca1(const ECA_REQUEST_1 *request)
   int nlevels;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD *var12 = NULL, *samp1 = NULL, *samp2 = NULL, *var13 = NULL, *var21 = NULL, *var23 = NULL, *var;
-  FIELD field1, field2;
+  field_t *var12 = NULL, *samp1 = NULL, *samp2 = NULL, *var13 = NULL, *var21 = NULL, *var23 = NULL, *var;
+  field_t field1, field2;
   
   cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
 
@@ -121,16 +121,16 @@ void eca1(const ECA_REQUEST_1 *request)
   nlevels = zaxisInqSize(zaxisID);
   missval = vlistInqVarMissval(ivlistID, FIRST_VAR_ID);
 
-  var12 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  samp1 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  samp2 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+  var12 = (field_t *) malloc(nlevels*sizeof(field_t));
+  samp1 = (field_t *) malloc(nlevels*sizeof(field_t));
+  samp2 = (field_t *) malloc(nlevels*sizeof(field_t));
   if ( IS_SET(request->var1.f3) ) 
-    var13 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    var13 = (field_t *) malloc(nlevels*sizeof(field_t));
     
   if ( IS_SET(request->var2.h2) ) 
-    var21 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    var21 = (field_t *) malloc(nlevels*sizeof(field_t));
   if ( IS_SET(request->var2.h3) ) 
-    var23 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    var23 = (field_t *) malloc(nlevels*sizeof(field_t));
       
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
@@ -417,8 +417,8 @@ void eca2(const ECA_REQUEST_2 *request)
   int nlevels;
   int *recVarID, *recLevelID;
   double missval1, missval2;
-  FIELD *var14 = NULL, *samp1 = NULL, *samp2 = NULL, *samp3 = NULL, *total = NULL, *var15 = NULL, *var22 = NULL, *var;
-  FIELD field1, field2;
+  field_t *var14 = NULL, *samp1 = NULL, *samp2 = NULL, *samp3 = NULL, *total = NULL, *var15 = NULL, *var22 = NULL, *var;
+  field_t field1, field2;
   
   cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
 
@@ -486,17 +486,17 @@ void eca2(const ECA_REQUEST_2 *request)
   missval1 = vlistInqVarMissval(ivlistID1, FIRST_VAR_ID);
   missval2 = vlistInqVarMissval(ivlistID2, FIRST_VAR_ID);
   
-  var14 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  samp1 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  samp2 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  samp3 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+  var14 = (field_t *) malloc(nlevels*sizeof(field_t));
+  samp1 = (field_t *) malloc(nlevels*sizeof(field_t));
+  samp2 = (field_t *) malloc(nlevels*sizeof(field_t));
+  samp3 = (field_t *) malloc(nlevels*sizeof(field_t));
   
   if ( request->var1.epilog == PERCENT_OF_TOTAL_AMOUNT )
-    total  = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    total  = (field_t *) malloc(nlevels*sizeof(field_t));
   if ( IS_SET(request->var1.f5) )
-    var15 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    var15 = (field_t *) malloc(nlevels*sizeof(field_t));
   if ( IS_SET(request->var2.h2) )
-    var22 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    var22 = (field_t *) malloc(nlevels*sizeof(field_t));
       
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
@@ -796,8 +796,8 @@ void eca3(const ECA_REQUEST_3 *request)
   int nlevels;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD *var1 = NULL, *var2 = NULL;
-  FIELD field1, field2;
+  field_t *var1 = NULL, *var2 = NULL;
+  field_t field1, field2;
   
   cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
 
@@ -852,8 +852,8 @@ void eca3(const ECA_REQUEST_3 *request)
   nlevels = zaxisInqSize(zaxisID);
   missval = vlistInqVarMissval(ivlistID1, FIRST_VAR_ID);
 
-  var1 = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  var2 = (FIELD *) malloc(nlevels*sizeof(FIELD));
+  var1 = (field_t *) malloc(nlevels*sizeof(field_t));
+  var2 = (field_t *) malloc(nlevels*sizeof(field_t));
         
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
@@ -999,10 +999,10 @@ void eca4(const ECA_REQUEST_4 *request)
   int nlevels;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD *startCount          , *endCount;
-  FIELD *startDateWithHist[2], *endDateWithHist[2];
-  FIELD *gslDuration, *gslFirstDay;
-  FIELD fieldGt              , fieldLt             , mask;
+  field_t *startCount          , *endCount;
+  field_t *startDateWithHist[2], *endDateWithHist[2];
+  field_t *gslDuration, *gslFirstDay;
+  field_t fieldGt              , fieldLt             , mask;
   int reinitializedCounts = FALSE;
   
   cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
@@ -1081,18 +1081,18 @@ void eca4(const ECA_REQUEST_4 *request)
   nlevels     = zaxisInqSize(zaxisID);
   missval     = vlistInqVarMissval(ivlistID1, FIRST_VAR_ID);
 
-  startCount  = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  endCount    = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  gslDuration = (FIELD *) malloc(nlevels*sizeof(FIELD));
-  gslFirstDay = (FIELD *) malloc(nlevels*sizeof(FIELD));
+  startCount  = (field_t *) malloc(nlevels*sizeof(field_t));
+  endCount    = (field_t *) malloc(nlevels*sizeof(field_t));
+  gslDuration = (field_t *) malloc(nlevels*sizeof(field_t));
+  gslFirstDay = (field_t *) malloc(nlevels*sizeof(field_t));
 
   /* because of the different definitions for northern and southern hemisphere,
    * the values of the last year have to be present
    * THE LAST YEAR HAS THE INDEX 1 */
   for ( int h = 0; h < 2; h++ )
   {
-    startDateWithHist[h] = (FIELD *) malloc(nlevels*sizeof(FIELD));
-    endDateWithHist[h]   = (FIELD *) malloc(nlevels*sizeof(FIELD));
+    startDateWithHist[h] = (field_t *) malloc(nlevels*sizeof(field_t));
+    endDateWithHist[h]   = (field_t *) malloc(nlevels*sizeof(field_t));
   }
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -1309,7 +1309,7 @@ void eca4(const ECA_REQUEST_4 *request)
                         ovarID1, ovarID2,ivlistID1,
                         FIRST_VAR_ID,
                         gslDuration, gslFirstDay,
-                        encode_date(ovdate/10000 - 1, 12, 31), ovtime,  nlevels); otsID++;
+                        cdiEncodeDate(ovdate/10000 - 1, 12, 31), ovtime,  nlevels); otsID++;
         }
       if (ovdate != ivdate)
         {
@@ -1323,9 +1323,11 @@ void eca4(const ECA_REQUEST_4 *request)
 #endif
             updateHist(endDateWithHist,   nlevels, gridsize, yvals, TRUE);
           }
+	  /*
 #if defined (_OPENMP)
 #pragma omp end sections
 #endif
+	  */
         }
       else
         {

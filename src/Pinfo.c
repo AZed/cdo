@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -41,13 +41,13 @@ void *Pinfo(void *argument)
   int levelID;
   int tsID;
   int taxisID1, taxisID2;
-  char varname[128];
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int nmiss;
   int ivals = 0, imiss = 0;
-  int year, month, day, hour, minute, second;
   int vdate, vtime;
+  char varname[128];
+  char vdatestr[32], vtimestr[32];	  
   double missval;
   double *array1 = NULL, *array2 = NULL;
   double level;
@@ -91,8 +91,8 @@ void *Pinfo(void *argument)
 
       streamDefTimestep(streamID2, tsID);
 
-      decode_date(vdate, &year, &month, &day);
-      decode_time(vtime, &hour, &minute, &second);
+      date2str(vdate, vdatestr, sizeof(vdatestr));
+      time2str(vtime, vtimestr, sizeof(vtimestr));
 
       for ( recID = 0; recID < nrecs; recID++ )
 	{
@@ -119,11 +119,9 @@ void *Pinfo(void *argument)
 	  if ( operatorID == PINFOV ) vlistInqVarName(vlistID1, varID, varname);
 
 	  if ( operatorID == PINFOV )
-	    fprintf(stdout, "%6d : "DATE_FORMAT" "TIME_FORMAT" %-8s ",
-		    indg, year, month, day, hour, minute, second, varname);
+	    fprintf(stdout, "%6d :%s %s %-8s ", indg, vdatestr, vtimestr, varname);
 	  else
-	    fprintf(stdout, "%6d : "DATE_FORMAT" "TIME_FORMAT" %3d",
-		    indg, year, month, day, hour, minute, second, code);
+	    fprintf(stdout, "%6d :%s %s %3d", indg, vdatestr, vtimestr, code);
 
 	  level = zaxisInqLevel(zaxisID, levelID);
 	  fprintf(stdout, " %7g ", level);
@@ -142,8 +140,8 @@ void *Pinfo(void *argument)
 		  ivals = 0;
 		  arrmean = 0;
 		  arrvar  = 0;
-		  arrmin  =  1e50;
-		  arrmax  = -1e50;
+		  arrmin  =  1.e300;
+		  arrmax  = -1.e300;
 		  for ( i = 0; i < gridsize; i++ )
 		    {
 		      if ( !DBL_IS_EQUAL(array1[i], missval) )

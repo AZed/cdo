@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -30,8 +30,6 @@
       Settime    shifttime       Shift timesteps
 */
 
-
-#include <string.h>
 #include <ctype.h>  /* isdigit */
 
 #include "cdi.h"
@@ -42,19 +40,29 @@
 void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 
-int get_tunits(const char *unit, int *incunit, int *tunit)
+int get_tunits(const char *unit, int *incperiod, int *incunit, int *tunit)
 {
   size_t len;
 	
   len = strlen(unit);
   
-  if      ( memcmp(unit, "seconds", len) == 0 ) { *incunit =     1; *tunit = TUNIT_SECOND;}
-  else if ( memcmp(unit, "minutes", len) == 0 ) { *incunit =    60; *tunit = TUNIT_MINUTE;}
-  else if ( memcmp(unit, "hours", len)   == 0 ) { *incunit =  3600; *tunit = TUNIT_HOUR;  }
-  else if ( memcmp(unit, "days", len)    == 0 ) { *incunit = 86400; *tunit = TUNIT_DAY;   }
-  else if ( memcmp(unit, "months", len)  == 0 ) { *incunit =     1; *tunit = TUNIT_MONTH; }
-  else if ( memcmp(unit, "years", len)   == 0 ) { *incunit =    12; *tunit = TUNIT_YEAR;  }
+  if      ( memcmp(unit, "seconds", len) == 0 ) { *incunit =     1; *tunit = TUNIT_SECOND;  }
+  else if ( memcmp(unit, "minutes", len) == 0 ) { *incunit =    60; *tunit = TUNIT_MINUTE;  }
+  else if ( memcmp(unit, "hours", len)   == 0 ) { *incunit =  3600; *tunit = TUNIT_HOUR;    }
+  else if ( memcmp(unit, "3hours", len)  == 0 ) { *incunit = 10800; *tunit = TUNIT_3HOURS;  }
+  else if ( memcmp(unit, "6hours", len)  == 0 ) { *incunit = 21600; *tunit = TUNIT_6HOURS;  }
+  else if ( memcmp(unit, "12hours", len) == 0 ) { *incunit = 43200; *tunit = TUNIT_12HOURS; }
+  else if ( memcmp(unit, "days", len)    == 0 ) { *incunit = 86400; *tunit = TUNIT_DAY;     }
+  else if ( memcmp(unit, "months", len)  == 0 ) { *incunit =     1; *tunit = TUNIT_MONTH;   }
+  else if ( memcmp(unit, "years", len)   == 0 ) { *incunit =    12; *tunit = TUNIT_YEAR;    }
   else cdoAbort("time unit >%s< unsupported", unit);
+
+  if ( *tunit == TUNIT_HOUR )
+    {
+      if      ( *incperiod ==  3 ) { *incperiod = 1; *incunit = 10800; *tunit = TUNIT_3HOURS;  }
+      else if ( *incperiod ==  6 ) { *incperiod = 1; *incunit = 21600; *tunit = TUNIT_6HOURS;  }
+      else if ( *incperiod == 12 ) { *incperiod = 1; *incunit = 43200; *tunit = TUNIT_12HOURS; }
+    }
 
   return (0);
 }
@@ -79,6 +87,7 @@ void *Settime(void *argument)
   int ijulinc = 0, incperiod = 0, incunit = 0;
   int year = 1, month = 1, day = 1, hour = 0, minute = 0, second = 0;
   int day0;
+  int taxis_has_bounds, copy_timestep = FALSE;
   int calendar;
   int newcalendar = CALENDAR_STANDARD;
   const char *datestr, *timestr;
@@ -112,7 +121,7 @@ void *Settime(void *argument)
       if ( strchr(datestr, '-') )
 	{
 	  sscanf(datestr, "%d-%d-%d", &year, &month, &day);
-	  sdate = encode_date(year, month, day);
+	  sdate = cdiEncodeDate(year, month, day);
 	}
       else
 	{
@@ -122,7 +131,7 @@ void *Settime(void *argument)
       if ( strchr(timestr, ':') )
 	{
 	  sscanf(timestr, "%d:%d:%d", &hour, &minute, &second);
-	  stime = encode_time(hour, minute, second);
+	  stime = cdiEncodeTime(hour, minute, second);
 	}
       else
 	{
@@ -135,7 +144,7 @@ void *Settime(void *argument)
 	  incperiod = atoi(unit);
 	  while ( isdigit((int) *unit) ) unit++;
 
-	  get_tunits(unit, &incunit, &tunit);
+	  get_tunits(unit, &incperiod, &incunit, &tunit);
 	}
       /* increment in seconds */
       ijulinc = incperiod * incunit;
@@ -147,7 +156,7 @@ void *Settime(void *argument)
       if ( strchr(datestr, '-') )
 	{
 	  sscanf(datestr, "%d-%d-%d", &year, &month, &day);
-	  newval = encode_date(year, month, day);
+	  newval = cdiEncodeDate(year, month, day);
 	}
       else
 	{
@@ -162,7 +171,7 @@ void *Settime(void *argument)
       if ( strchr(timestr, ':') )
 	{
 	  sscanf(timestr, "%d:%d:%d", &hour, &minute, &second);
-	  newval = encode_time(hour, minute, second);
+	  newval = cdiEncodeTime(hour, minute, second);
 	}
       else
 	{
@@ -176,7 +185,7 @@ void *Settime(void *argument)
       if ( unit[0] == '-' || unit[0] == '+' ) unit++;
       while ( isdigit((int) *unit) ) unit++;
 
-      get_tunits(unit, &incunit, &tunit);
+      get_tunits(unit, &incperiod, &incunit, &tunit);
 
       /* increment in seconds */
       ijulinc = incperiod * incunit;
@@ -185,8 +194,8 @@ void *Settime(void *argument)
     {
       int idum;
       char *unit = operatorArgv()[0];
-
-      get_tunits(unit, &idum, &tunit);
+      incperiod = 0;
+      get_tunits(unit, &incperiod, &idum, &tunit);
     }
   else if ( operatorID == SETCALENDAR )
     {
@@ -212,7 +221,8 @@ void *Settime(void *argument)
   vlistID2 = vlistDuplicate(vlistID1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
-  ntsteps = vlistNtsteps(vlistID1);
+  taxis_has_bounds = taxisHasBounds(taxisID1);
+  ntsteps  = vlistNtsteps(vlistID1);
 
   if ( ntsteps == 0 )
     {
@@ -228,6 +238,8 @@ void *Settime(void *argument)
 
   if ( operatorID == SETREFTIME )
     {
+      copy_timestep = TRUE;
+
       if ( taxisInqType(taxisID1) == TAXIS_ABSOLUTE )
 	{
 	  cdoPrint("Changing absolute to relative time axis!");
@@ -242,6 +254,8 @@ void *Settime(void *argument)
     }
   else if ( operatorID == SETTUNITS )
     {
+      copy_timestep = TRUE;
+
       if ( taxisInqType(taxisID1) == TAXIS_ABSOLUTE )
 	{
 	  cdoPrint("Changing absolute to relative time axis!");
@@ -254,6 +268,8 @@ void *Settime(void *argument)
     }
   else if ( operatorID == SETCALENDAR )
     {
+      copy_timestep = TRUE;
+
       /*
       if ( ((char *)argument)[0] == '-' )
 	cdoAbort("This operator does not work with pipes!");
@@ -283,14 +299,15 @@ void *Settime(void *argument)
     {
       taxisDefTunit(taxisID2, tunit);
     }
-  else if ( operatorID == SETREFTIME )
-    {
-      taxisDefRdate(taxisID2, sdate);
-      taxisDefRtime(taxisID2, stime);
-    }
   else if ( operatorID == SETCALENDAR )
     {
       taxisDefCalendar(taxisID2, newcalendar);
+    }
+
+  if ( taxis_has_bounds && copy_timestep == FALSE )
+    {
+      cdoWarning("Time bounds unsupported by this operator, removed!");
+      taxisDeleteBounds(taxisID2);
     }
 
   vlistDefTaxis(vlistID2, taxisID2);
@@ -317,7 +334,7 @@ void *Settime(void *argument)
 	      if ( tsID1 == 0 )
 		{
 		  vdate = sdate;
-		  decode_date(vdate, &year, &month, &day0);
+		  cdiDecodeDate(vdate, &year, &month, &day0);
 		}
 	      else
 		{	      
@@ -331,7 +348,7 @@ void *Settime(void *argument)
 		  else
 		    day = day0;
 
-		  vdate = encode_date(year, month, day);
+		  vdate = cdiEncodeDate(year, month, day);
 		}
 	    }
 	  else
@@ -344,14 +361,14 @@ void *Settime(void *argument)
 	{
 	  if ( tunit == TUNIT_MONTH || tunit == TUNIT_YEAR )
 	    {
-	      decode_date(vdate, &year, &month, &day);
+	      cdiDecodeDate(vdate, &year, &month, &day);
 	      
 	      month += ijulinc;
 
 	      while ( month > 12 ) { month -= 12; year++; }
 	      while ( month <  1 ) { month += 12; year--; }
 
-	      vdate = encode_date(year, month, day);
+	      vdate = cdiEncodeDate(year, month, day);
 	    }
 	  else
 	    {
@@ -363,26 +380,41 @@ void *Settime(void *argument)
 			 juldate_to_seconds(juldate), ijulinc, vdate, vtime);
 	    }
 	}
-      else if ( operatorID == SETREFTIME || operatorID == SETCALENDAR )
+      else if ( operatorID == SETREFTIME || operatorID == SETCALENDAR || operatorID == SETTUNITS )
 	{
 	  ;
 	}
       else
 	{
-	  decode_date(vdate, &year, &month, &day);
+	  cdiDecodeDate(vdate, &year, &month, &day);
 
 	  if ( operatorID == SETYEAR ) year  = newval;
 	  if ( operatorID == SETMON  ) month = newval;
 	  if ( operatorID == SETDAY  ) day   = newval;
       
-	  vdate = encode_date(year, month, day);
+	  vdate = cdiEncodeDate(year, month, day);
 
 	  if ( operatorID == SETDATE  ) vdate = newval;
 	  if ( operatorID == SETTIME  ) vtime = newval;
 	}
 
-      taxisDefVdate(taxisID2, vdate);
-      taxisDefVtime(taxisID2, vtime);
+      if ( copy_timestep )
+	{
+	  taxisCopyTimestep(taxisID2, taxisID1);
+	  if ( operatorID == SETREFTIME )
+	    {
+	      taxisDefRdate(taxisID2, sdate);
+	      taxisDefRtime(taxisID2, stime);
+	    }
+	}
+      else
+	{
+	  int numavg = taxisInqNumavg(taxisID1);
+	  taxisDefNumavg(taxisID2, numavg);
+
+	  taxisDefVdate(taxisID2, vdate);
+	  taxisDefVtime(taxisID2, vtime);
+	}
 
       streamDefTimestep(streamID2, tsID1);
 	       

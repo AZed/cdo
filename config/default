@@ -47,7 +47,7 @@ case "${HOSTNAME}" in
                     CC=icc CFLAGS="-g -O2 -Wall -fno-alias"
 	;;
 # x86_64-suse-linux
-    tornado2|tornado5)
+    tornado*)
  	${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/sles10-x64 \
 	            --with-netcdf=/sw/sles10-x64/netcdf-4.0.1 \
 	            --with-hdf5=/sw/sles10-x64/hdf5-1.8.2 \
@@ -55,21 +55,15 @@ case "${HOSTNAME}" in
 	            CC=gcc CFLAGS="-g -D_REENTRANT -Wall -O2 -fopenmp -static"
 #	            CC=suncc CFLAGS="-g -D_REENTRANT -fast -xopenmp"
 	;;        
-    tornado1)
- 	${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/sles9-x64 \
-	            --with-netcdf=/sw/sles9-x64/netcdf-3.6.2 \
-                    --with-szlib=$HOME/local/sles9-x64 \
-	            CC=gcc CFLAGS="-g -D_REENTRANT -Wall -O2"
-	;;        
 # x86_64-etch-x64-linux
-    squall1)
+    squall*)
         if [ "$SGE_MODE" = "off" ] ; then
    	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-x64 \
                     --with-netcdf=/sw/etch-x64/netcdf-4.0.1 \
                     --with-hdf5=/sw/etch-x64/hdf5-1.8.2 \
                     --with-szlib=/sw/etch-x64/szip-2.1-static \
                     --with-proj=$HOME/local/etch-x64/proj-4.6.1 \
-                    CC=gcc 'CFLAGS=-g -D_REENTRANT -Wall -O2'
+                    CC=gcc 'CFLAGS=-g -D_REENTRANT -Wall -O2 -fopenmp -static'
         else
    	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-x64 \
 	            --with-netcdf=/sw/etch-x64/netcdf-3.6.2 \
@@ -87,18 +81,20 @@ case "${HOSTNAME}" in
                     --with-netcdf=$HOME/local \
                     --with-hdf5=$HOME/local \
                     --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2"
+	            CC=colorgcc CFLAGS="-g -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
 	;;
 # etch-ia32
     etch-ia32 | gata | baba)
         if [ "$SGE_MODE" = "off" ] ; then
  	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-ia32 \
-                    --with-jasper=/usr \
+                    --with-jasper=/sw/etch-ia32/jasper-1.900.1 \
                     --with-grib_api=/scratch/local2/m214003/local \
-	            --with-netcdf=/sw/etch-ia32/netcdf-3.6.2 \
-	            --with-hdf5=/usr \
+	            --with-netcdf=/sw/etch-ia32/netcdf-4.0.1 \
+	            --with-hdf5=/sw/etch-ia32/hdf5-1.8.4-threadsafe \
+                    --with-zlib=/sw/etch-ia32/zlib-1.2.3 \
                     --with-szlib=$HOME/local/etch-ia32 \
                     --with-proj=/sw/etch-ia32/proj-4.6.0 \
+                    LIBS="-ljpeg"\
 	            CC=gcc CFLAGS="-g -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2"
         else
  	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-ia32 \
@@ -110,6 +106,17 @@ case "${HOSTNAME}" in
                     CC=gcc CFLAGS="-g -D_REENTRANT -Wall -O2"
         fi
         ;;
+# dap enabled
+    egmont)
+ 	  ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/etch-ia32 \
+                    --with-jasper=/sw/etch-ia32/jasper-1.900.1 \
+	            --with-netcdf=/sw/etch-ia32/netcdf-4.1.1-gcc \
+	            --with-hdf5=/sw/etch-ia32/hdf5-1.8.4-threadsafe \
+                    --with-zlib=/sw/etch-ia32/zlib-1.2.3 \
+                    --with-proj=/sw/etch-ia32/proj-4.6.0 \
+                    LIBS="-lcurl -lgssapi_krb5 -lssl -lcrypto -ldl -lidn -ldes425 -lkrb5 -lk5crypto -lcom_err -lkrb5support -lresolv" \
+	            CC=gcc CFLAGS="-g -D_REENTRANT -fopenmp -static -Wall -W -Wfloat-equal -pedantic -O2"
+    ;;
 # sarge-ia32
     sarge-ia32)
 # opt: -fno-PIC -O4 -march=i686 -mcpu=i686 -pipe -ffast-math -fomit-frame-pointer
@@ -183,12 +190,6 @@ case "${HOSTNAME}" in
 		    CC=escc AR=esar \
                     CFLAGS="-O -Onooverlap,restrict=all -pvctl,fullmsg,noassume,loopcnt=1000000"
 	;;
-# mips-sgi-irix6.5
-    ecgate1)
-	${CONFPATH}configure --prefix=$HOME/local \
- 	            --with-netcdf=/home/ms/spdekplb/hmk/include,/home/ms/spdekplb/hmk/lib64 \
-	            CC=cc CFLAGS="-O -64"
-	;;
 # 5000-fujitsu-uxpv4.1_ES
     vpp5*)
 	${CONFPATH}configure --prefix=$HOME \
@@ -196,7 +197,7 @@ case "${HOSTNAME}" in
 	            CC=vcc CFLAGS="-O -Wv,-m3 -K4"
 	;;
 # powerpc-ibm-aix5.2.0.0
-    ecgate)
+    ecga*)
 	${CONFPATH}configure --prefix=$HOME/local \
                     --with-netcdf=/usr/local/apps/netCDF/3.6.2/LP64_underscore \
                     --with-szlib=$HOME/local \
@@ -205,8 +206,9 @@ case "${HOSTNAME}" in
 # powerpc-ibm-aix5.3.0.0
     blizzard*)
 	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=/sw/aix53/netcdf-4.0.1-ibm \
-                    --with-hdf5=/sw/aix53/hdf5-1.8.2 \
+                    --with-netcdf=/sw/aix61/netcdf-4.1.1-rc2 \
+                    --with-hdf5=/sw/aix61/hdf5-1.8.4-patch1-threadsafe \
+                    --with-zlib=/sw/aix53/zlib-1.2.3 \
                     --with-szlib=/sw/aix53/szip-2.1 \
                     --with-proj=/sw/aix53/proj-4.6.1 \
  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP"
@@ -218,12 +220,11 @@ case "${HOSTNAME}" in
 	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP"
 	;;
 # powerpc-ibm-aix6.0.0.0
-    hpc*)
+    c1a*)
 	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-netcdf=/usr/local/lib/netcdf/3.6.2/LP64_underscore \
-                    --with-hdf5=/usr/local/lib/hdf5/1.8.1/LP64_underscore \
-                    --with-szlib=$HOME/local \
-                    --with-proj=$HOME/local \
+                    --with-netcdf=/usr/local/apps/netcdf/3.6.3/LP64 \
+                    --with-hdf5=/usr/local/apps/hdf5/1.8.1/LP64 \
+                    --with-szlib=/usr/local/apps/szip/2.1/LP64 \
 	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP"
 	;;
 # powerpc-ibm-aix6.0.0.0

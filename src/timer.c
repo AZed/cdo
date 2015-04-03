@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2008 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -72,17 +72,17 @@ void util_read_real_time(void *it);
 void util_diff_real_time(void *it1, void *it2, double *t);
 
 
-static FILE *rt_unit;
+FILE *rt_unit = NULL;
 
 enum {rt_stat_undef, rt_stat_on, rt_stat_off};
 
-/* minimal internal time needed to do one measuremenet */
+/* minimal internal time needed to do one measurement */
 
-static double tm_shift = 0.0;
+double tm_shift = 0.0;
 
 /* average total overhead for one timer_start & timer_stop pair */
 
-static double tm_overhead = 0.0;
+double tm_overhead = 0.0;
 
 
 #define  MAX_TIMER    128  /* max number of timers allowed */
@@ -101,17 +101,19 @@ typedef struct {
 }
 RT_TYPE;
 
-static RT_TYPE rt[MAX_TIMER];
-static RT_TYPE rt_init = {0, 0, 0, 0, 1.e30, 0, 0, "", "noname"};
-static int timer_need_init = 1;
-static int top_timer = 0;
+RT_TYPE rt[MAX_TIMER];
+RT_TYPE rt_init = {0, 0, 0, 0, 1.e30, 0, 0, "", "noname"};
+int timer_need_init = 1;
+int top_timer = 0;
 
-static void set_time_mark(void *mark)
+static
+void set_time_mark(void *mark)
 {
   util_read_real_time(mark);
 }
 
-static double get_time_val(void *mark0)
+static
+double get_time_val(void *mark0)
 {
   double dt;
   char mark[32];
@@ -124,9 +126,10 @@ static double get_time_val(void *mark0)
   return (dt);
 }
 
-static int ntests = 100; /* tests need about n microsecs on pwr4 */
+int ntests = 100; /* tests need about n microsecs on pwr4 */
 
-static double m1(void)
+static
+double m1(void)
 {
   double dt, dt0;
   int i;
@@ -143,7 +146,8 @@ static double m1(void)
   return (dt0);
 }
 
-static double m2(void)
+static
+double m2(void)
 {
   char mark1[32], mark2[32];
   double dt1, dt2, dt0;
@@ -163,14 +167,16 @@ static double m2(void)
   return (dt0);
 }
 
-static void estimate_overhead(void)
+static
+void estimate_overhead(void)
 {
   tm_shift    = m1();
   tm_overhead = m2();
 }
 
 
-static void timer_init(void)
+static
+void timer_init(void)
 {
   rt_unit = stderr;
 
@@ -207,14 +213,14 @@ int timer_new(char *text)
   return (it);
 }
 
-
+static
 void timer_check(int it)
 {
   if ( it < 0 || it > (top_timer-1) )
     fprintf(rt_unit, "timer: invalid timer id %d\n", it);
 }
 
-
+static
 double timer_val(int it)
 {
   double val, dt;
@@ -232,7 +238,7 @@ double timer_val(int it)
   return (val);
 }
 
-
+static
 void timer_header(void)
 {
   fprintf(rt_unit, "\nTimer report:  shift = %g\n", tm_shift);
@@ -299,4 +305,36 @@ void timer_stop(int it)
   if ( dt > rt[it].max ) rt[it].max = dt;
 
   rt[it].stat = rt_stat_off;
+}
+
+
+
+#include "counter.h"
+
+static
+void counter_init(counter_t *counter)
+{
+  counter->cputime = 0;
+}
+
+
+void counter_start(counter_t *counter)
+{
+  counter_init(counter);
+
+  if ( timer_need_init ) timer_init();
+
+  set_time_mark(counter->mark);
+}
+
+
+void counter_stop(counter_t *counter)
+{
+  counter->cputime = get_time_val(counter->mark);
+}
+
+
+double counter_cputime(counter_t counter)
+{
+  return (counter.cputime);
 }

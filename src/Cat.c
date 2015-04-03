@@ -21,12 +21,9 @@
       Copy       cat             Concatenate datasets
 */
 
-
 #if  defined  (HAVE_CONFIG_H)
 #  include "config.h" /* large file */
 #endif
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -136,7 +133,7 @@ void *Cat(void *argument)
 	    {
 	      streamInqRecord(streamID1, &varID, &levelID);
 	      streamDefRecord(streamID2,  varID,  levelID);
-	  
+
 	      if ( lcopy )
 		{
 		  streamCopyRecord(streamID2, streamID1); 

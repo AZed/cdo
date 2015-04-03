@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -59,8 +59,8 @@ void *Seasstat(void *argument)
   int newseas, oldmon = 0, newmon;
   int nseason = 0;
   double missval;
-  FIELD **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
+  field_t field;
   int season_start;
   const char *seas_name[4];
 
@@ -105,10 +105,10 @@ void *Seasstat(void *argument)
 
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars*sizeof(FIELD *));
-  samp1 = (FIELD **) malloc(nvars*sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars*sizeof(field_t *));
+  samp1 = (field_t **) malloc(nvars*sizeof(field_t *));
   if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (FIELD **) malloc(nvars*sizeof(FIELD *));
+    vars2 = (field_t **) malloc(nvars*sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -117,10 +117,10 @@ void *Seasstat(void *argument)
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
-      samp1[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+      vars1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+      samp1[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
       if ( operfunc == func_std || operfunc == func_var )
-	vars2[varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	vars2[varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{
@@ -313,20 +313,15 @@ void *Seasstat(void *argument)
 
       if ( cdoVerbose )
 	{
-	  int year0, month0, day0, hour0, minute0, second0;
-	  int year1, month1, day1, hour1, minute1, second1;
-	  decode_date(vdate0, &year0, &month0, &day0);
-	  decode_time(vtime0, &hour0, &minute0, &second0);
-	  decode_date(vdate1, &year1, &month1, &day1);
-	  decode_time(vtime1, &hour1, &minute1, &second1);
-	  cdoPrint("season %3d %3s "
-		   "start "DATE_FORMAT" "TIME_FORMAT" "
-		   "end "DATE_FORMAT" "TIME_FORMAT" "
-		   "ntimesteps %d", 
+	  char vdatestr0[32], vtimestr0[32];
+	  char vdatestr1[32], vtimestr1[32];
+	  date2str(vdate0, vdatestr0, sizeof(vdatestr0));
+	  time2str(vtime0, vtimestr0, sizeof(vtimestr0));
+	  date2str(vdate1, vdatestr1, sizeof(vdatestr1));
+	  time2str(vtime1, vtimestr1, sizeof(vtimestr1));
+	  cdoPrint("season %3d %3s start %s %s end %s %s ntimesteps %d", 
 		   nseason, seas_name[seas0],
-		   year0, month0, day0, hour0, minute0, second0,
-		   year1, month1, day1, hour1, minute1, second1,
-		   nsets);
+		   vdatestr0, vtimestr0, vdatestr1, vtimestr1, nsets);
 	}
 
       taxisDefVdate(taxisID2, vdate1);
@@ -335,10 +330,10 @@ void *Seasstat(void *argument)
 
       if ( nsets < 3 )
 	{
-	  int year, month, day;
-	  decode_date(vdate0, &year, &month, &day);
-	  cdoWarning("Season %3d ("DATE_FORMAT") has only %d input time step%s!", 
-		     otsID, year, month, day, nsets, nsets == 1 ? "" : "s");
+	  char vdatestr[32];
+	  date2str(vdate0, vdatestr, sizeof(vdatestr));
+	  cdoWarning("Season %3d (%s) has only %d input time step%s!", 
+		     otsID, vdatestr, nsets, nsets == 1 ? "" : "s");
 	}
 
       for ( recID = 0; recID < nrecords; recID++ )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ void *Fldstat(void *argument)
   int nmiss;
   double slon, slat;
   double sglval;
-  FIELD field;
+  field_t field;
   int taxisID1, taxisID2;
   /* RQ */
   int pn = 0;
@@ -70,7 +70,7 @@ void *Fldstat(void *argument)
   cdoOperatorAdd("fldvar",  func_var,  0, NULL);
   cdoOperatorAdd("fldstd",  func_std,  0, NULL);
   /* RQ */
-  cdoOperatorAdd("fldpctl", func_pctl,  0, NULL);
+  cdoOperatorAdd("fldpctl", func_pctl, 0, NULL);
   /* QR */
 
   operatorID = cdoOperatorID();
@@ -185,8 +185,8 @@ void *Fldstat(void *argument)
 			yval = gridInqYval(field.grid, j);
 			vdate = taxisInqVdate(taxisID1);
 			vtime = taxisInqVtime(taxisID1);
-			decode_date(vdate, &year, &month, &day);
-			decode_time(vtime, &hour, &minute, &second);
+			cdiDecodeDate(vdate, &year, &month, &day);
+			cdiDecodeTime(vtime, &hour, &minute, &second);
 			code = vlistInqVarCode(vlistID1, varID);
 			level = zaxisInqLevel(vlistInqVarZaxis(vlistID1, varID), levelID);
 			if ( tsID == 0 && recID == 0 )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -26,11 +26,6 @@
       Runstat    runvar          Running variance
       Runstat    runstd          Running standard deviation
 */
-
-
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -101,7 +96,7 @@ void *Runstat(void *argument)
   int nvars, nlevel;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD ***vars1 = NULL, ***vars2 = NULL, ***samp1 = NULL;
+  field_t ***vars1 = NULL, ***vars2 = NULL, ***samp1 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
   int calendar;
@@ -172,17 +167,17 @@ void *Runstat(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
-  vars1 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
-  samp1 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
+  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+  samp1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
+    vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
 
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
-      samp1[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
+      samp1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
       if ( operfunc == func_std || operfunc == func_var )
-	vars2[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	vars2[its] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -191,10 +186,10 @@ void *Runstat(void *argument)
 	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 
-	  vars1[its][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
-	  samp1[its][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	  vars1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+	  samp1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[its][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	    vars2[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {

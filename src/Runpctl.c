@@ -30,7 +30,6 @@
 #include "pstream.h"
 #include "functs.h"
 #include "field.h"
-#include "dmemory.h"
 #include "nth_element.h"
 
 
@@ -52,7 +51,7 @@ void *Runpctl(void *argument)
   int nvars, nlevels;
   int *recVarID, *recLevelID;
   double missval, val;
-  FIELD ***vars1 = NULL;
+  field_t ***vars1 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
   int calendar, dpy;
@@ -96,12 +95,12 @@ void *Runpctl(void *argument)
   recLevelID = (int *) malloc(nrecords*sizeof(int));
 
   datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
-  vars1 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
+  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   array = (double *) malloc(ndates*sizeof(double));
   
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
         {
@@ -110,7 +109,7 @@ void *Runpctl(void *argument)
           nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
           missval  = vlistInqVarMissval(vlistID1, varID);
 
-          vars1[its][varID] = (FIELD *)  malloc(nlevels*sizeof(FIELD));
+          vars1[its][varID] = (field_t *)  malloc(nlevels*sizeof(field_t));
 
           for ( levelID = 0; levelID < nlevels; levelID++ )
             {

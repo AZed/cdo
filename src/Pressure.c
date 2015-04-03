@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,14 +18,11 @@
 /*
    This module contains the following operators:
 
-      Pressure    fpressure          Pressure on full hybrid level
-      Pressure    hpressure          Pressure on half hybrid level
+      Pressure    pressure_fl          Pressure on full hybrid level
+      Pressure    pressure_hl          Pressure on half hybrid level
 */
 
-
 #include <ctype.h>
-#include <string.h>
-#include <math.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -38,7 +35,7 @@
 void *Pressure(void *argument)
 {
   static char func[] = "Pressure";
-  int FPRESSURE, HPRESSURE;
+  int PRESSURE_FL, PRESSURE_HL, DELTAP_FL, DELTAH_FL;
   int operatorID;
   int mode;
   enum {ECHAM_MODE, WMO_MODE};
@@ -47,7 +44,7 @@ void *Pressure(void *argument)
   int vlistID1, vlistID2;
   int gridsize, ngp = 0;
   int recID, nrecs;
-  int i, offset;
+  int i, k, offset;
   int tsID, varID, levelID;
   int nvars;
   int zaxisIDp, zaxisIDh = -1, nzaxis;
@@ -59,7 +56,7 @@ void *Pressure(void *argument)
   char varname[128];
   double *vct = NULL;
   double *rvct = NULL; /* reduced VCT for LM */
-  double *ps_prog = NULL, *full_press = NULL, *half_press = NULL;
+  double *ps_prog = NULL, *full_press = NULL, *half_press = NULL, *deltap_fl = NULL;
   double *hyb_press = NULL;
   double *pdata = NULL;
   int taxisID1, taxisID2;
@@ -72,8 +69,9 @@ void *Pressure(void *argument)
 
   cdoInitialize(argument);
 
-  FPRESSURE = cdoOperatorAdd("fpressure", 0, 0, NULL);
-  HPRESSURE = cdoOperatorAdd("hpressure", 0, 0, NULL);
+  PRESSURE_FL = cdoOperatorAdd("pressure_fl", 0, 0, NULL);
+  PRESSURE_HL = cdoOperatorAdd("pressure_hl", 0, 0, NULL);
+  DELTAP_FL   = cdoOperatorAdd("deltap_fl",   0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -214,13 +212,14 @@ void *Pressure(void *argument)
   if ( zaxisIDh != -1 && ngp > 0 )
     {
       ps_prog    = (double *) malloc(ngp*sizeof(double));
+      deltap_fl  = (double *) malloc(ngp*nhlevf*sizeof(double));
       full_press = (double *) malloc(ngp*nhlevf*sizeof(double));
       half_press = (double *) malloc(ngp*nhlevh*sizeof(double));
     }
   else
     cdoAbort("No data on hybrid model level found!");
 
-  if ( operatorID == FPRESSURE )
+  if ( operatorID == PRESSURE_FL || operatorID == DELTAP_FL )
     zaxisIDp = zaxisCreate(ZAXIS_HYBRID, nhlevf);
   else
     zaxisIDp = zaxisCreate(ZAXIS_HYBRID_HALF, nhlevh);
@@ -405,10 +404,21 @@ void *Pressure(void *argument)
 	  presh(full_press, half_press, vct, ps_prog, nhlevf, ngp);
 	}
 
-      if ( operatorID == FPRESSURE )
+      if ( operatorID == PRESSURE_FL )
 	{
 	  nlevel = nhlevf;
 	  hyb_press = full_press;
+	}
+      else if ( operatorID == DELTAP_FL )
+	{
+	  nlevel = nhlevf;
+	  for ( k = 0; k < nhlevf; ++k )
+	    for ( i = 0; i < ngp; ++i )
+	      {
+		deltap_fl[k*ngp+i] = half_press[(k+1)*ngp+i] - half_press[k*ngp+i];
+	      }
+
+	  hyb_press = deltap_fl;
 	}
       else
 	{
@@ -432,6 +442,7 @@ void *Pressure(void *argument)
 
   if ( pdata      ) free(pdata);
   if ( ps_prog    ) free(ps_prog);
+  if ( deltap_fl  ) free(deltap_fl);
   if ( full_press ) free(full_press);
   if ( half_press ) free(half_press);
   if ( vct        ) free(vct);

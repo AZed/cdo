@@ -61,9 +61,6 @@
       Hurr        hurr                  number of hurricane days 
 */
 
-#include <stdio.h>
-#include <string.h>
-
 #include "cdo.h"
 #include "cdo_int.h"
 #include "ecacore.h"

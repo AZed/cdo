@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -45,8 +45,8 @@ void *Trend(void *argument)
   int nwork = 5;
   double temp1, temp2;
   double missval, missval1, missval2;
-  FIELD **work[5];
-  FIELD field1, field2;
+  field_t **work[5];
+  field_t field1, field2;
 
   cdoInitialize(argument);
 
@@ -87,7 +87,7 @@ void *Trend(void *argument)
   field2.ptr = (double *) malloc(gridsize*sizeof(double));
 
   for ( w = 0; w < nwork; w++ )
-    work[w] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+    work[w] = (field_t **) malloc(nvars*sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -97,7 +97,7 @@ void *Trend(void *argument)
       missval  = vlistInqVarMissval(vlistID1, varID);
 
       for ( w = 0; w < nwork; w++ )
-	work[w][varID] = (FIELD *)  malloc(nlevel*sizeof(FIELD));
+	work[w][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
       for ( levelID = 0; levelID < nlevel; levelID++ )
 	{

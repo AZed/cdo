@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -29,8 +29,6 @@
       Seltime    selsmon         Select single month
 */
 
-
-#include <string.h>
 #include <ctype.h>
 
 #include "cdi.h"
@@ -83,7 +81,7 @@ void *Seltime(void *argument)
   int *vdate_list = NULL, *vtime_list = NULL;
   double missval;
   double *single;
-  FIELD ***vars = NULL;
+  field_t ***vars = NULL;
 
   cdoInitialize(argument);
 
@@ -215,16 +213,16 @@ void *Seltime(void *argument)
 		{
 		  status = sscanf(operatorArgv()[i], "%d-%d-%dT%d:%d:%d",
 				  &year, &month, &day, &hour, &minute, &second);
-		  fval = encode_time(hour, minute, second);
+		  fval = cdiEncodeTime(hour, minute, second);
 		  if ( fabs(fval) > 0 ) fval /= 1000000;
-		  fval += encode_date(year, month, day);
+		  fval += cdiEncodeDate(year, month, day);
 		  listSetFlt(flist, i, fval);
 		  set2 = FALSE;
 		}
 	      else
 		{
 		  status = sscanf(operatorArgv()[i], "%d-%d-%d", &year, &month, &day);
-		  fval = encode_date(year, month, day);
+		  fval = cdiEncodeDate(year, month, day);
 
 		  if ( nsel > 1 && i > 0 ) fval += 0.999;
 
@@ -249,7 +247,7 @@ void *Seltime(void *argument)
 	  if ( strchr(operatorArgv()[i], ':') )
 	    {
 	      sscanf(operatorArgv()[i], "%d:%d:%d", &hour, &minute, &second);
-	      listSetInt(ilist, i, encode_time(hour, minute, second));
+	      listSetInt(ilist, i, cdiEncodeTime(hour, minute, second));
 	    }
 	  else
 	    {
@@ -313,6 +311,7 @@ void *Seltime(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
+      if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
     }
 
@@ -335,11 +334,11 @@ void *Seltime(void *argument)
 	  nts1 = 1;
 	}
 
-      vars  = (FIELD ***) malloc(nts1*sizeof(FIELD **));
+      vars  = (field_t ***) malloc(nts1*sizeof(field_t **));
 
       for ( tsID = 0; tsID < nts1; tsID++ )
 	{
-	  vars[tsID] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	  vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
@@ -350,7 +349,7 @@ void *Seltime(void *argument)
 		  nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		  gridsize = gridInqSize(gridID);
 		  
-		  vars[tsID][varID] = (FIELD *) malloc(nlevel*sizeof(FIELD));
+		  vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
 
 		  for ( levelID = 0; levelID < nlevel; levelID++ )
 		    {

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -165,7 +165,7 @@ void *Filter(void *argument)
   double missval;
   double *array1, *array2;
   double fdata = 0;
-  FIELD ***vars = NULL;
+  field_t ***vars = NULL;
   double fmin, fmax;
   int *fmasc;
   
@@ -207,13 +207,13 @@ void *Filter(void *argument)
           nalloc += NALLOC_INC;
           vdate = (int *) realloc(vdate, nalloc*sizeof(int));
           vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-          vars  = (FIELD ***) realloc(vars, nalloc*sizeof(FIELD **));
+          vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
         }
                        
       vdate[tsID] = taxisInqVdate(taxisID1);
       vtime[tsID] = taxisInqVtime(taxisID1);
            
-      vars[tsID] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
       
       for ( varID = 0; varID < nvars; varID++ )
         {
@@ -221,7 +221,7 @@ void *Filter(void *argument)
           missval  = vlistInqVarMissval(vlistID1, varID);
           nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
           
-          vars[tsID][varID] = (FIELD *) malloc(nlevel*sizeof(FIELD));
+          vars[tsID][varID] = (field_t *) malloc(nlevel*sizeof(field_t));
           
           for ( levelID = 0; levelID < nlevel; levelID++ )
             {
@@ -251,9 +251,9 @@ void *Filter(void *argument)
 	  int lperiod, incperiod;
 	  int year, month, day;
 
-          decode_date(vdate[tsID], &year, &month, &day);
+          cdiDecodeDate(vdate[tsID], &year, &month, &day);
           
-	  decode_date(vdate[tsID-1], &year0, &month0, &day0);               
+	  cdiDecodeDate(vdate[tsID-1], &year0, &month0, &day0);               
 
           juldate0 = juldate_encode(calendar, vdate[tsID-1], vtime[tsID-1]);        
           juldate  = juldate_encode(calendar, vdate[tsID], vtime[tsID]);         

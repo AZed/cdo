@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,8 +20,8 @@
 #include <ctype.h>   /* tolower */
 
 #include "cdo.h"
+#include "cdo_int.h"
 #include "modules.h"
-#include "dmemory.h"
 #include "util.h"
 
 char *getProgname(char *string)
@@ -209,3 +209,38 @@ void get_season_name(const char *seas_name[4])
     for ( i = 0; i < 4; ++i ) seas_name[i] = seas_name_jan[i];
 }
 
+
+//#include <sys/types.h>
+#include <sys/stat.h>
+//#include <unistd.h>
+
+int fileExist(const char *filename)
+{
+  int status = 0;
+  struct stat buf;
+
+  if ( stat(filename, &buf) == 0 )
+    {
+      if ( buf.st_size > 0 ) status = 1;
+    }
+
+  return (status);
+}
+
+
+int userFileOverwrite(const char *filename)
+{
+  int status = 0;
+  char line[1024], *pline;
+
+  fprintf(stderr, "File %s already exist, overwrite? (yes/no): ", filename);
+  readline(stdin, line, 1024);
+  pline = line;
+  while ( isspace((int) *pline) ) pline++;
+  if ( pline[0] == 'y' && pline[1] == 'e' && pline[2] == 's' )
+    status = 1;
+  else if ( pline[0] == 'Y' && pline[1] == 'E' && pline[2] == 'S' )
+    status = 1;
+
+  return (status);
+}

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,14 +19,13 @@
    This module contains the following operators:
 
       Split      splitcode       Split codes
-      Split      splitname       Split variables
+      Split      splitname       Split  variables
       Split      splitlevel      Split levels
       Split      splitgrid       Split grids
       Split      splitzaxis      Split zaxis
+      Split      splittabnum     Split table numbers
 */
 
-
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"
@@ -37,17 +36,17 @@
 void *Split(void *argument)
 {
   static char func[] = "Split";
-  int SPLITCODE, SPLITNAME, SPLITLEVEL, SPLITGRID, SPLITZAXIS;
+  int SPLITCODE, SPLITNAME, SPLITLEVEL, SPLITGRID, SPLITZAXIS, SPLITTABNUM;
   int operatorID;
   int nchars;
   int streamID1;
   int varID;
-  int code;
+  int code, tabnum;
   int nrecs, nvars, nzaxis, nlevs;
   int tsID, recID, levelID, zaxisID, levID;
   int varID2, levelID2;
   int vlistID1, vlistID2;
-  int  *vlistIDs = NULL, *streamIDs = NULL;
+  int *vlistIDs = NULL, *streamIDs = NULL;
   int  itmp[999];
   double ftmp[999];
   char filesuffix[32];
@@ -62,11 +61,12 @@ void *Split(void *argument)
 
   cdoInitialize(argument);
 
-  SPLITCODE  = cdoOperatorAdd("splitcode",  0, 0, NULL);
-  SPLITNAME  = cdoOperatorAdd("splitname",  0, 0, NULL);
-  SPLITLEVEL = cdoOperatorAdd("splitlevel", 0, 0, NULL);
-  SPLITGRID  = cdoOperatorAdd("splitgrid",  0, 0, NULL);
-  SPLITZAXIS = cdoOperatorAdd("splitzaxis", 0, 0, NULL);
+  SPLITCODE   = cdoOperatorAdd("splitcode",   0, 0, NULL);
+  SPLITNAME   = cdoOperatorAdd("splitname",   0, 0, NULL);
+  SPLITLEVEL  = cdoOperatorAdd("splitlevel",  0, 0, NULL);
+  SPLITGRID   = cdoOperatorAdd("splitgrid",   0, 0, NULL);
+  SPLITZAXIS  = cdoOperatorAdd("splitzaxis",  0, 0, NULL);
+  SPLITTABNUM = cdoOperatorAdd("splittabnum", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -145,6 +145,59 @@ void *Split(void *argument)
 	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
       if ( codes ) free(codes);
+    }
+  else if ( operatorID == SPLITTABNUM )
+    {
+      int *tabnums = NULL;
+      nsplit = 0;
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  tabnum  = tableInqNum(vlistInqVarTable(vlistID1, varID));
+	  for ( index = 0; index < varID; index++ )
+	    if ( tabnum == tableInqNum(vlistInqVarTable(vlistID1, index)) ) break;
+
+	  if ( index == varID )
+	    {
+	      itmp[nsplit] = tabnum;
+	      nsplit++;
+	    }
+	}
+
+      tabnums   = (int *) malloc(nsplit*sizeof(int));
+      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
+      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      memcpy(tabnums, itmp, nsplit*sizeof(int));
+
+      for ( index = 0; index < nsplit; index++ )
+	{
+	  vlistClearFlag(vlistID1);
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      tabnum  = tableInqNum(vlistInqVarTable(vlistID1, varID));
+	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      nlevs   = zaxisInqSize(zaxisID);
+	      if ( tabnums[index] == tabnum )
+		{
+		  for ( levID = 0; levID < nlevs; levID++ )
+		    {
+		      vlistDefIndex(vlistID1, varID, levID, index);
+		      vlistDefFlag(vlistID1, varID, levID, TRUE);
+		    }
+		}
+	    }
+	  vlistID2 = vlistCreate();
+	  vlistCopyFlag(vlistID2, vlistID1);
+	  vlistIDs[index] = vlistID2;
+
+	  sprintf(filename+nchars, "%03d", tabnums[index]);
+	  if ( filesuffix[0] )
+	    sprintf(filename+nchars+3, "%s", filesuffix);
+	  streamIDs[index] = streamOpenWrite(filename, cdoFiletype());
+	  if ( streamIDs[index] < 0 ) cdiError(streamIDs[index], "Open failed on %s", filename);
+
+	  streamDefVlist(streamIDs[index], vlistIDs[index]);
+	}
+      if ( tabnums ) free(tabnums);
     }
   else if ( operatorID == SPLITNAME )
     {
@@ -331,6 +384,7 @@ void *Split(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
+      if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
       array = (double *) malloc(gridsize*sizeof(double));
     }
 
@@ -371,14 +425,14 @@ void *Split(void *argument)
 
   for ( index = 0; index < nsplit; index++ )
     {
-      vlistDestroy(vlistIDs[index]);
       streamClose(streamIDs[index]);
+      vlistDestroy(vlistIDs[index]);
     }
  
   if ( ! lcopy )
     if ( array ) free(array);
 
-  if ( vlistIDs ) free(vlistIDs);
+  if ( vlistIDs  ) free(vlistIDs);
   if ( streamIDs ) free(streamIDs);
 
   cdoFinish();

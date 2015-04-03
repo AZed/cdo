@@ -18,10 +18,11 @@
 #define  C_EARTH_RADIUS  (6371000.0)
 double PlanetRadius = C_EARTH_RADIUS;
 
-void geninx(int ntr, double *f, double *g)
+
+void geninx(long ntr, double *f, double *g)
 {
-  int m2,n2;
-  int m, n ;
+  long m2,n2;
+  long m, n ;
 
   for ( m = 0; m <= ntr; m++ )
     {
@@ -504,26 +505,34 @@ void dv2uv(double *d, double *o, double *u, double *v, double *f, double *g,
 }
 
 
-void dv2ps(double *div, double *pot, int nlev, int ntr)
+void dv2ps(const double * restrict div, double * restrict pot, long nlev, long ntr)
 {
-  int l,m,n;
+  long l, m, n;
+  double fact;
 
   for ( l = 0; l <  nlev; l++ )
-    for ( m = 0; m <= ntr; m++ )
-      for ( n = m; n <= ntr; n++ )
+    {
+      /* m == 0 */
+      *pot++ = 0.0;
+      *pot++ = 0.0;
+      div += 2;
+
+      for ( n = 1; n <= ntr; n++ )
 	{
-	  if ( n > 0 )
-	    {
-	      *pot++ = *div++ * SQUARE_RADIUS / (n*n + n);
-	      *pot++ = *div++ * SQUARE_RADIUS / (n*n + n);
-	    }
-	  else
-	    {
-	      *pot++ = 0.0;
-	      *pot++ = 0.0;
-	      div += 2;
-	    }
+	  fact = SQUARE_RADIUS / (n*n + n);
+	  *pot++ = *div++ * fact;
+	  *pot++ = *div++ * fact;
 	}
+
+      /* m >= 0 */
+      for ( m = 1; m <= ntr; m++ )
+	for ( n = m; n <= ntr; n++ )
+	  {
+	    fact = SQUARE_RADIUS / (n*n + n);
+	    *pot++ = *div++ * fact;
+	    *pot++ = *div++ * fact;
+	  }
+    }
 }
 
 

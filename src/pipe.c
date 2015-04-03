@@ -505,14 +505,15 @@ void pipeReadRecord(PSTREAM *pstreamptr, double *data, int *nmiss)
 	  if ( PipeDebug ) fprintf(stderr, "pstreamID = %d\n", pstreamptr->self);
 	  if ( pstreamptr->pipe->hasdata == 1 )
 	    {
-	      int vlistID, gridsize;
+	      int vlistID, datasize;
 
 	      if ( ! pstreamptr->pipe->data )
 		Error(func, "No data pointer for %s", pname);
 
 	      vlistID = pstreamptr->vlistID;
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID, pstreamptr->pipe->varID));
-	      memcpy(data, pstreamptr->pipe->data, gridsize*sizeof(double));
+	      datasize = gridInqSize(vlistInqVarGrid(vlistID, pstreamptr->pipe->varID));
+	      if ( vlistNumber(vlistID) != CDI_REAL ) datasize *= 2;
+	      memcpy(data, pstreamptr->pipe->data, datasize*sizeof(double));
 	      *nmiss = pstreamptr->pipe->nmiss;
 	    }
 	  else
@@ -526,15 +527,16 @@ void pipeReadRecord(PSTREAM *pstreamptr, double *data, int *nmiss)
     }
   else if ( pipe->hasdata == 1 )
     {
-      int vlistID, gridsize;
+      int vlistID, datasize;
 
       if ( ! pipe->data )
 	Error(func, "No data pointer for %s", pname);
 
       vlistID = pstreamptr->vlistID;
-      gridsize = gridInqSize(vlistInqVarGrid(vlistID, pipe->varID));
-      pipe->nvals += gridsize;
-      memcpy(data, pipe->data, gridsize*sizeof(double));
+      datasize = gridInqSize(vlistInqVarGrid(vlistID, pipe->varID));
+      pipe->nvals += datasize;
+      if ( vlistNumber(vlistID) != CDI_REAL ) datasize *= 2;
+      memcpy(data, pipe->data, datasize*sizeof(double));
       *nmiss = pipe->nmiss;
     }
   else

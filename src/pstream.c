@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -197,15 +197,18 @@ static void pstream_init_entry(PSTREAM *pstreamptr)
   pstreamptr->tsID       = -1;
   pstreamptr->filetype   = -1;
   pstreamptr->name       = NULL;
-#if  defined  (HAVE_LIBPTHREAD)
-  pstreamptr->pipe       = NULL;
-  pstreamptr->rthreadID  = 0;
-  pstreamptr->wthreadID  = 0;
-#endif
   pstreamptr->tsID0      = 0;
   pstreamptr->mfiles     = 0;
   pstreamptr->nfiles     = 0;
+  pstreamptr->varID      = -1;
+  pstreamptr->name       = NULL;
   pstreamptr->mfnames    = NULL;
+  pstreamptr->varlist    = NULL;
+#if  defined  (HAVE_LIBPTHREAD)
+  pstreamptr->pipe       = NULL;
+  //  pstreamptr->rthreadID  = 0;
+  //  pstreamptr->wthreadID  = 0;
+#endif
 }
 
 
@@ -707,7 +710,10 @@ int pstreamOpenWrite(const char *argument, int filetype)
 	  streamDefZlevel(fileID, cdoZlevel);
 
 	  if ( cdoZtype == COMPRESS_SZIP && (filetype != FILETYPE_GRB && filetype != FILETYPE_NC4) )
-	    cdoWarning("SZIP compression not available for non GRIB/netCDF4 data!");
+	    cdoWarning("SZIP compression not available for non GRIB1/netCDF4 data!");
+
+	  if ( cdoZtype == COMPRESS_JPEG && filetype != FILETYPE_GRB2 )
+	    cdoWarning("SZIP compression not available for non GRIB2 data!");
 
 	  if ( cdoZtype == COMPRESS_ZIP && filetype != FILETYPE_NC4 )
 	    cdoWarning("Deflate compression not available for non netCDF4 data!");
@@ -718,10 +724,11 @@ int pstreamOpenWrite(const char *argument, int filetype)
       */
       strcpy(filename, argument);
 
-      pstreamptr->mode   = 'w';
-      pstreamptr->name   = filename;
-      pstreamptr->fileID = fileID;
-    }
+      pstreamptr->mode     = 'w';
+      pstreamptr->name     = filename;
+      pstreamptr->fileID   = fileID;
+      pstreamptr->filetype = filetype;
+   }
 
   return (pstreamID);
 }
@@ -864,6 +871,12 @@ void pstreamClose(int pstreamID)
 	    }
 	}
 
+      if ( pstreamptr->varlist )
+	{
+	  free(pstreamptr->varlist);
+	  pstreamptr->varlist = NULL;
+	}
+
       pstream_delete_entry(pstreamptr);
     }
 }
@@ -894,6 +907,12 @@ int pstreamInqVlist(int pstreamID)
 
   pstreamptr->vlistID = vlistID;
 
+  if ( vlistNumber(vlistID) == CDI_COMP && cdoStreamNumber() == CDI_REAL )
+    cdoAbort("Complex fields are not supported by this operator!");
+
+  if ( vlistNumber(vlistID) == CDI_REAL && cdoStreamNumber() == CDI_COMP )
+    cdoAbort("This operator needs complex fields!");
+
   processDefVarNum(vlistNvars(vlistID), pstreamID);
 
   return (vlistID);
@@ -919,6 +938,74 @@ const char *cdoComment(void)
   return (comment);
 }
 
+static
+void pstreamDefVarlist(PSTREAM *pstreamptr, int vlistID)
+{
+  static char func[] = "pstreamDefVarlist";
+  int varID, nvars;
+  int laddoffset, lscalefactor;
+  int datatype, filetype;
+  varlist_t *varlist;
+
+  filetype = pstreamptr->filetype;
+
+  if ( pstreamptr->vlistID != -1 )
+    cdoAbort("Internal problem, vlist already defined!");
+
+  if ( pstreamptr->varlist != NULL )
+    cdoAbort("Internal problem, varlist already allocated!");
+
+  nvars = vlistNvars(vlistID);
+  varlist = (varlist_t *) malloc(nvars*sizeof(varlist_t));
+
+  for ( varID = 0; varID < nvars; ++varID )
+    {
+      varlist[varID].gridsize    = gridInqSize(vlistInqVarGrid(vlistID, varID));
+      varlist[varID].datatype    = vlistInqVarDatatype(vlistID, varID);
+      varlist[varID].missval     = vlistInqVarMissval(vlistID, varID);
+      varlist[varID].addoffset   = vlistInqVarAddoffset(vlistID, varID);
+      varlist[varID].scalefactor = vlistInqVarScalefactor(vlistID, varID);
+
+      varlist[varID].check_datarange = FALSE;
+
+      laddoffset   = IS_NOT_EQUAL(varlist[varID].addoffset, 0);
+      lscalefactor = IS_NOT_EQUAL(varlist[varID].scalefactor, 1);
+
+      datatype = varlist[varID].datatype;
+
+      if ( filetype == FILETYPE_NC || filetype == FILETYPE_NC2 || filetype == FILETYPE_NC4 )
+	{
+	  if ( datatype == DATATYPE_UINT8 && (filetype == FILETYPE_NC || filetype == FILETYPE_NC2) )
+	    {
+	      datatype = DATATYPE_INT16;
+	      varlist[varID].datatype = datatype;
+	    }
+
+	  if ( datatype == DATATYPE_UINT16 && (filetype == FILETYPE_NC || filetype == FILETYPE_NC2) )
+	    {
+	      datatype = DATATYPE_INT32;
+	      varlist[varID].datatype = datatype;
+	    }
+
+	  if ( laddoffset || lscalefactor )
+	    {
+	      if ( datatype == DATATYPE_INT8   ||
+		   datatype == DATATYPE_UINT8  ||
+		   datatype == DATATYPE_INT16  ||
+		   datatype == DATATYPE_UINT16 )
+		varlist[varID].check_datarange = TRUE;
+	    }
+	  else if ( cdoCheckDatarange )
+	    {
+	      varlist[varID].check_datarange = TRUE;
+	    }
+	}
+    }
+
+  pstreamptr->varlist = varlist;
+  pstreamptr->vlistID = vlistID; /* used for -r/-a */
+}
+
 
 void pstreamDefVlist(int pstreamID, int vlistID)
 {
@@ -941,10 +1028,10 @@ void pstreamDefVlist(int pstreamID, int vlistID)
 	{
 	  int varID, nvars = vlistNvars(vlistID);
 
-	  for ( varID = 0; varID < nvars; varID++ )
+	  for ( varID = 0; varID < nvars; ++varID )
 	    vlistDefVarDatatype(vlistID, varID, cdoDefaultDataType);
 
-	  if ( cdoDefaultDataType == DATATYPE_FLT64 )
+	  if ( cdoDefaultDataType == DATATYPE_FLT64 || cdoDefaultDataType == DATATYPE_FLT32 )
 	    {
 	      for ( varID = 0; varID < nvars; varID++ )
 		{
@@ -956,11 +1043,11 @@ void pstreamDefVlist(int pstreamID, int vlistID)
 
       vlistDefAttTxt(vlistID, CDI_GLOBAL, "CDO", (int)strlen(cdoComment())+1, cdoComment());
 
+      pstreamDefVarlist(pstreamptr, vlistID);
+
       if ( cdoTimer ) timer_start(timer_write);
       streamDefVlist(pstreamptr->fileID, vlistID);
       if ( cdoTimer ) timer_stop(timer_write);
-
-      pstreamptr->vlistID = vlistID; /* used for -r/-a */
     }
 }
 
@@ -991,10 +1078,14 @@ void pstreamDefRecord(int pstreamID, int varID, int levelID)
   PSTREAM *pstreamptr;
 
   pstreamptr = pstream_to_pointer(pstreamID);
+  
+  pstreamptr->varID = varID;
 
 #if  defined  (HAVE_LIBPTHREAD)
   if ( pstreamptr->ispipe )
-    pipeDefRecord(pstreamptr, varID, levelID);
+    {
+      pipeDefRecord(pstreamptr, varID, levelID);
+    }
   else
 #endif
     {
@@ -1026,6 +1117,68 @@ void pstreamReadRecord(int pstreamID, double *data, int *nmiss)
 }
 
 
+void pstreamCheckDatarange(PSTREAM *pstreamptr, int varID, double *array, int nmiss)
+{
+  long i, ivals, gridsize;
+  int datatype;
+  double missval, addoffset, scalefactor;
+  double arrmin, arrmax, smin, smax;
+  double vmin = 0, vmax = 0;
+
+  gridsize    = pstreamptr->varlist[varID].gridsize;
+  datatype    = pstreamptr->varlist[varID].datatype;
+  missval     = pstreamptr->varlist[varID].missval;
+  addoffset   = pstreamptr->varlist[varID].addoffset;
+  scalefactor = pstreamptr->varlist[varID].scalefactor;
+
+  ivals   = 0;
+  arrmin  =  1.e300;
+  arrmax  = -1.e300;
+  if ( nmiss > 0 )
+    {
+      for ( i = 0; i < gridsize; ++i )
+	{
+	  if ( !DBL_IS_EQUAL(array[i], missval) )
+	    {
+	      if ( array[i] < arrmin ) arrmin = array[i];
+	      if ( array[i] > arrmax ) arrmax = array[i];
+	      ivals++;
+	    }
+	}
+    }
+  else
+    {
+      for ( i = 0; i < gridsize; ++i )
+	{
+	  if ( array[i] < arrmin ) arrmin = array[i];
+	  if ( array[i] > arrmax ) arrmax = array[i];
+	}
+    }
+
+  smin = (arrmin - addoffset)/scalefactor;
+  smax = (arrmax - addoffset)/scalefactor;
+  /* only for int's
+  smin = NINT(smin);
+  smax = NINT(smax);
+  */
+
+  if      ( datatype == DATATYPE_INT8   ) { vmin =        -128.; vmax =        127.; }
+  else if ( datatype == DATATYPE_UINT8  ) { vmin =           0.; vmax =        255.; }
+  else if ( datatype == DATATYPE_INT16  ) { vmin =      -32768.; vmax =      32767.; }
+  else if ( datatype == DATATYPE_UINT16 ) { vmin =           0.; vmax =      65535.; }
+  else if ( datatype == DATATYPE_INT32  ) { vmin = -2147483648.; vmax = 2147483647.; }
+  else if ( datatype == DATATYPE_UINT32 ) { vmin =           0.; vmax = 4294967295.; }
+  else if ( datatype == DATATYPE_FLT32  ) { vmin = -3.40282e+38; vmax = 3.40282e+38; }
+  else                                    { vmin =     -1.e+300; vmax =     1.e+300; }
+
+  if ( smin < vmin || smax > vmax )
+    cdoWarning("Some data values (min=%g max=%g) are outside the\n"
+               "valid range (%g - %g) of the used output precision!\n"
+	       "Use the CDO option%s -b 64 to increase the output precision.",
+	       smin, smax, vmin, vmax, (datatype == DATATYPE_FLT32) ? "" : " -b 32 or");
+}
+
+
 void pstreamWriteRecord(int pstreamID, double *data, int nmiss)
 {
   PSTREAM *pstreamptr;
@@ -1036,11 +1189,19 @@ void pstreamWriteRecord(int pstreamID, double *data, int nmiss)
 
 #if  defined  (HAVE_LIBPTHREAD)
   if ( pstreamptr->ispipe )
-    pipeWriteRecord(pstreamptr, data, nmiss);
+    {
+      pipeWriteRecord(pstreamptr, data, nmiss);
+    }
   else
 #endif
     {
+      int varID = pstreamptr->varID;
       if ( cdoTimer ) timer_start(timer_write);
+
+      if ( pstreamptr->varlist )
+	if ( pstreamptr->varlist[varID].check_datarange )
+	  pstreamCheckDatarange(pstreamptr, varID, data, nmiss);
+
       streamWriteRecord(pstreamptr->fileID, data, nmiss);
       if ( cdoTimer ) timer_stop(timer_write);
     }
@@ -1151,6 +1312,7 @@ void pstreamDefTimestep(int pstreamID, int tsID)
 	}
 
       if ( cdoTimer ) timer_start(timer_write);
+      if ( tsID > 0 ) streamSync(pstreamptr->fileID);
       streamDefTimestep(pstreamptr->fileID, tsID);
       if ( cdoTimer ) timer_stop(timer_write);
     }
@@ -1170,7 +1332,9 @@ void pstreamCopyRecord(int pstreamIDdest, int pstreamIDsrc)
 
 #if  defined  (HAVE_LIBPTHREAD)
   if ( pstreamptr_dest->ispipe || pstreamptr_src->ispipe )
-    pipeCopyRecord(pstreamptr_dest, pstreamptr_src);
+    {
+      pipeCopyRecord(pstreamptr_dest, pstreamptr_src);
+    }
   else
 #endif
     {
@@ -1285,7 +1449,7 @@ void cdoFinish(void)
 
   if ( processID == 0 )
     {
-      int mu[] = {'B', 'K', 'M', 'G', 'T'};
+      int mu[] = {'b', 'k', 'm', 'g', 't'};
       int muindex = 0;
       long memmax;
       extern int cdoLogOff;
@@ -1317,7 +1481,7 @@ void cdoFinish(void)
   else
     {
       if ( ! cdoSilentMode )
-	fprintf(stderr, " ( %.2fs %s)\n", c_cputime, memstring);
+	fprintf(stderr, " ( %.2fs )\n", c_cputime);
     }
 
   if ( cdoBenchmark && processID == 0 )
@@ -1357,4 +1521,23 @@ int pstreamInqFiletype(int pstreamID)
     filetype = streamInqFiletype(pstreamptr->fileID);
 
   return (filetype);
+}
+
+
+int pcdf_openread(const char *filename)
+{
+  static char func[] = "pcdf_openread";
+  int fileID;
+
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_lock(&streamOpenReadMutex);
+#endif
+
+  fileID = cdf_openread(filename);
+
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_unlock(&streamOpenReadMutex);
+#endif
+
+  return (fileID);
 }

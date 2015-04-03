@@ -27,6 +27,22 @@ static void nce(int istat)
 #endif
 
 
+int cdf_openread(const char *filename)
+{
+  int fileID = -1;
+#if  defined  (HAVE_LIBNETCDF)
+  int nc_file_id;      /* netCDF grid file id           */
+
+  nce(nc_open(filename, NC_NOWRITE, &nc_file_id));
+  fileID = nc_file_id;
+#else
+  cdoWarning("netCDF support not compiled in!");
+#endif
+
+  return (fileID);
+}
+
+
 int gridFromNCfile(const char *gridfile)
 {
   static char func[] = "gridFromNCfile";
@@ -46,14 +62,14 @@ int gridFromNCfile(const char *gridfile)
   size_t attlen;
   size_t grid_rank, grid_size, grid_nvertex;
   int grid_dims[2];
-  GRID grid;
+  grid_t grid;
 
 
   gridInit(&grid);
 
   /* open grid file and read grid size/name data */
   
-  nce(nc_open(gridfile, NC_NOWRITE, &nc_file_id));
+  nc_file_id = pcdf_openread(gridfile);
 
   if ( nc_inq_dimid(nc_file_id, "grid_size", &nc_gridsize_id)    == NC_NOERR &&
        nc_inq_dimid(nc_file_id, "grid_rank", &nc_gridrank_id)    == NC_NOERR &&
@@ -126,6 +142,7 @@ int gridFromNCfile(const char *gridfile)
 
   return (gridID);
 }
+
 
 void writeNCgrid(const char *gridfile, int gridID, int *grid_imask)
 {

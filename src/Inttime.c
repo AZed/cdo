@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,6 @@
       Inttime    inttime         Time interpolation
 */
 
-
-#include <string.h>
 #include <ctype.h>  /* isdigit */
 
 #include "cdi.h"
@@ -72,7 +70,7 @@ void *Inttime(void *argument)
     {
       year = 1; month = 1; day = 1;
       sscanf(datestr, "%d-%d-%d", &year, &month, &day);
-      vdate = encode_date(year, month, day);
+      vdate = cdiEncodeDate(year, month, day);
     }
 
   if ( strchr(timestr, ':') == NULL )
@@ -83,7 +81,7 @@ void *Inttime(void *argument)
     {
       hour = 0; minute = 0; second = 0;
       sscanf(timestr, "%d:%d:%d", &hour, &minute, &second);
-      vtime = encode_time(hour, minute, second);
+      vtime = cdiEncodeTime(hour, minute, second);
     }
 
   if ( operatorArgc() == 3 )
@@ -141,6 +139,11 @@ void *Inttime(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID2) )
+    {
+      cdoWarning("Time bounds unsupported by this operator, removed!");
+      taxisDeleteBounds(taxisID2);
+    }
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -215,16 +218,15 @@ void *Inttime(void *argument)
 
 	      if ( cdoVerbose )
 		{
+		  char vdatestr[32], vtimestr[32];	  
 		  /*
 		  cdoPrint("juldate1 %f", juldate_to_seconds(juldate1));
 		  cdoPrint("juldate  %f", juldate_to_seconds(juldate));
 		  cdoPrint("juldate2 %f", juldate_to_seconds(juldate2));
 		  */
-		  decode_date(vdate, &year, &month, &day);
-		  decode_time(vtime, &hour, &minute, &second);
-		  cdoPrint(DATE_FORMAT" "TIME_FORMAT"  %f  %d",
-			   year, month, day, hour, minute, second,
-			   juldate_to_seconds(juldate), calendar);
+		  date2str(vdate, vdatestr, sizeof(vdatestr));
+		  time2str(vtime, vtimestr, sizeof(vtimestr));
+		  cdoPrint("%s %s  %f  %d", vdatestr, vtimestr, juldate_to_seconds(juldate), calendar);
 		}
 
 	      taxisDefVdate(taxisID2, vdate);
@@ -287,14 +289,14 @@ void *Inttime(void *argument)
 	    {
 	      juldate_decode(calendar, juldate, &vdate, &vtime);
 
-	      decode_date(vdate, &year, &month, &day);
+	      cdiDecodeDate(vdate, &year, &month, &day);
 	      
 	      month += ijulinc;
 
 	      while ( month > 12 ) { month -= 12; year++; }
 	      while ( month <  1 ) { month += 12; year--; }
 
-	      vdate = encode_date(year, month, day);
+	      vdate = cdiEncodeDate(year, month, day);
 		
 	      juldate = juldate_encode(calendar, vdate, vtime);
 	    }

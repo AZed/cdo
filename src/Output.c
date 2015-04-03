@@ -25,7 +25,6 @@
       Output     outputext       EXTRA output
 */
 
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
@@ -36,7 +35,7 @@
 void *Output(void *argument)
 {
   static char func[] = "Output";
-  int OUTPUT, OUTPUTINT, OUTPUTSRV, OUTPUTEXT, OUTPUTF, OUTPUTTS, OUTPUTFLD, OUTPUTARR, OUTPUTXYZ;
+  int OUTPUT, OUTPUTINT, OUTPUTSRV, OUTPUTEXT, OUTPUTF, OUTPUTTS, OUTPUTFLD, OUTPUTARR, OUTPUTXYZ, OUTPUTKEY;
   int operatorID;
   int i;
   int indf;
@@ -51,8 +50,6 @@ void *Output(void *argument)
   int vlistID;
   int nmiss, nout;
   int nlon, nlat;
-  int hour, minute, second;
-  int year, month, day;
   int nelem = 0;
   int index;
   int ndiffgrids;
@@ -62,6 +59,16 @@ void *Output(void *argument)
   double *array = NULL;
   double xdate;
   double missval;
+  double lon, lat;
+  char name[128];
+  int len;
+  int npar = 0;
+  char **parnames = NULL;
+  int *keys = NULL, nkeys = 0, k;
+  int nKeys;
+  enum                     {kvalue,  kcode,  kname,  klon,  klat,  klev,  kdate,  ktime};
+  const char *Keynames[] = {"value", "code", "name", "lon", "lat", "lev", "date", "time"};
+
 
   cdoInitialize(argument);
 
@@ -74,6 +81,7 @@ void *Output(void *argument)
   OUTPUTFLD = cdoOperatorAdd("outputfld", 0, 0, NULL);
   OUTPUTARR = cdoOperatorAdd("outputarr", 0, 0, NULL);
   OUTPUTXYZ = cdoOperatorAdd("outputxyz", 0, 0, NULL);
+  OUTPUTKEY = cdoOperatorAdd("outputkey", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
@@ -83,6 +91,40 @@ void *Output(void *argument)
       operatorCheckArgc(2);
       format = operatorArgv()[0];
       nelem  = atoi(operatorArgv()[1]);
+    }
+  else if ( operatorID == OUTPUTKEY )
+    {
+      operatorInputArg("keys to print");
+ 
+      npar     = operatorArgc();
+      parnames = operatorArgv();
+
+      if ( cdoVerbose )
+	for ( i = 0; i < npar; i++ )
+	  printf("key %d = %s\n", i+1, parnames[i]);
+
+      keys = (int *) malloc(npar*sizeof(int));
+      nkeys = 0;
+      nKeys = sizeof(Keynames)/sizeof(char *);
+      for ( i = 0; i < npar; i++ )
+	{
+	  for ( k = 0; k < nKeys; ++k )
+	    {
+	      len = strlen(parnames[i]);
+	      if ( len < 3 ) len = 3;
+	      if ( strncmp(parnames[i], Keynames[k], len) == 0 )
+		{
+		  keys[nkeys++] = k;
+		  break;
+		}
+	    }
+
+	  if ( k == nKeys ) cdoWarning("Key %s unsupported", parnames[i]);
+	}
+ 
+      if ( cdoVerbose )
+	for ( k = 0; k < nkeys; ++k )
+	  printf("keynr = %d  keyid = %d  keyname = %s\n", k, keys[k], Keynames[keys[k]]);
     }
 
   for ( indf = 0; indf < cdoStreamCnt(); indf++ )
@@ -100,12 +142,12 @@ void *Output(void *argument)
 
       if ( ndiffgrids > 0 ) cdoAbort("Too many different grids!");
 
-      gridID = vlistGrid(vlistID, 0);
+      gridID   = vlistGrid(vlistID, 0);
       gridsize = gridInqSize(gridID);
 
       array = (double *) malloc(gridsize*sizeof(double));
 
-      if ( operatorID == OUTPUTFLD || operatorID == OUTPUTXYZ )
+      if ( operatorID == OUTPUTFLD || operatorID == OUTPUTXYZ || operatorID == OUTPUTKEY )
 	{
 	  char units[128];
 
@@ -137,6 +179,7 @@ void *Output(void *argument)
 	    {
 	      streamInqRecord(streamID, &varID, &levelID);
 
+	      vlistInqVarName(vlistID, varID, name);
 	      code     = vlistInqVarCode(vlistID, varID);
 	      gridID   = vlistInqVarGrid(vlistID, varID);
 	      zaxisID  = vlistInqVarZaxis(vlistID, varID);
@@ -188,23 +231,45 @@ void *Output(void *argument)
 		}
 	      else if ( operatorID == OUTPUTTS )
 		{
+		  char vdatestr[32], vtimestr[32];
+	  
 		  if ( gridsize > 1 )
 		    cdoAbort("operator works only with one gridpoint!");
 
-		  decode_date(vdate, &year, &month, &day);
-		  decode_time(vtime, &hour, &minute, &second);
+		  date2str(vdate, vdatestr, sizeof(vdatestr));
+		  time2str(vtime, vtimestr, sizeof(vtimestr));
 
-		  fprintf(stdout, DATE_FORMAT" "TIME_FORMAT" %12.12g\n",
-			  year, month, day, hour, minute, second, array[0]);
+		  fprintf(stdout, "%s %s %12.12g\n", vdatestr, vtimestr, array[0]);
 		}
 	      else if ( operatorID == OUTPUTFLD )
 		{
-		  decode_time(vtime, &hour, &minute, &second);
+		  int hour, minute, second;
+		  cdiDecodeTime(vtime, &hour, &minute, &second);
 		  xdate  = vdate - (vdate/100)*100 + (hour*3600 + minute*60 + second)/86400.;
 		  for ( i = 0; i < gridsize; i++ )
 		    if ( !DBL_IS_EQUAL(array[i], missval) )
 		      fprintf(stdout, "%g\t%g\t%g\t%g\n", xdate, 
 			      grid_center_lat[i], grid_center_lon[i], array[i]);
+		}
+	      else if ( operatorID == OUTPUTKEY )
+		{
+		  for ( i = 0; i < gridsize; i++ )
+		    {
+		      lon = grid_center_lon[i];
+		      lat = grid_center_lat[i];
+		      for ( k = 0; k < nkeys; ++k )
+			{
+			  if      ( keys[k] == kvalue ) fprintf(stdout, "%8g ", array[i]);
+			  else if ( keys[k] == kcode  ) fprintf(stdout, "%4d ", code);
+			  else if ( keys[k] == kname  ) fprintf(stdout, "%8s ", name);
+			  else if ( keys[k] == klon   ) fprintf(stdout, "%6g ", lon);
+			  else if ( keys[k] == klat   ) fprintf(stdout, "%6g ", lat);
+			  else if ( keys[k] == klev   ) fprintf(stdout, "%6g ", level);
+			  else if ( keys[k] == kdate  ) fprintf(stdout, "%8d ", vdate);
+			  else if ( keys[k] == ktime  ) fprintf(stdout, "%6d ", vtime);
+			}
+		      fprintf(stdout, "\n");
+		    }
 		}
 	      else if ( operatorID == OUTPUTXYZ )
 		{
@@ -299,6 +364,8 @@ void *Output(void *argument)
       if ( grid_center_lon ) free(grid_center_lon);
       if ( grid_center_lat ) free(grid_center_lat);
     }
+
+  if ( keys ) free(keys);
 
   cdoFinish();
 

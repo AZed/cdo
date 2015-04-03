@@ -32,7 +32,8 @@
 #endif
 
 #if defined (HAVE_LOCK)
-static void filestatus(struct flock *lock)
+static
+void filestatus(struct flock *lock)
 {
   switch(lock->l_type) {
     case F_UNLCK:
@@ -141,7 +142,7 @@ void cdolog(const char *prompt, double cputime)
 
   if ( status == 0 )
     {
-      write(logfileno, logstring, slen);
+      status = write(logfileno, logstring, slen);
 
       mylock.l_type   = F_UNLCK;
       status = fcntl(logfileno, F_SETLK, &mylock);
@@ -164,8 +165,8 @@ void cdolog(const char *prompt, double cputime)
  *
  *                      Wesley Ebisuzaki
  */
-
-static float ibm2flt(unsigned char *ibm) {
+static
+float ibm2flt(unsigned char *ibm) {
 
 	int positive, power;
 	unsigned int abspower;
@@ -203,7 +204,8 @@ static float ibm2flt(unsigned char *ibm) {
  * doesn't handle subnormal numbers
  */
 
-static int flt2ibm(float x, unsigned char *ibm) {
+static
+int flt2ibm(float x, unsigned char *ibm) {
 
 	int sign, exp, i;
 	double mant;
@@ -850,7 +852,7 @@ typedef struct
 }
 LogInfo;
 
-
+static
 int cmplognocc(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -863,7 +865,7 @@ int cmplognocc(const void *s1, const void *s2)
   return (cmp);
 }
 
-
+static
 int cmplognvals(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -876,7 +878,7 @@ int cmplognvals(const void *s1, const void *s2)
   return (cmp);
 }
 
-
+static
 int cmplogtime(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -889,7 +891,7 @@ int cmplogtime(const void *s1, const void *s2)
   return (cmp);
 }
 
-
+static
 int cmplogperc(const void *s1, const void *s2)
 {
   int cmp = 0;
@@ -902,7 +904,7 @@ int cmplogperc(const void *s1, const void *s2)
   return (cmp);
 }
 
-
+static
 int cmplogname(const void *s1, const void *s2)
 {
   LogInfo *x = (LogInfo *) s1;
@@ -916,7 +918,7 @@ void dumplogo(const char *logfilename, int dumptype)
 {
 #if defined (HAVE_LOCK)
   static const char func[] = "dumplogo";
-  int  logfileno;
+  int logfileno;
   int status;
   int nocc;
   int nhours0;
@@ -982,7 +984,7 @@ void dumplogo(const char *logfilename, int dumptype)
 	  logInfo[i]->nocc  = nocc;
 	  logInfo[i]->nvals = nvals0;
 	  logInfo[i]->time  = nhours0 + cputime0/3600;
-	  logInfo[i]->perc  = logInfo[i]->time/nocc;
+	  logInfo[i]->perc  = 3600*logInfo[i]->time/nocc;
 	}
 
       if      ( dumptype == 1 )

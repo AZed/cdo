@@ -24,6 +24,7 @@ char **operatorHelp(char *operatorName);
 
 int operatorStreamInCnt(char *operatorName);
 int operatorStreamOutCnt(char *operatorName);
+int operatorStreamNumber(char *operatorName);
 
 void operatorPrintAll(void);
 

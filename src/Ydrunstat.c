@@ -27,18 +27,13 @@
       Ydrunstat    ydrunstd          Multi-year daily running standard deviation
 */
 
-
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-
 #include "cdi.h"
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "functs.h"
 #include "field.h"
-#include "dmemory.h"
+
 
 #define NDAY 373
 
@@ -46,8 +41,8 @@
 typedef struct {
   int     vdate[NDAY];
   int     vtime[NDAY];  
-  FIELD **vars1[NDAY]; 
-  FIELD **vars2[NDAY];
+  field_t **vars1[NDAY]; 
+  field_t **vars2[NDAY];
   int     nsets[NDAY];
   int     vlist;
 }
@@ -59,7 +54,7 @@ static void ydstatDestroy(YDAY_STATS *stats);
 static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy);
 static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy);
 static void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
-  FIELD **vars1, FIELD **vars2, int nsets, int operfunc);
+  field_t **vars1, field_t **vars2, int nsets, int operfunc);
 static void ydstatFinalize(YDAY_STATS *stats, int operfunc);
 
 
@@ -83,7 +78,7 @@ void *Ydrunstat(void *argument)
   int nvars, nlevels;
   int *recVarID, *recLevelID;
   double missval;
-  FIELD ***vars1 = NULL, ***vars2 = NULL;
+  field_t ***vars1 = NULL, ***vars2 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
   int calendar, dpy;
@@ -134,15 +129,15 @@ void *Ydrunstat(void *argument)
   datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
   
   stats = ydstatCreate(vlistID1);
-  vars1 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
+  vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   if ( operfunc == func_std || operfunc == func_var )
-    vars2 = (FIELD ***) malloc((ndates+1)*sizeof(FIELD **));
+    vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   
   for ( its = 0; its < ndates; its++ )
     {
-      vars1[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+      vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
       if ( operfunc == func_std || operfunc == func_var )
-	vars2[its] = (FIELD **) malloc(nvars*sizeof(FIELD *));
+	vars2[its] = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -151,9 +146,9 @@ void *Ydrunstat(void *argument)
 	  nlevels  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 
-	  vars1[its][varID] = (FIELD *) malloc(nlevels*sizeof(FIELD));
+	  vars1[its][varID] = (field_t *) malloc(nlevels*sizeof(field_t));
 	  if ( operfunc == func_std || operfunc == func_var )
-	    vars2[its][varID] = (FIELD *) malloc(nlevels*sizeof(FIELD));
+	    vars2[its][varID] = (field_t *) malloc(nlevels*sizeof(field_t));
 
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
 	    {
@@ -398,7 +393,7 @@ static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
 
   nvars = vlistNvars(stats->vlist);
   
-  stats->vars1[dayoy] = (FIELD **) malloc(nvars * sizeof(FIELD *));
+  stats->vars1[dayoy] = (field_t **) malloc(nvars * sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -407,7 +402,7 @@ static void ydstatCreateVars1(YDAY_STATS *stats, int dayoy)
       nlevels  = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
       missval  = vlistInqVarMissval(stats->vlist, varID);
 
-      stats->vars1[dayoy][varID] = (FIELD *) malloc(nlevels * sizeof(FIELD));
+      stats->vars1[dayoy][varID] = (field_t *) malloc(nlevels * sizeof(field_t));
 	      
       for ( levelID = 0; levelID < nlevels; levelID++ )
         {
@@ -428,7 +423,7 @@ static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
 
   nvars = vlistNvars(stats->vlist);
   
-  stats->vars2[dayoy] = (FIELD **) malloc(nvars * sizeof(FIELD *));
+  stats->vars2[dayoy] = (field_t **) malloc(nvars * sizeof(field_t *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -437,7 +432,7 @@ static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
       nlevels  = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
       missval  = vlistInqVarMissval(stats->vlist, varID);
 
-      stats->vars2[dayoy][varID] = (FIELD *) malloc(nlevels * sizeof(FIELD));
+      stats->vars2[dayoy][varID] = (field_t *) malloc(nlevels * sizeof(field_t));
 	      
       for ( levelID = 0; levelID < nlevels; levelID++ )
         {
@@ -450,7 +445,7 @@ static void ydstatCreateVars2(YDAY_STATS *stats, int dayoy)
 }
 
 static void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime, 
-  FIELD **vars1, FIELD **vars2, int nsets, int operfunc)
+  field_t **vars1, field_t **vars2, int nsets, int operfunc)
 {
   int varID, levelID, nvars, nlevels;
   int gridsize;

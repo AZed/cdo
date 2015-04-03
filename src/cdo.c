@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -61,43 +61,46 @@
 #  define  VERSION  "0.0.1"
 #endif
 
-char CDO_Version[] = "Climate Data Operators version "VERSION" (http://www.mpimet.mpg.de/cdo)";
+char CDO_Version[] = "Climate Data Operators version "VERSION" (http://code.zmaw.de/projects/cdo)";
 
 
 char *Progname;
 
 int ompNumThreads = 1;
 
-int cdoDefaultFileType  = CDI_UNDEFID;
-int cdoDefaultDataType  = CDI_UNDEFID;
-int cdoDefaultTimeType  = CDI_UNDEFID;
-int cdoDefaultByteorder = CDI_UNDEFID;
-int cdoDefaultTableID   = CDI_UNDEFID;
+int cdoDefaultFileType   = CDI_UNDEFID;
+int cdoDefaultDataType   = CDI_UNDEFID;
+int cdoDefaultTimeType   = CDI_UNDEFID;
+int cdoDefaultByteorder  = CDI_UNDEFID;
+int cdoDefaultTableID    = CDI_UNDEFID;
 
-int cdoHaveNC4          = FALSE;
-int cdoDiag        = FALSE;
+int cdoCheckDatarange    = FALSE;
+
+int cdoHaveNC4           = FALSE;
+int cdoDiag              = FALSE;
 int cdoDisableFilesuffix = FALSE;
-int cdoDisableHistory = FALSE;
-int cdoZtype       = COMPRESS_NONE;
-int cdoZlevel      = 0;
-int cdoLogOff      = FALSE;
-int cdoSilentMode  = FALSE;
-int cdoRegulargrid = FALSE;
-int cdoBenchmark   = FALSE;
-int cdoTimer       = FALSE;
-int cdoVerbose     = FALSE;
-int cdoDebug       = 0;
-int cdoCompress    = FALSE;
-int cdoInteractive = FALSE;
-int cdoParIO       = FALSE;
+int cdoDisableHistory    = FALSE;
+int cdoZtype             = COMPRESS_NONE;
+int cdoZlevel            = 0;
+int cdoLogOff            = FALSE;
+int cdoSilentMode        = FALSE;
+int cdoBenchmark         = FALSE;
+int cdoTimer             = FALSE;
+int cdoVerbose           = FALSE;
+int cdoDebug             = 0;
+int cdoCompress          = FALSE;
+int cdoInteractive       = FALSE;
+int cdoParIO             = FALSE;
+int cdoRegulargrid       = FALSE;
 
-int cdoExpMode     = -1;
-char *cdoExpName   = NULL;
+
+int cdoExpMode           = -1;
+char *cdoExpName         = NULL;
 void exp_run(int argc, char *argv[], char *cdoExpName);
 
 
 int timer_total, timer_read, timer_write;
-int timer_remap, timer_remap_con, timer_remap_con2, timer_remap_con3;
+int timer_remap, timer_remap_sort, timer_remap_con, timer_remap_con2, timer_remap_con3;
 
 
 #define PRINT_RLIMIT(resource) \
@@ -132,11 +135,19 @@ static void version(void)
 #endif
 #if defined (HAVE_LIBPTHREAD) || defined (HAVE_LIBSZ) || defined (HAVE_LIBPROJ) || defined (HAVE_LIBDRMAA) || defined (HAVE_LIBCURL) || defined (_OPENMP)
   fprintf(stderr, "    with:");
+  if ( cdoHaveNC4 ) 
+    fprintf(stderr, " NC4");
 #if defined (HAVE_LIBPTHREAD)
   fprintf(stderr, " PTHREADS");
 #endif
 #if defined (HAVE_LIBSZ)
   fprintf(stderr, " SZ");
+#endif
+#if defined (HAVE_LIBZ)
+  fprintf(stderr, " Z");
+#endif
+#if defined (HAVE_LIBJASPER)
+  fprintf(stderr, " JASPER");
 #endif
 #if defined (HAVE_LIBPROJ)
   fprintf(stderr, " PROJ.4");
@@ -172,9 +183,9 @@ void usage(void)
   fprintf(stderr, "usage : cdo  [Options]  Operator1  [-Operator2  [-OperatorN]]\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "  Options:\n");
-  fprintf(stderr, "    -a             Convert from a relative to an absolute time axis\n");
+  fprintf(stderr, "    -a             Generate an absolute time axis\n");
   fprintf(stderr, "    -b <nbits>     Set the number of bits for the output precision\n");
-  fprintf(stderr, "                   (32/64 for nc/nc2/nc4/srv/ext/ieg; 1 - 32 for grb/grb2)\n");
+  fprintf(stderr, "                   (I8/I16/I32/F32/F64 for nc/nc2/nc4; F32/F64 for srv/ext/ieg; 1 - 32 for grb/grb2)\n");
   fprintf(stderr, "                   Add L or B to set the byteorder to Little or Big endian\n");
   fprintf(stderr, "    -f <format>    Format of the output file. (grb, grb2, nc, nc2, nc4, srv, ext or ieg)\n");
   fprintf(stderr, "    -g <grid>      Set default grid name or file. Available grids: \n");
@@ -189,6 +200,7 @@ void usage(void)
   fprintf(stderr, "\n");
   */
   /* fprintf(stderr, "    -l <level>     Level file\n"); */
+  fprintf(stderr, "    -M             Switch to indicate that the I/O streams have missing values\n");
   fprintf(stderr, "    -m <missval>   Set the default missing value (default: %g)\n", cdiInqMissval());
 #if defined (_OPENMP)
   fprintf(stderr, "    -P <nthreads>  Set number of OpenMP threads\n");
@@ -199,7 +211,7 @@ void usage(void)
   */
   fprintf(stderr, "    -Q             Sort netCDF variable names\n");
   fprintf(stderr, "    -R             Convert GRIB data from reduced to regular grid\n");
-  fprintf(stderr, "    -r             Convert from an absolute to a relative time axis\n");
+  fprintf(stderr, "    -r             Generate a relative time axis\n");
   fprintf(stderr, "    -S             Create an extra output stream for the module TIMSTAT. This stream\n");
   fprintf(stderr, "                   contains the number of non missing values for each output period.\n");
   fprintf(stderr, "    -s             Silent mode\n");
@@ -212,7 +224,8 @@ void usage(void)
 
   fprintf(stderr, "    -V             Print the version number\n");
   fprintf(stderr, "    -v             Print extra details for some operators\n");
-  fprintf(stderr, "    -z szip        Compress GRIB records with szip\n");
+  fprintf(stderr, "    -z szip        SZIP compression of GRIB1 records\n");
+  fprintf(stderr, "       jpeg        JPEG compression of GRIB2 records\n");
   fprintf(stderr, "        zip        Deflate compression of netCDF4 variables\n");
   fprintf(stderr, "\n");
 
@@ -220,10 +233,10 @@ void usage(void)
   operatorPrintAll();
 
   fprintf(stderr, "\n");
-  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2009 Uwe Schulzweida\n", VERSION);
-  fprintf(stderr, "  Available from http://www.mpimet.mpg.de/cdo\n");
+  fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2010 Uwe Schulzweida\n", VERSION);
+  //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
-  fprintf(stderr, "  Report bugs to Uwe.Schulzweida@zmaw.de\n");
+  fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
 }
 
 static
@@ -332,7 +345,7 @@ void setDefaultDataType(char *datatypestr)
 {
   static union {unsigned long l; unsigned char c[sizeof(long)];} u_byteorder = {1};
   int nbits = -1;
-  enum {D_UINT, D_INT, D_FLT};
+  enum {D_UINT, D_INT, D_FLT, D_CPX};
   int dtype = -1;
 
   if      ( *datatypestr == 'i' || *datatypestr == 'I' )
@@ -348,6 +361,11 @@ void setDefaultDataType(char *datatypestr)
   else if ( *datatypestr == 'f' || *datatypestr == 'F' )
     {
       dtype = D_FLT;
+      datatypestr++;
+    }
+  else if ( *datatypestr == 'c' || *datatypestr == 'C' )
+    {
+      dtype = D_CPX;
       datatypestr++;
     }
 
@@ -408,6 +426,16 @@ void setDefaultDataType(char *datatypestr)
 	      else
 		{
 		  fprintf(stderr, "Unsupported number of bits = %d for datatype FLT!\n", nbits);
+		  exit(EXIT_FAILURE);
+		}
+	    }
+	  else if ( dtype == D_CPX )
+	    {
+	      if      ( nbits == 32 ) cdoDefaultDataType = DATATYPE_CPX32;
+	      else if ( nbits == 64 ) cdoDefaultDataType = DATATYPE_CPX64;
+	      else
+		{
+		  fprintf(stderr, "Unsupported number of bits = %d for datatype CPX!\n", nbits);
 		  exit(EXIT_FAILURE);
 		}
 	    }
@@ -569,6 +597,11 @@ void defineCompress(const char *arg)
       cdoZtype  = COMPRESS_SZIP;
       cdoZlevel = 0;
     }
+  else if ( memcmp(arg, "jpeg", len) == 0 )
+    {
+      cdoZtype = COMPRESS_JPEG;
+      cdoZlevel = 0;
+    }
   else if ( memcmp(arg, "gzip", len) == 0 )
     {
       cdoZtype  = COMPRESS_GZIP;
@@ -580,7 +613,7 @@ void defineCompress(const char *arg)
       cdoZlevel = 1;
     }
   else
-    fprintf(stderr, "Compression %s unsupported!\n", arg);
+    fprintf(stderr, "%s compression unsupported!\n", arg);
 }
 
 static
@@ -669,7 +702,7 @@ int main(int argc, char *argv[])
 
   cdoHaveNC4 = have_netCDF4();
 
-  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:l:m:t:D:z:aBdhMQRrsSTuVvZ")) != -1 )
+  while ( (c = cdoGetopt(argc, argv, "f:b:e:P:p:g:i:l:m:t:D:z:aBcdhMQRrsSTuVvXZ")) != -1 )
     {
       switch (c)
 	{
@@ -681,6 +714,9 @@ int main(int argc, char *argv[])
 	  break;
 	case 'B':
 	  cdoBenchmark = TRUE;
+	  break;
+	case 'c':
+	  cdoCheckDatarange = TRUE;
 	  break;
 	case 'd':
 	  Debug = 1;
@@ -724,13 +760,14 @@ int main(int argc, char *argv[])
 	case 'm':
 	  cdiDefMissval(atof(cdoOptarg));
 	  break;
-	case 'M': /* multi threaded I/O */
-	  cdoParIO = TRUE;
+	case 'M':
+	  cdiDefGlobal("HAVE_MISSVAL", TRUE);
 	  break;
 	case 'P':
 	  numThreads = atoi(cdoOptarg);
 	  break;
 	case 'p':
+	  fprintf(stderr, "CDO option -p is obsolete and will be removed in the next release, please switch to -b <bits>!\n");
 	  setDefaultDataTypeByte(cdoOptarg);
 	  break;
 	case 'Q':
@@ -763,6 +800,9 @@ int main(int argc, char *argv[])
 	  break;
 	case 'v':
 	  cdoVerbose = TRUE;
+	  break;
+	case 'X': /* multi threaded I/O */
+	  cdoParIO = TRUE;
 	  break;
 	case 'Z':
 	  cdoCompress = TRUE;
@@ -968,6 +1008,7 @@ int main(int argc, char *argv[])
 	  timer_read       = timer_new("read");
 	  timer_write      = timer_new("write");
 	  timer_remap      = timer_new("remap");
+	  timer_remap_sort = timer_new("remap sort");
 	  timer_remap_con  = timer_new("remap con");
 	  timer_remap_con2 = timer_new("remap con2");
 	  timer_remap_con3 = timer_new("remap con3");

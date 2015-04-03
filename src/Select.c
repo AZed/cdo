@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,24 +18,8 @@
 /*
    This module contains the following operators:
 
-      Select     selcode         Select codes
-      Select     delcode         Delete codes
-      Select     selname         Select variables
-      Select     delname         Delete variables
-      Select     selstdname      Select variables by CF standard name
-      Select     sellevel        Select levels
-      Select     sellevidx       Select levels by index
-      Select     selgrid         Select grids
-      Select     selgridname     Select grid by name
-      Select     selzaxis        Select zaxis
-      Select     selzaxisname    Select zaxis by name
-      Select     seltabnum       Select parameter table number
-      Select     selltype        Select GRIB level type 
+      Select      select         Select fields
 */
-
-
-#include <string.h>
-#include <math.h>   /* fabs */
 
 #include "cdi.h"
 #include "cdo.h"
@@ -45,56 +29,459 @@
 #include "util.h"
 #include "functs.h"
 #include "list.h"
+#include "namelist.h"
+
+void    vlistDefVarTime(int vlistID, int varID, int timeID);
+
+
+#define  PML_INT         1
+#define  PML_FLT         2
+#define  PML_WORD        3
+#define  PML_DATE        4
+#define  PML_TIME        4
+
+/*
+typedef struct {
+  char *name;
+  int maxpar;
+  int numpar;
+  char *par;
+}
+PARAMETER;
+
+static PARAMETER Parameter[] =
+{
+  {"code", 1024, 0, NULL},
+};
+
+static int NumParameter = sizeof(Parameter) / sizeof(Parameter[0]);
+*/
+
+#define PML_DEF(name, size, txt)      int flag_##name[size]; int npar_##name = 0; int max_##name = size; const char str_##name[] = txt
+#define PML_DEF_INT(name, size, txt)  int par_##name[size]; int name = 0; PML_DEF(name, size, txt)
+#define PML_DEF_FLT(name, size, txt)  double par_##name[size]; double name = 0; PML_DEF(name, size, txt)
+#define PML_DEF_WORD(name, size, txt) char *par_##name[size]; char *name = 0; PML_DEF(name, size, txt)
+#define PML_INIT_INT(name)            memset(flag_##name, 0, max_##name * sizeof(int))
+#define PML_INIT_FLT(name)            memset(flag_##name, 0, max_##name * sizeof(int))
+#define PML_INIT_WORD(name)           memset(flag_##name, 0, max_##name * sizeof(int))
+#define PML_ADD_INT(nml, name)        pmlAdd(nml, #name, PML_INT,  0, par_##name, sizeof(par_##name)/sizeof(int))
+#define PML_ADD_FLT(nml, name)        pmlAdd(nml, #name, PML_FLT,  0, par_##name, sizeof(par_##name)/sizeof(double))
+#define PML_ADD_WORD(nml, name)       pmlAdd(nml, #name, PML_WORD, 0, par_##name, sizeof(par_##name)/sizeof(char *))
+#define PML_NUM(nml, name)            npar_##name = pmlNum(nml, #name)
+#define PML_PAR(name)                 npar_##name, par_##name, name
+
+#define PAR_CHECK_INT_FLAG(name)      par_check_int_flag(npar_##name, par_##name, flag_##name, str_##name)
+#define PAR_CHECK_FLT_FLAG(name)      par_check_flt_flag(npar_##name, par_##name, flag_##name, str_##name)
+#define PAR_CHECK_WORD_FLAG(name)     par_check_word_flag(npar_##name, par_##name, flag_##name, str_##name)
+#define PAR_CHECK_INT(name)           par_check_int(npar_##name, par_##name, flag_##name, name)
+#define PAR_CHECK_FLT(name)           par_check_flt(npar_##name, par_##name, flag_##name, name)
+#define PAR_CHECK_WORD(name)          par_check_word(npar_##name, par_##name, flag_##name, name)
+
+#define MAX_PLIST_ENTRY  256
+#define MAX_PML_ENTRY    256
+
+typedef struct
+{
+  char *text;
+  size_t len;
+  void *ptr;
+  int type;
+  int occ;
+  int dis;
+  size_t size;
+} plist_entry_t;
+
+
+typedef struct
+{
+  int size;
+  plist_entry_t *entry[MAX_PLIST_ENTRY];
+} plist_t;
+
+
+typedef struct
+{
+  char *name;
+  size_t len;
+  void *ptr;
+  int type;
+  int occ;
+  int dis;
+  size_t size;
+} pml_entry_t;
+
+
+typedef struct
+{
+  int size;
+  int dis;
+  char *name;
+  /* PML_LINE line; */
+  pml_entry_t *entry[MAX_PML_ENTRY];
+} pml_t;
+
+
+static
+void pml_init(pml_t *pml, const char *name)
+{
+  static char func[] = "pml_init";
+  pml->size = 0;
+  pml->dis  = 1;
+  pml->name = strdup(name);
+}
+
+
+pml_t *pmlNew(const char *name)
+{
+  static char func[] = "pmlNew";
+  pml_t *pml;
+
+  pml = (pml_t *) malloc(sizeof(pml_t));
+
+  pml_init(pml, name);
+
+  return (pml);
+}
+
+
+void pmlPrint(pml_t *pml)
+{
+  pml_entry_t *entry;
+  int i, j, nout;
+
+  if ( pml == NULL ) return;
+
+  fprintf(stdout, "Parameter list: %s\n", pml->name);
+  fprintf(stdout, " Num  Name             Type  Size   Dis   Occ  Entries\n");
+
+  for ( i = 0; i < pml->size; ++i )
+    {
+      entry = pml->entry[i];
+      fprintf(stdout, "%4d  %-16s %4d  %4d  %4d  %4d ",
+	      i+1, pml->entry[i]->name, pml->entry[i]->type, (int)pml->entry[i]->size,
+	      pml->entry[i]->dis, pml->entry[i]->occ);
+      nout = pml->entry[i]->occ;
+      if ( nout > 8 ) nout = 8;
+
+      if      ( entry->type == PML_WORD )
+	for ( j = 0; j < nout; j++ )
+	  fprintf(stdout, " %s", ((char **)entry->ptr)[j]);
+      else if ( entry->type == PML_INT )
+	for ( j = 0; j < nout; j++ )
+	  fprintf(stdout, " %d", ((int *)entry->ptr)[j]);
+      else if ( entry->type == PML_FLT )
+	for ( j = 0; j < nout; j++ )
+	  fprintf(stdout, " %g", ((double *)entry->ptr)[j]);
+      
+      fprintf(stdout, "\n");
+    }
+}
+
+
+int pmlAdd(pml_t *pml, const char *name, int type, int dis, void *ptr, size_t size)
+{
+  static char func[] = "pmlAdd";
+  pml_entry_t *pml_entry;
+  int entry = 0;
+
+  if ( pml->size >= MAX_PML_ENTRY )
+    {
+      fprintf(stderr, "Too many entries in parameter list %s! (Max = %d)\n", pml->name, MAX_PML_ENTRY);
+      return (-1);
+    }
+
+  pml_entry = (pml_entry_t *) malloc(sizeof(pml_entry_t));
+
+  pml_entry->name = strdup(name);
+  pml_entry->len  = strlen(name);
+  pml_entry->type = type;
+  pml_entry->ptr  = ptr;
+  pml_entry->size = size;
+  pml_entry->dis  = dis;
+  pml_entry->occ  = 0;
+
+  entry = pml->size;
+  pml->entry[pml->size++] = pml_entry;
+
+  return (entry);
+}
+
+
+int pmlNum(pml_t *pml, const char *name)
+{
+  pml_entry_t *entry;
+  int i, nocc = 0;
+
+  if ( pml == NULL ) return (nocc);
+
+  for ( i = 0; i < pml->size; i++ )
+    {
+      entry = pml->entry[i];
+      if ( strcmp(name, entry->name) == 0 )
+	{
+	  nocc = entry->occ;
+	  break;
+	}
+    }
+
+  if ( i == pml->size )
+    fprintf(stderr, "Parameter list entry %s not found in %s\n", name, pml->name);
+
+  return (nocc);
+}
+
+
+int pml_add_entry(pml_entry_t *entry, char *arg)
+{
+  static char func[] = "pml_add_entry";
+  int status = 0;
+
+  if ( entry->type == PML_INT )
+    {
+      if ( entry->occ < (int) entry->size )
+	((int *) entry->ptr)[entry->occ++] = atoi(arg);
+    }
+  else if ( entry->type == PML_FLT )
+    {
+      if ( entry->occ < (int) entry->size )
+	((double *) entry->ptr)[entry->occ++] = atof(arg);
+    }
+  else if ( entry->type == PML_WORD )
+    {
+      if ( entry->occ < (int) entry->size )
+	((char **) entry->ptr)[entry->occ++] = strdupx(arg);
+    }
+  else
+    {
+      fprintf(stderr, "unsupported type!\n");
+    }
+
+  return (status);
+}
+
+
+void pmlProcess(pml_entry_t *entry, int argc, char **argv)
+{
+  int i;
+  int len;
+  char *parg;
+  char *epos;
+
+  for ( i = 0; i < argc; ++i )
+    {
+      parg = argv[i];
+      if ( i == 0 )
+	{
+	  epos = strchr(parg, '=');
+	  if ( epos == NULL )
+	    {
+	      fprintf(stderr, "internal problem, keyword not found!\n");
+	    }
+	  parg += epos-parg+1;
+	}
+
+      pml_add_entry(entry, parg);
+    }
+}
+
+
+int pmlRead(pml_t *pml, int argc, char **argv)
+{
+  static char func[] = "pmlRead";
+  pml_entry_t *entry = NULL;
+  pml_entry_t *pentry[MAX_PML_ENTRY];
+  int params[MAX_PML_ENTRY];
+  int num_par[MAX_PML_ENTRY];
+  int len_par[MAX_PML_ENTRY];
+  int nparams = 0;
+  int i, istart;
+  char *epos;
+  size_t len;
+  char *parbuf;
+  int bufsize = 0;
+  int status = 0;
+  /*
+  if ( cdoVerbose )
+    for ( i = 0; i < argc; ++i ) printf("pmlRead: %d %s\n", i, argv[i]);
+  */
+  for ( i = 0; i < argc; ++i )
+    {
+      len = strlen(argv[i]);
+      len_par[i] = (int)len;
+      bufsize += len+1;
+    }
+
+  parbuf = (char *) malloc(bufsize*sizeof(char));
+  memset(parbuf, 0, bufsize*sizeof(char));
+
+  istart = 0;
+  while ( istart < argc )
+    {
+
+      epos = strchr(argv[istart], '=');
+      if ( epos == NULL )
+	{
+	  fprintf(stderr, "Parameter >%s< has no keyword!\n", argv[istart]);
+	  status = 1;
+	  goto END_LABEL;
+	}
+
+      len = epos - argv[istart];
+      for ( i = 0; i < pml->size; ++i )
+	{
+	  entry = pml->entry[i];
+	  if ( entry->len == len )
+	    if ( memcmp(entry->name, argv[istart], len) == 0 ) break;
+	}
+
+      if ( i == pml->size )
+	{
+	  fprintf(stderr, "Parameter >%s< has not a valid keyword!\n", argv[istart]);
+	  status = 2;
+	  goto END_LABEL;
+	}
+
+      num_par[nparams] = 0;
+      pentry[nparams]  = entry;
+      params[nparams]  = istart;
+      num_par[nparams] = 1;
+      
+      istart++;
+      for ( i = istart; i < argc; ++i )
+	{
+	  epos = strchr(argv[i], '=');
+	  if ( epos != NULL ) break;
+
+	  num_par[nparams]++;
+	}
+
+      istart = i;
+
+      nparams++;
+    }
+
+  for ( i = 0; i < nparams; ++i )
+    {
+      pmlProcess(pentry[i], num_par[i], &argv[params[i]]);
+    }
+
+
+ END_LABEL:
+
+  free(parbuf);
+
+  return (status);
+}
+
+
+int par_check_int(int npar, int *parlist, int *flaglist, int par)
+{
+  int i, found;
+
+  found = 0;
+  for ( i = 0; i < npar; i++ )
+    if ( par == parlist[i] ) { found = 1; flaglist[i] = TRUE;/* break;*/}
+
+  return (found);
+}
+
+
+int par_check_flt(int npar, double *parlist, int *flaglist, double par)
+{
+  int i, found;
+
+  found = 0;
+  for ( i = 0; i < npar; i++ )
+    if ( fabs(par - parlist[i]) < 1.e-4 ) { found = 1; flaglist[i] = TRUE;/* break;*/}
+
+  return (found);
+}
+
+
+int par_check_word(int npar, char **parlist, int *flaglist, char *par)
+{
+  int i, found;
+
+  found = 0;
+  for ( i = 0; i < npar; i++ )
+    if ( strcmp(par, parlist[i]) == 0 ) { found = 1; flaglist[i] = TRUE;/* break;*/}
+
+  return (found);
+}
+
+
+void par_check_int_flag(int npar, int *parlist, int *flaglist, const char *txt)
+{
+  int i;
+
+  for ( i = 0; i < npar; ++i )
+    if ( flaglist[i] == FALSE )
+      cdoWarning("%s %d not found!", txt, parlist[i]);
+}
+
+
+void par_check_flt_flag(int npar, double *parlist, int *flaglist, const char *txt)
+{
+  int i;
+
+  for ( i = 0; i < npar; ++i )
+    if ( flaglist[i] == FALSE )
+      cdoWarning("%s %g not found!", txt, parlist[i]);
+}
+
+
+void par_check_word_flag(int npar, char **parlist, int *flaglist, const char *txt)
+{
+  int i;
+
+  for ( i = 0; i < npar; ++i )
+    if ( flaglist[i] == FALSE )
+      cdoWarning("%s %s not found!", txt, parlist[i]);
+}
 
 
 void *Select(void *argument)
 {
   const char func[] = "Select";
-  int SELCODE, SELNAME, SELLEVEL, SELLEVIDX, SELGRID, SELGRIDNAME, SELZAXIS, SELZAXISNAME, SELLTYPE; 
-  int SELTABNUM, DELCODE, DELNAME, SELSTDNAME;
+  int SELECT;
   int operatorID;
-  int streamID1, streamID2;
-  int tsID, nrecs;
+  int streamID1, streamID2 = CDI_UNDEFID;
+  int tsID1, tsID2, nrecs;
   int nvars, nlevs;
-  int code, tabnum, gridID, zaxisID, levID;
-  double level;
+  int zaxisID, levID;
   int varID2, levelID2;
   int recID, varID, levelID;
-  int *intarr = NULL, nsel = 0;
-  int *selfound = NULL;
-  double *fltarr = NULL;
+  int iparam;
+  int nsel;
+  char paramstr[32];
   char varname[256];
   char stdname[256];
-  char gridname[256];
-  char zaxisname[256];
   char **argnames = NULL;
-  int vlistID1 = -1, vlistID2 = -1;
-  int isel;
+  int vlistID0 = -1, vlistID1 = -1, vlistID2 = -1;
   int i;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
+  int streamCnt, nfiles, indf;
   double *array = NULL;
-  int taxisID1, taxisID2;
-  int ltype;
-  LIST *ilist = listNew(INT_LIST);
-  LIST *flist = listNew(FLT_LIST);
+  int taxisID1, taxisID2 = CDI_UNDEFID;
+  int ntsteps;
+  int npar;
+  int *vars = NULL;
+  pml_t *pml;
+  PML_DEF_INT(code,    1024, "Code number");
+  PML_DEF_FLT(level,   1024, "Level");
+  PML_DEF_WORD(name,   1024, "Variable name");
+  PML_DEF_WORD(param,  1024, "Parameter");
+
+  PML_INIT_INT(code);
+  PML_INIT_FLT(level);
+  PML_INIT_WORD(name);
+  PML_INIT_WORD(param);
 
   cdoInitialize(argument);
 
-  SELCODE      = cdoOperatorAdd("selcode",      0, 0, "codes");
-  SELNAME      = cdoOperatorAdd("selname",      0, 0, "vars");
-  SELSTDNAME   = cdoOperatorAdd("selstdname",   0, 0, "standard names");
-  SELLEVEL     = cdoOperatorAdd("sellevel",     0, 0, "levels");
-  SELLEVIDX    = cdoOperatorAdd("sellevidx",    0, 0, "index of levels");
-  SELGRID      = cdoOperatorAdd("selgrid",      0, 0, "gridIDs");
-  SELGRIDNAME  = cdoOperatorAdd("selgridname",  0, 0, "grid names");
-  SELZAXIS     = cdoOperatorAdd("selzaxis",     0, 0, "zaxisIDs");
-  SELZAXISNAME = cdoOperatorAdd("selzaxisname", 0, 0, "zaxis names");
-  SELTABNUM    = cdoOperatorAdd("seltabnum",    0, 0, "table number");
-  DELCODE      = cdoOperatorAdd("delcode",      0, 0, "codes");
-  DELNAME      = cdoOperatorAdd("delname",      0, 0, "vars");
-  SELLTYPE     = cdoOperatorAdd("selltype",     0, 0, "GRIB level types"); 
+  SELECT  = cdoOperatorAdd("select", 0, 0, "parameter list");
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -102,297 +489,212 @@ void *Select(void *argument)
 
   operatorInputArg(cdoOperatorEnter(operatorID));
 
-  if ( operatorID == SELNAME || operatorID == DELNAME || operatorID == SELSTDNAME ||
-       operatorID == SELGRIDNAME || operatorID == SELZAXISNAME )
-    {
-      nsel     = operatorArgc();
-      argnames = operatorArgv();
-
-      if ( cdoVerbose )
-	for ( i = 0; i < nsel; i++ )
-	  printf("name %d = %s\n", i+1, argnames[i]);
-    }
-  else if ( operatorID == SELLEVEL )
-    {
-      nsel = args2fltlist(operatorArgc(), operatorArgv(), flist);
-      fltarr = (double *) listArrayPtr(flist);
-
-      if ( cdoVerbose )
-	for ( i = 0; i < nsel; i++ )
-	  printf("flt %d = %g\n", i+1, fltarr[i]);
-    }
-  else
-    {
-      nsel = args2intlist(operatorArgc(), operatorArgv(), ilist);
-      intarr = (int *) listArrayPtr(ilist);
-
-      if ( cdoVerbose )
-	for ( i = 0; i < nsel; i++ )
-	  printf("int %d = %d\n", i+1, intarr[i]);
-    }
-
-  if ( nsel )
-    {
-      selfound = (int *) malloc(nsel*sizeof(int));
-      for ( i = 0; i < nsel; i++ ) selfound[i] = FALSE;
-    }
-
+  nsel     = operatorArgc();
+  argnames = operatorArgv();
   /*
-  if ( nsel == 0 )
-    cdoAbort("missing code argument!");
+  if ( cdoVerbose )
+    for ( i = 0; i < nsel; i++ )
+      printf("name %d = %s\n", i+1, argnames[i]);
   */
-  streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
+  pml = pmlNew("SELECT");
 
-  vlistID1 = streamInqVlist(streamID1);
+  PML_ADD_INT(pml, code);
+  PML_ADD_FLT(pml, level);
+  PML_ADD_WORD(pml, name);
+  PML_ADD_WORD(pml, param);
 
-  vlistClearFlag(vlistID1);
-  nvars = vlistNvars(vlistID1);
-  for ( varID = 0; varID < nvars; varID++ )
+  pmlRead(pml, nsel, argnames);
+
+  if ( cdoVerbose ) pmlPrint(pml);
+
+  PML_NUM(pml, code);
+  PML_NUM(pml, level);
+  PML_NUM(pml, name);
+  PML_NUM(pml, param);
+  /*
+  pmlDelete(pml);
+  */
+
+  streamCnt = cdoStreamCnt();
+  nfiles = streamCnt - 1;
+
+  tsID2 = 0;
+  for ( indf = 0; indf < nfiles; indf++ )
     {
-      vlistInqVarName(vlistID1, varID, varname);
-      vlistInqVarStdname(vlistID1, varID, stdname);
-      code    = vlistInqVarCode(vlistID1, varID);
-      tabnum  = tableInqNum(vlistInqVarTable(vlistID1, varID));
-      gridID  = vlistInqVarGrid(vlistID1, varID);
-      zaxisID = vlistInqVarZaxis(vlistID1, varID);
-      nlevs   = zaxisInqSize(zaxisID);
-      gridName(gridInqType(gridID), gridname);
-      zaxisName(zaxisInqType(zaxisID), zaxisname);
+      if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
 
-      for ( levID = 0; levID < nlevs; levID++ )
+      streamID1 = streamOpenRead(cdoStreamName(indf));
+      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(indf));
+
+      vlistID1 = streamInqVlist(streamID1);
+      taxisID1 = vlistInqTaxis(vlistID1);
+
+      if ( indf == 0 )
 	{
-	  level = zaxisInqLevel(zaxisID, levID);
+	  vlistClearFlag(vlistID1);
+	  nvars = vlistNvars(vlistID1);
+	  vars = (int *) malloc(nvars*sizeof(int));
 
-	  if ( operatorID == DELCODE || operatorID == DELNAME )
-	    vlistDefFlag(vlistID1, varID, levID, TRUE);
-
-	  for ( isel = 0; isel < nsel; isel++ )
+	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( operatorID == SELCODE )
-		{
-		  if ( intarr[isel] == code )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELNAME )
-		{
-		  if ( strcmp(argnames[isel], varname) == 0 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELSTDNAME )
-		{
-		  if ( strcmp(argnames[isel], stdname) == 0 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELLEVEL )
-		{
-		  if ( fabs(fltarr[isel] - level) < 0.0001 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELLEVIDX )
-		{
-		  if ( intarr[isel] == (levID+1) )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELGRID )
-		{
-		  if ( intarr[isel] == (gridID+1) )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELGRIDNAME )
-		{
-		  if ( memcmp(argnames[isel], gridname, strlen(argnames[isel])) == 0 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELZAXIS )
-		{
-		  if ( intarr[isel] == (zaxisID+1) )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELZAXISNAME )
-		{
-		  if ( memcmp(argnames[isel], zaxisname, strlen(argnames[isel])) == 0 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELTABNUM )
-		{
-		  if ( intarr[isel] == tabnum )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == DELCODE )
-		{
-		  if ( intarr[isel] == code )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, FALSE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == DELNAME )
-		{
-		  if ( strcmp(argnames[isel], varname) == 0 )
-		    {
-		      vlistDefFlag(vlistID1, varID, levID, FALSE);
-		      selfound[isel] = TRUE;
-		    }
-		}
-	      else if ( operatorID == SELLTYPE )
-		{
-		  ltype = zaxis2ltype(zaxisID);
+	      iparam   = vlistInqVarParam(vlistID1, varID);
+	      code    = vlistInqVarCode(vlistID1, varID);
+	      vlistInqVarName(vlistID1, varID, varname);
+	      vlistInqVarStdname(vlistID1, varID, stdname);
 
-		  if ( intarr[isel] == ltype )
+	      cdiParamToString(iparam, paramstr, sizeof(paramstr));
+
+	      name  = varname;
+	      param = paramstr;
+
+	      vars[varID] = FALSE;
+	      
+	      if ( npar_code  && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
+	      if ( npar_name  && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
+	      if ( npar_param && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+	    }
+
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      if ( vars[varID] )
+		{
+		  zaxisID = vlistInqVarZaxis(vlistID1, varID);
+		  nlevs   = zaxisInqSize(zaxisID);
+
+		  for ( levID = 0; levID < nlevs; levID++ )
 		    {
-		      vlistDefFlag(vlistID1, varID, levID, TRUE);
-		      selfound[isel] = TRUE;
+		      level = zaxisInqLevel(zaxisID, levID);
+		      
+		      if ( nlevs == 1 && IS_EQUAL(level, 0) )
+			{
+			  vlistDefFlag(vlistID1, varID, levID, TRUE);
+			}
+		      else
+			{
+			  if ( npar_level )
+			    {
+			      if ( PAR_CHECK_FLT(level) )
+				vlistDefFlag(vlistID1, varID, levID, TRUE);
+			    }
+			  else
+			    {
+			      vlistDefFlag(vlistID1, varID, levID, TRUE);
+			    }
+			}
 		    }
 		}
+	    }
+
+	  PAR_CHECK_INT_FLAG(code);
+	  PAR_CHECK_FLT_FLAG(level);
+	  PAR_CHECK_WORD_FLAG(name);
+	  PAR_CHECK_WORD_FLAG(param);
+
+	  npar = 0;
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      nlevs   = zaxisInqSize(zaxisID);
+
+	      for ( levID = 0; levID < nlevs; levID++ )
+		if ( vlistInqFlag(vlistID1, varID, levID) == TRUE ) break;
+	      
+	      if ( levID < nlevs ) npar++;
+	    }
+
+	  if ( npar == 0 )
+	    cdoAbort("No variable selected!");
+
+
+	  // if ( cdoVerbose ) vlistPrint(vlistID1);
+
+	  vlistID0 = vlistDuplicate(vlistID1);
+	  for ( varID = 0; varID < nvars; varID++ )
+	    {
+	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      nlevs   = zaxisInqSize(zaxisID);
+	      for ( levID = 0; levID < nlevs; levID++ )
+		if ( vlistInqFlag(vlistID1, varID, levID) == TRUE )
+		  vlistDefFlag(vlistID0, varID, levID, TRUE);
+	    }
+
+	  // if ( cdoVerbose ) vlistPrint(vlistID0);
+
+	  vlistID2 = vlistCreate();
+	  vlistCopyFlag(vlistID2, vlistID1);
+
+	  // if ( cdoVerbose ) vlistPrint(vlistID2);
+
+	  taxisID2 = taxisDuplicate(taxisID1);
+	  vlistDefTaxis(vlistID2, taxisID2);
+
+	  ntsteps = vlistNtsteps(vlistID1);
+	  if ( ntsteps == 0 && nfiles > 1 )
+	    {	      
+	      for ( varID = 0; varID < nvars; ++varID )
+		vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
+	    }
+
+	  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
+	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
+
+	  streamDefVlist(streamID2, vlistID2);
+
+	  if ( ! lcopy )
+	    {
+	      gridsize = vlistGridsizeMax(vlistID1);
+	      if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
+	      array = (double *) malloc(gridsize*sizeof(double));
 	    }
 	}
-    }
-
-  for ( isel = 0; isel < nsel; isel++ )
-    {
-      if ( selfound[isel] == FALSE )
+      else
 	{
-	  if ( operatorID == SELCODE || operatorID == DELCODE )
-	    {
-	      cdoWarning("Code number %d not found!", intarr[isel]);
-	    }
-	  else if ( operatorID == SELNAME || operatorID == DELNAME )
-	    {
-	      cdoWarning("Variable name %s not found!", argnames[isel]);
-	    }
-	  else if ( operatorID == SELSTDNAME )
-	    {
-	      cdoWarning("Variable with standard name %s not found!", argnames[isel]);
-	    }
-	  else if ( operatorID == SELLEVEL )
-	    {
-	      cdoWarning("Level %g not found!", fltarr[isel]);
-	    }
-	  else if ( operatorID == SELLEVIDX )
-	    {
-	      cdoWarning("Level index %d not found!", intarr[isel]);
-	    }
-	  else if ( operatorID == SELGRID )
-	    {
-	      cdoWarning("Grid %d not found!", intarr[isel]);
-	    }
-	  else if ( operatorID == SELGRIDNAME )
-	    {
-	      cdoWarning("Grid name %s not found!", argnames[isel]);
-	    }
-	  else if ( operatorID == SELZAXIS )
-	    {
-	      cdoWarning("Zaxis %d not found!", intarr[isel]);
-	    }
-	  else if ( operatorID == SELZAXISNAME )
-	    {
-	      cdoWarning("Zaxis name %s not found!", argnames[isel]);
-	    }
-	  else if ( operatorID == SELTABNUM )
-	    {
-	      cdoWarning("Table number %d not found!", intarr[isel]);
-	    }
-	  else if ( operatorID == SELLTYPE )
-	    {
-	      cdoWarning("GRIB level type %d not found!", intarr[isel]);
-	    }
+	  vlistCompare(vlistID0, vlistID1, func_sft);
+	  /* vlistCompare(vlistID1, vlistID2, func_hrd); */
 	}
-    }
 
-  vlistID2 = vlistCreate();
-  vlistCopyFlag(vlistID2, vlistID1);
+      tsID1 = 0;
+      while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
+	{
+	  taxisCopyTimestep(taxisID2, taxisID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
-  vlistDefTaxis(vlistID2, taxisID2);
-
-  nrecs = vlistNrecs(vlistID2);
-
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
-
-  streamDefVlist(streamID2, vlistID2);
-
-  if ( ! lcopy )
-    {
-      gridsize = vlistGridsizeMax(vlistID1);
-      array = (double *) malloc(gridsize*sizeof(double));
-    }
-
-  tsID = 0;
-  while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
-    {
-      taxisCopyTimestep(taxisID2, taxisID1);
-
-      streamDefTimestep(streamID2, tsID);
+	  streamDefTimestep(streamID2, tsID2);
      
-      for ( recID = 0; recID < nrecs; recID++ )
-	{
-	  streamInqRecord(streamID1, &varID, &levelID);
-	  if ( vlistInqFlag(vlistID1, varID, levelID) == TRUE )
+	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
-	      varID2   = vlistFindVar(vlistID2, varID);
-	      levelID2 = vlistFindLevel(vlistID2, varID, levelID);
+	      streamInqRecord(streamID1, &varID, &levelID);
+	      if ( vlistInqFlag(vlistID0, varID, levelID) == TRUE )
+		{
+		  varID2   = vlistFindVar(vlistID2, varID);
+		  levelID2 = vlistFindLevel(vlistID2, varID, levelID);
 
-	      streamDefRecord(streamID2, varID2, levelID2);
-	      if ( lcopy )
-		{
-		  streamCopyRecord(streamID2, streamID1);
-		}
-	      else
-		{
-		  streamReadRecord(streamID1, array, &nmiss);
-		  streamWriteRecord(streamID2, array, nmiss);
+		  streamDefRecord(streamID2, varID2, levelID2);
+		  if ( lcopy )
+		    {
+		      streamCopyRecord(streamID2, streamID1);
+		    }
+		  else
+		    {
+		      streamReadRecord(streamID1, array, &nmiss);
+		      streamWriteRecord(streamID2, array, nmiss);
+		    }
 		}
      	    }
+
+	  tsID1++;
+	  tsID2++;
 	}
-       
-      tsID++;
+      
+      streamClose(streamID1);
     }
 
   streamClose(streamID2);
-  streamClose(streamID1);
  
+  vlistDestroy(vlistID0);
   vlistDestroy(vlistID2);
 
-  if ( ! lcopy )
-    if ( array ) free(array);
-
-  if ( selfound ) free(selfound);
-
-  listDelete(ilist);
-  listDelete(flist);
+  if ( array ) free(array);
+  if ( vars ) free(vars);
 
   cdoFinish();
 

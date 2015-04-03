@@ -51,8 +51,8 @@ void *Seaspctl(void *argument)
   int *recVarID, *recLevelID;
   int newseas, oldmon = 0, newmon;
   double missval;
-  FIELD **vars1 = NULL;
-  FIELD field;
+  field_t **vars1 = NULL;
+  field_t field;
   int pn;
   HISTOGRAM_SET *hset = NULL;
   int season_start;
@@ -107,7 +107,7 @@ void *Seaspctl(void *argument)
 
   field.ptr = (double *) malloc(gridsize*sizeof(double));
 
-  vars1 = (FIELD **) malloc(nvars * sizeof(FIELD *));
+  vars1 = (field_t **) malloc(nvars * sizeof(field_t *));
   hset = hsetCreate(nvars);
 
   for ( varID = 0; varID < nvars; varID++ )
@@ -117,7 +117,7 @@ void *Seaspctl(void *argument)
       nlevels   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = (FIELD *) malloc(nlevels * sizeof(FIELD));
+      vars1[varID] = (field_t *) malloc(nlevels * sizeof(field_t));
       hsetCreateVarLevels(hset, varID, nlevels, gridID);
 
       for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -168,7 +168,7 @@ void *Seaspctl(void *argument)
 	{
 	  vdate1 = taxisInqVdate(taxisID1);
 	  vtime1 = taxisInqVtime(taxisID1);
-	  decode_date(vdate1, &year, &month, &day);
+	  cdiDecodeDate(vdate1, &year, &month, &day);
 	  if ( month < 0 || month > 16 )
 	    cdoAbort("Month %d out of range!", month);
 

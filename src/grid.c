@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -68,13 +68,9 @@ int gridToZonal(int gridID1)
   gridsize = gridInqYsize(gridID1);
   gridID2  = gridCreate(gridtype, gridsize);
 	  
-  if ( gridtype != GRID_LONLAT &&
-       gridtype != GRID_GAUSSIAN &&
-       (gridtype == GRID_GENERIC && gridsize <= 1) )
-    {
-      Error(func, "Gridtype %s unsupported!", gridNamePtr(gridtype));
-    }
-  else
+  if ( gridtype == GRID_LONLAT   ||
+       gridtype == GRID_GAUSSIAN ||
+       gridtype == GRID_GENERIC )
     {
       gridDefXsize(gridID2, 1);
       gridDefYsize(gridID2, gridsize);
@@ -90,6 +86,10 @@ int gridToZonal(int gridID1)
 
 	  free(yvals);
 	}
+    }
+  else
+    {
+      Error(func, "Gridtype %s unsupported!", gridNamePtr(gridtype));
     }
 
   return (gridID2);
@@ -108,29 +108,28 @@ int gridToMeridional(int gridID1)
   gridsize = gridInqXsize(gridID1);
   gridID2  = gridCreate(gridtype, gridsize);
 	  
-  switch (gridtype)
+  if ( gridtype == GRID_LONLAT   ||
+       gridtype == GRID_GAUSSIAN ||
+       gridtype == GRID_GENERIC )
     {
-    case GRID_LONLAT:
-    case GRID_GAUSSIAN:
-      {
-	gridDefXsize(gridID2, gridsize);
-	gridDefYsize(gridID2, 1);
+      gridDefXsize(gridID2, gridsize);
+      gridDefYsize(gridID2, 1);
 
-	xvals = (double *) malloc(gridsize*sizeof(double));
+      if ( gridInqXvals(gridID1, NULL) )
+	{
+	  xvals = (double *) malloc(gridsize*sizeof(double));
 
-	gridInqXvals(gridID1, xvals);
-	gridDefXvals(gridID2, xvals);
-	gridDefYvals(gridID2, &yval);
+	  gridInqXvals(gridID1, xvals);
+	  gridDefXvals(gridID2, xvals);
 
-	free(xvals);
+	  free(xvals);
+	}
 
-	break;
-      }
-    default:
-      {
-	Error(func, "Gridtype %s unsupported!", gridNamePtr(gridtype));
-	break;
-      }
+      gridDefYvals(gridID2, &yval);
+    }
+  else
+    {
+      Error(func, "Gridtype %s unsupported!", gridNamePtr(gridtype));
     }
 
   return (gridID2);
@@ -237,21 +236,26 @@ void gridGenRotBounds(int gridID, int nx, int ny,
     }
 }
 
-
-void gridGenXbounds2D(int nx, int ny, double *xbounds, double *xbounds2D)
+static
+void gridGenXbounds2D(int nx, int ny, const double * restrict xbounds, double * restrict xbounds2D)
 {
   long i, j, index;
   double minlon, maxlon;
 
-  for ( i = 0; i < nx; i++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none)        \
+  shared(nx, ny, xbounds, xbounds2D)	      \
+  private(i, j, minlon, maxlon, index)
+#endif
+  for ( i = 0; i < nx; ++i )
     {
-      minlon = xbounds[2*i];
+      minlon = xbounds[2*i  ];
       maxlon = xbounds[2*i+1];
 
-      for ( j = 0; j < ny; j++ )
+      for ( j = 0; j < ny; ++j )
 	{
 	  index = j*4*nx + 4*i;
-	  xbounds2D[index+0] = minlon;
+	  xbounds2D[index  ] = minlon;
 	  xbounds2D[index+1] = maxlon;
 	  xbounds2D[index+2] = maxlon;
 	  xbounds2D[index+3] = minlon;
@@ -259,29 +263,34 @@ void gridGenXbounds2D(int nx, int ny, double *xbounds, double *xbounds2D)
     }
 }
 
-
-void gridGenYbounds2D(int nx, int ny, double *ybounds, double *ybounds2D)
+static
+void gridGenYbounds2D(int nx, int ny, const double * restrict ybounds, double * restrict ybounds2D)
 {
   long i, j, index;
   double minlat, maxlat;
 
-  for ( j = 0; j < ny; j++ )
+#if defined (_OPENMP)
+#pragma omp parallel for default(none)        \
+  shared(nx, ny, ybounds, ybounds2D)	      \
+  private(i, j, minlat, maxlat, index)
+#endif
+  for ( j = 0; j < ny; ++j )
     {
       if ( ybounds[0] > ybounds[1] )
 	{
-	  maxlat = ybounds[2*j];
+	  maxlat = ybounds[2*j  ];
 	  minlat = ybounds[2*j+1];
 	}
       else
 	{
 	  maxlat = ybounds[2*j+1];
-	  minlat = ybounds[2*j];
+	  minlat = ybounds[2*j  ];
 	}
 
-      for ( i = 0; i < nx; i++ )
+      for ( i = 0; i < nx; ++i )
 	{
 	  index = j*4*nx + 4*i;
-	  ybounds2D[index+0] = minlat;
+	  ybounds2D[index  ] = minlat;
 	  ybounds2D[index+1] = minlat;
 	  ybounds2D[index+2] = maxlat;
 	  ybounds2D[index+3] = maxlat;
@@ -477,6 +486,78 @@ void lcc2_to_geo(int gridID, int gridsize, double *xvals, double *yvals)
 #else
   cdoAbort("proj4 support not compiled in!");
 #endif
+}
+
+int    qu2reg3(double *pfield, int *kpoint, int klat, int klon,
+	       double msval, int *kret, int omisng, int operio, int oveggy);
+
+void field2regular(int gridID1, int gridID2, double missval, double *array, int nmiss)
+{
+  static char func[] = "field2regular";
+  int nlon, nlat;
+  int gridtype;
+  int lmiss, lperio, lveggy;
+  int iret;
+  int *rowlonptr;
+
+  gridtype = gridInqType(gridID1);
+
+  if ( gridtype != GRID_GAUSSIAN_REDUCED ) Error(func, "Not a reduced gaussian grid!");
+
+  nlat = gridInqYsize(gridID1);
+  nlon = 2*nlat;
+
+  rowlonptr = (int *) malloc(nlat*sizeof(int));
+
+  if ( gridInqSize(gridID2) != nlon*nlat ) Error(func, "Gridsize differ!");
+
+  gridInqRowlon(gridID1, rowlonptr);
+
+  lmiss = nmiss > 0;
+  lperio = 1;
+  lveggy = 0;
+
+  (void) qu2reg3(array, rowlonptr, nlat, nlon, missval, &iret, lmiss, lperio, lveggy);
+
+  free(rowlonptr);
+}
+
+
+int gridToRegular(int gridID1)
+{
+  static char func[] = "gridToRegular";
+  int gridID2;
+  int gridtype, gridsize;
+  int nx, ny;
+  long i;
+  double *xvals = NULL, *yvals = NULL;
+
+  gridtype = gridInqType(gridID1);
+
+  if ( gridtype != GRID_GAUSSIAN_REDUCED ) Error(func, "Not a reduced gaussian grid!");
+
+  ny = gridInqYsize(gridID1);
+  nx = 2*ny;
+  gridsize = nx*ny;
+
+  gridID2  = gridCreate(GRID_GAUSSIAN, gridsize);
+	  
+  gridDefXsize(gridID2, nx);
+  gridDefYsize(gridID2, ny);
+  
+  xvals = (double *) malloc(nx*sizeof(double));
+  yvals = (double *) malloc(ny*sizeof(double));
+
+  for ( i = 0; i < nx; ++i ) xvals[i] = i * 360./nx;
+  gridInqYvals(gridID1, yvals);
+
+  gridDefXvals(gridID2, xvals);
+  gridDefYvals(gridID2, yvals);
+
+  free(xvals);
+  free(yvals);
+
+  return (gridID2);
 }
 
 
@@ -923,23 +1004,179 @@ int gridToCell(int gridID1)
 }
 
 
+static
+double areas(struct cart *dv1, struct cart *dv2, struct cart *dv3)
+{
+  double a1, a2, a3;
+  double ca1, ca2, ca3;
+  double s12, s23, s31;
+
+  struct cart u12, u23, u31;
+
+  double areas;
+
+  /* compute cross products Uij = Vi X Vj */
+
+  u12.x[0] = dv1->x[1]*dv2->x[2] - dv1->x[2]*dv2->x[1];
+  u12.x[1] = dv1->x[2]*dv2->x[0] - dv1->x[0]*dv2->x[2];
+  u12.x[2] = dv1->x[0]*dv2->x[1] - dv1->x[1]*dv2->x[0];
+  
+  u23.x[0] = dv2->x[1]*dv3->x[2] - dv2->x[2]*dv3->x[1];
+  u23.x[1] = dv2->x[2]*dv3->x[0] - dv2->x[0]*dv3->x[2];
+  u23.x[2] = dv2->x[0]*dv3->x[1] - dv2->x[1]*dv3->x[0];
+  
+  u31.x[0] = dv3->x[1]*dv1->x[2] - dv3->x[2]*dv1->x[1];
+  u31.x[1] = dv3->x[2]*dv1->x[0] - dv3->x[0]*dv1->x[2];
+  u31.x[2] = dv3->x[0]*dv1->x[1] - dv3->x[1]*dv1->x[0];
+  
+  /* normalize Uij to unit vectors */
+  
+  s12 = u12.x[0]*u12.x[0]+u12.x[1]*u12.x[1]+u12.x[2]*u12.x[2];
+  s23 = u23.x[0]*u23.x[0]+u23.x[1]*u23.x[1]+u23.x[2]*u23.x[2];
+  s31 = u31.x[0]*u31.x[0]+u31.x[1]*u31.x[1]+u31.x[2]*u31.x[2];
+
+  /* test for a degenerate triangle associated with collinear vertices */
+  
+  if ( !(fabs(s12) > 0.0) || !(fabs(s23) > 0.0) || !(fabs(s31) > 0.0) ) {
+    areas = 0.0;
+    return areas;
+  }
+
+  s12 = sqrt(s12);
+  s23 = sqrt(s23);
+  s31 = sqrt(s31);
+  
+  u12.x[0] = u12.x[0]/s12; u12.x[1] = u12.x[1]/s12; u12.x[2] = u12.x[2]/s12;
+  u23.x[0] = u23.x[0]/s23; u23.x[1] = u23.x[1]/s23; u23.x[2] = u23.x[2]/s23;
+  u31.x[0] = u31.x[0]/s31; u31.x[1] = u31.x[1]/s31; u31.x[2] = u31.x[2]/s31;
+  
+  /*
+   *  Compute interior angles Ai as the dihedral angles between planes:
+   *  CA1 = cos(A1) = -<U12,U31>
+   *  CA2 = cos(A2) = -<U23,U12>
+   *  CA3 = cos(A3) = -<U31,U23>
+   */
+
+  ca1 = -( u12.x[0]*u31.x[0]+u12.x[1]*u31.x[1]+u12.x[2]*u31.x[2] );
+  ca2 = -( u23.x[0]*u12.x[0]+u23.x[1]*u12.x[1]+u23.x[2]*u12.x[2] );
+  ca3 = -( u31.x[0]*u23.x[0]+u31.x[1]*u23.x[1]+u31.x[2]*u23.x[2] );
+
+#if ! defined (FMAX)
+#define  FMAX(a,b)  ((a) > (b) ? (a) : (b))
+#endif
+#if ! defined (FMIN)
+#define  FMIN(a,b)  ((a) < (b) ? (a) : (b))
+#endif
+
+  ca1 = FMAX(ca1, -1.0);
+  ca1 = FMIN(ca1, +1.0);
+  ca2 = FMAX(ca2, -1.0);
+  ca2 = FMIN(ca2, +1.0);
+  ca3 = FMAX(ca3, -1.0);
+  ca3 = FMIN(ca3, +1.0);
+  
+  a1 = acos(ca1);
+  a2 = acos(ca2);
+  a3 = acos(ca3);
+  
+  /* compute AREAS = A1 + A2 + A3 - PI */
+  
+  areas = a1 + a2 + a3 - M_PI;
+
+  if ( areas < 0.0 ) {
+    areas = 0.0;
+  }
+
+  return areas;
+}
+
+
+static
+double cell_area(long i, long nv, double *grid_center_lon, double *grid_center_lat,
+		 double *grid_corner_lon, double *grid_corner_lat)
+{
+  long k;
+  double xa;
+  double area;
+  struct geo p1, p2, p3;
+  struct cart c1, c2, c3;
+
+  area = 0;
+      
+  p3.lon = grid_center_lon[i]*deg2rad; 
+  p3.lat = grid_center_lat[i]*deg2rad;
+  c3 = gc2cc(&p3);
+      
+  for ( k = 1; k < nv; ++k )
+    {
+      p1.lon = grid_corner_lon[i*nv+k-1]*deg2rad; 
+      p1.lat = grid_corner_lat[i*nv+k-1]*deg2rad;
+      c1 = gc2cc(&p1);
+      p2.lon = grid_corner_lon[i*nv+k]*deg2rad; 
+      p2.lat = grid_corner_lat[i*nv+k]*deg2rad;
+      c2 = gc2cc(&p2);
+
+      xa = areas(&c1, &c2, &c3);
+      /*
+	if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
+	(fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
+	(fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) )
+	{
+	printf("area: %d %g %g %g %g %g %g %g %g\n", i, xa, area[i], 
+	p1.lon*rad2deg, p1.lat*rad2deg, p2.lon*rad2deg, p2.lat*rad2deg, p3.lon*rad2deg, p3.lat*rad2deg);
+	}
+      */
+      if ( xa > 0.001 )
+	if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
+	     (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
+	     (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) ) return(2);
+      
+      area += xa;
+    }
+
+  p1.lon = grid_corner_lon[i*nv+0]*deg2rad; 
+  p1.lat = grid_corner_lat[i*nv+0]*deg2rad;
+  c1 = gc2cc(&p1);
+  p2.lon = grid_corner_lon[i*nv+nv-1]*deg2rad; 
+  p2.lat = grid_corner_lat[i*nv+nv-1]*deg2rad;
+  c2 = gc2cc(&p2);
+
+  xa = areas(&c1, &c2, &c3);
+  /*
+    if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
+    (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
+    (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) )
+    {
+    printf("area: %d %g %g %g %g %g %g %g %g\n", i, xa, area[i],
+    p1.lon*rad2deg, p1.lat*rad2deg, p2.lon*rad2deg, p2.lat*rad2deg, p3.lon*rad2deg, p3.lat*rad2deg);
+    }
+  */
+  if ( xa > 0.001 )
+    if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
+	 (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
+	 (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) ) return(2);
+  
+  area += xa;
+
+  return (area);
+}
+
+
 int gridGenArea(int gridID, double *area)
 {
   static char func[] = "gridGenArea";
   int status = 0;
-  int i, k;
   int gridtype;
-  int nv, gridsize;
   int lgrid_gen_bounds = FALSE;
-  double xa;
+  int lgriddestroy = FALSE;
+  long i;
+  long nv, gridsize;
   double total_area;
   double *grid_center_lon = NULL;
   double *grid_center_lat = NULL;
   double *grid_corner_lon = NULL;
   double *grid_corner_lat = NULL;
   int *grid_mask = NULL;
-  struct geo p1, p2, p3;
-  struct cart c1, c2, c3;
 
   gridsize = gridInqSize(gridID);
   gridtype = gridInqType(gridID);
@@ -961,12 +1198,14 @@ int gridGenArea(int gridID, double *area)
     {
       if ( gridtype == GRID_GME )
 	{
+	  lgriddestroy = TRUE;
 	  gridID = gridToCell(gridID);
 	  grid_mask = (int *) malloc(gridsize*sizeof(int));
 	  gridInqMask(gridID, grid_mask);
 	}
       else
 	{
+	  lgriddestroy = TRUE;
 	  gridID = gridToCurvilinear(gridID);
 	  lgrid_gen_bounds = TRUE;
 	}
@@ -1013,71 +1252,22 @@ int gridGenArea(int gridID, double *area)
 	  return (status);
 	}
     }
+
+  if ( lgriddestroy ) gridDestroy(gridID);
   
   total_area = 0;
+#if defined (_OPENMP)
+#pragma omp parallel for default(none)        \
+  shared(gridsize, area, nv, grid_center_lon, grid_center_lat, grid_corner_lon, grid_corner_lat) \
+  private(i)
+#endif
   for ( i = 0; i < gridsize; ++i )
     {
-      area[i] = 0;
-      
-      p3.lon = grid_center_lon[i]*deg2rad; 
-      p3.lat = grid_center_lat[i]*deg2rad;
-      c3 = gc2cc(&p3);
-      
-      for ( k = 1; k < nv; ++k )
-	{
-	  p1.lon = grid_corner_lon[i*nv+k-1]*deg2rad; 
-	  p1.lat = grid_corner_lat[i*nv+k-1]*deg2rad;
-	  c1 = gc2cc(&p1);
-	  p2.lon = grid_corner_lon[i*nv+k]*deg2rad; 
-	  p2.lat = grid_corner_lat[i*nv+k]*deg2rad;
-	  c2 = gc2cc(&p2);
-
-	  xa = areas(&c1, &c2, &c3);
-	  /*
-	  if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
-	       (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
-	       (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) )
-	    {
-	    printf("area: %d %g %g %g %g %g %g %g %g\n", i, xa, area[i], 
-	    p1.lon*rad2deg, p1.lat*rad2deg, p2.lon*rad2deg, p2.lat*rad2deg, p3.lon*rad2deg, p3.lat*rad2deg);
-	    }
-	  */
-	  if ( xa > 0.001 )
-	    if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
-		 (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
-		 (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) ) return(2);
-
-	  area[i] += xa;
-	}
-
-      p1.lon = grid_corner_lon[i*nv+0]*deg2rad; 
-      p1.lat = grid_corner_lat[i*nv+0]*deg2rad;
-      c1 = gc2cc(&p1);
-      p2.lon = grid_corner_lon[i*nv+nv-1]*deg2rad; 
-      p2.lat = grid_corner_lat[i*nv+nv-1]*deg2rad;
-      c2 = gc2cc(&p2);
-
-      xa = areas(&c1, &c2, &c3);
-      /*
-      if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
-	   (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
-	   (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) )
-	{
-	printf("area: %d %g %g %g %g %g %g %g %g\n", i, xa, area[i],
-	p1.lon*rad2deg, p1.lat*rad2deg, p2.lon*rad2deg, p2.lat*rad2deg, p3.lon*rad2deg, p3.lat*rad2deg);
-	}
-      */
-      if ( xa > 0.001 )
-	if ( (fabs(p1.lon*rad2deg - p2.lon*rad2deg) > 179) ||
-	     (fabs(p2.lon*rad2deg - p3.lon*rad2deg) > 179) ||
-	     (fabs(p3.lon*rad2deg - p1.lon*rad2deg) > 179) ) return(2);
-
-      area[i] += xa;
-
-      total_area += area[i];
+      area[i] = cell_area(i, nv, grid_center_lon, grid_center_lat, grid_corner_lon, grid_corner_lat);
+      //     total_area += area[i];
     }
 
-  if ( cdoVerbose ) cdoPrint("Total area = %g", total_area);
+  //  if ( cdoVerbose ) cdoPrint("Total area = %g", total_area);
 
   free(grid_center_lon);
   free(grid_center_lat);
@@ -1247,18 +1437,18 @@ int gridWeights(int gridID, double *grid_wgts)
     }
   else
     {
-      if ( gridtype != GRID_LONLAT      &&
-	   gridtype != GRID_GAUSSIAN    &&
-	   gridtype != GRID_LCC         &&
-	   gridtype != GRID_GME         &&
-	   gridtype != GRID_CURVILINEAR &&
-	   gridtype != GRID_CELL )
+      if ( gridtype == GRID_LONLAT      ||
+	   gridtype == GRID_GAUSSIAN    ||
+	   gridtype == GRID_LCC         ||
+	   gridtype == GRID_GME         ||
+	   gridtype == GRID_CURVILINEAR ||
+	   gridtype == GRID_CELL )
 	{
-	  a_status = 1;
+	  a_status = gridGenArea(gridID, grid_area);
 	}
       else
 	{
-	  a_status = gridGenArea(gridID, grid_area);
+	  a_status = 1;
 	}
     }
 

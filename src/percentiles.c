@@ -264,7 +264,7 @@ void hsetDestroy(HISTOGRAM_SET *hset)
 }
 
 
-void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const FIELD *field1, const FIELD *field2)
+void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *field1, const field_t *field2)
 {
   static const char func[] = "hsetDefVarLevelBounds";
   const double *array1 = field1->ptr;
@@ -320,7 +320,7 @@ void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const FI
 }
 
 
-void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const FIELD *field)
+void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *field)
 {
   static const char func[] = "hsetAddVarLevelValues";
   const double *array = field->ptr;
@@ -374,7 +374,7 @@ void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const FI
 }
 
 
-void hsetGetVarLevelPercentiles(FIELD *field, const HISTOGRAM_SET *hset, int varID, int levelID, int p)
+void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, int p)
 {
   static const char func[] = "hsetGetVarLevelPercentiles";
   double *array = field->ptr;

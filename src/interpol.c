@@ -106,7 +106,7 @@ void intlinarr(int nxm, double *ym, double *xm, int nx, double *y, double *x)
 }
 
 
-void intgrid(FIELD *field1, FIELD *field2)
+void intgrid(field_t *field1, field_t *field2)
 {
   static char func[] = "intgrid";
   int nlonIn, nlatIn;
@@ -223,7 +223,7 @@ void intgrid(FIELD *field1, FIELD *field2)
 }
 
 
-void intarea(FIELD *field1, FIELD *field2)
+void intarea(field_t *field1, field_t *field2)
 {
   static char func[] = "intarea";
   int gridsize_i, gridsize_o;
@@ -466,7 +466,7 @@ C
 
 
 /* source code from pingo */
-void interpolate(FIELD *field1, FIELD *field2)
+void interpolate(field_t *field1, field_t *field2)
 {
   static char func[] = "interpolate";
   int i;

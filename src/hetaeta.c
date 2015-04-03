@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "hetaeta.h"
+
 const double ap0  = 100000.0;
 const double apr  = 101325.0;   /* reference pressure */
 const double aipr = 1.0/101325.0;
@@ -31,7 +33,8 @@ FILE *old, *new;
 #endif
 
 
-static long int_index(long n, double *x1, double x2)
+static
+long int_index(long n, double *x1, double x2)
 {
   long klo, khi, k;
 
@@ -56,8 +59,8 @@ static long int_index(long n, double *x1, double x2)
   return (klo);
 }
 
-
-static double esat(double temperature)
+static
+double esat(double temperature)
 {
   double zes;
   double es;
@@ -79,25 +82,401 @@ static double esat(double temperature)
 #define MAX_VARS  512
 
 /* Source from INTERA */
-void hetaeta(int ltq, int ngp, const int *imiss,
-	     int nlev1, const double *ah1, const double *bh1,
-             const double *fis1, const double *ps1, 
-             const double *t1, const double *q1,
-             int nlev2, const double *ah2, const double *bh2, 
-             const double *fis2, double * restrict ps2, 
-             double * restrict t2, double * restrict q2,
-	     int nvars, const double **vars1, double ** restrict vars2,
-	     double * restrict tscor, double * restrict pscor,
-	     double * restrict secor)
+
+void hetaeta_sc(int ltq, int lpsmod, long ij, long ngp, long nlev1, long nlev2, long nvars,
+		const double *restrict af1, const double *restrict bf1, const double *restrict etah2,
+		const double *restrict af2, const double *restrict bf2, const double *restrict w1, 
+		const double *restrict w2, const long *restrict jl1, const long *restrict jl2,
+		const double *restrict ah1, const double *restrict bh1, const double *restrict ps1, 
+		double epsm1i, const double *restrict q1, const double *restrict t1, 
+		const double *restrict fis1, const double *restrict fis2, double *restrict ps2,
+		const double *restrict ah2, const double *restrict bh2, double *restrict *restrict vars1,
+		double *restrict *restrict vars2, double *restrict t2, double *restrict q2,
+		double *restrict tscor, double *restrict pscor, double *restrict secor, long jblt,
+		double *restrict ph1, double *restrict lnph1, double *restrict fi1, double *restrict pf1,
+		double *restrict lnpf1, double *restrict tv1, double *restrict theta1, double *restrict rh1,
+		double *restrict zvar, double *restrict ph2, double *restrict lnph2, double *restrict fi2,
+		double *restrict pf2, double *restrict rh2, double *restrict wgt, long *restrict idx,
+		double *restrict rh_pbl, double *restrict theta_pbl, double *restrict *restrict vars_pbl, 
+		double *restrict zt2, double *restrict zq2)
 {
-  static char func[] = "hetaeta";
-  double epsm1i, zdff, zdffl, ztv, zb, zbb, zc, zps;
+  long k, iv, ijk, ijk1, ijk2;
+  long jlev = 0, jlevr, jnop;
+  long klo;
+  long nlev1p1, nlev2p1;
+  long jjblt;
+  double zq1, zt1;
+  double zdff, zdffl, ztv, zb, zbb, zc, zps;
   double zsump, zsumpp, zsumt, zsumtp;
   double dfi, fiadj = 0, dteta = 0;
   double pbl_lim, pbl_lim_need;
-  long jblt, jjblt;
-  long k, iv, ij, ijk, ijk1, ijk2;
-  long jlev = 0, jlevr = 0, jnop;
+  double rair_d_cpair;
+
+  rair_d_cpair = rair/cpair;
+
+  nlev1p1 = nlev1+1;
+  nlev2p1 = nlev2+1;
+
+  /******* initialise atmospheric fields in old system */
+  
+  /* pressure */
+  ph1[0]       =  0.0;
+  lnph1[0]     = -1.0; 
+  for ( k = 1; k < nlev1p1; ++k )
+    {
+      ph1[k]   = ah1[k]+bh1[k]*ps1[ij];
+      lnph1[k] = log(ph1[k]);
+    } 
+
+  for ( k = 0; k < nlev1; ++k )
+    {
+      pf1[k]   = af1[k]+bf1[k]*ps1[ij];
+      lnpf1[k] = log(pf1[k]);
+    }
+
+  /* virtual temperature, relative humidity, potential temperature */
+  if ( ltq )
+    for ( k = 0; k < nlev1; ++k )
+      {
+	ijk = k*ngp+ij;
+	zq1 = q1[ijk];
+	zt1 = t1[ijk];
+	tv1[k]    = (1.0+epsm1i*zq1)*zt1;
+	rh1[k]    = zq1*pf1[k]/(epsilon*esat(zt1));
+	theta1[k] = zt1*pow(apr/pf1[k], rair_d_cpair);
+      }
+
+  /* ****** integrate hydrostatic equation, using interpolated orography */
+  if ( ltq )
+    {
+      fi1[0] = 0.0;
+      fi1[nlev1] = fis1[ij];
+      for ( k = nlev1-1; k > 0; --k )
+	{
+	  fi1[k] = fi1[k+1]+rair*tv1[k]*(lnph1[k+1]-lnph1[k]);
+	}
+    }
+#if defined (OUTPUT)
+  if ( ij == OPOINT )
+    for ( k = nlev1-1; k >= 0; --k )
+      { 
+	ijk = k*ngp+ij;
+	if ( ltq ) { t = t1[ijk]; q = q1[ijk]; fi = fi1[k]; }
+	else       { t = 0; q = 0; fi = 0; }
+	fprintf(old, "%3d %18.10f %18.10f %18.10f %18.10f", k, fi/g, pf1[k], t, q);
+	for ( iv = 0; iv < nvars; ++iv ) fprintf(old, " %18.10f", vars1[iv][ijk]);
+	fprintf(old, "\n");
+      }
+#endif
+
+  /******* find new surface pressure
+	   extra-/interpolate to new orography
+	   linear regression works not well for extrapolation
+	   separation necessary
+  */
+  if ( ltq )
+    {
+      for ( k = nlev1-2; k > 0; --k )
+	{
+	  /* find index for regression, 1 <= jlev <= nlevec-2 */
+	  jlev = k;
+	  if (fis2[ij] < fi1[k]) break;
+	}
+      zdff = fi1[jlev+1]-fis2[ij];
+      
+      /* get the number of points used for estimation of regression coefficients */
+      jlevr = 0;
+      for ( k = jlev-1; k > 0; --k )
+	{
+	  jlevr = k;
+	  zdffl = fi1[k]-fi1[jlev+1];
+	  if (zdffl >= zdff) break;
+	}
+
+      jnop = jlev+1-jlevr+1;
+
+      /*
+	get coefficients of regression between Tv and lnP ::Tv = B*lnP + C
+	using three levels surounding new orography geopotential
+      */
+      zsumt  = 0.0;
+      zsump  = 0.0;
+      zsumpp = 0.0;
+      zsumtp = 0.0;
+
+      for ( k = jlevr; k <= jlev+1; ++k )
+	{
+	  zsumt  = zsumt  + tv1[k];
+	  zsump  = zsump  + lnpf1[k];
+	  zsumpp = zsumpp + lnpf1[k]*lnpf1[k];
+	  zsumtp = zsumtp + tv1[k]*lnpf1[k];
+	}
+
+      /* final regression coefficients */
+      zb = jnop*zsumpp - zsump*zsump;
+      zc = (zsumt*zsumpp-zsump*zsumtp)/zb;
+      zb = (jnop*zsumtp-zsump*zsumt)/zb;
+
+      /* calculate preliminary surface pressure, adjust to middle level */
+      zps = lnph1[jlev];
+
+      /* calculate preliminary pressure */
+      if ( fabs(zb) < 1.0e-20 )
+	{
+	  /* constant virtual temperature near new surface */
+	  ps2[ij] = exp(zps+(fi1[jlev]-fis2[ij])/(zc*rair));
+	}
+      else
+	{
+	  /* virtual temperatur not constant near new surface */
+	  zbb = zc*zc + zb*(zps*(zb*zps+2.0*zc)+2.0*(fi1[jlev]-fis2[ij])/rair);
+	  ps2[ij] = exp((sqrt(zbb)-zc)/zb);
+	}
+    }
+  else
+    {
+      ps2[ij] = ps1[ij];
+    }
+
+
+  ph2[0]   =  0.0;
+  lnph2[0] = -1.0; 
+  for ( k = 1; k < nlev2p1; ++k )
+    {
+      ph2[k]   = ah2[k]+bh2[k]* ps2[ij];
+      lnph2[k] = log(ph2[k]);
+    } 
+
+  for ( k = 0; k < nlev2; ++k )
+    {
+      pf2[k]   = af2[k]+bf2[k]* ps2[ij];
+      /* lnpf2[k] = log(pf2[k]); */
+    }
+
+  /******* find reference geopotential,  */
+
+  if ( lpsmod && ltq )
+    {
+      /* using old pressure at half levels
+	 find first level below reference pressure */
+      for ( k = 1; k < nlev1p1; ++k )
+	{
+	  jlev = k;
+	  if ( ph1[k] > p_firef ) break;
+	}
+	  
+      fiadj = fi1[jlev]+(fi1[jlev-1]-fi1[jlev])*
+	log(ph1[jlev]/p_firef)/log(ph1[jlev]/ph1[jlev-1]);
+    }
+
+  /******* find the new boundary layer top */
+
+  /* using the pressure from the old system */
+  pbl_lim = ps1[ij]*eta_pbl;
+  jjblt = nlev2-1;
+  for ( k = nlev2-1; k > 0; --k )
+    {
+      /* find the next upper level in new system */
+      pbl_lim_need = ps2[ij] *etah2[k];
+      if (pbl_lim > pbl_lim_need) break;
+      jjblt = jjblt-1;
+    }
+
+  /* correct the merging level */
+  if ( jblt < jjblt ) jjblt = jblt;
+
+  /******* PBL profile interpolation */
+  /* tension spline interpolation with full eta levels */
+
+  if ( ltq )
+    for ( k = jjblt; k < nlev2; ++k )
+      {
+	theta_pbl[k] = w1[k]*theta1[jl1[k]] + w2[k]*theta1[jl2[k]];
+	rh_pbl[k]    = w1[k]*rh1[jl1[k]]    + w2[k]*rh1[jl2[k]];
+      }
+
+  for ( iv = 0; iv < nvars; ++iv )
+    for ( k = jjblt; k < nlev2; ++k )
+      {
+	ijk1 = jl1[k]*ngp+ij;
+	ijk2 = jl2[k]*ngp+ij;
+	vars_pbl[iv][k] = w1[k]*vars1[iv][ijk1] + w2[k]*vars1[iv][ijk2];
+      }
+
+  /******* linear interpolation using pressure in free atmosphere
+	   pressure in new system using preliminary pressure */
+
+  for ( k = 0; k <= jjblt; ++k )
+    {
+      idx[k] = int_index(nlev1, pf1, pf2[k]);
+    }
+
+  for ( k = 0; k <= jjblt; ++k )
+    {
+      wgt[k] = (pf1[idx[k]+1]-pf2[k])/(pf1[idx[k]+1]-pf1[idx[k]]);
+    }
+
+  if ( ltq )
+    {
+      for ( k = 0; k < nlev1; ++k )
+	{
+	  ijk = k*ngp+ij;
+	  zvar[k] = t1[ijk];
+	}
+
+      for ( k = 0; k <= jjblt; ++k )
+	{
+	  klo = idx[k];
+	  zt2[k] = wgt[k]*zvar[klo] + (1-wgt[k])*zvar[klo+1];
+	  rh2[k] = wgt[k]*rh1[klo]  + (1-wgt[k])*rh1[klo+1];
+	}
+    }
+
+  for ( iv = 0; iv < nvars; ++iv )
+    {
+      for ( k = 0; k < nlev1; ++k )
+	{
+	  ijk = k*ngp+ij;
+	  zvar[k] = vars1[iv][ijk];
+	}
+      for ( k = 0; k <= jjblt; ++k )
+	{
+	  ijk = k*ngp+ij;
+	  klo = idx[k];
+	  vars2[iv][ijk] = wgt[k]*zvar[klo] + (1-wgt[k])*zvar[klo+1];
+	}
+    }
+
+  /******* merge boundary layer and free atmosphere */
+
+  if ( ltq )
+    {
+      /* correction of potential temperature at top of PBL */
+      dteta = zt2[jjblt]*pow(apr/pf2[jjblt], rair_d_cpair)-theta_pbl[jjblt];
+	  
+      /* merge top layer values */
+      rh2[jjblt] = 0.5*(rh2[jjblt]+rh_pbl[jjblt]);
+    }
+
+  ijk = jjblt*ngp+ij;
+  for ( iv = 0; iv < nvars; ++iv )
+    {
+      vars2[iv][ijk] = 0.5*(vars2[iv][ijk]+vars_pbl[iv][jjblt]);
+    }
+
+  /* correct boundary profile values */
+  if ( ltq )
+    for ( k = jjblt+1; k < nlev2; ++k ) 
+      {
+	zt2[k] = (theta_pbl[k]+dteta)*pow(pf2[k]/apr, rair_d_cpair);
+	rh2[k] = rh_pbl[k];
+      }
+
+  for ( iv = 0; iv < nvars; ++iv )
+    for ( k = jjblt+1; k < nlev2; ++k ) 
+      {
+	ijk = k*ngp+ij;
+	vars2[iv][ijk] = vars_pbl[iv][k];
+      }
+
+  if ( ltq )
+    for ( k = 0; k < nlev2; ++k )
+      {
+	zq2[k] = rh2[k]*epsilon*esat(zt2[k])/pf2[k];
+      }
+
+  /******* reference level correction */
+  if ( lpsmod && ltq )
+    {
+      /* integrate hydrostatic equation with preliminary temperature and pressure */
+      fi2[nlev2] = fis2[ij];
+      fi2[0]     = -1.0; /* top not defined, infinity */
+    
+      /* problem at top level, top pressure is zero per definition */
+      for ( k = nlev2-1; k > 0; --k )
+	{
+	  fi2[k] = fi2[k+1]+rair*zt2[k]*(lnph2[k+1]-lnph2[k])*(1.0+epsm1i*zq2[k]);
+	}
+
+      /* search next level above reference level in new system */
+      for ( k = nlev2-1; k > 0; --k )
+	{ 
+	  jlev = k; 
+	  if (ph2[k] < p_firef) break;
+	}
+	  
+      /* correct surface pressure */
+      dfi = fiadj-(fi2[jlev+1]+(fi2[jlev]-fi2[jlev+1])* 
+		   log(ph2[jlev+1]/p_firef)/log(ph2[jlev+1]/ph2[jlev]));
+      ztv     = (1.0+epsm1i*zq2[nlev2-1])*zt2[nlev2-1];
+      ps2[ij] = ps2[ij] *exp(dfi/(rair*ztv));
+    }
+
+  /******* final calculation of specific humidity profiles */
+  if ( ltq )
+    {
+      for ( k = 0; k < nlev2; ++k )
+	{
+	  pf2[k] = af2[k] + bf2[k]* ps2[ij];
+	}
+
+      for ( k = 0; k < nlev2; ++k )
+	{
+	  zq2[k] = rh2[k]*epsilon*esat(zt2[k])/pf2[k];
+	}
+    }
+
+#if defined (OUTPUT)
+  if ( ij == OPOINT )
+    for ( k = nlev2-1; k >= 0; --k )
+      { 
+	ijk = k*ngp+ij;
+	if ( ltq ) { t = t2[k]; q = zq2[k]; fi = fi2[k]; }
+	else       { t = 0; q = 0; fi = 0; }
+	fprintf(new, "%3d %18.10f %18.10f %18.10f %18.10f", k, fi/g, pf2[k], t, q);
+	for ( iv = 0; iv < nvars; ++iv ) fprintf(new, " %18.10f", vars2[iv][ijk]);
+	fprintf(new, "\n");
+      }
+#endif
+
+  if ( ltq )
+    {
+      /* calculate surface temperature correction (old version) */
+      tscor[ij] = dteta*pow(ps2[ij]/apr, rair_d_cpair);
+      pscor[ij] = pow(ps2[ij]/ps1[ij], rair_d_cpair);
+
+      /* correction term of static energy of lowest layer */
+      secor[ij] = tv1[nlev1-1]*(cpair+rair*(1.0-ph1[nlev1-1]
+					    /(ps1[ij]-ph1[nlev1-1])*log(ps1[ij]/ph1[nlev1-1])));
+    }
+
+  if ( ltq )
+    for ( k = 0; k < nlev2; ++k ) 
+      {
+	ijk = k*ngp+ij;
+	t2[ijk] = zt2[k];
+	q2[ijk] = zq2[k];
+      }
+}
+
+
+void hetaeta(int ltq, int ngp, const int *imiss,
+	     int nlev1, const double *restrict ah1, const double *restrict bh1,
+             const double *restrict fis1, const double *restrict ps1, 
+             const double *restrict t1, const double *restrict q1,
+             int nlev2, const double *restrict ah2, const double *restrict bh2, 
+             const double *restrict fis2, double *restrict ps2, 
+             double *restrict t2, double *restrict q2,
+	     int nvars, double *restrict *restrict vars1, double *restrict *restrict vars2,
+	     double *restrict tscor, double *restrict pscor,
+	     double *restrict secor)
+{
+  static char func[] = "hetaeta";
+  double epsm1i;
+  long jblt;
+  long k, iv, ij;
+  long jlev = 0;
+  double *zt2 = NULL, *zq2 = NULL;
   double /* *etah1,*/ *ph1, *lnph1, *fi1;
   double *af1, *bf1, *etaf1, *pf1, *lnpf1;
   double *tv1, *theta1, *rh1;
@@ -114,17 +493,14 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   long nlev1p1;
   long nlev2p1;
   int lpsmod = 1;
-  long klo;
-  double zq1, zt1;
-  double rair_d_cpair;
 #if defined (_OPENMP)
+  double **zt2_2, **zq2_2;
   double **ph1_2, **lnph1_2, **fi1_2, **pf1_2, **lnpf1_2, **tv1_2, **theta1_2, **rh1_2, **zvar_2;
   double **ph2_2, **lnph2_2, **fi2_2, **pf2_2;
   double **rh_pbl_2, **theta_pbl_2, **rh2_2;
   double **wgt_2;
   double ***vars_pbl_2;
   long **idx_2;
-  int ompthID;
   long i;
   extern int ompNumThreads;
   double *vars_pbl[MAX_VARS];
@@ -137,8 +513,6 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   old = fopen("old.dat","w");
   new = fopen("new.dat","w");
 #endif
-
-  rair_d_cpair = rair/cpair;
 
   nlev1p1 = nlev1+1;
   nlev2p1 = nlev2+1;
@@ -162,10 +536,12 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   pf2_2    = (double **) malloc(ompNumThreads*sizeof(double *));
   rh2_2    = (double **) malloc(ompNumThreads*sizeof(double *));
   wgt_2    = (double **) malloc(ompNumThreads*sizeof(double *));
-  idx_2    = (long **)    malloc(ompNumThreads*sizeof(long *));
+  idx_2    = (long **)   malloc(ompNumThreads*sizeof(long *));
 
   if ( ltq )
     {
+      zt2_2       = (double **) malloc(ompNumThreads*sizeof(double *));
+      zq2_2       = (double **) malloc(ompNumThreads*sizeof(double *));
       rh_pbl_2    = (double **) malloc(ompNumThreads*sizeof(double *));
       theta_pbl_2 = (double **) malloc(ompNumThreads*sizeof(double *));
     }
@@ -195,10 +571,12 @@ void hetaeta(int ltq, int ngp, const int *imiss,
       pf2_2[i]    = (double *) malloc(nlev2*sizeof(double));
       rh2_2[i]    = (double *) malloc(nlev2*sizeof(double));
       wgt_2[i]    = (double *) malloc(nlev2*sizeof(double));
-      idx_2[i]    = (long *)    malloc(nlev2*sizeof(long));
+      idx_2[i]    = (long *)   malloc(nlev2*sizeof(long));
 
       if ( ltq )
 	{
+	  zt2_2[i]       = (double *) malloc(nlev2*sizeof(double));
+	  zq2_2[i]       = (double *) malloc(nlev2*sizeof(double));
 	  rh_pbl_2[i]    = (double *) malloc(nlev2*sizeof(double));
 	  theta_pbl_2[i] = (double *) malloc(nlev2*sizeof(double));
 	}
@@ -207,7 +585,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 	{
 	  if ( nvars > MAX_VARS )
 	    {
-	      fprintf(stderr, "To many vars (max = %d)!\n", MAX_VARS);
+	      fprintf(stderr, "Too many vars (max = %d)!\n", MAX_VARS);
 	      exit(-1);
 	    }
 	  vars_pbl_2[i]  = (double **) malloc(nvars*sizeof(double *));
@@ -240,6 +618,8 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
   if ( ltq )
     {
+      zt2       = (double *) malloc(nlev2*sizeof(double));
+      zq2       = (double *) malloc(nlev2*sizeof(double));
       rh_pbl    = (double *) malloc(nlev2*sizeof(double));
       theta_pbl = (double *) malloc(nlev2*sizeof(double));
     }
@@ -264,8 +644,8 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
   w1     = (double *) malloc(nlev2*sizeof(double));
   w2     = (double *) malloc(nlev2*sizeof(double));
-  jl1    = (long *)    malloc(nlev2*sizeof(long));
-  jl2    = (long *)    malloc(nlev2*sizeof(long));
+  jl1    = (long *)   malloc(nlev2*sizeof(long));
+  jl2    = (long *)   malloc(nlev2*sizeof(long));
 
 
   /******* set coordinate system ETA's, A's, B's
@@ -342,19 +722,22 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
 #if defined (_OPENMP)
 #pragma omp parallel for default(none) \
-  shared(ngp, ph1_2, lnph1_2, fi1_2, pf1_2, lnpf1_2, tv1_2, theta1_2, rh1_2, zvar_2, ph2_2, lnph2_2, fi2_2, pf2_2, rh_pbl_2, \
-	 theta_pbl_2, rh2_2, wgt_2, vars_pbl_2, idx_2, af1, bf1, etaf1, etah2, af2, bf2, etaf2, w1, w2, jl1, jl2, \
-	 ltq, nvars, imiss, nlev1p1, ah1, bh1, ps1, nlev1, epsm1i, q1, t1, fis1, fis2, ps2, nlev2p1, ah2, bh2, \
-	 nlev2, vars1, vars2, t2, q2, tscor, pscor, secor, jblt, rair_d_cpair) \
+  shared(ngp, ph1_2, lnph1_2, fi1_2, pf1_2, lnpf1_2, tv1_2, theta1_2, rh1_2, zvar_2, ph2_2, lnph2_2, \
+	 fi2_2, pf2_2, rh_pbl_2, zt2_2, zq2_2, theta_pbl_2, rh2_2, wgt_2, idx_2, vars_pbl_2, \
+	 af1, bf1, etah2, af2, bf2, w1, w2, jl1, jl2,	\
+	 ltq, nvars, imiss, ah1, bh1, ps1, nlev1, epsm1i, q1, t1, fis1, fis2, ps2, \
+	 ah2, bh2, nlev2, vars1, vars2, t2, q2, tscor, pscor, secor, jblt) \
   firstprivate(lpsmod) \
-  private(ij, iv, ph1, lnph1, fi1, pf1, lnpf1, tv1, theta1, rh1, zvar, ph2, lnph2, fi2, pf2, rh_pbl, theta_pbl, rh2, wgt, vars_pbl, \
-	  k, ijk, jlev, idx, ompthID, zdff, jlevr, zdffl, jnop, zsumt, zsump, zsumpp, zsumtp, zb, zc, zps, zbb, \
-	  fiadj, pbl_lim, jjblt, pbl_lim_need, ijk1, ijk2, klo, dteta, dfi, ztv, zq1, zt1) \
+  private(ij, ph1, lnph1, fi1, pf1, lnpf1, tv1, theta1, rh1, zvar, ph2, lnph2, fi2, pf2, rh_pbl, \
+          theta_pbl, rh2, wgt, idx, vars_pbl, zt2, zq2) \
   schedule(dynamic,1)
 #endif
   for ( ij = 0; ij < ngp; ++ij )
     {
 #if defined (_OPENMP)
+      int ompthID;
+      long iv;      
+
       ompthID = omp_get_thread_num();
 
       ph1    = ph1_2[ompthID];
@@ -377,8 +760,15 @@ void hetaeta(int ltq, int ngp, const int *imiss,
       wgt    = wgt_2[ompthID];
       idx    = idx_2[ompthID];
 
+      zt2       = NULL;
+      zq2       = NULL;
+      rh_pbl    = NULL;
+      theta_pbl = NULL;
+
       if ( ltq )
 	{
+	  zt2       = zt2_2[ompthID];
+	  zq2       = zq2_2[ompthID];
 	  rh_pbl    = rh_pbl_2[ompthID];
 	  theta_pbl = theta_pbl_2[ompthID];
 	}
@@ -393,341 +783,13 @@ void hetaeta(int ltq, int ngp, const int *imiss,
       if ( imiss )
 	if ( imiss[ij] ) continue;
 
-      /******* initialise atmospheric fields in old system */
-      
-      /* pressure */
-      ph1[0]       =  0.0;
-      lnph1[0]     = -1.0; 
-      for ( k = 1; k < nlev1p1; ++k )
-	{
-	  ph1[k]   = ah1[k]+bh1[k]*ps1[ij];
-	  lnph1[k] = log(ph1[k]);
-	} 
-
-      for ( k = 0; k < nlev1; ++k )
-	{
-	  pf1[k]   = af1[k]+bf1[k]*ps1[ij];
-	  lnpf1[k] = log(pf1[k]);
-	}
-
-      /* virtual temperature, relative humidity, potential temperature */
-      if ( ltq )
-	for ( k = 0; k < nlev1; ++k )
-	  {
-	    ijk = k*ngp+ij;
-	    zq1 = q1[ijk];
-	    zt1 = t1[ijk];
-	    tv1[k]    = (1.0+epsm1i*zq1)*zt1;
-	    rh1[k]    = zq1*pf1[k]/(epsilon*esat(zt1));
-	    theta1[k] = zt1*pow(apr/pf1[k], rair_d_cpair);
-	  }
-
-      /* ****** integrate hydrostatic equation, using interpolated orography */
-      if ( ltq )
-	{
-	  fi1[0] = 0.0;
-	  fi1[nlev1] = fis1[ij];
-	  for ( k = nlev1-1; k > 0; --k )
-	    {
-	      fi1[k] = fi1[k+1]+rair*tv1[k]*(lnph1[k+1]-lnph1[k]);
-	    }
-	}
-#if defined (OUTPUT)
-      if ( ij == OPOINT )
-	for ( k = nlev1-1; k >= 0; --k )
-	  { 
-	    ijk = k*ngp+ij;
-	    if ( ltq ) { t = t1[ijk]; q = q1[ijk]; fi = fi1[k]; }
-	    else       { t = 0; q = 0; fi = 0; }
-	    fprintf(old, "%3d %18.10f %18.10f %18.10f %18.10f", k, fi/g, pf1[k], t, q);
-	    for ( iv = 0; iv < nvars; ++iv ) fprintf(old, " %18.10f", vars1[iv][ijk]);
-	    fprintf(old, "\n");
-	  }
-#endif
-
-      /******* find new surface pressure
-	       extra-/interpolate to new orography
-	       linear regression works not well for extrapolation
-	       separation necessary
-      */
-      if ( ltq )
-	{
-	  for ( k = nlev1-2; k > 0; --k )
-	    {
-	      /* find index for regression, 1 <= jlev <= nlevec-2 */
-	      jlev = k;
-	      if (fis2[ij] < fi1[k]) break;
-	    }
-	  zdff = fi1[jlev+1]-fis2[ij];
-      
-	  /* get the number of points used for estimation of regression coefficients */
-      
-	  for ( k = jlev-1; k > 0; --k )
-	    {
-	      jlevr = k;
-	      zdffl = fi1[k]-fi1[jlev+1];
-	      if (zdffl >= zdff) break;
-	    }
-
-	  jnop = jlev+1-jlevr+1;
-
-	  /*
-	    get coefficients of regression between Tv and lnP ::Tv = B*lnP + C
-	    using three levels surounding new orography geopotential
-	  */
-	  zsumt  = 0.0;
-	  zsump  = 0.0;
-	  zsumpp = 0.0;
-	  zsumtp = 0.0;
-
-	  for ( k = jlevr; k <= jlev+1; ++k )
-	    {
-	      zsumt  = zsumt  + tv1[k];
-	      zsump  = zsump  + lnpf1[k];
-	      zsumpp = zsumpp + lnpf1[k]*lnpf1[k];
-	      zsumtp = zsumtp + tv1[k]*lnpf1[k];
-	    }
-
-	  /* final regression coefficients */
-	  zb = jnop*zsumpp - zsump*zsump;
-	  zc = (zsumt*zsumpp-zsump*zsumtp)/zb;
-	  zb = (jnop*zsumtp-zsump*zsumt)/zb;
-
-	  /* calculate preliminary surface pressure, adjust to middle level */
-	  zps = lnph1[jlev];
-
-	  /* calculate preliminary pressure */
-	  if ( fabs(zb) < 1.0e-20 )
-	    {
-	      /* constant virtual temperature near new surface */
-	      ps2[ij] = exp(zps+(fi1[jlev]-fis2[ij])/(zc*rair));
-	    }
-	  else
-	    {
-	      /* virtual temperatur not constant near new surface */
-	      zbb = zc*zc + zb*(zps*(zb*zps+2.0*zc)+2.0*(fi1[jlev]-fis2[ij])/rair);
-	      ps2[ij] = exp((sqrt(zbb)-zc)/zb);
-	    }
-	}
-      else
-	{
-	  ps2[ij] = ps1[ij];
-	}
-
-
-      ph2[0]       =  0.0;
-      lnph2[0]     = -1.0; 
-      for ( k = 1; k < nlev2p1; ++k )
-	{
-	  ph2[k]   = ah2[k]+bh2[k]* ps2[ij];
-	  lnph2[k] = log(ph2[k]);
-	} 
-
-      for ( k = 0; k < nlev2; ++k )
-	{
-	  pf2[k]   = af2[k]+bf2[k]* ps2[ij];
-	  /* lnpf2[k] = log(pf2[k]); */
-	}
-
-      /******* find reference geopotential,  */
-
-      if ( lpsmod && ltq )
-	{
-	  /* using old pressure at half levels
-	     find first level below reference pressure */
-	  for ( k = 1; k < nlev1p1; ++k )
-	    {
-	      jlev = k;
-	      if ( ph1[k] > p_firef ) break;
-	    }
-	  
-	  fiadj = fi1[jlev]+(fi1[jlev-1]-fi1[jlev])*
-	          log(ph1[jlev]/p_firef)/log(ph1[jlev]/ph1[jlev-1]);
-	}
-
-      /******* find the new boundary layer top */
-
-      /* using the pressure from the old system */
-      pbl_lim = ps1[ij]*eta_pbl;
-      jjblt = nlev2-1;
-      for ( k = nlev2-1; k > 0; --k )
-	{
-	  /* find the next upper level in new system */
-	  pbl_lim_need = ps2[ij] *etah2[k];
-	  if (pbl_lim > pbl_lim_need) break;
-	  jjblt = jjblt-1;
-	}
-
-      /* correct the merging level */
-      if ( jblt < jjblt ) jjblt = jblt;
-
-      /******* PBL profile interpolation */
-      /* tension spline interpolation with full eta levels */
-      if ( ltq )
-	for ( k = jjblt; k < nlev2; ++k )
-	  {
-	    theta_pbl[k] = w1[k]*theta1[jl1[k]]+w2[k]*theta1[jl2[k]];
-	    rh_pbl[k]    = w1[k]*rh1[jl1[k]]+w2[k]*rh1[jl2[k]];
-	  }
-
-      for ( iv = 0; iv < nvars; ++iv )
-	for ( k = jjblt; k < nlev2; ++k )
-	  {
-	    ijk1 = jl1[k]*ngp+ij;
-	    ijk2 = jl2[k]*ngp+ij;
-	    vars_pbl[iv][k] = w1[k]*vars1[iv][ijk1]+ w2[k]*vars1[iv][ijk2];
-	  }
-
-      /******* linear interpolation using pressure in free atmosphere
-	       pressure in new system using preliminary pressure */
-
-      for ( k = 0; k <= jjblt; ++k )
-	{
-	  idx[k] = int_index(nlev1, pf1, pf2[k]);
-	}
-
-      for ( k = 0; k <= jjblt; ++k )
-	{
-	  wgt[k] = (pf1[idx[k]+1]-pf2[k])/(pf1[idx[k]+1]-pf1[idx[k]]);
-	}
-
-      if ( ltq )
-	{
-	  for ( k = 0; k < nlev1; ++k )
-	    {
-	      ijk = k*ngp+ij;
-	      zvar[k] = t1[ijk];
-	    }
-	  for ( k = 0; k <= jjblt; ++k )
-	    {
-	      ijk = k*ngp+ij;
-	      klo = idx[k];
-	      t2[ijk] = wgt[k]*zvar[klo] + (1-wgt[k])*zvar[klo+1];
-	      rh2[k]  = wgt[k]*rh1[klo]  + (1-wgt[k])*rh1[klo+1];
-	    }
-	}
-
-      for ( iv = 0; iv < nvars; ++iv )
-	{
-	  for ( k = 0; k < nlev1; ++k )
-	    {
-	      ijk = k*ngp+ij;
-	      zvar[k] = vars1[iv][ijk];
-	    }
-	  for ( k = 0; k <= jjblt; ++k )
-	    {
-	      ijk = k*ngp+ij;
-	      klo = idx[k];
-	      vars2[iv][ijk] = wgt[k]*zvar[klo] + (1-wgt[k])*zvar[klo+1];
-	    }
-	}
-
-      /******* merge boundary layer and free atmosphere */
-
-      if ( ltq )
-	{
-	  /* correction of potential temperature at top of PBL */
-	  dteta = t2[jjblt*ngp+ij]*pow(apr/pf2[jjblt], rair_d_cpair)-theta_pbl[jjblt];
-	  
-	  /* merge top layer values */
-	  rh2[jjblt] = 0.5*(rh2[jjblt]+rh_pbl[jjblt]);
-	}
-
-      ijk = jjblt*ngp+ij;
-      for ( iv = 0; iv < nvars; ++iv )
-	{
-	  vars2[iv][ijk] = 0.5*(vars2[iv][ijk]+vars_pbl[iv][jjblt]);
-	}
-
-      /* correct boundary profile values */
-      if ( ltq )
-	for ( k = jjblt+1; k < nlev2; ++k ) 
-	  {
-	    ijk = k*ngp+ij;
-	    t2[ijk]  = (theta_pbl[k]+dteta)*pow(pf2[k]/apr, rair_d_cpair);
-	    rh2[k] = rh_pbl[k];
-	  }
-
-      for ( iv = 0; iv < nvars; ++iv )
-	for ( k = jjblt+1; k < nlev2; ++k ) 
-	  {
-	    ijk = k*ngp+ij;
-	    vars2[iv][ijk] = vars_pbl[iv][k];
-	  }
-
-      if ( ltq )
-	for ( k = 0; k < nlev2; ++k )
-	  {
-	    ijk = k*ngp+ij;
-	    q2[ijk] = rh2[k]*epsilon*esat(t2[ijk])/pf2[k];
-	  }
-
-      /******* reference level correction */
-      if ( lpsmod && ltq )
-	{
-	  /* integrate hydrostatic equation with preliminary temperature and pressure */
-	  fi2[nlev2] = fis2[ij];
-	  fi2[0]     = -1.0; /* top not defined, infinity */
-    
-	  /* problem at top level, top pressure is zero per definition */
-	  for ( k = nlev2-1; k > 0; --k )
-	    {
-	      ijk = k*ngp+ij;
-	      fi2[k] = fi2[k+1]+rair*t2[ijk]*(lnph2[k+1]-lnph2[k])*(1.0+epsm1i*q2[ijk]);
-	    }
-
-	  /* search next level above reference level in new system */
-	  for ( k = nlev2-1; k > 0; --k )
-	    { 
-	      jlev = k; 
-	      if (ph2[k] < p_firef) break;
-	    }
-	  
-	  /* correct surface pressure */
-	  dfi = fiadj-(fi2[jlev+1]+(fi2[jlev]-fi2[jlev+1])* 
-		       log(ph2[jlev+1]/p_firef)/log(ph2[jlev+1]/ph2[jlev]));
-	  ztv     = (1.0+epsm1i*q2[(nlev2-1)*ngp+ij])*t2[(nlev2-1)*ngp+ij];
-	  ps2[ij] = ps2[ij] *exp(dfi/(rair*ztv));
-	}
-
-      /******* final calculation of specific humidity profiles */
-      if ( ltq )
-	{
-	  for ( k = 0; k < nlev2; ++k )
-	    {
-	      pf2[k] = af2[k] + bf2[k]* ps2[ij];
-	    }
-
-	  for ( k = 0; k < nlev2; ++k )
-	    {
-	      ijk = k*ngp+ij;
-	      q2[ijk] = rh2[k]*epsilon*esat(t2[ijk])/pf2[k];
-	    }
-	}
-
-#if defined (OUTPUT)
-      if ( ij == OPOINT )
-	for ( k = nlev2-1; k >= 0; --k )
-	  { 
-	    ijk = k*ngp+ij;
-	    if ( ltq ) { t = t2[ijk]; q = q2[ijk]; fi = fi2[k]; }
-	    else       { t = 0; q = 0; fi = 0; }
-	    fprintf(new, "%3d %18.10f %18.10f %18.10f %18.10f", k, fi/g, pf2[k], t, q);
-	    for ( iv = 0; iv < nvars; ++iv ) fprintf(new, " %18.10f", vars2[iv][ijk]);
-	    fprintf(new, "\n");
-	  }
-#endif
-
-      if ( ltq )
-	{
-	  /* calculate surface temperature correction (old version) */
-	  tscor[ij] = dteta*pow(ps2[ij]/apr, rair_d_cpair);
-	  pscor[ij] = pow(ps2[ij]/ps1[ij], rair_d_cpair);
-
-	  /* correction term of static energy of lowest layer */
-	  secor[ij] = tv1[nlev1-1]*(cpair+rair*(1.0-ph1[nlev1-1]
-		     /(ps1[ij]-ph1[nlev1-1])*log(ps1[ij]/ph1[nlev1-1])));
-	}
+      hetaeta_sc(ltq, lpsmod, ij, ngp, nlev1, nlev2, nvars,
+		 af1, bf1, etah2, af2, bf2, w1, w2, jl1, jl2,
+		 ah1, bh1, ps1, epsm1i, q1, t1, fis1, fis2, ps2,
+		 ah2, bh2, vars1, vars2, t2, q2, tscor, pscor, secor, jblt,
+		 ph1, lnph1, fi1, pf1, lnpf1, tv1, theta1, rh1, zvar, 
+                 ph2, lnph2, fi2, pf2, rh2, wgt, idx,
+		 rh_pbl, theta_pbl, vars_pbl, zt2, zq2);
 
     } /* end for ij */
 
@@ -763,6 +825,8 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
       if ( ltq )
 	{
+	  free(zt2_2[i]); 
+	  free(zq2_2[i]); 
 	  free(rh_pbl_2[i]); 
 	  free(theta_pbl_2[i]); 
 	}   
@@ -798,6 +862,8 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
   if ( ltq )
     {
+      free(zt2_2);
+      free(zq2_2);
       free(rh_pbl_2);
       free(theta_pbl_2);
     }
@@ -831,6 +897,8 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
   if ( ltq )
     {
+      free(zt2); 
+      free(zq2); 
       free(rh_pbl); 
       free(theta_pbl); 
     }   

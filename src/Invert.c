@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,10 +25,6 @@
       Invert     invertlatdata   Invert latitude data
       Invert     invertlondata   Invert longitude data
 */
-
-
-#include <stdio.h>
-#include <string.h>
 
 #include "cdi.h"
 #include "cdo.h"

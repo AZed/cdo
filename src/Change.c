@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -19,16 +19,13 @@
    This module contains the following operators:
 
       Change     chcode          Change code number
+      Change     chtabnum        Change GRIB1 parameter table number
       Change     chname          Change variable name
       Change     chlevel         Change level
       Change     chlevelc        Change level of one code
       Change     chlevelv        Change level of one variable
       Change     chltype         Change GRIB level type 
 */
-
-
-#include <string.h>
-#include <math.h>   /* fabs */
 
 #include "cdi.h"
 #include "cdo.h"
@@ -41,19 +38,19 @@
 void *Change(void *argument)
 {
   static char func[] = "Change";
-  int CHCODE, CHNAME, CHLEVEL, CHLEVELC, CHLEVELV, CHLTYPE;  
+  int CHCODE, CHTABNUM, CHNAME, CHLEVEL, CHLEVELC, CHLEVELV, CHLTYPE;  
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs, nvars;
   int tsID1, recID, varID = 0, levelID;
   int vlistID1, vlistID2;
   int taxisID1, taxisID2;
-  int chcodes[MAXARG], nch = 0;
+  int chcodes[MAXARG], chtabnums[MAXARG], nch = 0;
   char *chnames[MAXARG];
   char varname[128];
   char *chname = NULL;
   int chcode = 0;
-  int code, i;
+  int code, tabnum, i;
   int nmiss;
   int gridsize;
   int nfound;
@@ -67,6 +64,7 @@ void *Change(void *argument)
   cdoInitialize(argument);
 
   CHCODE   = cdoOperatorAdd("chcode",   0, 0, "pairs of old and new code numbers");
+  CHTABNUM = cdoOperatorAdd("chtabnum", 0, 0, "pairs of old and new GRIB1 table numbers");
   CHNAME   = cdoOperatorAdd("chname",   0, 0, "pairs of old and new variable names");
   CHLEVEL  = cdoOperatorAdd("chlevel",  0, 0, "pairs of old and new levels");
   CHLEVELC = cdoOperatorAdd("chlevelc", 0, 0, "code number, old and new level");
@@ -84,6 +82,12 @@ void *Change(void *argument)
       if ( nch%2 ) cdoAbort("Odd number of input arguments!");
       for ( i = 0; i < nch; i++ )
 	chcodes[i] = atoi(operatorArgv()[i]);
+    }
+  else if ( operatorID == CHTABNUM )
+    {
+      if ( nch%2 ) cdoAbort("Odd number of input arguments!");
+      for ( i = 0; i < nch; i++ )
+	chtabnums[i] = atoi(operatorArgv()[i]);
     }
   else if ( operatorID == CHNAME )
     {
@@ -139,6 +143,21 @@ void *Change(void *argument)
 	  for ( i = 0; i < nch; i += 2 )
 	    if ( code == chcodes[i] )
 	      vlistDefVarCode(vlistID2, varID, chcodes[i+1]);
+	}
+    }
+  else if ( operatorID == CHTABNUM )
+    {
+      int tableID;
+      nvars = vlistNvars(vlistID2);
+      for ( varID = 0; varID < nvars; varID++ )
+	{
+	  tabnum = tableInqNum(vlistInqVarTable(vlistID2, varID));
+	  for ( i = 0; i < nch; i += 2 )
+	    if ( tabnum == chtabnums[i] )
+	      {
+		tableID = tableDef(-1, chtabnums[i+1], NULL);
+		vlistDefVarTable(vlistID2, varID, tableID);
+	      }
 	}
     }
   else if ( operatorID == CHNAME )
