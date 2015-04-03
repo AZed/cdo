@@ -8,11 +8,11 @@ Version:        1.6.8
 Release:        1
 Summary:        Climate Data Operators
 License:        GNU GENERAL PUBLIC LICENSE Version 2, June 1991
-Group:          Productivity/Graphics/Visualization/Other
+Group:          Applications/Engineering
 Requires:       netcdf
 Autoreqprov:    on
 URL:            https://code.zmaw.de/projects/cdo
-Source0:        cdo-%{version}.tar.gz
+Source0:        https://code.zmaw.de/attachments/download/10030/cdo-1.6.8.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -33,14 +33,15 @@ Authors:
 
 
 %prep
-%setup
+%setup -q
 
 
 %build
-./configure --prefix=%{_prefix} --with-netcdf
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --with-netcdf
 make 
 
 %install
+rm -rf $RPM_BUILD_ROOT
 make DESTDIR=$RPM_BUILD_ROOT install 
 
 %clean
