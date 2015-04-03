@@ -21,7 +21,7 @@
 #include "cdi_int.h"
 #include "stream_cdf.h"
 
-static int nNamespaces = 1;
+static unsigned nNamespaces = 1;
 static int activeNamespace = 0;
 
 #ifdef HAVE_LIBNETCDF
@@ -61,7 +61,7 @@ static const union namespaceSwitchValue
   defaultSwitches_[NUM_NAMESPACE_SWITCH] = defaultSwitches;
 #endif
 
-struct Namespace
+static struct Namespace
 {
   statusCode resStage;
   union namespaceSwitchValue switches[NUM_NAMESPACE_SWITCH];
@@ -70,9 +70,9 @@ struct Namespace
   .switches = defaultSwitches
 };
 
-struct Namespace *namespaces = &initialNamespace;
+static struct Namespace *namespaces = &initialNamespace;
 
-static int namespacesSize = 1;
+static unsigned namespacesSize = 1;
 
 #if  defined  (HAVE_LIBPTHREAD)
 #  include <pthread.h>
@@ -151,10 +151,10 @@ namespaceNew()
   if (namespacesSize > nNamespaces)
     {
       /* namespace is already available and only needs reinitialization */
-      for (int i = 0; i < namespacesSize; ++i)
+      for (unsigned i = 0; i < namespacesSize; ++i)
         if (namespaces[i].resStage == STAGE_UNUSED)
           {
-            newNamespaceID = i;
+            newNamespaceID = (int)i;
             break;
           }
     }
@@ -171,7 +171,7 @@ namespaceNew()
   else if (namespacesSize < NUM_NAMESPACES)
     {
       /* make room for additional namespace */
-      newNamespaceID = namespacesSize;
+      newNamespaceID = (int)namespacesSize;
       namespaces
         = (struct Namespace *)xrealloc(namespaces, ((size_t)namespacesSize + 1) * sizeof (namespaces[0]));
       ++namespacesSize;
@@ -203,7 +203,8 @@ namespaceDelete(int namespaceID)
 {
   NAMESPACE_INIT();
   NAMESPACE_LOCK();
-  xassert(namespaceID < namespacesSize && nNamespaces);
+  xassert(namespaceID >= 0 && (unsigned)namespaceID < namespacesSize
+          && nNamespaces);
   reshListDestruct(namespaceID);
   namespaces[namespaceID].resStage = STAGE_UNUSED;
   --nNamespaces;
@@ -212,13 +213,13 @@ namespaceDelete(int namespaceID)
 
 int namespaceGetNumber ()
 {
-  return nNamespaces;
+  return (int)nNamespaces;
 }
 
 
 void namespaceSetActive ( int nId )
 {
-  xassert(nId < namespacesSize && nId >= 0
+  xassert((unsigned)nId < namespacesSize
           && namespaces[nId].resStage != STAGE_UNUSED);
   activeNamespace = nId;
 }
@@ -294,9 +295,9 @@ void cdiReset(void)
 {
   NAMESPACE_INIT();
   NAMESPACE_LOCK();
-  for (int namespaceID = 0; namespaceID < namespacesSize; ++namespaceID)
+  for (unsigned namespaceID = 0; namespaceID < namespacesSize; ++namespaceID)
     if (namespaces[namespaceID].resStage != STAGE_UNUSED)
-      namespaceDelete(namespaceID);
+      namespaceDelete((int)namespaceID);
   if (namespaces != &initialNamespace)
     {
       free(namespaces);

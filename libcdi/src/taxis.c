@@ -533,7 +533,7 @@ void taxisDefForecastPeriod(int taxisID, double fc_period)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  if (taxisptr->fc_period != fc_period)
+  if ( IS_NOT_EQUAL(taxisptr->fc_period, fc_period) )
     {
       taxisptr->fc_period = fc_period;
       reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
@@ -919,9 +919,13 @@ ptaxisDefLongname(taxis_t *taxisptr, const char *longname)
     }
 }
 
+
 void cdiDecodeTimevalue(int timeunit, double timevalue, int *days, int *secs)
 {
   static int lwarn = TRUE;
+
+  *days = 0;
+  *secs = 0;
 
   if ( timeunit == TUNIT_MINUTE )
     {
@@ -937,7 +941,8 @@ void cdiDecodeTimevalue(int timeunit, double timevalue, int *days, int *secs)
   if ( timeunit == TUNIT_SECOND )
     {
       *days = (int) (timevalue/86400);
-      *secs = (int) (timevalue - *days*86400.);
+      double seconds = timevalue - *days*86400.;
+      *secs = lround(seconds);
       if ( *secs < 0 ) { *days -= 1; *secs += 86400; };
       /*
       {
@@ -950,7 +955,8 @@ void cdiDecodeTimevalue(int timeunit, double timevalue, int *days, int *secs)
   else if ( timeunit == TUNIT_DAY )
     {
       *days = (int) timevalue;
-      *secs = (int) ((timevalue - *days)*86400 + 0.5);
+      double seconds = (timevalue - *days)*86400;
+      *secs = lround(seconds);
       if ( *secs < 0 ) { *days -= 1; *secs += 86400; };
       /*
       {

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -55,11 +55,11 @@ void scale_vec(double scalefactor, long nvals, double *restrict values)
 
 void grid_to_radian(const char *units, long nvals, double *restrict values, const char *description)
 {
-  if ( strcompare(units, "degree") == 0 )
+  if ( cmpstr(units, "degree") == 0 )
     {
       scale_vec(DEG2RAD, nvals, values);
     }
-  else if ( strcompare(units, "radian") == 0 )
+  else if ( cmpstr(units, "radian") == 0 )
     {
       /* No conversion necessary */
     }
@@ -72,11 +72,11 @@ void grid_to_radian(const char *units, long nvals, double *restrict values, cons
 
 void grid_to_degree(const char *units, long nvals, double *restrict values, const char *description)
 {
-  if ( strcompare(units, "radian") == 0 )
+  if ( cmpstr(units, "radian") == 0 )
     {
       for ( long n = 0; n < nvals; ++n ) values[n] *= RAD2DEG;
     }
-  else if ( strcompare(units, "degree") == 0 )
+  else if ( cmpstr(units, "degree") == 0 )
     {
       /* No conversion necessary */
     }

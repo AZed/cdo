@@ -1,3 +1,38 @@
+2015-03-26  Uwe Schulzweida
+
+	* Version 1.6.8 released
+        * using CGRIBEX library version 1.7.1
+
+2015-02-18  Uwe Schulzweida
+
+	* cdiDecodeTimevalue: fix rounding error for negativ timevalue
+
+2015-02-12  Uwe Schulzweida
+
+	* scan netcdf time units attribute (bug fix)
+
+2015-02-02  Uwe Schulzweida
+
+	* gribapiDefDateTimeRel: forecastTime [Bug #5435]
+	* cdfCopyRecord: incorrect checksum for freed object [Bug #5461]
+
+2015-01-16  Uwe Schulzweida
+
+	* cdiDecodeTimevalue: round seconds for TUNIT_SECOND (bug fix)
+
+2015-01-12  Uwe Schulzweida
+
+	* cdfCreateRecords: call cdfCreateRecords(streamptr, 1) if not done before (bug fix)
+
+2015-01-09  Uwe Schulzweida
+
+	* cdi_create_records: the contents of unused records must not be interpreted (bug fix) [patch from Nathanael Huebbe]
+
+2014-12-19  Uwe Schulzweida
+
+	* netCDF: renamed coordinate bounds dimension from nv2 to bnds
+	* netCDF: renamed time bounds dimension from nb2 to bnds
+
 2014-12-11  Uwe Schulzweida
 
 	* Version 1.6.7 released

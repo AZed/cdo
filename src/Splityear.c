@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,8 @@
 /*
    This module contains the following operators:
 
-     Splittime  splityear       Split years
+     Splityear  splityear       Split in years
+     Splityear  splityearmon    Split in years and month
 */
 
 #include <cdi.h>
@@ -31,20 +32,16 @@
 
 void *Splityear(void *argument)
 {
-  int nchars;
-  int streamID1, streamID2 = -1;
+  int streamID2 = -1;
   int varID;
   int nrecs;
   int tsID, tsID2, recID, levelID;
-  int vlistID1, vlistID2;
   char filesuffix[32];
   char filename[8192];
-  const char *refname;
   int vdate;
   int day;
   int year1, year2;
   int mon1, mon2;
-  int taxisID1, taxisID2;
   int lcopy = FALSE;
   int gridsize;
   int ic = 0;
@@ -58,17 +55,24 @@ void *Splityear(void *argument)
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
+  int SPLITYEAR    = cdoOperatorAdd("splityear",     func_date, 10000, NULL);
+  int SPLITYEARMON = cdoOperatorAdd("splityearmon",  func_date,   100, NULL);
+  
+  int operatorID = cdoOperatorID();
+  int operfunc   = cdoOperatorF1(operatorID);
+  int operintval = cdoOperatorF2(operatorID);
+
   memset(cyear, 0, MAX_YEARS*sizeof(int));
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
   strcpy(filename, cdoStreamName(1)->args);
-  nchars = strlen(filename);
+  int nchars = strlen(filename);
 
-  refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
+  const char *refname = cdoStreamName(0)->argv[cdoStreamName(0)->argc-1];
   filesuffix[0] = 0;
   cdoGenFileSuffix(filesuffix, sizeof(filesuffix), streamInqFiletype(streamID1), vlistID1, refname);
 
@@ -79,10 +83,12 @@ void *Splityear(void *argument)
       array = (double*) malloc(gridsize*sizeof(double));
     }
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
+  int index1 = - 1<<31;
+  int index2;
   year1 = -1;
   mon1  = -1;
   tsID  = 0;
@@ -92,38 +98,67 @@ void *Splityear(void *argument)
       vdate = taxisInqVdate(taxisID1);
       cdiDecodeDate(vdate, &year2, &mon2, &day);
 
-      if ( tsID == 0 || year1 != year2 || (year1 == year2 && mon1 > mon2) )
+      if ( operatorID == SPLITYEAR )
 	{
-	  tsID2 = 0;
-
-	  if ( year1 != year2 ) ic = 0;
-	  else                  ic++;
-
-	  if ( year2 >= 0 && year2 < MAX_YEARS )
+	  if ( tsID == 0 || year1 != year2 || (year1 == year2 && mon1 > mon2) )
 	    {
-	      ic = cyear[year2];
-	      cyear[year2]++;
-	    }
+	      tsID2 = 0;
 
-	  year1 = year2;
+	      if ( year1 != year2 ) ic = 0;
+	      else                  ic++;
 
-	  if ( streamID2 >= 0 ) streamClose(streamID2);
+	      if ( year2 >= 0 && year2 < MAX_YEARS )
+		{
+		  ic = cyear[year2];
+		  cyear[year2]++;
+		}
 
-	  sprintf(filename+nchars, "%04d", year1);
-	  if ( ic > 0 ) sprintf(filename+strlen(filename), "_%d", ic+1);
-	  if ( filesuffix[0] )
-	    sprintf(filename+strlen(filename), "%s", filesuffix);
+	      year1 = year2;
+
+	      if ( streamID2 >= 0 ) streamClose(streamID2);
+
+	      sprintf(filename+nchars, "%04d", year1);
+	      if ( ic > 0 ) sprintf(filename+strlen(filename), "_%d", ic+1);
+	      if ( filesuffix[0] )
+		sprintf(filename+strlen(filename), "%s", filesuffix);
 	  
-	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
+	      if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
-	  argument_t *fileargument = file_argument_new(filename);
-	  streamID2 = streamOpenWrite(fileargument, cdoFiletype());
-	  file_argument_free(fileargument);
+	      argument_t *fileargument = file_argument_new(filename);
+	      streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+	      file_argument_free(fileargument);
 
-	  streamDefVlist(streamID2, vlistID2);
+	      streamDefVlist(streamID2, vlistID2);
+	    }
+	  mon1 = mon2;
 	}
-      mon1 = mon2;
+      else if ( operatorID == SPLITYEARMON )
+	{
+	  index2 = (vdate/operintval);
+	  
+	  if ( tsID == 0 || index1 != index2 )
+	    {
+	      tsID2 = 0;
 
+	      index1 = index2;
+
+	      if ( streamID2 >= 0 ) streamClose(streamID2);
+
+	      sprintf(filename+nchars, "%04d", index1);
+	      //if ( ic > 0 ) sprintf(filename+strlen(filename), "_%d", ic+1);
+	      if ( filesuffix[0] )
+		sprintf(filename+strlen(filename), "%s", filesuffix);
+	  
+	      if ( cdoVerbose ) cdoPrint("create file %s", filename);
+
+	      argument_t *fileargument = file_argument_new(filename);
+	      streamID2 = streamOpenWrite(fileargument, cdoFiletype());
+	      file_argument_free(fileargument);
+
+	      streamDefVlist(streamID2, vlistID2);
+	    }
+	}
+      
       taxisCopyTimestep(taxisID2, taxisID1);
 
       streamDefTimestep(streamID2, tsID2++);

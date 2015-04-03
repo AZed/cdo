@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -38,28 +38,15 @@
 
 void *Timselstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
+  int timestat_date = TIMESTAT_MEAN;
   int gridsize;
-  int vdate = 0, vtime = 0;
-  int vdate0 = 0, vtime0 = 0;
-  int vdate_lb = 0, vdate_ub = 0, date_lb = 0, date_ub = 0;
-  int vtime_lb = 0, vtime_ub = 0, time_lb = 0, time_ub = 0;
-  int nrecs = 0, nrecords;
+  int nrecs = 0;
   int varID, levelID, recID;
   int tsID;
-  int otsID;
   int nsets;
   int i;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2, taxisID1, taxisID2;
-  int taxis_has_bounds = FALSE;
   int nmiss;
-  int nvars, nlevel;
-  int ndates = 0, noffset = 0, nskip = 0, nargc;
-  int *recVarID, *recLevelID;
-  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
-  double divisor;
+  int nlevel;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
   field_t field;
 
@@ -75,43 +62,46 @@ void *Timselstat(void *argument)
   cdoOperatorAdd("timselstd",  func_std,  0, NULL);
   cdoOperatorAdd("timselstd1", func_std1, 0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
   operatorInputArg("nsets <noffset <nskip>>");
 
-  nargc = operatorArgc();
-
-  ndates = atoi(operatorArgv()[0]);
-  if ( nargc > 1 ) noffset = atoi(operatorArgv()[1]);
-  if ( nargc > 2 ) nskip   = atoi(operatorArgv()[2]);
+  int nargc  = operatorArgc();
+  int ndates = parameter2int(operatorArgv()[0]);
+  int noffset = 0, nskip = 0;
+  if ( nargc > 1 ) noffset = parameter2int(operatorArgv()[1]);
+  if ( nargc > 2 ) nskip   = parameter2int(operatorArgv()[2]);
 
   if ( cdoVerbose ) cdoPrint("nsets = %d, noffset = %d, nskip = %d", ndates, noffset, nskip);
 
-  lmean   = operfunc == func_mean || operfunc == func_avg;
-  lstd    = operfunc == func_std || operfunc == func_std1;
-  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
-  divisor = operfunc == func_std1 || operfunc == func_var1;
+  int lmean   = operfunc == func_mean || operfunc == func_avg;
+  int lstd    = operfunc == func_std || operfunc == func_std1;
+  int lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  double divisor = operfunc == func_std1 || operfunc == func_var1;
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxis_has_bounds = taxisHasBounds(taxisID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
+
+  dtlist_type *dtlist = dtlist_new();
+  dtlist_set_stat(dtlist, timestat_date);
+  dtlist_set_calendar(dtlist, taxisInqCalendar(taxisID1));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -146,7 +136,7 @@ void *Timselstat(void *argument)
       goto LABEL_END;
     }
 
-  otsID   = 0;
+  int otsID   = 0;
   while ( TRUE )
     {
       for ( nsets = 0; nsets < ndates; nsets++ )
@@ -154,21 +144,7 @@ void *Timselstat(void *argument)
 	  nrecs = streamInqTimestep(streamID1, tsID);
 	  if ( nrecs == 0 ) break;
 
-	  vdate = taxisInqVdate(taxisID1);
-	  vtime = taxisInqVtime(taxisID1);
-
-	  if ( taxis_has_bounds )
-	    {
-	      taxisInqVdateBounds(taxisID1, &date_lb, &date_ub);
-	      taxisInqVtimeBounds(taxisID1, &time_lb, &time_ub);
-	      if ( nsets == 0 )
-		{
-		  vdate_lb = date_lb;
-		  vtime_lb = time_lb;
-		}
-	      vdate_ub = date_ub;
-	      vtime_ub = time_ub;
-	    }
+	  dtlist_taxisInqTimestep(dtlist, taxisID1, nsets);
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -241,8 +217,6 @@ void *Timselstat(void *argument)
 		  farmoq(&vars2[varID][levelID], vars1[varID][levelID]);
 	      }
 
-	  vdate0 = vdate;
-	  vtime0 = vtime;
 	  tsID++;
 	}
 
@@ -285,13 +259,7 @@ void *Timselstat(void *argument)
 	      }
 	  }
 
-      taxisDefVdate(taxisID2, vdate0);
-      taxisDefVtime(taxisID2, vtime0);
-      if ( taxis_has_bounds )
-	{
-	  taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
-	  taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
-	}
+      dtlist_stat_taxisDefTimestep(dtlist, taxisID2, nsets);
       streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
@@ -324,6 +292,8 @@ void *Timselstat(void *argument)
   field_free(vars1, vlistID1);
   field_free(samp1, vlistID1);
   if ( lvarstd ) field_free(vars2, vlistID1);
+
+  dtlist_delete(dtlist);
 
   if ( field.ptr ) free(field.ptr);
 

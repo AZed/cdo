@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -74,7 +74,7 @@ void *Merstat(void *argument)
   if ( operfunc == func_pctl )
     {
       operatorInputArg("percentile number");
-      pn = atoi(operatorArgv()[0]);
+      pn = parameter2int(operatorArgv()[0]);
       
       if ( pn < 1 || pn > 99 )
         cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);

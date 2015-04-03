@@ -371,12 +371,12 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type, i
 
   for ( i = 0; i < rv.num_links; i++ )
     {
-      rv.src_grid_add[i]++;
-      rv.tgt_grid_add[i]++;
+      rv.src_cell_add[i]++;
+      rv.tgt_cell_add[i]++;
     }
 
-  nce(nc_put_var_int(nc_file_id, nc_srcadd_id, rv.src_grid_add));
-  nce(nc_put_var_int(nc_file_id, nc_dstadd_id, rv.tgt_grid_add));
+  nce(nc_put_var_int(nc_file_id, nc_srcadd_id, rv.src_cell_add));
+  nce(nc_put_var_int(nc_file_id, nc_dstadd_id, rv.tgt_cell_add));
 
   nce(nc_put_var_double(nc_file_id, nc_rmpmatrix_id, rv.wts));
 
@@ -500,10 +500,10 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
   *submap_type = SUBMAP_TYPE_NONE;
   *remap_order = 1;
 
-  if ( strcompare(map_method, "Conservative") == 0 )
+  if ( cmpstr(map_method, "Conservative") == 0 )
     {
       int iatt;
-      if ( strcompare(map_method, "Conservative remapping using clipping on sphere") == 0 )
+      if ( cmpstr(map_method, "Conservative remapping using clipping on sphere") == 0 )
 	rv->map_type = MAP_TYPE_CONSERV_YAC;
       else
 	rv->map_type = MAP_TYPE_CONSERV;
@@ -511,19 +511,19 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
       status = nc_get_att_int(nc_file_id, NC_GLOBAL, "remap_order", &iatt);
       if ( status == NC_NOERR ) *remap_order = iatt;
     }
-  else if ( strcompare(map_method, "Bilinear") == 0 ) rv->map_type = MAP_TYPE_BILINEAR;
-  else if ( strcompare(map_method, "Bicubic")  == 0 ) rv->map_type = MAP_TYPE_BICUBIC;
-  else if ( strcompare(map_method, "Distance") == 0 )
+  else if ( cmpstr(map_method, "Bilinear") == 0 ) rv->map_type = MAP_TYPE_BILINEAR;
+  else if ( cmpstr(map_method, "Bicubic")  == 0 ) rv->map_type = MAP_TYPE_BICUBIC;
+  else if ( cmpstr(map_method, "Distance") == 0 )
     {
       rv->map_type = MAP_TYPE_DISTWGT;
       *num_neighbors = 4;
     }
-  else if ( strcompare(map_method, "Nearest") == 0 )
+  else if ( cmpstr(map_method, "Nearest") == 0 )
     {
       rv->map_type = MAP_TYPE_DISTWGT;
       *num_neighbors = 1;
     }
-  else if ( strcompare(map_method, "Largest") == 0 )
+  else if ( cmpstr(map_method, "Largest") == 0 )
     {
       rv->map_type = MAP_TYPE_CONSERV;
       *submap_type = SUBMAP_TYPE_LAF;
@@ -651,8 +651,8 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
 
   /* Allocate address and weight arrays for mapping 1 */
 
-  rv->src_grid_add = (int*) malloc(rv->num_links*sizeof(int));
-  rv->tgt_grid_add = (int*) malloc(rv->num_links*sizeof(int));
+  rv->src_cell_add = (int*) malloc(rv->num_links*sizeof(int));
+  rv->tgt_cell_add = (int*) malloc(rv->num_links*sizeof(int));
 
   rv->wts = (double*) malloc(rv->num_wts*rv->num_links*sizeof(double));
 
@@ -758,13 +758,13 @@ void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *ma
 
   nce(nc_get_var_double(nc_file_id, nc_dstgrdfrac_id, tgt_grid->cell_frac));
 
-  nce(nc_get_var_int(nc_file_id, nc_srcadd_id, rv->src_grid_add));
-  nce(nc_get_var_int(nc_file_id, nc_dstadd_id, rv->tgt_grid_add));
+  nce(nc_get_var_int(nc_file_id, nc_srcadd_id, rv->src_cell_add));
+  nce(nc_get_var_int(nc_file_id, nc_dstadd_id, rv->tgt_cell_add));
 
   for ( i = 0; i < rv->num_links; i++ )
     {
-      rv->src_grid_add[i]--;
-      rv->tgt_grid_add[i]--;
+      rv->src_cell_add[i]--;
+      rv->tgt_cell_add[i]--;
     }
 
   nce(nc_get_var_double(nc_file_id, nc_rmpmatrix_id, rv->wts));

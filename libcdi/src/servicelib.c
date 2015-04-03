@@ -2,6 +2,8 @@
 #  include "config.h"
 #endif
 
+#ifdef HAVE_LIBSERVICE
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -609,3 +611,4 @@ void srvWrite(int fileID, srvrec_t *srvp)
  * require-trailing-newline: t
  * End:
  */
+#endif  /* HAVE_LIBSERVICE */

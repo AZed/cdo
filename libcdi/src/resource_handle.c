@@ -431,19 +431,17 @@ void *reshGetValue(const char * caller, const char* expressionString, cdiResH re
 
 /**************************************************************/
 
-void reshGetResHListOfType ( int c, int * resHs, const resOps * ops )
+void reshGetResHListOfType(unsigned numIDs, int resHs[numIDs], const resOps *ops)
 {
-  int i, j = 0, nsp;
-
   xassert ( resHs && ops );
 
   LIST_INIT(1);
 
   LIST_LOCK();
 
-  nsp = namespaceGetActive ();
-
-  for ( i = 0; i < resHList[nsp].size && j < c; i++ )
+  int nsp = namespaceGetActive();
+  unsigned j = 0;
+  for (int i = 0; i < resHList[nsp].size && j < numIDs; i++ )
     if ((resHList[nsp].resources[i].status & RESH_IN_USE_BIT)
         && resHList[nsp].resources[i].res.v.ops == ops)
       resHs[j++] = namespaceIdxEncode2(nsp, i);
@@ -500,20 +498,21 @@ cdiResHFilterApply(const resOps *p,
 
 /**************************************************************/
 
-int reshCountType ( const resOps * ops )
+unsigned reshCountType(const resOps *ops)
 {
-  int i, nsp, countType = 0;
+  unsigned countType = 0;
 
-  xassert ( ops );
+  xassert(ops);
 
   LIST_INIT(1);
 
   LIST_LOCK();
 
-  nsp = namespaceGetActive ();
+  int nsp = namespaceGetActive ();
 
   listElem_t *r = resHList[nsp].resources;
-  for ( i = 0; i < resHList[nsp].size; i++ )
+  size_t len = (size_t)resHList[nsp].size;
+  for (size_t i = 0; i < len; i++ )
     countType += ((r[i].status & RESH_IN_USE_BIT) && r[i].res.v.ops == ops);
 
   LIST_UNLOCK();
@@ -658,10 +657,10 @@ void reshSetStatus ( cdiResH resH, const resOps * ops, int status )
             nspT.idx >= 0 &&
             nspT.idx < resHList[nsp].size );
 
+  xassert ( resHList[nsp].resources );
   listElem = resHList[nsp].resources + nspT.idx;
 
-  xassert ( listElem &&
-            listElem->res.v.ops == ops );
+  xassert ( listElem->res.v.ops == ops );
 
   listElem->status = status;
 

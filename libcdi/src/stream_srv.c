@@ -206,25 +206,17 @@ static
 void srv_add_record(stream_t *streamptr, int param, int level, int xsize, int ysize,
                     size_t recsize, off_t position, int prec)
 {
-  int leveltype;
-  int gridID = CDI_UNDEFID;
-  int levelID = 0;
-  int tsID, recID, varID;
-  int datatype;
-  record_t *record;
+  int vlistID = streamptr->vlistID;
+  int tsID    = streamptr->curTsID;
+  int recID   = recordNewEntry(streamptr, tsID);
+  record_t *record = &streamptr->tsteps[tsID].records[recID];
+
+  record->size     = recsize;
+  record->position = position;
+  record->param    = param;
+  record->ilevel   = level;
+
   grid_t grid;
-  int vlistID;
-
-  vlistID = streamptr->vlistID;
-  tsID    = streamptr->curTsID;
-  recID   = recordNewEntry(streamptr, tsID);
-  record  = &streamptr->tsteps[tsID].records[recID];
-
-  (*record).size     = recsize;
-  (*record).position = position;
-  (*record).param    = param;
-  (*record).ilevel   = level;
-
   memset(&grid, 0, sizeof(grid_t));
   grid.type  = GRID_GENERIC;
   grid.size  = xsize*ysize;
@@ -232,21 +224,24 @@ void srv_add_record(stream_t *streamptr, int param, int level, int xsize, int ys
   grid.ysize = ysize;
   grid.xvals = NULL;
   grid.yvals = NULL;
-  gridID = varDefGrid(vlistID, &grid, 0);
+  int gridID = varDefGrid(vlistID, &grid, 0);
   /*
   if ( level == 0 ) leveltype = ZAXIS_SURFACE;
   else              leveltype = ZAXIS_GENERIC;
   */
-  leveltype = ZAXIS_GENERIC;
+  int leveltype = ZAXIS_GENERIC;
 
-  datatype = srvInqDatatype(prec);
+  int datatype = srvInqDatatype(prec);
+
+  int levelID = 0;
+  int varID;
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0, 0, 0,
 	       datatype, &varID, &levelID, TSTEP_INSTANT, 0, 0, -1, NULL, NULL, NULL, NULL);
 
   xassert(varID <= SHRT_MAX && levelID <= SHRT_MAX);
-  (*record).varID   = (short)varID;
-  (*record).levelID = (short)levelID;
+  record->varID   = (short)varID;
+  record->levelID = (short)levelID;
 
   streamptr->tsteps[tsID].nallrecs++;
   streamptr->nrecs++;

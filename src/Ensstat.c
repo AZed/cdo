@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -40,31 +40,21 @@
 
 void *Ensstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
   int i;
   int varID, recID;
-  int gridsize = 0;
   int gridID;
   int nrecs, nrecs0;
   int levelID;
-  int tsID;
-  int streamID = 0, streamID2;
-  int vlistID, vlistID1, vlistID2;
+  int streamID = 0;
   int nmiss;
-  int taxisID1, taxisID2;
+  int fileID;
   double missval;
-  double *array2 = NULL;
-  field_t *field;
-  int fileID, nfiles;
-  const char *ofilename;
   typedef struct
   {
     int streamID;
     int vlistID;
     double *array;
   } ens_file_t;
-  ens_file_t *ef = NULL;
   int pn = 0;
 
   cdoInitialize(argument);
@@ -80,75 +70,99 @@ void *Ensstat(void *argument)
   cdoOperatorAdd("ensvar1", func_var1, 0, NULL);
   cdoOperatorAdd("enspctl", func_pctl, 0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
+  int argc = operatorArgc();
+  int nargc = argc;
   if ( operfunc == func_pctl )
     {
       operatorInputArg("percentile number");
-      pn = atoi(operatorArgv()[0]);
+      pn = parameter2int(operatorArgv()[0]);
       
       if ( pn < 1 || pn > 99 )
         cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
+      argc--;
+    }
+
+  int count_data = FALSE;
+  if ( argc == 1 )
+    {
+      if ( strcmp("count", operatorArgv()[nargc-1]) == 0 ) count_data = TRUE;
+      else cdoAbort("Unknown parameter: >%s<", operatorArgv()[nargc-1]); 
     }
     
-  nfiles = cdoStreamCnt() - 1;
+  int nfiles = cdoStreamCnt() - 1;
 
-  if ( cdoVerbose )
-    cdoPrint("Ensemble over %d files.", nfiles);
+  if ( cdoVerbose ) cdoPrint("Ensemble over %d files.", nfiles);
 
-  ofilename = cdoStreamName(nfiles)->args;
+  const char *ofilename = cdoStreamName(nfiles)->args;
 
   if ( !cdoSilentMode && !cdoOverwriteMode )
     if ( fileExists(ofilename) )
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  ef = (ens_file_t*) malloc(nfiles*sizeof(ens_file_t));
+  ens_file_t *ef = (ens_file_t *) malloc(nfiles*sizeof(ens_file_t));
 
-  field = (field_t*) malloc(ompNumThreads*sizeof(field_t));
+  field_t *field = (field_t *) malloc(ompNumThreads*sizeof(field_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
       field_init(&field[i]);
       field[i].size   = nfiles;
       field[i].ptr    = (double*) malloc(nfiles*sizeof(double));
       field[i].weight = (double*) malloc(nfiles*sizeof(double));
-      for ( fileID = 0; fileID < nfiles; fileID++ )
-	field[i].weight[fileID] = 1;
+      for ( fileID = 0; fileID < nfiles; fileID++ ) field[i].weight[fileID] = 1;
     }
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
-      streamID = streamOpenRead(cdoStreamName(fileID));
-
-      vlistID = streamInqVlist(streamID);
-
-      ef[fileID].streamID = streamID;
-      ef[fileID].vlistID = vlistID;
+      ef[fileID].streamID = streamOpenRead(cdoStreamName(fileID));
+      ef[fileID].vlistID  = streamInqVlist(ef[fileID].streamID);
     }
 
   /* check that the contents is always the same */
   for ( fileID = 1; fileID < nfiles; fileID++ )
     vlistCompare(ef[0].vlistID, ef[fileID].vlistID, CMP_ALL);
 
-  vlistID1 = ef[0].vlistID;
-  vlistID2 = vlistDuplicate(vlistID1);
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int vlistID1 = ef[0].vlistID;
+  int vlistID2 = vlistDuplicate(vlistID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-
-  streamDefVlist(streamID2, vlistID2);
-	  
-  gridsize = vlistGridsizeMax(vlistID1);
+  int gridsize = vlistGridsizeMax(vlistID1);
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     ef[fileID].array = (double*) malloc(gridsize*sizeof(double));
 
-  array2 = (double*) malloc(gridsize*sizeof(double));
+  double *array2 = (double *) malloc(gridsize*sizeof(double));
 
-  tsID = 0;
+  int nvars = vlistNvars(vlistID2);
+  double *count2 = NULL;
+  if ( count_data )
+    {
+      count2 = (double *) malloc(gridsize*sizeof(double));
+      for ( varID = 0; varID < nvars; ++varID )
+	{
+	  char name[CDI_MAX_NAME];
+	  vlistInqVarName(vlistID2, varID, name);
+	  strcat(name, "_count");
+	  gridID = vlistInqVarGrid(vlistID2, varID);
+	  int zaxisID = vlistInqVarZaxis(vlistID2, varID);
+	  int tsteptype = vlistInqVarTsteptype(vlistID2, varID);
+	  int cvarID = vlistDefVar(vlistID2, gridID, zaxisID, tsteptype);
+	  vlistDefVarName(vlistID2, cvarID, name);
+	  vlistDefVarDatatype(vlistID2, cvarID, DATATYPE_INT16);
+	  if ( cvarID != (varID+nvars) ) cdoAbort("Internal error, varIDs do not match!");
+	}
+    }
+
+  int streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
+
+  streamDefVlist(streamID2, vlistID2);
+
+  int tsID = 0;
   do
     {
       nrecs0 = streamInqTimestep(ef[0].streamID, tsID);
@@ -218,10 +232,18 @@ void *Ensstat(void *argument)
 #endif
 		  nmiss++;
 		}
+
+	      if ( count_data ) count2[i] = nfiles - field[ompthID].nmiss;
 	    }
 
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, array2, nmiss);
+
+	  if ( count_data )
+	    {
+	      streamDefRecord(streamID2, varID+nvars, levelID);
+	      streamWriteRecord(streamID2, count2, 0);
+	    }
 	}
 
       tsID++;
@@ -229,10 +251,7 @@ void *Ensstat(void *argument)
   while ( nrecs0 > 0 );
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    {
-      streamID = ef[fileID].streamID;
-      streamClose(streamID);
-    }
+    streamClose(ef[fileID].streamID);
 
   streamClose(streamID2);
 
@@ -241,6 +260,7 @@ void *Ensstat(void *argument)
 
   if ( ef ) free(ef);
   if ( array2 ) free(array2);
+  if ( count2 ) free(count2);
 
   for ( i = 0; i < ompNumThreads; i++ )
     {

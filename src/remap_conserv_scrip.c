@@ -10,7 +10,7 @@
 #include "cdo_int.h"
 #include "grid.h"
 #include "remap.h"
-#include "remap_store_link.h"
+#include "remap_store_link_cnsrv.h"
 #include "util.h"  /* progressStatus */
 
 /* #define  BABY_STEP  0.001 */ /* original value */
@@ -1004,8 +1004,8 @@ void correct_pole(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv,
   long num_wts;
   long src_grid_size;
   long tgt_grid_size;
-  long src_grid_add;       /* current linear address for source grid cell   */
-  long tgt_grid_add;       /* current linear address for target grid cell   */
+  long src_cell_add;       /* current linear address for source grid cell   */
+  long tgt_cell_add;       /* current linear address for target grid cell   */
   double weights[6];       /* local wgt array */
 
   num_wts = rv->num_wts;
@@ -1021,51 +1021,51 @@ void correct_pole(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv,
   weights[4] =  PI*PI;
   weights[5] =  ZERO;
 
-  src_grid_add = -1;
+  src_cell_add = -1;
   /* pole_loop1 */
   for ( n = 0; n < src_grid_size; ++n )
     if ( src_grid->cell_area[n] < -THREE*PIH && src_grid->cell_center_lat[n] > ZERO )
       {
-	src_grid_add = n;
+	src_cell_add = n;
 #ifndef SX
 	break;
 #endif
       }
 
-  tgt_grid_add = -1;
+  tgt_cell_add = -1;
   /* pole_loop2 */
   for ( n = 0; n < tgt_grid_size; ++n )
     if ( tgt_grid->cell_area[n] < -THREE*PIH && tgt_grid->cell_center_lat[n] > ZERO )
       {
-	tgt_grid_add = n;
+	tgt_cell_add = n;
 #ifndef SX
 	break;
 #endif
       }
 
-  if ( src_grid_add != -1 )
+  if ( src_cell_add != -1 )
     {
-      src_grid->cell_area[src_grid_add] += weights[0];
-      src_centroid_lat[src_grid_add]    += weights[1];
-      src_centroid_lon[src_grid_add]    += weights[2];
+      src_grid->cell_area[src_cell_add] += weights[0];
+      src_centroid_lat[src_cell_add]    += weights[1];
+      src_centroid_lon[src_cell_add]    += weights[2];
     }
 
-  if ( tgt_grid_add != -1 )
+  if ( tgt_cell_add != -1 )
     {
-      tgt_grid->cell_area[tgt_grid_add] += weights[3];
-      tgt_centroid_lat[tgt_grid_add]    += weights[4];
-      tgt_centroid_lon[tgt_grid_add]    += weights[5];
+      tgt_grid->cell_area[tgt_cell_add] += weights[3];
+      tgt_centroid_lat[tgt_cell_add]    += weights[4];
+      tgt_centroid_lon[tgt_cell_add]    += weights[5];
     }
 
-  if ( src_grid_add != -1 && tgt_grid_add != -1 )
+  if ( src_cell_add != -1 && tgt_cell_add != -1 )
     {
       if ( remap_store_link_fast )
-	store_link_cnsrv_fast(rv, src_grid_add, tgt_grid_add, num_wts, weights, grid_store);
+	store_link_cnsrv_fast(rv, src_cell_add, tgt_cell_add, num_wts, weights, grid_store);
       else
-	store_link_cnsrv(rv, src_grid_add, tgt_grid_add, weights, link_add1, link_add2);
+	store_link_cnsrv(rv, src_cell_add, tgt_cell_add, weights, link_add1, link_add2);
 
-      src_grid->cell_frac[src_grid_add] += weights[0];
-      tgt_grid->cell_frac[tgt_grid_add] += weights[3];
+      src_grid->cell_frac[src_cell_add] += weights[0];
+      tgt_grid->cell_frac[tgt_cell_add] += weights[3];
     }
 
   /* South Pole */
@@ -1076,51 +1076,51 @@ void correct_pole(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv,
   weights[4] = -PI*PI;
   weights[5] =  ZERO;
 
-  src_grid_add = -1;
+  src_cell_add = -1;
   /* pole_loop3 */
   for ( n = 0; n < src_grid_size; ++n )
     if ( src_grid->cell_area[n] < -THREE*PIH && src_grid->cell_center_lat[n] < ZERO )
       {
-	src_grid_add = n;
+	src_cell_add = n;
 #ifndef SX
 	break;
 #endif
       }
 
-  tgt_grid_add = -1;
+  tgt_cell_add = -1;
   /* pole_loop4 */
   for ( n = 0; n < tgt_grid_size; ++n )
     if ( tgt_grid->cell_area[n] < -THREE*PIH && tgt_grid->cell_center_lat[n] < ZERO )
       {
-	tgt_grid_add = n;
+	tgt_cell_add = n;
 #ifndef SX
 	break;
 #endif
       }
 
-  if ( src_grid_add != -1 )
+  if ( src_cell_add != -1 )
     {
-      src_grid->cell_area[src_grid_add] += weights[0];
-      src_centroid_lat[src_grid_add]    += weights[1];
-      src_centroid_lon[src_grid_add]    += weights[2];
+      src_grid->cell_area[src_cell_add] += weights[0];
+      src_centroid_lat[src_cell_add]    += weights[1];
+      src_centroid_lon[src_cell_add]    += weights[2];
     }
 
-  if ( tgt_grid_add != -1 )
+  if ( tgt_cell_add != -1 )
     {
-      tgt_grid->cell_area[tgt_grid_add] += weights[3];
-      tgt_centroid_lat[tgt_grid_add]    += weights[4];
-      tgt_centroid_lon[tgt_grid_add]    += weights[5];
+      tgt_grid->cell_area[tgt_cell_add] += weights[3];
+      tgt_centroid_lat[tgt_cell_add]    += weights[4];
+      tgt_centroid_lon[tgt_cell_add]    += weights[5];
     }
 
-  if ( src_grid_add != -1 && tgt_grid_add != -1 )
+  if ( src_cell_add != -1 && tgt_cell_add != -1 )
     {
       if ( remap_store_link_fast )
-	store_link_cnsrv_fast(rv, src_grid_add, tgt_grid_add, num_wts, weights, grid_store);
+	store_link_cnsrv_fast(rv, src_cell_add, tgt_cell_add, num_wts, weights, grid_store);
       else
-	store_link_cnsrv(rv, src_grid_add, tgt_grid_add, weights, link_add1, link_add2);
+	store_link_cnsrv(rv, src_cell_add, tgt_cell_add, weights, link_add1, link_add2);
 
-      src_grid->cell_frac[src_grid_add] += weights[0];
-      tgt_grid->cell_frac[tgt_grid_add] += weights[3];
+      src_grid->cell_frac[src_cell_add] += weights[0];
+      tgt_grid->cell_frac[tgt_cell_add] += weights[3];
     }
 }
 
@@ -1140,8 +1140,8 @@ void normalize_weights(remapgrid_t *tgt_grid, remapvars_t *rv, double *src_centr
   /* Include centroids in weights and normalize using destination area if requested */
   long n;
   long num_links = rv->num_links;
-  long src_grid_add;       /* current linear address for source grid cell   */
-  long tgt_grid_add;       /* current linear address for target grid cell   */
+  long src_cell_add;       /* current linear address for source grid cell   */
+  long tgt_cell_add;       /* current linear address for target grid cell   */
   double *weights = rv->wts;
   double norm_factor = 0;  /* factor for normalizing wts */
 
@@ -1153,18 +1153,18 @@ void normalize_weights(remapgrid_t *tgt_grid, remapvars_t *rv, double *src_centr
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, weights, tgt_grid, src_centroid_lat, src_centroid_lon)		\
-  private(n, src_grid_add, tgt_grid_add, norm_factor)
+  private(n, src_cell_add, tgt_cell_add, norm_factor)
 #endif
       for ( n = 0; n < num_links; ++n )
 	{
-	  src_grid_add = rv->src_grid_add[n]; tgt_grid_add = rv->tgt_grid_add[n];
+	  src_cell_add = rv->src_cell_add[n]; tgt_cell_add = rv->tgt_cell_add[n];
 
-          if ( IS_NOT_EQUAL(tgt_grid->cell_area[tgt_grid_add], 0) )
-	    norm_factor = ONE/tgt_grid->cell_area[tgt_grid_add];
+          if ( IS_NOT_EQUAL(tgt_grid->cell_area[tgt_cell_add], 0) )
+	    norm_factor = ONE/tgt_grid->cell_area[tgt_cell_add];
           else
             norm_factor = ZERO;
 
-	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_grid_add], src_centroid_lon[src_grid_add]);
+	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_cell_add], src_centroid_lon[src_cell_add]);
 	}
     }
   else if ( rv->norm_opt == NORM_OPT_FRACAREA )
@@ -1175,18 +1175,18 @@ void normalize_weights(remapgrid_t *tgt_grid, remapvars_t *rv, double *src_centr
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, weights, tgt_grid, src_centroid_lat, src_centroid_lon)		\
-  private(n, src_grid_add, tgt_grid_add, norm_factor)
+  private(n, src_cell_add, tgt_cell_add, norm_factor)
 #endif
       for ( n = 0; n < num_links; ++n )
 	{
-	  src_grid_add = rv->src_grid_add[n]; tgt_grid_add = rv->tgt_grid_add[n];
+	  src_cell_add = rv->src_cell_add[n]; tgt_cell_add = rv->tgt_cell_add[n];
 
-          if ( IS_NOT_EQUAL(tgt_grid->cell_frac[tgt_grid_add], 0) )
-	    norm_factor = ONE/tgt_grid->cell_frac[tgt_grid_add];
+          if ( IS_NOT_EQUAL(tgt_grid->cell_frac[tgt_cell_add], 0) )
+	    norm_factor = ONE/tgt_grid->cell_frac[tgt_cell_add];
           else
             norm_factor = ZERO;
 
-	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_grid_add], src_centroid_lon[src_grid_add]);
+	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_cell_add], src_centroid_lon[src_cell_add]);
 	}
     }
   else if ( rv->norm_opt == NORM_OPT_NONE )
@@ -1197,15 +1197,15 @@ void normalize_weights(remapgrid_t *tgt_grid, remapvars_t *rv, double *src_centr
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) \
   shared(num_links, rv, weights, tgt_grid, src_centroid_lat, src_centroid_lon)	\
-  private(n, src_grid_add, norm_factor)
+  private(n, src_cell_add, norm_factor)
 #endif
       for ( n = 0; n < num_links; ++n )
 	{
-	  src_grid_add = rv->src_grid_add[n];;
+	  src_cell_add = rv->src_cell_add[n];;
 
           norm_factor = ONE;
 
-	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_grid_add], src_centroid_lon[src_grid_add]);
+	  norm_weight(norm_factor, &weights[n*3], src_centroid_lat[src_cell_add], src_centroid_lon[src_cell_add]);
 	}
     }
 }
@@ -1232,8 +1232,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
   long tgt_grid_size;
   long src_num_cell_corners;
   long tgt_num_cell_corners;
-  long src_grid_add;       /* current linear address for source grid cell   */
-  long tgt_grid_add;       /* current linear address for target grid cell   */
+  long src_cell_add;       /* current linear address for source grid cell   */
+  long tgt_cell_add;       /* current linear address for target grid cell   */
   long n, k;            /* generic counters                        */
   long corner;          /* corner of cell that segment starts from */
   long next_corn;       /* corner of cell that segment ends on     */
@@ -1380,17 +1380,17 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
 #if defined(_OPENMP)
 #pragma omp parallel for default(shared) \
-  shared(ompNumThreads, cdoTimer, nbins, num_wts, src_centroid_lon, src_centroid_lat, \
+  shared(ompNumThreads, nbins, num_wts, src_centroid_lon, src_centroid_lat, \
          remap_store_link_fast, grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
 	 srch_corner_lat2, srch_corner_lon2, max_srch_cells2, 		\
 	 src_num_cell_corners,	srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, srch_add2, findex) \
   private(srch_add, n, k, num_srch_cells, max_srch_cells, 	\
-	  src_grid_add, tgt_grid_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
+	  src_cell_add, tgt_cell_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
 	  weights, intrsct_lat, intrsct_lon, intrsct_lat_off, intrsct_lon_off, intrsct_x, intrsct_y, \
 	  last_loc, lcoinc, lthresh, luse_last, avoid_pole_count, avoid_pole_offset)
 #endif
-  for ( src_grid_add = 0; src_grid_add < src_grid_size; ++src_grid_add )
+  for ( src_cell_add = 0; src_cell_add < src_grid_size; ++src_cell_add )
     {
       int ompthID = cdo_omp_get_thread_num();
       int lprogress = 1;
@@ -1410,8 +1410,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
       avoid_pole_offset = TINY;
 
       /* Get search cells */
-      num_srch_cells = get_srch_cells(src_grid_add, nbins, src_grid->bin_addr, tgt_grid->bin_addr,
-				      src_grid->cell_bound_box+src_grid_add*4, tgt_grid->cell_bound_box, tgt_grid_size, srch_add);
+      num_srch_cells = get_srch_cells(src_cell_add, nbins, src_grid->bin_addr, tgt_grid->bin_addr,
+				      src_grid->cell_bound_box+src_cell_add*4, tgt_grid->cell_bound_box, tgt_grid_size, srch_add);
 
       if ( num_srch_cells == 0 ) continue;
 
@@ -1436,8 +1436,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
       /* gather1 */
       for ( n = 0; n < num_srch_cells; ++n )
 	{
-	  tgt_grid_add = srch_add[n];
-	  ioffset = tgt_grid_add*srch_corners;
+	  tgt_cell_add = srch_add[n];
+	  ioffset = tgt_cell_add*srch_corners;
 
 	  nsrch_corners = n*srch_corners;
 	  for ( k = 0; k < srch_corners; k++ )
@@ -1449,7 +1449,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
       /* Integrate around this cell */
 
-      ioffset = src_grid_add*src_num_cell_corners;
+      ioffset = src_cell_add*src_num_cell_corners;
 
       for ( corner = 0; corner < src_num_cell_corners; ++corner )
 	{
@@ -1494,7 +1494,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 	      num_subseg++;
 	      if ( num_subseg >= max_subseg )
 		cdoAbort("Integration stalled: num_subseg exceeded limit (grid1[%d]: lon1=%g lon2=%g lat1=%g lat2=%g)!",
-			 src_grid_add, beglon, endlon, beglat, endlat);
+			 src_cell_add, beglon, endlon, beglat, endlat);
 
 	      /* Uwe Schulzweida: skip very small regions */
 	      if ( num_subseg%1000 == 0 )
@@ -1503,14 +1503,14 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 		    {
 		      if ( cdoVerbose )
 			cdoPrint("Skip very small region (grid1[%d]): lon=%g dlon=%g lat=%g dlat=%g",
-				 src_grid_add, beglon, endlon-beglon, beglat, endlat-beglat);
+				 src_cell_add, beglon, endlon-beglon, beglat, endlat-beglat);
 		      break;
 		    }
 		}
 
 	      /* Find next intersection of this segment with a gridline on grid 2. */
 
-	      intersection(&tgt_grid_add, &intrsct_lat, &intrsct_lon, &lcoinc,
+	      intersection(&tgt_cell_add, &intrsct_lat, &intrsct_lon, &lcoinc,
 			   beglat, beglon, endlat, endlon, begseg, 
 			   lbegin, lrevers,
 			   num_srch_cells, srch_corners, srch_add,
@@ -1523,12 +1523,12 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
 	      /* Compute line integral for this subsegment. */
 
-	      if ( tgt_grid_add != -1 )
+	      if ( tgt_cell_add != -1 )
 		line_integral(weights, beglon, intrsct_lon, beglat, intrsct_lat,
-			      src_grid->cell_center_lon[src_grid_add], tgt_grid->cell_center_lon[tgt_grid_add]);
+			      src_grid->cell_center_lon[src_cell_add], tgt_grid->cell_center_lon[tgt_cell_add]);
 	      else
 		line_integral(weights, beglon, intrsct_lon, beglat, intrsct_lat,
-			      src_grid->cell_center_lon[src_grid_add], src_grid->cell_center_lon[src_grid_add]);
+			      src_grid->cell_center_lon[src_cell_add], src_grid->cell_center_lon[src_cell_add]);
 
 	      /* If integrating in reverse order, change sign of weights */
 
@@ -1538,26 +1538,26 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 		Store the appropriate addresses and weights. 
 		Also add contributions to cell areas and centroids.
 	      */
-	      if ( tgt_grid_add != -1 )
-		if ( src_grid->mask[src_grid_add] )
+	      if ( tgt_cell_add != -1 )
+		if ( src_grid->mask[src_cell_add] )
 		  {
 #if defined(_OPENMP)
 #pragma omp critical
 #endif
 		    {
 		      if ( remap_store_link_fast )
-			store_link_cnsrv_fast(rv, src_grid_add, tgt_grid_add, num_wts, weights, grid_store);
+			store_link_cnsrv_fast(rv, src_cell_add, tgt_cell_add, num_wts, weights, grid_store);
 		      else
-			store_link_cnsrv(rv, src_grid_add, tgt_grid_add, weights, link_add1, link_add2);
+			store_link_cnsrv(rv, src_cell_add, tgt_cell_add, weights, link_add1, link_add2);
 
-		      tgt_grid->cell_frac[tgt_grid_add] += weights[3];
+		      tgt_grid->cell_frac[tgt_cell_add] += weights[3];
 		    }
-		    src_grid->cell_frac[src_grid_add] += weights[0];
+		    src_grid->cell_frac[src_cell_add] += weights[0];
 		  }
 
-	      src_grid->cell_area[src_grid_add] += weights[0];
-	      src_centroid_lat[src_grid_add] += weights[1];
-	      src_centroid_lon[src_grid_add] += weights[2];
+	      src_grid->cell_area[src_cell_add] += weights[0];
+	      src_centroid_lat[src_cell_add] += weights[1];
+	      src_centroid_lon[src_cell_add] += weights[2];
 
 	      /* Reset beglat and beglon for next subsegment. */
 	      beglat = intrsct_lat;
@@ -1605,17 +1605,17 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
 #if defined(_OPENMP)
 #pragma omp parallel for default(shared) \
-  shared(ompNumThreads, cdoTimer, nbins, num_wts, tgt_centroid_lon, tgt_centroid_lat, \
+  shared(ompNumThreads, nbins, num_wts, tgt_centroid_lon, tgt_centroid_lat, \
          remap_store_link_fast, grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
 	 srch_corner_lat2, srch_corner_lon2, max_srch_cells2, 		\
 	 tgt_num_cell_corners, srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, srch_add2, findex) \
   private(srch_add, n, k, num_srch_cells, max_srch_cells,	\
-	  src_grid_add, tgt_grid_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
+	  src_cell_add, tgt_cell_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
 	  weights, intrsct_lat, intrsct_lon, intrsct_lat_off, intrsct_lon_off, intrsct_x, intrsct_y, \
 	  last_loc, lcoinc, lthresh, luse_last, avoid_pole_count, avoid_pole_offset)
 #endif
-  for ( tgt_grid_add = 0; tgt_grid_add < tgt_grid_size; ++tgt_grid_add )
+  for ( tgt_cell_add = 0; tgt_cell_add < tgt_grid_size; ++tgt_cell_add )
     {
       int ompthID = cdo_omp_get_thread_num();
       int lprogress = 1;
@@ -1635,8 +1635,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
       avoid_pole_offset = TINY;
 
       /* Get search cells */
-      num_srch_cells = get_srch_cells(tgt_grid_add, nbins, tgt_grid->bin_addr, src_grid->bin_addr,
-				      tgt_grid->cell_bound_box+tgt_grid_add*4, src_grid->cell_bound_box, src_grid_size, srch_add);
+      num_srch_cells = get_srch_cells(tgt_cell_add, nbins, tgt_grid->bin_addr, src_grid->bin_addr,
+				      tgt_grid->cell_bound_box+tgt_cell_add*4, src_grid->cell_bound_box, src_grid_size, srch_add);
 
       if ( num_srch_cells == 0 ) continue;
 
@@ -1661,8 +1661,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
       /* gather2 */
       for ( n = 0; n < num_srch_cells; ++n )
 	{
-	  src_grid_add = srch_add[n];
-	  ioffset = src_grid_add*srch_corners;
+	  src_cell_add = srch_add[n];
+	  ioffset = src_cell_add*srch_corners;
 
 	  nsrch_corners = n*srch_corners;
 	  for ( k = 0; k < srch_corners; ++k )
@@ -1674,7 +1674,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
       /* Integrate around this cell */
 
-      ioffset = tgt_grid_add*tgt_num_cell_corners;
+      ioffset = tgt_cell_add*tgt_num_cell_corners;
 
       for ( corner = 0; corner < tgt_num_cell_corners; ++corner )
 	{
@@ -1719,7 +1719,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 	      num_subseg++;
 	      if ( num_subseg >= max_subseg )
 		cdoAbort("Integration stalled: num_subseg exceeded limit (grid2[%d]: lon1=%g lon2=%g lat1=%g lat2=%g)!",
-			 tgt_grid_add, beglon, endlon, beglat, endlat);
+			 tgt_cell_add, beglon, endlon, beglat, endlat);
 
 	      /* Uwe Schulzweida: skip very small regions */
 	      if ( num_subseg%1000 == 0 )
@@ -1728,14 +1728,14 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 		    {
 		      if ( cdoVerbose )
 			cdoPrint("Skip very small region (grid2[%d]): lon=%g dlon=%g lat=%g dlat=%g",
-				 tgt_grid_add, beglon, endlon-beglon, beglat, endlat-beglat);
+				 tgt_cell_add, beglon, endlon-beglon, beglat, endlat-beglat);
 		      break;
 		    }
 		}
 
 	      /* Find next intersection of this segment with a gridline on grid 2. */
 
-	      intersection(&src_grid_add, &intrsct_lat, &intrsct_lon, &lcoinc,
+	      intersection(&src_cell_add, &intrsct_lat, &intrsct_lon, &lcoinc,
 			   beglat, beglon, endlat, endlon, begseg,
 			   lbegin, lrevers,
 			   num_srch_cells, srch_corners, srch_add,
@@ -1748,12 +1748,12 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
 	      /* Compute line integral for this subsegment. */
 
-	      if ( src_grid_add != -1 )
+	      if ( src_cell_add != -1 )
 		line_integral(weights, beglon, intrsct_lon, beglat, intrsct_lat,
-			      src_grid->cell_center_lon[src_grid_add], tgt_grid->cell_center_lon[tgt_grid_add]);
+			      src_grid->cell_center_lon[src_cell_add], tgt_grid->cell_center_lon[tgt_cell_add]);
 	      else
 		line_integral(weights, beglon, intrsct_lon, beglat, intrsct_lat,
-			      tgt_grid->cell_center_lon[tgt_grid_add], tgt_grid->cell_center_lon[tgt_grid_add]);
+			      tgt_grid->cell_center_lon[tgt_cell_add], tgt_grid->cell_center_lon[tgt_cell_add]);
 
 	      /* If integrating in reverse order, change sign of weights */
 
@@ -1766,26 +1766,26 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 		because they have been captured in the previous loop.
 		The source grid mask is the master mask
 	      */
-	      if ( ! lcoinc && src_grid_add != -1 )
-		if ( src_grid->mask[src_grid_add] )
+	      if ( ! lcoinc && src_cell_add != -1 )
+		if ( src_grid->mask[src_cell_add] )
 		  {
 #if defined(_OPENMP)
 #pragma omp critical
 #endif
 		    {
 		      if ( remap_store_link_fast )
-			store_link_cnsrv_fast(rv, src_grid_add, tgt_grid_add, num_wts, weights, grid_store);
+			store_link_cnsrv_fast(rv, src_cell_add, tgt_cell_add, num_wts, weights, grid_store);
 		      else
-			store_link_cnsrv(rv, src_grid_add, tgt_grid_add, weights, link_add1, link_add2);
+			store_link_cnsrv(rv, src_cell_add, tgt_cell_add, weights, link_add1, link_add2);
 
-		      src_grid->cell_frac[src_grid_add] += weights[0];
+		      src_grid->cell_frac[src_cell_add] += weights[0];
 		    }
-		    tgt_grid->cell_frac[tgt_grid_add] += weights[3];
+		    tgt_grid->cell_frac[tgt_cell_add] += weights[3];
 		  }
 
-	      tgt_grid->cell_area[tgt_grid_add] += weights[3];
-	      tgt_centroid_lat[tgt_grid_add] += weights[4];
-	      tgt_centroid_lon[tgt_grid_add] += weights[5];
+	      tgt_grid->cell_area[tgt_cell_add] += weights[3];
+	      tgt_centroid_lat[tgt_cell_add] += weights[4];
+	      tgt_centroid_lon[tgt_cell_add] += weights[5];
 
 	      /* Reset beglat and beglon for next subsegment. */
 	      beglat = intrsct_lat;
@@ -1871,8 +1871,8 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 		  rv->wts[3*i+1] = rv->wts[3*(i+nd)+1];
 		  rv->wts[3*i+2] = rv->wts[3*(i+nd)+2];
 		  
-		  rv->src_grid_add[i] = rv->src_grid_add[i+nd];
-		  rv->tgt_grid_add[i] = rv->tgt_grid_add[i+nd];
+		  rv->src_cell_add[i] = rv->src_cell_add[i+nd];
+		  rv->tgt_cell_add[i] = rv->tgt_cell_add[i+nd];
 		}
 	    }
 	}
@@ -1926,25 +1926,25 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 
       for ( n = 0; n < num_links; ++n )
 	{
-	  src_grid_add = rv->src_grid_add[n];
-	  tgt_grid_add = rv->tgt_grid_add[n];
+	  src_cell_add = rv->src_cell_add[n];
+	  tgt_cell_add = rv->tgt_cell_add[n];
 
 	  if ( rv->wts[3*n] < -0.01 )
 	    cdoPrint("Map weight < 0! grid1idx=%d grid2idx=%d nlink=%d wts=%g",
-		     src_grid_add, tgt_grid_add, n, rv->wts[3*n]);
+		     src_cell_add, tgt_cell_add, n, rv->wts[3*n]);
 
 	  if ( rv->norm_opt != NORM_OPT_NONE && rv->wts[3*n] > 1.01 )
 	    cdoPrint("Map weight > 1! grid1idx=%d grid2idx=%d nlink=%d wts=%g",
-		     src_grid_add, tgt_grid_add, n, rv->wts[3*n]);
+		     src_cell_add, tgt_cell_add, n, rv->wts[3*n]);
 	}
 
       for ( n = 0; n < num_links; ++n )
 	{
-	  tgt_grid_add = rv->tgt_grid_add[n];
-	  tgt_centroid_lat[tgt_grid_add] += rv->wts[3*n];
+	  tgt_cell_add = rv->tgt_cell_add[n];
+	  tgt_centroid_lat[tgt_cell_add] += rv->wts[3*n];
 	}
 
-      /* 2012-01-24 Uwe Schulzweida: changed [tgt_grid_add] to [n] (bug fix) */
+      /* 2012-01-24 Uwe Schulzweida: changed [tgt_cell_add] to [n] (bug fix) */
       for ( n = 0; n < tgt_grid_size; ++n )
 	{
 	  if ( rv->norm_opt == NORM_OPT_DESTAREA )

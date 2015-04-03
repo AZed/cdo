@@ -32,6 +32,10 @@ adisit -adisit \
 aexpr -aexpr \
 aexprf -aexprf \
 anomaly -anomaly \
+ap2pl -ap2pl \
+ap2pl_lp -ap2pl_lp \
+ap2plx -ap2plx \
+ap2plx_lp -ap2plx_lp \
 asin -asin \
 atan -atan \
 atan2 -atan2 \
@@ -592,6 +596,7 @@ splitsel -splitsel \
 splittabnum -splittabnum \
 splitvar -splitvar \
 splityear -splityear \
+splityearmon -splityearmon \
 splitzaxis -splitzaxis \
 sqr -sqr \
 sqrt -sqrt \
@@ -659,6 +664,7 @@ varrms -varrms \
 vct -vct \
 vct2 -vct2 \
 vertavg -vertavg \
+vertint -vertint \
 vertmax -vertmax \
 vertmean -vertmean \
 vertmin -vertmin \
@@ -738,12 +744,16 @@ ymonsub -ymonsub \
 ymonsum -ymonsum \
 ymonvar -ymonvar \
 ymonvar1 -ymonvar1 \
+yseasadd -yseasadd \
 yseasavg -yseasavg \
+yseasdiv -yseasdiv \
 yseasmax -yseasmax \
 yseasmean -yseasmean \
 yseasmin -yseasmin \
+yseasmul -yseasmul \
 yseaspctl -yseaspctl \
 yseasstd -yseasstd \
+yseassub -yseassub \
 yseassum -yseassum \
 yseasvar -yseasvar \
 zaxisdes -zaxisdes \

@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 
-#ifdef USE_MPI
 #include <mpi.h>
 #include <yaxt.h>
 #include "cdi.h"
@@ -223,23 +222,20 @@ static void modelRun ( MPI_Comm comm )
   return;
 }
 
-#endif 
-
-int main (int argc, char *argv[]) 
+int main (int argc, char *argv[])
 {
-#ifdef USE_MPI
   int sizeGlob, pioNamespace;
   MPI_Comm commGlob, commModel;
 
-  MPI_Init(&argc, &argv);           
+  MPI_Init(&argc, &argv);
   commGlob = MPI_COMM_WORLD;
   xt_initialize(commGlob);
   xmpi ( MPI_Comm_set_errhandler ( commGlob, MPI_ERRORS_RETURN ));
-  xmpi ( MPI_Comm_size ( commGlob, &sizeGlob )); 
+  xmpi ( MPI_Comm_size ( commGlob, &sizeGlob ));
 
-  if ( sizeGlob != 1 )                                         
+  if ( sizeGlob != 1 )
       xabort ( "test transition of resource array only with 1 PE." );
-                                         
+
   if ( nProcsIO != 1 )
     xabort ( "bad distribution of tasks on PEs" );
 
@@ -250,10 +246,7 @@ int main (int argc, char *argv[])
   modelRun ( commModel );
 
   xt_finalize();
-  MPI_Finalize (); 
-#else
-  printf ( "Use MPI for this testprogram.\n" );
-#endif
+  MPI_Finalize ();
 
   return 0;
 }

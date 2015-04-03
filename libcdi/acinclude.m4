@@ -14,6 +14,9 @@ AC_DEFUN([ACX_CHECK_CFINT],
      [AC_DEFINE(HAVE_CF_INTERFACE, [1],
         [Define if C / Fortran interface cfortran.h works])])
   ])
+m4_include([m4/ac_lang_program_fortran.m4])
+m4_include([m4/acx_lang_fortran_check_include.m4])
+m4_include([m4/acx_lang_c_check_include.m4])
 dnl
 dnl Local Variables:
 dnl mode: autoconf

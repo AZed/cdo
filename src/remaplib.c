@@ -1,7 +1,7 @@
 /*
   This is a C library of the Fortran SCRIP version 1.4
 
-  ===>>> Please send bug reports to <https://code.zmaw.de/projects/cdo> <<<===
+  ===>>> Please send bug reports to <http://mpimet.mpg.de/cdo> <<<===
 
   Spherical Coordinate Remapping and Interpolation Package (SCRIP)
   ================================================================
@@ -57,7 +57,7 @@
 #include "cdo_int.h"
 #include "grid.h"
 #include "remap.h"
-#include "remap_store_link.h"
+#include "remap_store_link_cnsrv.h"
 #include "util.h"  /* progressStatus */
 
 
@@ -118,9 +118,9 @@ void remapVarsFree(remapvars_t *rv)
 
       rv->sort_add = FALSE;
 
-      free(rv->src_grid_add);
-      free(rv->tgt_grid_add);
-      free(rv->wts);
+      if ( rv->src_cell_add ) free(rv->src_cell_add);
+      if ( rv->tgt_cell_add ) free(rv->tgt_cell_add);
+      if ( rv->wts ) free(rv->wts);
 
       if ( rv->links.option == TRUE )
 	{
@@ -383,6 +383,10 @@ void check_lon_range(long nlons, double *lons)
 #endif
   for ( n = 0; n < nlons; ++n )
     {
+      // remove missing values
+      if ( lons[n] < -PI2 ) lons[n] = 0;
+      if ( lons[n] > 2*PI2) lons[n] = PI2;
+
       if ( lons[n] > PI2  ) lons[n] -= PI2;
       if ( lons[n] < ZERO ) lons[n] += PI2;
     }
@@ -983,8 +987,8 @@ void remap_vars_init(int map_type, long src_grid_size, long tgt_grid_size, remap
     {
       rv->pinit = TRUE;
 
-      rv->src_grid_add = NULL;
-      rv->tgt_grid_add = NULL;
+      rv->src_cell_add = NULL;
+      rv->tgt_cell_add = NULL;
       rv->wts          = NULL;
     }
 
@@ -994,17 +998,17 @@ void remap_vars_init(int map_type, long src_grid_size, long tgt_grid_size, remap
   if ( ompNumThreads > 1 )
     {
       if      ( map_type == MAP_TYPE_CONSERV     ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_BILINEAR    ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_BICUBIC     ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_DISTWGT     ) rv->sort_add = TRUE;
+      else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_BILINEAR    ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_BICUBIC     ) rv->sort_add = FALSE;
+      else if ( map_type == MAP_TYPE_DISTWGT     ) rv->sort_add = FALSE;
       else cdoAbort("Unknown mapping method!");
     }
   else
 #endif
     {
       if      ( map_type == MAP_TYPE_CONSERV     ) rv->sort_add = TRUE;
-      else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = TRUE;
+      else if ( map_type == MAP_TYPE_CONSERV_YAC ) rv->sort_add = FALSE;
       else if ( map_type == MAP_TYPE_BILINEAR    ) rv->sort_add = FALSE;
       else if ( map_type == MAP_TYPE_BICUBIC     ) rv->sort_add = FALSE;
       else if ( map_type == MAP_TYPE_DISTWGT     ) rv->sort_add = FALSE;
@@ -1030,11 +1034,13 @@ void remap_vars_init(int map_type, long src_grid_size, long tgt_grid_size, remap
   rv->resize_increment = (int) (0.1 * MAX(src_grid_size, tgt_grid_size));
 
   /*  Allocate address and weight arrays for mapping 1 */
+  if ( map_type == MAP_TYPE_CONSERV )
+    {
+      rv->src_cell_add = (int*) realloc(rv->src_cell_add, rv->max_links*sizeof(int));
+      rv->tgt_cell_add = (int*) realloc(rv->tgt_cell_add, rv->max_links*sizeof(int));
 
-  rv->src_grid_add = (int*) realloc(rv->src_grid_add, rv->max_links*sizeof(int));
-  rv->tgt_grid_add = (int*) realloc(rv->tgt_grid_add, rv->max_links*sizeof(int));
-
-  rv->wts = (double*) realloc(rv->wts, rv->num_wts*rv->max_links*sizeof(double));
+      rv->wts = (double*) realloc(rv->wts, rv->num_wts*rv->max_links*sizeof(double));
+    }
 
   rv->links.option    = FALSE;
   rv->links.max_links = 0;
@@ -1064,8 +1070,8 @@ void resize_remap_vars(remapvars_t *rv, int increment)
 
   if ( rv->max_links )
     {
-      rv->src_grid_add = (int*) realloc(rv->src_grid_add, rv->max_links*sizeof(int));
-      rv->tgt_grid_add = (int*) realloc(rv->tgt_grid_add, rv->max_links*sizeof(int));
+      rv->src_cell_add = (int*) realloc(rv->src_cell_add, rv->max_links*sizeof(int));
+      rv->tgt_cell_add = (int*) realloc(rv->tgt_cell_add, rv->max_links*sizeof(int));
 
       rv->wts = (double*) realloc(rv->wts, rv->num_wts*rv->max_links*sizeof(double));
     }
@@ -1162,19 +1168,19 @@ void remap(double *restrict dst_array, double missval, long dst_size, long num_l
 	{
 	  for ( n = 0; n < num_links; ++n )
 	    {
-	      dst_array[dst_add[n]] += src_array[src_add[n]]*map_wts[num_wts*n] +
-                                       src_grad1[src_add[n]]*map_wts[num_wts*n+1] +
-                                       src_grad2[src_add[n]]*map_wts[num_wts*n+2];
+	      dst_array[dst_add[n]] += src_array[src_add[n]]*map_wts[3*n] +
+                                       src_grad1[src_add[n]]*map_wts[3*n+1] +
+                                       src_grad2[src_add[n]]*map_wts[3*n+2];
 	    }
 	}
       else if ( num_wts == 4 )
 	{
       	  for ( n = 0; n < num_links; ++n )
 	    {
-              dst_array[dst_add[n]] += src_array[src_add[n]]*map_wts[num_wts*n] +
-                                       src_grad1[src_add[n]]*map_wts[num_wts*n+1] +
-                                       src_grad2[src_add[n]]*map_wts[num_wts*n+2] +
-                                       src_grad3[src_add[n]]*map_wts[num_wts*n+3];
+              dst_array[dst_add[n]] += src_array[src_add[n]]*map_wts[4*n] +
+                                       src_grad1[src_add[n]]*map_wts[4*n+1] +
+                                       src_grad2[src_add[n]]*map_wts[4*n+2] +
+                                       src_grad3[src_add[n]]*map_wts[4*n+3];
 	    }
 	}
     }
@@ -1519,7 +1525,7 @@ void remap_stat(int remap_order, remapgrid_t src_grid, remapgrid_t tgt_grid, rem
 #if defined(SX)
 #pragma vdir nodep
 #endif
-  for ( n = 0; n < rv.num_links; ++n ) tgt_count[rv.tgt_grid_add[n]]++;
+  for ( n = 0; n < rv.num_links; ++n ) tgt_count[rv.tgt_cell_add[n]]++;
 
   imin = INT_MAX;
   imax = INT_MIN;
@@ -1787,13 +1793,13 @@ void reorder_links(remapvars_t *rv)
   lastval = -1;
   for ( n = 0; n < num_links; n++ )
     {
-      if ( rv->tgt_grid_add[n] == lastval ) nval++;
+      if ( rv->tgt_cell_add[n] == lastval ) nval++;
       else
 	{
 	  if ( nval > num_blks ) num_blks = nval;
 	  nval = 1;
 	  max_links++;
-	  lastval = rv->tgt_grid_add[n];
+	  lastval = rv->tgt_cell_add[n];
 	}
     }
 
@@ -1825,17 +1831,17 @@ void reorder_links(remapvars_t *rv)
 
       for ( n = 0; n < num_links; n++ )
 	{
-	  if ( rv->tgt_grid_add[n] == lastval ) nval++;
+	  if ( rv->tgt_cell_add[n] == lastval ) nval++;
 	  else
 	    {
 	      nval = 1;
-	      lastval = rv->tgt_grid_add[n];
+	      lastval = rv->tgt_cell_add[n];
 	    }
 	  
 	  if ( nval == j+1 )
 	    {
-	      rv->links.dst_add[j][nlinks] = rv->tgt_grid_add[n];
-	      rv->links.src_add[j][nlinks] = rv->src_grid_add[n];
+	      rv->links.dst_add[j][nlinks] = rv->tgt_cell_add[n];
+	      rv->links.src_add[j][nlinks] = rv->src_cell_add[n];
 	      rv->links.w_index[j][nlinks] = n;
 	      nlinks++;
 	    }

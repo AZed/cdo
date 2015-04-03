@@ -35,9 +35,9 @@ struct gavar {
   char abbrv[16];              /* Variable abbreviation.               */
   char longnm[257];            /* netcdf/hdf var name if different     */
   gadouble units[16];          /* Units indicator.                     
-				  Vals 0-7 are for variable codes:
-				  grib, non-float data, nc/hdf dims
-				  Vals  8-11 are for grib level codes  */
+                                  Vals 0-7 are for variable codes:
+                                  grib, non-float data, nc/hdf dims
+                                  Vals  8-11 are for grib level codes  */
   gaint offset;                /* Offset in grid elements of the start
                                   of this variable within a time group
                                   within this file.                    */
@@ -49,8 +49,8 @@ struct gavar {
                                   0 is special and indiates one grid is
                                   available for the surface only.      */
   gaint dfrm;                  /* format  type indicator
-  				  1 - unsigned char
-				  4 - int  			       */
+                                  1 - unsigned char
+                                  4 - int                              */
   gaint var_t ;                /* variable t transform                 */
   gadouble scale;              /* scale factor for unpacking data      */
   gadouble add;                /* offset value for unpacking data      */
@@ -59,7 +59,7 @@ struct gavar {
   gaint isu;                   /* Variable is the u-component of a vector pair */
   gaint isdvar;                /* Variable is a valid data variable (for SDF files) */
   gaint nvardims;              /* Number of variable dimensions        */
-  gaint vardimids[100];        /* Variable dimension IDs. 	       */
+  gaint vardimids[100];        /* Variable dimension IDs.                */
 };
 
 /* Sructure for string substitution in templating -- the %ch template.  
@@ -116,8 +116,8 @@ typedef struct {
   gaint dnum[5];               /* Dimension sizes for this file.        */
   gaint vnum;                  /* Number of variables.                  */
   struct gavar *pvar1;         /* Pointer to an array of structures.
-				  Each structure in the array has info
-				  about the specific variable.          */
+                                  Each structure in the array has info
+                                  about the specific variable.          */
   struct gaens *ens1;          /* pointer to array of ensemble structures */
   gaint wrap;                  /* The grid globally 'wraps' in X        */
   gadouble (*gr2ab[5]) (double *, double);
@@ -160,7 +160,7 @@ gadouble gr2lev (gadouble *, gadouble);
 gadouble lev2gr (gadouble *, gadouble);
 void gr2t (gadouble *, gadouble, struct dt *);
 char *gafndt (char *, struct dt *, struct dt *, gadouble *, 
-	      struct gachsub *, struct gaens *, gaint, gaint, gaint *);
+              struct gachsub *, struct gaens *, gaint, gaint, gaint *);
 
 gaint cmpwrd (char *ch1, char *ch2);
 char *intprs (char *ch, int *val);

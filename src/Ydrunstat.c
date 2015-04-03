@@ -58,26 +58,18 @@ static void ydstatFinalize(YDAY_STATS *stats, int operfunc);
 
 void *Ydrunstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
   int varID;
   int recID;
-  int nrecs, nrecords;
+  int nrecs;
   int levelID;
   int tsID;
   int otsID;
-  int inp, its, ndates = 0;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
+  int inp, its;
   int nmiss;
-  int *recVarID, *recLevelID;
-  int lvarstd = FALSE;
-  field_t ***vars1 = NULL, ***vars2 = NULL;
-  datetime_t *datetime;
-  int taxisID1, taxisID2;
-  int calendar, dpy;
   int vdate, vtime;
   int dayoy;
+  field_t ***vars1 = NULL, ***vars2 = NULL;
+  datetime_t *datetime;
   YDAY_STATS *stats;
     
   cdoInitialize(argument);
@@ -92,35 +84,35 @@ void *Ydrunstat(void *argument)
   cdoOperatorAdd("ydrunstd",  func_std,  0, NULL);
   cdoOperatorAdd("ydrunstd1", func_std1, 0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
   operatorInputArg("number of timesteps");
-  ndates = atoi(operatorArgv()[0]);
+  int ndates = parameter2int(operatorArgv()[0]);
 
-  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  int lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
   
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   if ( taxisHasBounds(taxisID2) ) taxisDeleteBounds(taxisID2);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  calendar = taxisInqCalendar(taxisID1);
-  dpy      = calendar_dpy(calendar);
+  int calendar = taxisInqCalendar(taxisID1);
+  int dpy      = calendar_dpy(calendar);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nrecords = vlistNrecs(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   datetime = (datetime_t*) malloc((ndates+1)*sizeof(datetime_t));
   

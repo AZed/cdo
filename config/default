@@ -43,7 +43,7 @@ case "${HOSTNAME}" in
 	  ${CONFPATH}configure  \
                     $CDOLIBS \
                     LIBS="-L/opt/local/lib -lopenjpeg" \
-	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+	            CC=icc CFLAGS="-g -Wall -O2 -vec-report2 -march=native -fp-model source -fast-transcendentals"
         elif  test "$COMP" = clang ; then
 	  ${CONFPATH}configure  \
                     $CDOLIBS \
@@ -60,19 +60,23 @@ case "${HOSTNAME}" in
         fi
 	;;
     hama*)
+#        CDOLIBS="--with-fftw3 \
+#                 --with-jasper=/opt/local \
+#                 --with-grib_api=$HOME/local/gribapi-1.13.0 \
+#                 --with-netcdf=/opt/local \
+#                 --with-hdf5=/opt/local \
+#                 --with-szlib=$HOME/local \
+#                 --with-proj=/opt/local \
+#                 --with-curl=/opt/local"
         CDOLIBS="--with-fftw3 \
-                 --with-jasper=/opt/local \
                  --with-grib_api=$HOME/local/gribapi-1.13.0 \
-                 --with-netcdf=/opt/local \
-                 --with-hdf5=/opt/local \
-                 --with-szlib=$HOME/local \
-                 --with-proj=/opt/local \
-                 --with-curl=/opt/local"
+                 --with-netcdf=$HOME/local \
+                 --with-hdf5=$HOME/local"
 
         if  test "$COMP" = icc ; then
 	  ${CONFPATH}configure --prefix=$HOME/local \
                     $CDOLIBS \
-	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -openmp -fp-model source -fast-transcendentals"
+	            CC=icc CFLAGS="-g -Wall -O2 -qopt-report=5 -march=native -openmp -fp-model source -fast-transcendentals"
         elif  test "$COMP" = clang ; then
 	  ${CONFPATH}configure  \
                     $CDOLIBS \
@@ -81,7 +85,7 @@ case "${HOSTNAME}" in
 	  ${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     $CDOLIBS \
-	            CC=gcc CFLAGS="-g -pipe -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fstack-protector"
+	            CC=gcc CFLAGS="-g -pipe -Wall -W -Wfloat-equal -pedantic -O3 -fstack-protector"
 #                    --with-libxml2=/usr \
 #                    --with-magics=/Users/m214003/local/Magics-2.18.14nio \
         fi
@@ -101,7 +105,7 @@ case "${HOSTNAME}" in
                     --enable-all-static \
                     --with-fftw3 \
                     $CDOLIBS \
-	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+	            CC=icc CFLAGS="-g -Wall -O2 -qopt-report=5 -march=native -fp-model source -fast-transcendentals"
         elif  test "$COMP" = pgcc ; then
           ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/thunder \
                     --enable-all-static \
@@ -116,18 +120,20 @@ case "${HOSTNAME}" in
 	fi
 	;;
 # x86_64-unknown-linux-gnu
-    btlogin*)
-        CDOLIBS=""
-
+    btc*)
         if  test "$COMP" = icc ; then
           ${CONFPATH}configure --prefix=$HOME/local \
+                    --with-grib_api=/lustre/sw/rhel6-x64/grib_api/grib_api-1.13.0-intel15 \
+	            --with-netcdf=/lustre/sw/rhel6-x64/netcdf/netcdf_c-4.3.2-intel15 \
+                    --with-hdf5=/lustre/sw/rhel6-x64/hdf5/hdf5-1.8.14-threadsafe-intel15 \
                     --with-fftw3 \
-                    $CDOLIBS \
-	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+	            CC=icc CFLAGS="-g -Wall -O2 -qopt-report=5 -xCORE-AVX2 -fp-model source -fast-transcendentals"
 	else
           ${CONFPATH}configure --prefix=$HOME/local \
+                    --with-grib_api=/lustre/sw/rhel6-x64/grib_api/grib_api-1.13.0-gcc48 \
+	            --with-netcdf=/lustre/sw/rhel6-x64/netcdf/netcdf_c-4.3.2-gcc48 \
+                    --with-hdf5=/lustre/sw/rhel6-x64/hdf5/hdf5-1.8.14-threadsafe-gcc48 \
                     --with-fftw3 \
-                    $CDOLIBS \
                     CC=gcc CFLAGS='-g -Wall -O3 -march=native'
 	fi
 	;;

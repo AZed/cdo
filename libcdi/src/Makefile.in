@@ -98,17 +98,26 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
+	$(top_srcdir)/m4/acx_c_package.m4 \
 	$(top_srcdir)/m4/acx_check_strptr_convert.m4 \
 	$(top_srcdir)/m4/acx_execinfo.m4 \
+	$(top_srcdir)/m4/acx_fortran_package.m4 \
+	$(top_srcdir)/m4/acx_lang_check_include.m4 \
 	$(top_srcdir)/m4/acx_lang_other_suffix_conftest.m4 \
+	$(top_srcdir)/m4/acx_lang_package.m4 \
+	$(top_srcdir)/m4/acx_option_search_libs.m4 \
 	$(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/acx_sl_fc_mod_path_flag.m4 \
 	$(top_srcdir)/m4/acx_sl_mod_suffix.m4 \
-	$(top_srcdir)/m4/asx_unset.m4 $(top_srcdir)/m4/ax_pthread.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/m4/pkg.m4 \
-	$(top_srcdir)/m4/starlink_fpp.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/asx_tr_arg.m4 $(top_srcdir)/m4/asx_unset.m4 \
+	$(top_srcdir)/m4/ax_pthread.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/starlink_fpp.m4 \
+	$(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/ac_lang_program_fortran.m4 \
+	$(top_srcdir)/m4/acx_lang_fortran_check_include.m4 \
+	$(top_srcdir)/m4/acx_lang_c_check_include.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -145,7 +154,8 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
-libcdi_la_DEPENDENCIES =
+am__DEPENDENCIES_1 =
+libcdi_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_libcdi_la_OBJECTS = basetime.lo binary.lo calendar.lo cdf.lo \
 	cdf_int.lo cdi_error.lo cdi_util.lo cdiFortran.lo \
 	cgribexlib.lo dmemory.lo cksum.lo cdi_cksum.lo error.lo \
@@ -165,9 +175,8 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 @ENABLE_CDI_LIB_FALSE@am_libcdi_la_rpath =
 @ENABLE_CDI_LIB_TRUE@am_libcdi_la_rpath = -rpath $(libdir)
-am__DEPENDENCIES_1 =
 libcdipio_la_DEPENDENCIES = libcdi.la $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libcdipio_la_OBJECTS = cdipioFortran.lo pio.lo pio_comm.lo \
 	pio_dbuffer.lo pio_interface.lo pio_mpinonb.lo \
 	pio_record_send.lo pio_posixasynch.lo \
@@ -281,6 +290,7 @@ ENABLE_CGRIBEX = @ENABLE_CGRIBEX@
 ENABLE_EXTRA = @ENABLE_EXTRA@
 ENABLE_GRIB = @ENABLE_GRIB@
 ENABLE_IEG = @ENABLE_IEG@
+ENABLE_MPI = @ENABLE_MPI@
 ENABLE_NC2 = @ENABLE_NC2@
 ENABLE_NC4 = @ENABLE_NC4@
 ENABLE_NETCDF = @ENABLE_NETCDF@
@@ -328,6 +338,11 @@ MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MPIROOT = @MPIROOT@
+MPI_C_INCLUDE = @MPI_C_INCLUDE@
+MPI_C_LIB = @MPI_C_LIB@
+MPI_FC_INCLUDE = @MPI_FC_INCLUDE@
+MPI_FC_LIB = @MPI_FC_LIB@
 MPI_LAUNCH = @MPI_LAUNCH@
 NC_CONFIG = @NC_CONFIG@
 NETCDF_INCLUDE = @NETCDF_INCLUDE@
@@ -441,7 +456,7 @@ noinst_LTLIBRARIES = libcdiresunpack.la $(am__append_1) \
 	$(am__append_4)
 @ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la $(am__append_2)
 @ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc $(am__append_3)
-AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
+AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS) $(MPI_C_INCLUDE)
 libcdi_la_SOURCES = \
 	basetime.c     	 \
 	basetime.h	 \
@@ -468,6 +483,7 @@ libcdi_la_SOURCES = \
 	cksum.h		\
 	cdi_cksum.c	\
 	cdi_cksum.h	\
+	create_uuid.h	 \
 	dtypes.h	 \
 	error.c        	 \
 	error.h	 	 \
@@ -575,10 +591,8 @@ libcdipio_la_SOURCES = \
 	pio_cdf_int.c							\
 	pio_cdf_int.h
 
-libcdipio_la_LIBADD = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS)
-
-#libcdi_la_CPPFLAGS  = @CPPFLAGS@
-libcdi_la_LIBADD = 
+libcdipio_la_LIBADD = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS) $(MPI_C_LIB)
+libcdi_la_LIBADD = $(UUID_C_LIB)
 #
 #cdilib.c:
 #	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src

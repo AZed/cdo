@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,10 @@
       Ymonarith  ymonsub         Subtract multi-year monthly time series
       Ymonarith  ymonmul         Multiply multi-year monthly time series
       Ymonarith  ymondiv         Divide multi-year monthly time series
+      Ymonarith  yseasadd        Add multi-year seasonal time series
+      Ymonarith  yseassub        Subtract multi-year seasonal time series
+      Ymonarith  yseasmul        Multiply multi-year seasonal time series
+      Ymonarith  yseasdiv        Divide multi-year seasonal time series
 */
 
 #include <cdi.h>
@@ -30,61 +34,93 @@
 #include "pstream.h"
 
 
-#define  MAX_MON    20
+#define  MAX_MON    12
+
+static
+int month_to_season(int mon)
+{
+  int seas = -1;
+
+  switch ( mon )
+    {
+    case 12:
+    case  1:
+    case  2:
+      seas = 0; break;
+    case  3:
+    case  4:
+    case  5:
+      seas = 1; break;
+    case  6:
+    case  7:
+    case  8:
+      seas = 2; break;
+    case  9:
+    case 10:
+    case 11:
+      seas = 3; break;
+    }
+
+  return seas;
+}
+
 
 void *Ymonarith(void *argument)
 {
-  int operatorID;
-  int operfunc;
-  int streamID1, streamID2, streamID3;
-  int gridsize;
+  enum {MONTHLY, SEASONAL};
   int nrecs, nvars, nlev, recID;
   int tsID;
   int varID, levelID;
   int offset;
-  int vlistID1, vlistID2, vlistID3;
-  int taxisID1, taxisID2, taxisID3;
   int vdate, year, mon, day;
   field_t field1, field2;
   int **varnmiss2[MAX_MON];
   double **vardata2[MAX_MON];
+  const char *seas_name[4];
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("ymonadd", func_add, 0, NULL);
-  cdoOperatorAdd("ymonsub", func_sub, 0, NULL);
-  cdoOperatorAdd("ymonmul", func_mul, 0, NULL);
-  cdoOperatorAdd("ymondiv", func_div, 0, NULL);
+  cdoOperatorAdd("ymonadd",  func_add, MONTHLY, NULL);
+  cdoOperatorAdd("ymonsub",  func_sub, MONTHLY, NULL);
+  cdoOperatorAdd("ymonmul",  func_mul, MONTHLY, NULL);
+  cdoOperatorAdd("ymondiv",  func_div, MONTHLY, NULL);
+  cdoOperatorAdd("yseasadd", func_add, SEASONAL, NULL);
+  cdoOperatorAdd("yseassub", func_sub, SEASONAL, NULL);
+  cdoOperatorAdd("yseasmul", func_mul, SEASONAL, NULL);
+  cdoOperatorAdd("yseasdiv", func_div, SEASONAL, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
+  int opertype = cdoOperatorF2(operatorID);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
-  streamID2 = streamOpenRead(cdoStreamName(1));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID2 = streamOpenRead(cdoStreamName(1));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = streamInqVlist(streamID2);
-  vlistID3 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = streamInqVlist(streamID2);
+  int vlistID3 = vlistDuplicate(vlistID1);
 
   vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
-  gridsize = vlistGridsizeMax(vlistID1);
+  int gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field1);
   field_init(&field2);
   field1.ptr = (double*) malloc(gridsize*sizeof(double));
   field2.ptr = (double*) malloc(gridsize*sizeof(double));
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = vlistInqTaxis(vlistID2);
-  taxisID3 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = vlistInqTaxis(vlistID2);
+  int taxisID3 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID3, taxisID3);
 
-  streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
+  int streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
 
   streamDefVlist(streamID3, vlistID3);
 
   nvars  = vlistNvars(vlistID2);
+
+  if ( opertype == SEASONAL ) get_season_name(seas_name);
 
   for ( mon = 0; mon < MAX_MON ; mon++ ) vardata2[mon] = NULL;
 
@@ -94,9 +130,18 @@ void *Ymonarith(void *argument)
       vdate = taxisInqVdate(taxisID2);
 
       cdiDecodeDate(vdate, &year, &mon, &day);
-      if ( mon < 0 || mon >= MAX_MON ) cdoAbort("Month %d out of range!", mon);
+      if ( mon < 1 || mon > MAX_MON ) cdoAbort("Month %d out of range!", mon);
+      mon--;
 
-      if ( vardata2[mon] != NULL ) cdoAbort("Month %d already allocatd!", mon);
+      if ( opertype == SEASONAL ) mon = month_to_season(mon+1);
+
+      if ( vardata2[mon] != NULL )
+	{
+	  if ( opertype == SEASONAL )
+	    cdoAbort("Season %s already allocatd!", seas_name[mon]);
+	  else
+	    cdoAbort("Month %d already allocatd!", mon);
+	}
 
       vardata2[mon]  = (double **) malloc(nvars*sizeof(double *));
       varnmiss2[mon] = (int **) malloc(nvars*sizeof(int *));
@@ -130,7 +175,18 @@ void *Ymonarith(void *argument)
       vdate = taxisInqVdate(taxisID1);
 
       cdiDecodeDate(vdate, &year, &mon, &day);
-      if ( mon < 0 || mon >= MAX_MON ) cdoAbort("Month %d out of range!", mon);
+      if ( mon < 1 || mon > MAX_MON ) cdoAbort("Month %d out of range!", mon);
+      mon--;
+
+      if ( opertype == SEASONAL ) mon = month_to_season(mon+1);
+
+      if ( vardata2[mon] == NULL )
+	{
+	  if ( opertype == SEASONAL )
+	    cdoAbort("Season %s not found!", seas_name[mon]);
+	  else
+	    cdoAbort("Month %d not found!", mon);
+	}
 
       taxisCopyTimestep(taxisID3, taxisID1);
 
@@ -143,7 +199,7 @@ void *Ymonarith(void *argument)
 
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	  offset   = gridsize*levelID;
-	  if ( vardata2[mon] == NULL ) cdoAbort("Month %d not found!", mon);
+
 	  memcpy(field2.ptr, vardata2[mon][varID]+offset, gridsize*sizeof(double));
 	  field2.nmiss = varnmiss2[mon][varID][levelID];
 

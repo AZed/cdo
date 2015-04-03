@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -263,7 +263,7 @@ void *Specinfo(void *argument)
 
   len = strlen(operatorArgv()[0]);
 
-  if ( (len+1) >= 128 ) cdoAbort("Parameter string to large!");
+  if ( (len+1) >= 128 ) cdoAbort("Parameter string too large!");
 
   for ( i = 0; i < len; i++ ) arg[i] = toupper(operatorArgv()[0][i]);
   arg[len] = 0;

@@ -30,26 +30,20 @@
 
 void *Runpctl(void *argument)
 {
+  int timestat_date = TIMESTAT_MEAN;
   int gridsize;
   int varID;
   int recID;
-  int nrecs, nrecords;
+  int nrecs;
   int levelID;
   int tsID;
   int otsID;
-  int i, j, inp, its, ndates = 0;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
+  int i, j, inp, its;
   int nmiss;
-  int nvars, nlevels;
-  int *recVarID, *recLevelID;
+  int nlevels;
   double missval, val;
-  field_t ***vars1 = NULL;
-  dtinfo_t *dtinfo;
-  int taxisID1, taxisID2;
-  int calendar;
-  int pn;
   double *array;
+  field_t ***vars1 = NULL;
 
   cdoInitialize(argument);
 
@@ -57,34 +51,35 @@ void *Runpctl(void *argument)
 
   operatorInputArg("percentile number, number of timesteps");
   operatorCheckArgc(2);
-  pn     = atoi(operatorArgv()[0]);
-  ndates = atoi(operatorArgv()[1]);
+  int pn     = parameter2int(operatorArgv()[0]);
+  int ndates = parameter2int(operatorArgv()[1]);
 
   if ( pn < 1 || pn > 99 )
     cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  calendar = taxisInqCalendar(taxisID1);
-
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
 
-  dtinfo = (dtinfo_t*) malloc((ndates+1)*sizeof(dtinfo_t));
+  dtlist_type *dtlist = dtlist_new();
+  dtlist_set_stat(dtlist, timestat_date);
+  dtlist_set_calendar(dtlist, taxisInqCalendar(taxisID1));
+
   vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   array = (double*) malloc(ndates*sizeof(double));
   
@@ -96,10 +91,9 @@ void *Runpctl(void *argument)
   for ( tsID = 0; tsID < ndates; tsID++ )
     {
       nrecs = streamInqTimestep(streamID1, tsID);
-      if ( nrecs == 0 )
-        cdoAbort("File has less than %d timesteps!", ndates);
+      if ( nrecs == 0 ) cdoAbort("File has less than %d timesteps!", ndates);
 
-      taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
+      dtlist_taxisInqTimestep(dtlist, taxisID1, tsID);
         
       for ( recID = 0; recID < nrecs; recID++ )
         {
@@ -152,16 +146,8 @@ void *Runpctl(void *argument)
               vars1[0][varID][levelID].nmiss = nmiss;  
             }
         }
-     
-      datetime_avg_dtinfo(calendar, ndates, dtinfo);
 
-      if ( taxisHasBounds(taxisID2) )
-	{
-	  dtinfo[ndates].b[0] = dtinfo[0].b[0];
-	  dtinfo[ndates].b[1] = dtinfo[ndates-1].b[1];
-	}
-
-      taxisDefDTinfo(taxisID2, dtinfo[ndates]);
+      dtlist_stat_taxisDefTimestep(dtlist, taxisID2, ndates);
       streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
@@ -177,19 +163,18 @@ void *Runpctl(void *argument)
 
       otsID++;
 
-      dtinfo[ndates] = dtinfo[0];
-      vars1[ndates] = vars1[0];
+      dtlist_shift(dtlist);
 
+      vars1[ndates] = vars1[0];
       for ( inp = 0; inp < ndates; inp++ )
         {
-          dtinfo[inp] = dtinfo[inp+1];
           vars1[inp] = vars1[inp+1];
         }
 
       nrecs = streamInqTimestep(streamID1, tsID);
       if ( nrecs == 0 ) break;
 
-      taxisInqDTinfo(taxisID1, &dtinfo[ndates-1]);
+      dtlist_taxisInqTimestep(dtlist, taxisID1, ndates-1);
 
       for ( recID = 0; recID < nrecs; recID++ )
         {
@@ -212,6 +197,8 @@ void *Runpctl(void *argument)
   
   if ( recVarID   ) free(recVarID);
   if ( recLevelID ) free(recLevelID);
+
+  dtlist_delete(dtlist);
 
   streamClose(streamID2);
   streamClose(streamID1);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -198,7 +198,8 @@ void *Tstepcount(void *argument);
 void *Vardup(void *argument);
 void *Vargen(void *argument);
 void *Varrms(void *argument);
-void *Vertint(void *argument);
+void *Vertintml(void *argument);
+void *Vertintap(void *argument);
 void *Vertstat(void *argument);
 void *Vertwind(void *argument);
 void *Wind(void *argument);
@@ -416,7 +417,7 @@ void *Maggraph(void *argument);
 #define  SplitrecOperators      {"splitrec"}
 #define  SplitselOperators      {"splitsel"}
 #define  SplittimeOperators     {"splithour", "splitday", "splitmon", "splitseas"}
-#define  SplityearOperators     {"splityear"}
+#define  SplityearOperators     {"splityear", "splityearmon"}
 #define  SSOparOperators        {"ssopar"}
 #define  SubtrendOperators      {"subtrend"}
 #define  TeeOperators           {"tee"}
@@ -456,8 +457,9 @@ void *Maggraph(void *argument);
 #define  VardupOperators        {"pardup", "parmul"}
 #define  VargenOperators        {"random", "const", "sincos", "coshill", "for", "topo", "temp", "mask", "stdatm"}
 #define  VarrmsOperators        {"varrms"}
-#define  VertintOperators       {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
-#define  VertstatOperators      {"vertmin", "vertmax", "vertsum", "vertmean", "vertavg", "vertvar", "vertstd"}
+#define  VertintmlOperators     {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
+#define  VertintapOperators     {"ap2pl", "ap2plx", "ap2pl_lp", "ap2plx_lp"}
+#define  VertstatOperators      {"vertmin", "vertmax", "vertsum", "vertint", "vertmean", "vertavg", "vertvar", "vertstd"}
 #define  VertwindOperators      {"vertwind"}
 #define  WindOperators          {"uv2dv", "uv2dvl", "dv2uv", "dv2uvl", "dv2ps"}
 #define  WritegridOperators     {"writegrid"}
@@ -472,6 +474,7 @@ void *Maggraph(void *argument);
 #define  YhourarithOperators    {"yhouradd", "yhoursub", "yhourmul", "yhourdiv"}
 #define  YhourstatOperators     {"yhourmin", "yhourmax", "yhoursum", "yhourmean", "yhouravg", "yhourstd", "yhourstd1", "yhourvar", "yhourvar1"}
 #define  YmonarithOperators     {"ymonadd", "ymonsub", "ymonmul", "ymondiv"}
+#define  YseasarithOperators    {"yseasadd", "yseassub", "yseasmul", "yseasdiv"}
 #define  YmonpctlOperators      {"ymonpctl"}
 #define  YmonstatOperators      {"ymonmin", "ymonmax", "ymonsum", "ymonmean", "ymonavg", "ymonstd", "ymonstd1", "ymonvar", "ymonvar1"}
 #define  YseaspctlOperators     {"yseaspctl"}
@@ -716,7 +719,8 @@ static modules_t Modules[] =
   { Vardup,         NULL,              VardupOperators,        CDI_REAL,  1,  1 },
   { Vargen,         VargenHelp,        VargenOperators,        CDI_REAL,  0,  1 },
   { Varrms,         NULL,              VarrmsOperators,        CDI_REAL,  2,  1 },
-  { Vertint,        IntvertHelp,       VertintOperators,       CDI_REAL,  1,  1 },
+  { Vertintml,      IntvertHelp,       VertintmlOperators,     CDI_REAL,  1,  1 },
+  { Vertintap,      NULL,              VertintapOperators,     CDI_REAL,  1,  1 },
   { Vertstat,       VertstatHelp,      VertstatOperators,      CDI_REAL,  1,  1 },
   { Vertwind,       NULL,              VertwindOperators,      CDI_REAL,  1,  1 },
   { Wind,           WindHelp,          WindOperators,          CDI_REAL,  1,  1 },
@@ -732,6 +736,7 @@ static modules_t Modules[] =
   { Yhourarith,     YhourarithHelp,    YhourarithOperators,    CDI_REAL,  2,  1 },
   { Yhourstat,      YhourstatHelp,     YhourstatOperators,     CDI_REAL,  1,  1 },
   { Ymonarith,      YmonarithHelp,     YmonarithOperators,     CDI_REAL,  2,  1 },
+  { Ymonarith,      YseasarithHelp,    YseasarithOperators,    CDI_REAL,  2,  1 },
   { Ymonpctl,       YmonpctlHelp,      YmonpctlOperators,      CDI_REAL,  3,  1 },
   { Ymonstat,       YmonstatHelp,      YmonstatOperators,      CDI_REAL,  1,  1 },
   { Yseaspctl,      YseaspctlHelp,     YseaspctlOperators,     CDI_REAL,  3,  1 },

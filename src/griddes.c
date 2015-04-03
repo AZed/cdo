@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -38,8 +38,6 @@
 #include "griddes.h"
 #include "error.h"
 #include "dtypes.h"
-
-#define  cmpstr(s1, s2, len)  (memcmp(s1, s2, len = strlen(s2)))
 
 /*
 int  extInqPrec(int fileID);
@@ -701,229 +699,229 @@ int gridFromFile(FILE *gfp, const char *dname)
       pline = line;
       while ( isspace((int) *pline) ) pline++;
       if ( pline[0] == '\0' ) continue;
-      if ( cmpstr(pline, "gridtype", len) == 0 )
+      if ( cmpstrlen(pline, "gridtype", len) == 0 )
 	{
 	  pline = skipSeparator(pline + len);
-	  if ( cmpstr(pline, "lonlat", len)  == 0 ||
-	       cmpstr(pline, "latlon", len)  == 0 )
+	  if ( cmpstrlen(pline, "lonlat", len)  == 0 ||
+	       cmpstrlen(pline, "latlon", len)  == 0 )
 	    {
 	      grid.type = GRID_LONLAT;
 	      grid.nvertex = 2;
 	    }
-	  else if ( cmpstr(pline, "gaussian", len)  == 0 )
+	  else if ( cmpstrlen(pline, "gaussian", len)  == 0 )
 	    {
 	      grid.type = GRID_GAUSSIAN;
 	      grid.nvertex = 2;
 	    }
-	  else if ( cmpstr(pline, "curvilinear", len)  == 0 )
+	  else if ( cmpstrlen(pline, "curvilinear", len)  == 0 )
 	    {
 	      grid.type = GRID_CURVILINEAR;
 	      grid.nvertex = 4;
 	    }
-	  else if ( cmpstr(pline, "spectral", len)  == 0 )
+	  else if ( cmpstrlen(pline, "spectral", len)  == 0 )
 	    grid.type = GRID_SPECTRAL;
-	  else if ( cmpstr(pline, "unstructured", len)  == 0 )
+	  else if ( cmpstrlen(pline, "unstructured", len)  == 0 )
 	    grid.type = GRID_UNSTRUCTURED;
-	  else if ( cmpstr(pline, "cell", len)  == 0 )
+	  else if ( cmpstrlen(pline, "cell", len)  == 0 )
 	    grid.type = GRID_UNSTRUCTURED;
-	  else if ( cmpstr(pline, "gme", len)  == 0 )
+	  else if ( cmpstrlen(pline, "gme", len)  == 0 )
 	    grid.type = GRID_GME;
-	  else if ( cmpstr(pline, "lcc2", len)  == 0 )
+	  else if ( cmpstrlen(pline, "lcc2", len)  == 0 )
 	    grid.type = GRID_LCC2;
-	  else if ( cmpstr(pline, "lcc", len)  == 0 )
+	  else if ( cmpstrlen(pline, "lcc", len)  == 0 )
 	    grid.type = GRID_LCC;
-	  else if ( cmpstr(pline, "lambert", len)  == 0 )
+	  else if ( cmpstrlen(pline, "lambert", len)  == 0 )
 	    grid.type = GRID_LCC;
-	  else if ( cmpstr(pline, "sinusoidal", len)  == 0 )
+	  else if ( cmpstrlen(pline, "sinusoidal", len)  == 0 )
 	    grid.type = GRID_SINUSOIDAL;
-	  else if ( cmpstr(pline, "laea", len)  == 0 )
+	  else if ( cmpstrlen(pline, "laea", len)  == 0 )
 	    grid.type = GRID_LAEA;
-	  else if ( cmpstr(pline, "generic", len)  == 0 )
+	  else if ( cmpstrlen(pline, "generic", len)  == 0 )
 	    grid.type = GRID_GENERIC;
 	  else
 	    cdoAbort("Invalid grid name : %s (grid description file: %s)", pline, dname);
 	}
-      else if ( cmpstr(pline, "gridprec", len)  == 0 )
+      else if ( cmpstrlen(pline, "gridprec", len)  == 0 )
 	{
 	  grid.prec = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "gridsize", len)  == 0 )
+      else if ( cmpstrlen(pline, "gridsize", len)  == 0 )
 	{
 	  grid.size = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "truncation", len)  == 0 )
+      else if ( cmpstrlen(pline, "truncation", len)  == 0 )
 	{
 	  grid.ntr = atoi(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "np", len)  == 0 )
+      else if ( cmpstrlen(pline, "np", len)  == 0 )
 	{
 	  grid.np = atoi(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "complexpacking", len)  == 0 )
+      else if ( cmpstrlen(pline, "complexpacking", len)  == 0 )
 	{
 	  grid.lcomplex = atoi(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "xname", len)  == 0 )
+      else if ( cmpstrlen(pline, "xname", len)  == 0 )
 	{
 	  strcpy(grid.xname, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "xlongname", len)  == 0 )
+      else if ( cmpstrlen(pline, "xlongname", len)  == 0 )
 	{
 	  strcpy(grid.xlongname, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "xunits", len)  == 0 )
+      else if ( cmpstrlen(pline, "xunits", len)  == 0 )
 	{
 	  strcpy(grid.xunits, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "yname", len)  == 0 )
+      else if ( cmpstrlen(pline, "yname", len)  == 0 )
 	{
 	  strcpy(grid.yname, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "ylongname", len)  == 0 )
+      else if ( cmpstrlen(pline, "ylongname", len)  == 0 )
 	{
 	  strcpy(grid.ylongname, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "yunits", len)  == 0 )
+      else if ( cmpstrlen(pline, "yunits", len)  == 0 )
 	{
 	  strcpy(grid.yunits, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "nvertex", len)  == 0 )
+      else if ( cmpstrlen(pline, "nvertex", len)  == 0 )
 	{
 	  grid.nvertex = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "ni", len)  == 0 )
+      else if ( cmpstrlen(pline, "ni", len)  == 0 )
 	{
 	  grid.ni = atol(skipSeparator(pline + len));
           grid.nd = 10;
 	}
-      else if ( cmpstr(pline, "position", len)  == 0 )
+      else if ( cmpstrlen(pline, "position", len)  == 0 )
 	{
 	  grid.position = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "number", len)  == 0 )
+      else if ( cmpstrlen(pline, "number", len)  == 0 )
 	{
 	  grid.number = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "path", len)  == 0 )
+      else if ( cmpstrlen(pline, "path", len)  == 0 )
 	{
 	  strcpy(grid.path, skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "uuid", len)  == 0 )
+      else if ( cmpstrlen(pline, "uuid", len)  == 0 )
 	{
 	  char uuidOfHGridStr[256];
 	  strcpy(uuidOfHGridStr, skipSeparator(pline + len));
 	  str2uuid(uuidOfHGridStr, grid.uuid);
 	}
-      else if ( cmpstr(pline, "xsize", len)  == 0 )
+      else if ( cmpstrlen(pline, "xsize", len)  == 0 )
 	{
 	  grid.xsize = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "nlon", len)  == 0 )
+      else if ( cmpstrlen(pline, "nlon", len)  == 0 )
 	{
 	  grid.xsize = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "ysize", len)  == 0 )
+      else if ( cmpstrlen(pline, "ysize", len)  == 0 )
 	{
 	  grid.ysize = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "nlat", len)  == 0 )
+      else if ( cmpstrlen(pline, "nlat", len)  == 0 )
 	{
 	  grid.ysize = atol(skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "xfirst", len)  == 0 )
+      else if ( cmpstrlen(pline, "xfirst", len)  == 0 )
 	{
 	  grid.xfirst = readflt(dname, "xfirst", skipSeparator(pline + len));
 	  grid.def_xfirst = TRUE;
 	}
-      else if ( cmpstr(pline, "lonfirst", len)  == 0 )
+      else if ( cmpstrlen(pline, "lonfirst", len)  == 0 )
 	{
 	  grid.xfirst = readflt(dname, "lonfirst", skipSeparator(pline + len));
 	  grid.def_xfirst = TRUE;
 	}
-      else if ( cmpstr(pline, "yfirst", len)  == 0 )
+      else if ( cmpstrlen(pline, "yfirst", len)  == 0 )
 	{
 	  grid.yfirst = readflt(dname, "yfirst", skipSeparator(pline + len));
 	  grid.def_yfirst = TRUE;
 	}
-      else if ( cmpstr(pline, "latfirst", len)  == 0 )
+      else if ( cmpstrlen(pline, "latfirst", len)  == 0 )
 	{
 	  grid.yfirst = readflt(dname, "latfirst", skipSeparator(pline + len));
 	  grid.def_yfirst = TRUE;
 	}
-      else if ( cmpstr(pline, "xlast", len)  == 0 )
+      else if ( cmpstrlen(pline, "xlast", len)  == 0 )
 	{
 	  grid.xlast = readflt(dname, "xlast", skipSeparator(pline + len));
 	  grid.def_xlast = TRUE;
 	}
-      else if ( cmpstr(pline, "lonlast", len)  == 0 )
+      else if ( cmpstrlen(pline, "lonlast", len)  == 0 )
 	{
 	  grid.xlast = readflt(dname, "lonlast", skipSeparator(pline + len));
 	  grid.def_xlast = TRUE;
 	}
-      else if ( cmpstr(pline, "ylast", len)  == 0 )
+      else if ( cmpstrlen(pline, "ylast", len)  == 0 )
 	{
 	  grid.ylast = readflt(dname, "ylast", skipSeparator(pline + len));
 	  grid.def_ylast = TRUE;
 	}
-      else if ( cmpstr(pline, "latlast", len)  == 0 )
+      else if ( cmpstrlen(pline, "latlast", len)  == 0 )
 	{
 	  grid.ylast = readflt(dname, "latlast", skipSeparator(pline + len));
 	  grid.def_ylast = TRUE;
 	}
-      else if ( cmpstr(pline, "xinc", len)  == 0 )
+      else if ( cmpstrlen(pline, "xinc", len)  == 0 )
 	{
 	  grid.xinc = readflt(dname, "xinc", skipSeparator(pline + len));
 	  grid.def_xinc = TRUE;
 	}
-      else if ( cmpstr(pline, "loninc", len)  == 0 )
+      else if ( cmpstrlen(pline, "loninc", len)  == 0 )
 	{
 	  grid.xinc = readflt(dname, "loninc", skipSeparator(pline + len));
 	  grid.def_xinc = TRUE;
 	}
-      else if ( cmpstr(pline, "yinc", len)  == 0 )
+      else if ( cmpstrlen(pline, "yinc", len)  == 0 )
 	{
 	  grid.yinc = readflt(dname, "yinc", skipSeparator(pline + len));
 	  grid.def_yinc = TRUE;
 	}
-      else if ( cmpstr(pline, "latinc", len)  == 0 )
+      else if ( cmpstrlen(pline, "latinc", len)  == 0 )
 	{
 	  grid.yinc = readflt(dname, "latinc", skipSeparator(pline + len));
 	  grid.def_yinc = TRUE;
 	}
-      else if ( cmpstr(pline, "originLon", len)  == 0 )
+      else if ( cmpstrlen(pline, "originLon", len)  == 0 )
 	{
 	  grid.originLon = readflt(dname, "originLon", skipSeparator(pline + len));
 	  grid.def_originLon = TRUE;
 	}
-      else if ( cmpstr(pline, "originLat", len)  == 0 )
+      else if ( cmpstrlen(pline, "originLat", len)  == 0 )
 	{
 	  grid.originLat = readflt(dname, "originLat", skipSeparator(pline + len));
 	  grid.def_originLat = TRUE;
 	}
-      else if ( cmpstr(pline, "lonParY", len)  == 0 )
+      else if ( cmpstrlen(pline, "lonParY", len)  == 0 )
 	{
 	  grid.lonParY = readflt(dname, "lonParY", skipSeparator(pline + len));
 	  grid.def_lonParY = TRUE;
 	}
-      else if ( cmpstr(pline, "lat1", len)  == 0 )
+      else if ( cmpstrlen(pline, "lat1", len)  == 0 )
 	{
 	  grid.lat1 = readflt(dname, "lat1", skipSeparator(pline + len));
 	  grid.def_lat1 = TRUE;
 	}
-      else if ( cmpstr(pline, "lat2", len)  == 0 )
+      else if ( cmpstrlen(pline, "lat2", len)  == 0 )
 	{
 	  grid.lat2 = readflt(dname, "lat2", skipSeparator(pline + len));
 	  grid.def_lat2 = TRUE;
 	}
-      else if ( cmpstr(pline, "projection", len)  == 0 )
+      else if ( cmpstrlen(pline, "projection", len)  == 0 )
 	{
 	  pline = skipSeparator(pline + len);
-	  if      ( cmpstr(pline, "north", len) == 0 )
+	  if      ( cmpstrlen(pline, "north", len) == 0 )
 	    {
 	      grid.projflag = 0;
 	      grid.scanflag = 64;
 	    }
-	  else if ( cmpstr(pline, "south", len) == 0 )
+	  else if ( cmpstrlen(pline, "south", len) == 0 )
 	    {
 	      grid.projflag = 128;
 	      grid.scanflag = 64;
@@ -931,56 +929,56 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    cdoAbort("Invalid projection : %s (grid description file: %s)", pline, dname);
 	}
-      else if ( cmpstr(pline, "lon_0", len)  == 0 )
+      else if ( cmpstrlen(pline, "lon_0", len)  == 0 )
 	{
 	  grid.lon_0 = readflt(dname, "lon_0", skipSeparator(pline + len));
 	  grid.def_lon_0 = TRUE;
 	}
-      else if ( cmpstr(pline, "lat_0", len)  == 0 )
+      else if ( cmpstrlen(pline, "lat_0", len)  == 0 )
 	{
 	  grid.lat_0 = readflt(dname, "lat_0", skipSeparator(pline + len));
 	  grid.def_lat_0 = TRUE;
 	}
-      else if ( cmpstr(pline, "lat_1", len)  == 0 )
+      else if ( cmpstrlen(pline, "lat_1", len)  == 0 )
 	{
 	  grid.lat_1 = readflt(dname, "lat_1", skipSeparator(pline + len));
 	  grid.def_lat_1 = TRUE;
 	}
-      else if ( cmpstr(pline, "lat_2", len)  == 0 )
+      else if ( cmpstrlen(pline, "lat_2", len)  == 0 )
 	{
 	  grid.lat_2 = readflt(dname, "lat_2", skipSeparator(pline + len));
 	  grid.def_lat_2 = TRUE;
 	}
-      else if ( cmpstr(pline, "xnpole", len)  == 0 )
+      else if ( cmpstrlen(pline, "xnpole", len)  == 0 )
 	{
 	  grid.xpole = readflt(dname, "xnpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( cmpstr(pline, "lonpole", len)  == 0 )
+      else if ( cmpstrlen(pline, "lonpole", len)  == 0 )
 	{
 	  grid.xpole = readflt(dname, "lonpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( cmpstr(pline, "ynpole", len)  == 0 )
+      else if ( cmpstrlen(pline, "ynpole", len)  == 0 )
 	{
 	  grid.ypole = readflt(dname, "ynpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( cmpstr(pline, "latpole", len)  == 0 )
+      else if ( cmpstrlen(pline, "latpole", len)  == 0 )
 	{
 	  grid.ypole = readflt(dname, "latpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( cmpstr(pline, "angle", len)  == 0 )
+      else if ( cmpstrlen(pline, "angle", len)  == 0 )
 	{
 	  grid.angle = readflt(dname, "angle", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
-      else if ( cmpstr(pline, "a", len)  == 0 )
+      else if ( cmpstrlen(pline, "a", len)  == 0 )
 	{
 	  grid.a = readflt(dname, "a", skipSeparator(pline + len));
 	}
-      else if ( cmpstr(pline, "gridlatlon", len)  == 0 )
+      else if ( cmpstrlen(pline, "gridlatlon", len)  == 0 )
 	{
 	  int i;
 	  double flat = 0, flon = 0;
@@ -998,7 +996,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	      grid.xvals[i] = flon;
 	    }
 	}
-      else if ( cmpstr(pline, "mask", len)  == 0 )
+      else if ( cmpstrlen(pline, "mask", len)  == 0 )
 	{
 	  int i = 0;
 	  long lval;
@@ -1038,7 +1036,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    cdoAbort("gridsize undefined (grid description file: %s)!", dname);
 	}
-      else if ( cmpstr(pline, "xvals", len)  == 0 )
+      else if ( cmpstrlen(pline, "xvals", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1073,7 +1071,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    cdoAbort("xsize or gridsize undefined (grid description file: %s)!", dname);
 	}
-      else if ( cmpstr(pline, "yvals", len)  == 0 )
+      else if ( cmpstrlen(pline, "yvals", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1108,7 +1106,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    cdoAbort("ysize or gridsize undefined (grid description file: %s)!", dname);
 	}
-      else if ( cmpstr(pline, "xbounds", len)  == 0 )
+      else if ( cmpstrlen(pline, "xbounds", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1151,7 +1149,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	      if ( grid.nvertex == 0 ) cdoAbort("nvertex undefined (grid description file: %s)!", dname);
 	    }
 	}
-      else if ( cmpstr(pline, "ybounds", len)  == 0 )
+      else if ( cmpstrlen(pline, "ybounds", len)  == 0 )
 	{
 	  int i = 0;
 	  double fval;
@@ -1531,10 +1529,10 @@ int gridFromName(const char *gridname)
 	{
 	  grid.ntr = atoi(pline);
 	  while ( isdigit((int) *pline) ) pline++;
-	  if      ( cmpstr(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( cmpstr(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( cmpstr(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
-	  else if ( cmpstr(pline, "",     len) == 0 ) grid.type = GRID_SPECTRAL;
+	  if      ( cmpstrlen(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstrlen(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstrlen(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
+	  else if ( cmpstrlen(pline, "",     len) == 0 ) grid.type = GRID_SPECTRAL;
       
 	  if ( pline[len] != 0 ) return (gridID);
 
@@ -1542,7 +1540,7 @@ int gridFromName(const char *gridname)
 	    {
 	      grid.ysize = ntr2nlat_linear(grid.ntr);
 	      grid.np    = grid.ysize/2;
-	      if ( cmpstr(pline, "zon",  len) == 0 )
+	      if ( cmpstrlen(pline, "zon",  len) == 0 )
 		grid.xsize = 1;
 	      else
 		grid.xsize = compNlon(grid.ysize);
@@ -1559,10 +1557,10 @@ int gridFromName(const char *gridname)
 	{
 	  grid.ntr = atoi(pline);
 	  while ( isdigit((int) *pline) ) pline++;
-	  if      ( cmpstr(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( cmpstr(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
-	  else if ( cmpstr(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
-	  else if ( cmpstr(pline, "",     len) == 0 ) grid.type = GRID_SPECTRAL;
+	  if      ( cmpstrlen(pline, "grid", len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstrlen(pline, "zon",  len) == 0 ) grid.type = GRID_GAUSSIAN;
+	  else if ( cmpstrlen(pline, "spec", len) == 0 ) grid.type = GRID_SPECTRAL;
+	  else if ( cmpstrlen(pline, "",     len) == 0 ) grid.type = GRID_SPECTRAL;
      
 	  if ( pline[len] != 0 ) return (gridID);
 
@@ -1570,7 +1568,7 @@ int gridFromName(const char *gridname)
 	    {
 	      grid.ysize = ntr2nlat(grid.ntr);
 	      grid.np    = grid.ysize/2;
-	      if ( cmpstr(pline, "zon",  len) == 0 )
+	      if ( cmpstrlen(pline, "zon",  len) == 0 )
 		grid.xsize = 1;
 	      else
 		grid.xsize = compNlon(grid.ysize);
@@ -1660,7 +1658,7 @@ int gridFromName(const char *gridname)
 	  long np = strtol(pline, &endptr, 10);
 	  pline = endptr;
 
-	  if ( cmpstr(pline, "zon",  len) == 0 )
+	  if ( cmpstrlen(pline, "zon",  len) == 0 )
 	    {
 	      grid.xsize = 1;
 	      pline += 3;
@@ -1791,7 +1789,7 @@ int cdoDefineGrid(const char *gridfile)
 
       close(fileno);
 
-      if ( cmpstr(buffer, "CDF", len) == 0 )
+      if ( cmpstrlen(buffer, "CDF", len) == 0 )
 	{
 	  if ( cdoDebug ) cdoPrint("Grid from netCDF file");
 	  gridID = gridFromNCfile(filename);
@@ -1799,7 +1797,7 @@ int cdoDefineGrid(const char *gridfile)
 
       if ( gridID == -1 )
 	{
-	  if ( cmpstr(buffer+1, "HDF", len) == 0 )
+	  if ( cmpstrlen(buffer+1, "HDF", len) == 0 )
 	    {
 	      if ( cdoDebug ) cdoPrint("Grid from HDF5 file");
 	      gridID = gridFromH5file(filename);
@@ -1808,7 +1806,7 @@ int cdoDefineGrid(const char *gridfile)
 
       if ( gridID == -1 )
 	{
-	  if ( cmpstr(buffer+1, "HDF", len) == 0 )
+	  if ( cmpstrlen(buffer+1, "HDF", len) == 0 )
 	    {
 	      if ( cdoDebug ) cdoPrint("Grid from netCDF4 file");
 	      gridID = gridFromNCfile(filename);

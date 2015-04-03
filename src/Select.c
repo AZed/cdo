@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -392,10 +392,8 @@ int pmlRead(pml_t *pml, int argc, char **argv)
 
 int par_check_int(int npar, int *parlist, int *flaglist, int par)
 {
-  int i, found;
-
-  found = 0;
-  for ( i = 0; i < npar; i++ )
+  int found = 0;
+  for ( int i = 0; i < npar; i++ )
     if ( par == parlist[i] ) { found = 1; flaglist[i] = TRUE;/* break;*/}
 
   return (found);
@@ -404,10 +402,8 @@ int par_check_int(int npar, int *parlist, int *flaglist, int par)
 
 int par_check_flt(int npar, double *parlist, int *flaglist, double par)
 {
-  int i, found;
-
-  found = 0;
-  for ( i = 0; i < npar; i++ )
+  int found = 0;
+  for ( int i = 0; i < npar; i++ )
     if ( fabs(par - parlist[i]) < 1.e-4 ) { found = 1; flaglist[i] = TRUE;/* break;*/}
 
   return (found);
@@ -416,11 +412,9 @@ int par_check_flt(int npar, double *parlist, int *flaglist, double par)
 
 int par_check_word(int npar, char **parlist, int *flaglist, char *par)
 {
-  int i, found;
-
-  found = 0;
-  for ( i = 0; i < npar; i++ )
-    if ( strcmp(par, parlist[i]) == 0 ) { found = 1; flaglist[i] = TRUE;/* break;*/}
+  int found = 0;
+  for ( int i = 0; i < npar; i++ )
+    if ( wildcardmatch(parlist[i], par) == 0 ) { found = 1; flaglist[i] = TRUE;/* break;*/}
 
   return (found);
 }
@@ -428,9 +422,7 @@ int par_check_word(int npar, char **parlist, int *flaglist, char *par)
 
 void par_check_int_flag(int npar, int *parlist, int *flaglist, const char *txt)
 {
-  int i;
-
-  for ( i = 0; i < npar; ++i )
+  for ( int i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
       cdoWarning("%s >%d< not found!", txt, parlist[i]);
 }
@@ -438,9 +430,7 @@ void par_check_int_flag(int npar, int *parlist, int *flaglist, const char *txt)
 
 void par_check_flt_flag(int npar, double *parlist, int *flaglist, const char *txt)
 {
-  int i;
-
-  for ( i = 0; i < npar; ++i )
+  for ( int i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
       cdoWarning("%s >%g< not found!", txt, parlist[i]);
 }
@@ -448,9 +438,7 @@ void par_check_flt_flag(int npar, double *parlist, int *flaglist, const char *tx
 
 void par_check_word_flag(int npar, char **parlist, int *flaglist, const char *txt)
 {
-  int i;
-
-  for ( i = 0; i < npar; ++i )
+  for ( int i = 0; i < npar; ++i )
     if ( flaglist[i] == FALSE )
       cdoWarning("%s >%s< not found!", txt, parlist[i]);
 }
@@ -458,9 +446,7 @@ void par_check_word_flag(int npar, char **parlist, int *flaglist, const char *tx
 
 void *Select(void *argument)
 {
-  int SELECT, DELETE;
-  int operatorID;
-  int streamID1, streamID2 = CDI_UNDEFID;
+  int streamID2 = CDI_UNDEFID;
   int tsID1, tsID2, nrecs;
   int nvars, nvars2, nlevs;
   int zaxisID, levID;
@@ -470,26 +456,23 @@ void *Select(void *argument)
   int nsel;
   int vdate, vtime;
   int last_year = -999999999;
-  int copytimestep;
   char paramstr[32];
   char varname[CDI_MAX_NAME];
   char stdname[CDI_MAX_NAME];
   char **argnames = NULL;
-  int vlistID0 = -1, vlistID1 = -1, vlistID2 = -1;
+  int vlistID0 = -1, vlistID2 = -1;
   int i;
   int result = FALSE;
-  int lcopy = FALSE;
   int gridsize;
   int nmiss;
-  int streamCnt, nfiles, indf;
   double *array = NULL;
-  int taxisID1, taxisID2 = CDI_UNDEFID;
+  int taxisID2 = CDI_UNDEFID;
   int ntsteps;
   int ltimsel = FALSE;
   int second;
   int npar;
   int *vars = NULL;
-  pml_t *pml;
+
   PML_DEF_INT(timestep_of_year, 4096, "Timestep of year");
   PML_DEF_INT(timestep,         4096, "Timestep");
   PML_DEF_INT(year,             1024, "Year");
@@ -520,12 +503,13 @@ void *Select(void *argument)
 
   cdoInitialize(argument);
 
-  SELECT  = cdoOperatorAdd("select", 0, 0, "parameter list");
-  DELETE  = cdoOperatorAdd("delete", 0, 0, "parameter list");
+  int SELECT  = cdoOperatorAdd("select", 0, 0, "parameter list");
+  int DELETE  = cdoOperatorAdd("delete", 0, 0, "parameter list");
 
+  int lcopy = FALSE;
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
   operatorInputArg(cdoOperatorEnter(operatorID));
 
@@ -536,7 +520,7 @@ void *Select(void *argument)
     for ( i = 0; i < nsel; i++ )
       printf("name %d = %s\n", i+1, argnames[i]);
 
-  pml = pmlNew("SELECT");
+  pml_t *pml = pmlNew("SELECT");
 
   PML_ADD_INT(pml, timestep_of_year);
   PML_ADD_INT(pml, timestep);
@@ -573,21 +557,21 @@ void *Select(void *argument)
   pmlDelete(pml);
   */
 
-  streamCnt = cdoStreamCnt();
-  nfiles = streamCnt - 1;
+  int streamCnt = cdoStreamCnt();
+  int nfiles = streamCnt - 1;
 
   if ( !cdoVerbose && nfiles > 1 ) progressInit();
 
   tsID2 = 0;
-  for ( indf = 0; indf < nfiles; indf++ )
+  for ( int indf = 0; indf < nfiles; indf++ )
     {
       if ( !cdoVerbose && nfiles > 1 ) progressStatus(0, 1, (indf+1.)/nfiles);
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf)->args);
 
-      streamID1 = streamOpenRead(cdoStreamName(indf));
+      int streamID1 = streamOpenRead(cdoStreamName(indf));
 
-      vlistID1 = streamInqVlist(streamID1);
-      taxisID1 = vlistInqTaxis(vlistID1);
+      int vlistID1 = streamInqVlist(streamID1);
+      int taxisID1 = vlistInqTaxis(vlistID1);
 
       if ( indf == 0 )
 	{
@@ -828,6 +812,8 @@ void *Select(void *argument)
       tsID1 = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
 	{
+	  int copytimestep = TRUE;
+
 	  if ( ltimsel == TRUE )
 	    {
 	      copytimestep = FALSE;
@@ -865,10 +851,6 @@ void *Select(void *argument)
 		}
 
 	      if ( operatorID == DELETE ) copytimestep = !copytimestep;
-	    }
-	  else
-	    {
-	      copytimestep = TRUE;
 	    }
 
 	  if ( copytimestep == TRUE )

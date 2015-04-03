@@ -185,13 +185,13 @@ void *Remapeta(void *argument)
   int operatorID;
   int streamID1, streamID2;
   int vlistID1, vlistID2;
-  int gridsize, ngp = 0, nfis2gp = 0;
+  int nfis2gp = 0;
   int recID, nrecs;
   int i, offset, iv;
   int tsID, varID, levelID;
   int nvars, nvars3D = 0;
   int zaxisID2, zaxisIDh = -1, nzaxis, surfaceID;
-  int ngrids, gridID, zaxisID;
+  int gridID, zaxisID;
   int nlevel;
   int nvct1, nvct2 = 0;
   int sgeopotID = -1, tempID = -1, sqID = -1, psID = -1, lnpsID = -1, presID = -1;
@@ -316,31 +316,11 @@ void *Remapeta(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  ngrids  = vlistNgrids(vlistID1);
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) == GRID_SPECTRAL )
-	{
-	  cdoAbort("Spectral data unsupported!");
-	}
-      else
-	{
-	  ngp = gridInqSize(gridID);
-	  break;
-	}
-    }
+  gridID = vlistGrid(vlistID1, 0);
+  if ( gridInqType(gridID) == GRID_SPECTRAL )
+    cdoAbort("Spectral data unsupported!");
 
-  /* check gridsize */
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  if ( ngp != gridInqSize(gridID) )
-	    cdoAbort("Grids have different size!");
-	}
-    }
+  int gridsize = vlist_check_gridsize(vlistID1);
 
   zaxisID2 = zaxisCreate(ZAXIS_HYBRID, nhlevf2);
   lev2 = (double*) malloc(nhlevf2*sizeof(double));
@@ -512,39 +492,39 @@ void *Remapeta(void *argument)
 
   if ( operatorID == REMAPETAS || operatorID == REMAPETAZ)
     {
-      sum1 = (double*) malloc(ngp*sizeof(double));
-      sum2 = (double*) malloc(ngp*sizeof(double));
+      sum1 = (double*) malloc(gridsize*sizeof(double));
+      sum2 = (double*) malloc(gridsize*sizeof(double));
     }
 
   if ( operatorID == REMAPETAZ )
     {
-      deltap1 = (double*) malloc(ngp*nhlevf1*sizeof(double));
-      deltap2 = (double*) malloc(ngp*nhlevf2*sizeof(double));
-      half_press1 = (double*) malloc(ngp*(nhlevf1+1)*sizeof(double));
-      half_press2 = (double*) malloc(ngp*(nhlevf2+1)*sizeof(double));
+      deltap1 = (double*) malloc(gridsize*nhlevf1*sizeof(double));
+      deltap2 = (double*) malloc(gridsize*nhlevf2*sizeof(double));
+      half_press1 = (double*) malloc(gridsize*(nhlevf1+1)*sizeof(double));
+      half_press2 = (double*) malloc(gridsize*(nhlevf2+1)*sizeof(double));
     }
 
-  array = (double*) malloc(ngp*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
-  fis1  = (double*) malloc(ngp*sizeof(double));
-  ps1   = (double*) malloc(ngp*sizeof(double));
+  fis1  = (double*) malloc(gridsize*sizeof(double));
+  ps1   = (double*) malloc(gridsize*sizeof(double));
 
-  if ( lfis2 == FALSE ) fis2  = (double*) malloc(ngp*sizeof(double));
-  if ( lfis2 == TRUE && ngp != nfis2gp ) cdoAbort("Orographies have different grid size!");
+  if ( lfis2 == FALSE ) fis2  = (double*) malloc(gridsize*sizeof(double));
+  if ( lfis2 == TRUE && gridsize != nfis2gp ) cdoAbort("Orographies have different grid size!");
 
-  ps2   = (double*) malloc(ngp*sizeof(double));
+  ps2   = (double*) malloc(gridsize*sizeof(double));
 
   if ( ltq )
     {
-      tscor = (double*) malloc(ngp*sizeof(double));
-      pscor = (double*) malloc(ngp*sizeof(double));
-      secor = (double*) malloc(ngp*sizeof(double));
+      tscor = (double*) malloc(gridsize*sizeof(double));
+      pscor = (double*) malloc(gridsize*sizeof(double));
+      secor = (double*) malloc(gridsize*sizeof(double));
 
-      t1    = (double*) malloc(ngp*nhlevf1*sizeof(double));
-      q1    = (double*) malloc(ngp*nhlevf1*sizeof(double));
+      t1    = (double*) malloc(gridsize*nhlevf1*sizeof(double));
+      q1    = (double*) malloc(gridsize*nhlevf1*sizeof(double));
 
-      t2    = (double*) malloc(ngp*nhlevf2*sizeof(double));
-      q2    = (double*) malloc(ngp*nhlevf2*sizeof(double));
+      t2    = (double*) malloc(gridsize*nhlevf2*sizeof(double));
+      q2    = (double*) malloc(gridsize*nhlevf2*sizeof(double));
     }
 
   if ( nvars3D )
@@ -554,8 +534,8 @@ void *Remapeta(void *argument)
 
       for ( varID = 0; varID < nvars3D; ++varID )
 	{
-	  vars1[varID] = (double*) malloc(ngp*nhlevf1*sizeof(double));
-	  vars2[varID] = (double*) malloc(ngp*nhlevf2*sizeof(double));
+	  vars1[varID] = (double*) malloc(gridsize*nhlevf1*sizeof(double));
+	  vars2[varID] = (double*) malloc(gridsize*nhlevf2*sizeof(double));
 	}
     }
 
@@ -564,7 +544,7 @@ void *Remapeta(void *argument)
       if ( ltq )
 	cdoWarning("%s not found - set to zero!", var_stdname(surface_geopotential));
 
-      memset(fis1, 0, ngp*sizeof(double));
+      memset(fis1, 0, gridsize*sizeof(double));
     }
 
   presID = lnpsID;
@@ -596,7 +576,6 @@ void *Remapeta(void *argument)
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	  zaxisID  = vlistInqVarZaxis(vlistID1, varID);
 	  nlevel   = zaxisInqSize(zaxisID);
 	  offset   = gridsize*levelID;
@@ -605,18 +584,18 @@ void *Remapeta(void *argument)
 	  if ( zaxisIDh != -1 )
 	    {
 	      if ( varID == sgeopotID )
-		memcpy(fis1, array, ngp*sizeof(double));
+		memcpy(fis1, array, gridsize*sizeof(double));
 	      else if ( varID == presID )
 		{
 		  if ( lnpsID != -1 )
-		    for ( i = 0; i < ngp; ++i ) ps1[i] = exp(array[i]);
+		    for ( i = 0; i < gridsize; ++i ) ps1[i] = exp(array[i]);
 		  else if ( psID != -1 )
-		    memcpy(ps1, array, ngp*sizeof(double));
+		    memcpy(ps1, array, gridsize*sizeof(double));
 		}
 	      else if ( ltq && varID == tempID )
-		memcpy(t1+offset, array, ngp*sizeof(double));
+		memcpy(t1+offset, array, gridsize*sizeof(double));
 	      else if ( ltq && varID == sqID )
-		memcpy(q1+offset, array, ngp*sizeof(double));
+		memcpy(q1+offset, array, gridsize*sizeof(double));
 	      /* else if ( zaxisID == zaxisIDh ) */
 	      else if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && nlevel == nhlevf1 )
 		{
@@ -625,7 +604,7 @@ void *Remapeta(void *argument)
 
 		  if ( i == nvars3D ) cdoAbort("Internal error, 3D variable not found!");
 
-		  memcpy(vars1[i]+offset, array, ngp*sizeof(double));
+		  memcpy(vars1[i]+offset, array, gridsize*sizeof(double));
 		}
 	      else
 		{
@@ -643,18 +622,18 @@ void *Remapeta(void *argument)
       if ( zaxisIDh != -1 )
 	{
 	  /* check range of ps_prog */
-	  minmaxval(ngp, ps1, imiss, &minval, &maxval);
+	  minmaxval(gridsize, ps1, imiss, &minval, &maxval);
 	  if ( minval < MIN_PS || maxval > MAX_PS )
 	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 
 	  /* check range of geop */
-	  minmaxval(ngp, fis1, imiss, &minval, &maxval);
+	  minmaxval(gridsize, fis1, imiss, &minval, &maxval);
 	  if ( minval < MIN_FIS || maxval > MAX_FIS )
 	    cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
 	}
 
       if ( lfis2 == FALSE )
-	for ( i = 0; i < ngp; i++ ) fis2[i] = fis1[i];
+	for ( i = 0; i < gridsize; i++ ) fis2[i] = fis1[i];
 
       if ( ltq )
 	{
@@ -662,11 +641,10 @@ void *Remapeta(void *argument)
 	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	      offset   = gridsize*levelID;
 	      single2  = t1 + offset;
 
-	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      minmaxval(gridsize, single2, imiss, &minval, &maxval);
 	      if ( minval < MIN_T || maxval > MAX_T )
 		cdoWarning("Input temperature at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
@@ -676,13 +654,12 @@ void *Remapeta(void *argument)
 	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	      offset   = gridsize*levelID;
 	      single2  = q1 + offset;
 
 	      corr_hum(gridsize, single2, MIN_Q);
 
-	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      minmaxval(gridsize, single2, imiss, &minval, &maxval);
 	      if ( minval < MIN_Q || maxval > MAX_Q )
 		cdoWarning("Input humidity at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
@@ -692,7 +669,7 @@ void *Remapeta(void *argument)
       if ( nvars3D || ltq )
 	{
 	  if ( cdoTimer ) timer_start(timer_hetaeta);
-	  hetaeta(ltq, ngp, imiss,
+	  hetaeta(ltq, gridsize, imiss,
 		  nhlevf1, a1, b1,
 		  fis1, ps1,
 		  t1, q1,
@@ -711,19 +688,19 @@ void *Remapeta(void *argument)
 	{
 	  varID   = sgeopotID;
 	  levelID = 0;
-	  setmissval(ngp, imiss, missval, fis2);
+	  setmissval(gridsize, imiss, missval, fis2);
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, fis2, nmissout);
 	}
 
       if ( zaxisIDh != -1 && lnpsID != -1 )
-	for ( i = 0; i < ngp; ++i ) ps2[i] = log(ps2[i]);
+	for ( i = 0; i < gridsize; ++i ) ps2[i] = log(ps2[i]);
 
       if ( zaxisIDh != -1 && presID != -1 )
 	{
 	  varID   = presID;
 	  levelID = 0;
-	  setmissval(ngp, imiss, missval, ps2);
+	  setmissval(gridsize, imiss, missval, ps2);
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, ps2, nmissout);
 	}
@@ -734,16 +711,15 @@ void *Remapeta(void *argument)
 	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	      offset   = gridsize*levelID;
 	      single2  = t2 + offset;
 
-	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      minmaxval(gridsize, single2, imiss, &minval, &maxval);
 	      if ( minval < MIN_T || maxval > MAX_T )
 		cdoWarning("Output temperature at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 
-	      if ( gridsize == ngp ) setmissval(ngp, imiss, missval, single2);
+	      setmissval(gridsize, imiss, missval, single2);
 	      streamDefRecord(streamID2, varID, levelID);
 	      streamWriteRecord(streamID2, single2, nmissout);
 	    }
@@ -752,7 +728,6 @@ void *Remapeta(void *argument)
 	  nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	      offset   = gridsize*levelID;
 	      single2  = q2 + offset;
 
@@ -761,12 +736,12 @@ void *Remapeta(void *argument)
 	      if ( levelID < nctop )
 		for ( i = 0; i < gridsize; ++i ) single2[i] = cconst;
 
-	      minmaxval(ngp, single2, imiss, &minval, &maxval);
+	      minmaxval(gridsize, single2, imiss, &minval, &maxval);
 	      if ( minval < MIN_Q || maxval > MAX_Q )
 		cdoWarning("Output humidity at level %d out of range (min=%g max=%g)!",
 			   levelID+1, minval, maxval);
 
-	      if ( gridsize == ngp ) setmissval(ngp, imiss, missval, single2);
+	      setmissval(gridsize, imiss, missval, single2);
 	      streamDefRecord(streamID2, varID, levelID);
 	      streamWriteRecord(streamID2, single2, nmissout);
 	    }
@@ -776,16 +751,13 @@ void *Remapeta(void *argument)
 	{
 	  varID = varids[iv];
 
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	  nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 
 	  if ( operatorID == REMAPETAS )
 	    {
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      vert_sum(sum1, vars1[iv], gridsize, nhlevf1);
 
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 	      vert_sum(sum2, vars2[iv], gridsize, nhlevf2);
 	    }
@@ -793,28 +765,25 @@ void *Remapeta(void *argument)
 	    {
 	      int k;
 
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
 	      presh(NULL, half_press1, vct1, ps1, nhlevf1, gridsize);
 	      for ( k = 0; k < nhlevf1; ++k )
-		for ( i = 0; i < ngp; ++i )
+		for ( i = 0; i < gridsize; ++i )
 		  {
-		    deltap1[k*ngp+i] = half_press1[(k+1)*ngp+i] - half_press1[k*ngp+i];
-		    deltap1[k*ngp+i] = log(deltap1[k*ngp+i]);
+		    deltap1[k*gridsize+i] = half_press1[(k+1)*gridsize+i] - half_press1[k*gridsize+i];
+		    deltap1[k*gridsize+i] = log(deltap1[k*gridsize+i]);
 		  }
 	      vert_sumw(sum1, vars1[iv], gridsize, nhlevf1, deltap1);
 
-
-	      gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
 
 	      presh(NULL, half_press2, vct2, ps1, nhlevf2, gridsize);
 	      for ( k = 0; k < nhlevf2; ++k )
-		for ( i = 0; i < ngp; ++i )
+		for ( i = 0; i < gridsize; ++i )
 		  {
-		    deltap2[k*ngp+i] = half_press2[(k+1)*ngp+i] - half_press2[k*ngp+i];
-		    deltap2[k*ngp+i] = log(deltap2[k*ngp+i]);
+		    deltap2[k*gridsize+i] = half_press2[(k+1)*gridsize+i] - half_press2[k*gridsize+i];
+		    deltap2[k*gridsize+i] = log(deltap2[k*gridsize+i]);
 		  }
 	      vert_sumw(sum2, vars2[iv], gridsize, nhlevf2, deltap2);
 	    }
@@ -835,7 +804,7 @@ void *Remapeta(void *argument)
 		    single2[i] = single2[i]*sum1[i]/sum2[i];
 		}
 
-	      if ( gridsize == ngp ) setmissval(ngp, imiss, missval, single2);
+	      setmissval(gridsize, imiss, missval, single2);
 	      streamDefRecord(streamID2, varID, levelID);
 	      streamWriteRecord(streamID2, single2, nmissout);
 	    }

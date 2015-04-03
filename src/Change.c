@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,7 @@ void *Change(void *argument)
     {
       if ( nch%2 ) cdoAbort("Odd number of input arguments!");
       for ( i = 0; i < nch; i++ )
-	chints[i] = atoi(operatorArgv()[i]);
+	chints[i] = parameter2int(operatorArgv()[i]);
     }
   else if ( operatorID == CHPARAM || operatorID == CHNAME || operatorID == CHUNIT )
     {
@@ -97,29 +97,29 @@ void *Change(void *argument)
     {
       if ( nch%2 ) cdoAbort("Odd number of input arguments!");
       for ( i = 0; i < nch; i++ )
-	chlevels[i] = atof(operatorArgv()[i]);
+	chlevels[i] = parameter2double(operatorArgv()[i]);
     }
   else if ( operatorID == CHLEVELC )
     {
       operatorCheckArgc(3);
       
-      chcode = atoi(operatorArgv()[0]);
-      chlevels[0] = atof(operatorArgv()[1]);
-      chlevels[1] = atof(operatorArgv()[2]);
+      chcode = parameter2int(operatorArgv()[0]);
+      chlevels[0] = parameter2double(operatorArgv()[1]);
+      chlevels[1] = parameter2double(operatorArgv()[2]);
     }
   else if ( operatorID == CHLEVELV )
     {
       operatorCheckArgc(3);
       
       chname = operatorArgv()[0];
-      chlevels[0] = atof(operatorArgv()[1]);
-      chlevels[1] = atof(operatorArgv()[2]);
+      chlevels[0] = parameter2double(operatorArgv()[1]);
+      chlevels[1] = parameter2double(operatorArgv()[2]);
     }
   else if ( operatorID == CHLTYPE )                  
     {
       if ( nch%2 ) cdoAbort("Odd number of input arguments!");
       for ( i = 0; i < nch; i++ )
-	chltypes[i] = atoi(operatorArgv()[i]);
+	chltypes[i] = parameter2int(operatorArgv()[i]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));

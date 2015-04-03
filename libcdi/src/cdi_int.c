@@ -389,12 +389,6 @@ const char *strfiletype(int filetype)
 }
 
 
-int streamSize(void)
-{
-  return reshCountType ( &streamOps );
-}
-
-
 void cdiDefGlobal(const char *string, int val)
 {
   if      ( strcmp(string, "REGULARGRID")      == 0 ) cdiDataUnreduced = val;

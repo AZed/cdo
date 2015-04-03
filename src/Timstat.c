@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -74,36 +74,24 @@
 
 void *Timstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
+  int timestat_date = TIMESTAT_MEAN;
   int cmplen;
-  char indate1[DATE_LEN+1], indate2[DATE_LEN+1];
   int gridsize;
   int vdate = 0, vtime = 0;
   int vdate0 = 0, vtime0 = 0;
-  int vdate_lb = 0, vdate_ub = 0, date_lb = 0, date_ub = 0;
-  int vtime_lb = 0, vtime_ub = 0, time_lb = 0, time_ub = 0;
-  int nrecs, nrecords;
+  int nrecs;
   int varID, levelID, recID;
-  int tsID;
-  int otsID;
   long nsets;
   int i;
-  int streamID1, streamID2, streamID3 = -1;
-  int vlistID1, vlistID2, vlistID3, taxisID1, taxisID2, taxisID3 = -1;
+  int streamID3 = -1;
+  int vlistID3, taxisID3 = -1;
   int nmiss;
-  int nvars, nlevel;
-  int *recVarID, *recLevelID;
-  int taxis_has_bounds = FALSE;
+  int nlevel;
   int lvfrac = FALSE;
-  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
   int nwpv; // number of words per value; real:1  complex:2
-  char vdatestr[32], vtimestr[32];
+  char indate1[DATE_LEN+1], indate2[DATE_LEN+1];
   double vfrac = 1;
-  double divisor;
   double missval;
-  field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
-  field_t field;
 
   cdoInitialize(argument);
 
@@ -153,13 +141,13 @@ void *Timstat(void *argument)
   cdoOperatorAdd("hourstd",   func_std,   4, NULL);
   cdoOperatorAdd("hourstd1",  func_std1,  4, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
-  lmean   = operfunc == func_mean || operfunc == func_avg;
-  lstd    = operfunc == func_std || operfunc == func_std1;
-  lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
-  divisor = operfunc == func_std1 || operfunc == func_var1;
+  int lmean   = operfunc == func_mean || operfunc == func_avg;
+  int lstd    = operfunc == func_std || operfunc == func_std1;
+  int lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
+  double divisor = operfunc == func_std1 || operfunc == func_var1;
 
   if ( operfunc == func_mean )
     {
@@ -179,25 +167,24 @@ void *Timstat(void *argument)
 
   cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
   if ( cdoOperatorF2(operatorID) == 31 ) vlistDefNtsteps(vlistID2, 1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   if ( taxisInqType(taxisID2) == TAXIS_FORECAST ) taxisDefType(taxisID2, TAXIS_RELATIVE);
-  taxis_has_bounds = taxisHasBounds(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
   if ( cdoDiag )
     {
@@ -226,52 +213,40 @@ void *Timstat(void *argument)
       streamDefVlist(streamID3, vlistID3);
     }
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
+
+  dtlist_type *dtlist = dtlist_new();
+  dtlist_set_stat(dtlist, timestat_date);
+  dtlist_set_calendar(dtlist, taxisInqCalendar(taxisID1));
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
 
+  field_t field;
   field_init(&field);
   field.ptr = (double*) malloc(gridsize*sizeof(double));
 
-  vars1 = field_malloc(vlistID1, FIELD_PTR);
-  samp1 = field_malloc(vlistID1, FIELD_NONE);
-  if ( lvarstd )
-    vars2 = field_malloc(vlistID1, FIELD_PTR);
+  field_t **vars1 = field_malloc(vlistID1, FIELD_PTR);
+  field_t **samp1 = field_malloc(vlistID1, FIELD_NONE);
+  field_t **vars2 = NULL;
+  if ( lvarstd ) vars2 = field_malloc(vlistID1, FIELD_PTR);
 
-  tsID    = 0;
-  otsID   = 0;
+  int tsID  = 0;
+  int otsID = 0;
   while ( TRUE )
     {
       nsets = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
 	{
-	  vdate = taxisInqVdate(taxisID1);
-	  vtime = taxisInqVtime(taxisID1);
-
-	  if ( taxis_has_bounds )
-	    {
-	      taxisInqVdateBounds(taxisID1, &date_lb, &date_ub);
-	      taxisInqVtimeBounds(taxisID1, &time_lb, &time_ub);
-	      if ( nsets == 0 )
-		{ vdate_lb = date_lb; vtime_lb = time_lb; }
-	    }
-	  else
-	    {
-	      if ( nsets == 0 )
-		{ vdate_lb = vdate; vtime_lb = vtime; }
-	    }
+	  dtlist_taxisInqTimestep(dtlist, taxisID1, nsets);
+	  vdate = dtlist_get_vdate(dtlist, nsets);
+	  vtime = dtlist_get_vtime(dtlist, nsets);
 
 	  if ( nsets == 0 ) SET_DATE(indate2, vdate, vtime);
 	  SET_DATE(indate1, vdate, vtime);
 
 	  if ( DATE_IS_NEQ(indate1, indate2, cmplen) ) break;
-
-	  if ( taxis_has_bounds )
-	    { vdate_ub = date_ub; vtime_ub = time_ub; }
-	  else
-	    { vdate_ub = vdate; vtime_ub = vtime; }
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -391,6 +366,7 @@ void *Timstat(void *argument)
 
       if ( cdoVerbose )
 	{
+	  char vdatestr[32], vtimestr[32];
 	  date2str(vdate0, vdatestr, sizeof(vdatestr));
 	  time2str(vtime0, vtimestr, sizeof(vtimestr));
 	  cdoPrint("%s %s  vfrac = %g, nsets = %d", vdatestr, vtimestr, vfrac, nsets);
@@ -429,18 +405,12 @@ void *Timstat(void *argument)
 	      }
 	  }
 
-      taxisDefVdate(taxisID2, vdate0);
-      taxisDefVtime(taxisID2, vtime0);
-      taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
-      taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
+      dtlist_stat_taxisDefTimestep(dtlist, taxisID2, nsets);
       streamDefTimestep(streamID2, otsID);
 
       if ( cdoDiag )
 	{
-	  taxisDefVdate(taxisID3, vdate0);
-	  taxisDefVtime(taxisID3, vtime0);
-	  taxisDefVdateBounds(taxisID3, vdate_lb, vdate_ub);
-	  taxisDefVtimeBounds(taxisID3, vtime_lb, vtime_ub);
+	  dtlist_stat_taxisDefTimestep(dtlist, taxisID3, nsets);
 	  streamDefTimestep(streamID3, otsID);
 	}
 
@@ -471,6 +441,8 @@ void *Timstat(void *argument)
   field_free(vars1, vlistID1);
   field_free(samp1, vlistID1);
   if ( lvarstd ) field_free(vars2, vlistID1);
+
+  dtlist_delete(dtlist);
 
   if ( cdoDiag ) streamClose(streamID3);
   streamClose(streamID2);

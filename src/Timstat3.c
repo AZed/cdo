@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -37,18 +37,14 @@
 void *Timstat3(void *argument)
 {
   int VARQUOT2TEST, MEANDIFF2TEST;
-  int operatorID;
-  int streamID[NIN], streamID3;
-  int vlistID[NIN], vlistID2 = -1, vlistID3 = -1;
+  int streamID[NIN];
+  int vlistID[NIN], vlistID2 = -1;
   int gridsize;
   int vdate = 0, vtime = 0;
-  int nrecs, nrecs3, nvars, nlevs ;
+  int nlevs;
   int i, iw, is;
-  int tsID;
   int varID, recID, levelID, gridID;
   int nmiss3;
-  int *recVarID, *recLevelID;
-  int taxisID1, taxisID3;
   double rconst, risk;
   double fnvals0, fnvals1;
   double missval, missval1, missval2;
@@ -66,12 +62,12 @@ void *Timstat3(void *argument)
   VARQUOT2TEST  = cdoOperatorAdd("varquot2test",  0, 0, NULL);
   MEANDIFF2TEST = cdoOperatorAdd("meandiff2test", 0, 0, NULL);
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
   operatorInputArg("constant and risk (e.g. 0.05)");
   operatorCheckArgc(2);
-  rconst = atof(operatorArgv()[0]);
-  risk   = atof(operatorArgv()[1]);
+  rconst = parameter2double(operatorArgv()[0]);
+  risk   = parameter2double(operatorArgv()[1]);
 
   if ( operatorID == VARQUOT2TEST )
     {
@@ -94,20 +90,20 @@ void *Timstat3(void *argument)
 	}
     }
 
-  vlistID3 = vlistDuplicate(vlistID[0]);
+  int vlistID3 = vlistDuplicate(vlistID[0]);
 
   gridsize = vlistGridsizeMax(vlistID[0]);
-  nvars = vlistNvars(vlistID[0]);
-  nrecs = vlistNrecs(vlistID[0]);
-  nrecs3 = nrecs;
-  recVarID   = (int*) malloc(nrecs*sizeof(int));
-  recLevelID = (int*) malloc(nrecs*sizeof(int));
+  int nvars = vlistNvars(vlistID[0]);
+  int nrecs = vlistNrecs(vlistID[0]);
+  int nrecs3 = nrecs;
+  int *recVarID   = (int*) malloc(nrecs*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecs*sizeof(int));
 
-  taxisID1 = vlistInqTaxis(vlistID[0]);
-  taxisID3 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID[0]);
+  int taxisID3 = taxisDuplicate(taxisID1);
  
   vlistDefTaxis(vlistID3, taxisID3);
-  streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
+  int streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
 
   streamDefVlist(streamID3, vlistID3);
 
@@ -163,7 +159,7 @@ void *Timstat3(void *argument)
 	}
     }
  
-  tsID=0;
+  int tsID = 0;
   while ( TRUE )
     {
       for ( is = 0; is < NIN; ++is )
@@ -219,10 +215,10 @@ void *Timstat3(void *argument)
       tsID++;
     }
 
-  tsID = 0;
+
   taxisDefVdate(taxisID3, vdate);
   taxisDefVtime(taxisID3, vtime);
-  streamDefTimestep(streamID3, tsID);
+  streamDefTimestep(streamID3, 0);
 
   for ( recID = 0; recID < nrecs3; recID++ )
     {

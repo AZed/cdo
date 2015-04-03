@@ -69,7 +69,11 @@ if [ "${FC+set}" != set ]; then
 fi
 FC=${FC-$F90C}
 # nagfor 5.3 up chokes on -EP flag
-nag=`$FC -V 2>&1 | sed -n '/^NAG/s/NAG Fortran Compiler.*/NAG/;t print;b;: print; p'`
+nag=`$FC -V 2>&1 | sed -n '/^NAG/s/NAG Fortran Compiler.*/NAG/
+t print
+b
+: print
+p'`
 [ x"$nag" = xNAG ] || FCFLAGS=${FCFLAGS--EP}
 # append -fpp if necessary
 IFStr=`echo "$IFS" | sed -n '$!s/$/\\\\n/

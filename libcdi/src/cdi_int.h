@@ -318,8 +318,7 @@ int     cdiInqAccesstype(int streamID);
 
 int     getByteswap(int byteorder);
 
-int     streamSize ();
-void    streamGetIndexList ( int, int * );
+void cdiStreamGetIndexList(unsigned numIDs, int IDs[numIDs]);
 
 
 void  cdiInitialize(void);
@@ -372,6 +371,11 @@ int cdiStreamDefTimestep_(stream_t *streamptr, int tsID);
 void cdiStreamSync_(stream_t *streamptr);
 
 char *cdiUnitNamePtr(int cdi_unit);
+
+void zaxisGetIndexList(int nzaxis, int *zaxisIndexList);
+
+void zaxisDefLtype2(int zaxisID, int ltype2);
+int  zaxisInqLtype2(int zaxisID);
 
 #endif  /* _CDI_INT_H */
 /*

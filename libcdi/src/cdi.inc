@@ -1,10 +1,10 @@
 ! This file was automatically generated, don't edit!
 !
-! Fortran interface for CDI library version 1.6.7
+! Fortran interface for CDI library version 1.6.8
 !
 ! Author:
 ! -------
-! Uwe Schulzweida, MPI-MET, Hamburg,   December 2014
+! Uwe Schulzweida, MPI-MET, Hamburg,   February 2015
 !
 
       INTEGER    CDI_MAX_NAME          
@@ -185,6 +185,8 @@
       PARAMETER (DATATYPE_CPX           = 254)
       INTEGER    DATATYPE_UCHAR        
       PARAMETER (DATATYPE_UCHAR         = 255)
+      INTEGER    DATATYPE_LONG         
+      PARAMETER (DATATYPE_LONG          = 256)
 !
 !  Chunks
 !
@@ -1378,6 +1380,7 @@
 
 !                     gridPrint
 !                                    (INTEGER         gridID,
+!                                     INTEGER         index,
 !                                     INTEGER         opt)
       EXTERNAL        gridPrint
 
@@ -1840,7 +1843,8 @@
       EXTERNAL        zaxisResize
 
 !                     zaxisPrint
-!                                    (INTEGER         zaxisID)
+!                                    (INTEGER         zaxisID,
+!                                     INTEGER         index)
       EXTERNAL        zaxisPrint
 
 !                     zaxisDefLevels

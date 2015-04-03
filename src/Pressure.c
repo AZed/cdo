@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -36,14 +36,11 @@
 
 void *Pressure(void *argument)
 {
-  int PRESSURE_FL, PRESSURE_HL, DELTAP;
-  int operatorID;
   int mode;
   enum {ECHAM_MODE, WMO_MODE};
   int geop_code = 0, temp_code = 0, ps_code = 0, lsp_code = 0;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
-  int gridsize, ngp = 0;
+  int streamID2;
+  int vlistID2;
   int recID, nrecs;
   int i, k, offset;
   int tsID, varID, levelID;
@@ -70,37 +67,17 @@ void *Pressure(void *argument)
 
   cdoInitialize(argument);
 
-  PRESSURE_FL = cdoOperatorAdd("pressure_fl", 0, 0, NULL);
-  PRESSURE_HL = cdoOperatorAdd("pressure_hl", 0, 0, NULL);
-  DELTAP      = cdoOperatorAdd("deltap",      0, 0, NULL);
+  int PRESSURE_FL = cdoOperatorAdd("pressure_fl", 0, 0, NULL);
+  int PRESSURE_HL = cdoOperatorAdd("pressure_hl", 0, 0, NULL);
+  int DELTAP      = cdoOperatorAdd("deltap",      0, 0, NULL);
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
+  int vlistID1 = streamInqVlist(streamID1);
 
-  ngrids  = vlistNgrids(vlistID1);
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  ngp = gridInqSize(gridID);
-	  break;
-	}
-    }
-
-  /* check gridsize */
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  if ( ngp != gridInqSize(gridID) )
-	    cdoAbort("Grids have different size!");
-	}
-    }
+  int gridsize = vlist_check_gridsize(vlistID1);
 
   nzaxis  = vlistNzaxis(vlistID1);
   lhavevct = FALSE;
@@ -211,12 +188,12 @@ void *Pressure(void *argument)
 
   nvars = vlistNvars(vlistID1);
 
-  if ( zaxisIDh != -1 && ngp > 0 )
+  if ( zaxisIDh != -1 && gridsize > 0 )
     {
-      ps_prog    = (double*) malloc(ngp*sizeof(double));
-      deltap     = (double*) malloc(ngp*nhlevf*sizeof(double));
-      full_press = (double*) malloc(ngp*nhlevf*sizeof(double));
-      half_press = (double*) malloc(ngp*nhlevh*sizeof(double));
+      ps_prog    = (double*) malloc(gridsize*sizeof(double));
+      deltap     = (double*) malloc(gridsize*nhlevf*sizeof(double));
+      full_press = (double*) malloc(gridsize*nhlevf*sizeof(double));
+      half_press = (double*) malloc(gridsize*nhlevh*sizeof(double));
     }
   else
     cdoAbort("No 3D variable with hybrid sigma pressure coordinate found!");
@@ -255,7 +232,6 @@ void *Pressure(void *argument)
     {
       gridID   = vlistInqVarGrid(vlistID1, varID);
       zaxisID  = vlistInqVarZaxis(vlistID1, varID);
-      gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(zaxisID);
       instNum  = institutInqCenter(vlistInqVarInstitut(vlistID1, varID));
       tableNum = tableInqNum(vlistInqVarTable(vlistID1, varID));
@@ -350,7 +326,6 @@ void *Pressure(void *argument)
   if ( gridInqType(gridID) == GRID_SPECTRAL )
     cdoAbort("%s on spectral representation not supported!", var_stdname(surface_air_pressure));
 
-  gridsize = gridInqSize(gridID);
   pdata = (double*) malloc(gridsize*sizeof(double));
 
 
@@ -391,16 +366,16 @@ void *Pressure(void *argument)
       if ( zaxisIDh != -1 )
 	{
 	  if ( lnpsID != -1 )
-	    for ( i = 0; i < ngp; i++ ) ps_prog[i] = exp(pdata[i]);
+	    for ( i = 0; i < gridsize; i++ ) ps_prog[i] = exp(pdata[i]);
 	  else if ( psID != -1 )
-	    memcpy(ps_prog, pdata, ngp*sizeof(double));
+	    memcpy(ps_prog, pdata, gridsize*sizeof(double));
 
 	  /* check range of ps_prog */
-	  minmaxval(ngp, ps_prog, NULL, &minval, &maxval);
+	  minmaxval(gridsize, ps_prog, NULL, &minval, &maxval);
 	  if ( minval < MIN_PS || maxval > MAX_PS )
 	    cdoWarning("Surface pressure out of range (min=%g max=%g)!", minval, maxval);
 	    
-	  presh(full_press, half_press, vct, ps_prog, nhlevf, ngp);
+	  presh(full_press, half_press, vct, ps_prog, nhlevf, gridsize);
 	}
 
       if ( operatorID == PRESSURE_FL )
@@ -412,9 +387,9 @@ void *Pressure(void *argument)
 	{
 	  nlevel = nhlevf;
 	  for ( k = 0; k < nhlevf; ++k )
-	    for ( i = 0; i < ngp; ++i )
+	    for ( i = 0; i < gridsize; ++i )
 	      {
-		deltap[k*ngp+i] = half_press[(k+1)*ngp+i] - half_press[k*ngp+i];
+		deltap[k*gridsize+i] = half_press[(k+1)*gridsize+i] - half_press[k*gridsize+i];
 	      }
 
 	  pout = deltap;

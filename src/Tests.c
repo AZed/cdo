@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ void *Tests(void *argument)
 
       operatorCheckArgc(1);
 
-      degree_of_freedom = atof(operatorArgv()[0]);
+      degree_of_freedom = parameter2double(operatorArgv()[0]);
 
       if ( degree_of_freedom <= 0 )
 	cdoAbort("degree of freedom must be positive!");
@@ -65,8 +65,8 @@ void *Tests(void *argument)
 
       operatorCheckArgc(2);
 
-      p = atof(operatorArgv()[0]);
-      q = atof(operatorArgv()[1]);
+      p = parameter2double(operatorArgv()[0]);
+      q = parameter2double(operatorArgv()[1]);
 
       if ( p <= 0 || q <= 0 )
 	cdoAbort("p and q must be positive!");
@@ -77,8 +77,8 @@ void *Tests(void *argument)
 
       operatorCheckArgc(2);
 
-      n = atof(operatorArgv()[0]);
-      d = atof(operatorArgv()[1]);
+      n = parameter2double(operatorArgv()[0]);
+      d = parameter2double(operatorArgv()[1]);
 
       if ( n <= 0 || d <= 0 )
 	cdoAbort("both degrees must be positive!");

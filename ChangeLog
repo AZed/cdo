@@ -1,7 +1,138 @@
-2014-12-11  Uwe Schulzweida
+2015-03-26  Uwe Schulzweida
+
+	* Version 1.6.8 released
+
+2015-03-25  Uwe Schulzweida
+
+	* expr: added support for operator ?: (short ifelse)
+	* eof, eof3d: use area weights instead of no weights
+	* vertmean, vertavg: changed to weighted means if layer bounds are available
+
+2015-03-23  Uwe Schulzweida
+
+	* expr: added support for operator ?: (short ifelse test version)
+
+2015-03-22  Uwe Schulzweida
+
+	* configure: check whether netCDF4/HDF5 is threadsafe
+
+2015-03-21  Uwe Schulzweida
+
+	* expr: added support for logical operator <=>
+
+2015-03-20  Uwe Schulzweida
+
+	* Remap: renamed env. variable CDO_REMAP_NORMALIZE_OPT to CDO_REMAP_NORM
+	* Remap: renamed env. variable CDO_REMAP_SEARCH_RADIUS to CDO_REMAP_RADIUS
+
+2015-03-19  Uwe Schulzweida
+
+	* remapycon:  correct weights only for norm_opt=fracarea
+
+2015-03-18  Uwe Schulzweida
+
+	* expr: added support for logical operators <, >, <=, >=, !=, ==
+
+2015-03-17  Uwe Schulzweida
+
+	* gradsdes: grib index file is empty (introduced in 1.6.7)
+
+2015-03-11  Uwe Schulzweida
+
+	* delname: added wildcard support
+	* wildcardmatch(): use fnmatch() if available
+	* eofspatial: removed scaling with grid cell area weights (bug fix)
+	* eoftime: removed scaling with grid cell area weights (bug fix)
+
+2015-03-10  Uwe Schulzweida
+
+	* ensSTAT: added optional parameter count to count the number of valid values
+
+2015-03-09  Uwe Schulzweida
+
+	* setpartabp, setpartabn: added optional parameter convert to convert the units
+
+2015-02-04  Uwe Schulzweida
+
+	* select: added wildcard support for parameter name and param
+	* selname: added wildcard support
+
+2015-01-31  Uwe Schulzweida
+
+	* changed remapnn test to remapdis
+
+2015-01-30  Uwe Schulzweida
+
+        * cdoGenFileSuffix: filter wildcard characters
+
+2015-01-27  Uwe Schulzweida
+
+	* remapnn: Segmentation fault for extrapolation of regular 2D source grids [Bug #5448]
+
+2015-01-21  Uwe Schulzweida
+
+	* New operator: splityearmon - Split in years and months
+
+2015-01-20  Uwe Schulzweida
+
+	* remap: replaced critical section with store_link() by store_weightlinks()
+
+2015-01-06  Uwe Schulzweida
+
+	* intersection: use function sqrt(x) if sqrtl(x) is missing
+
+2015-01-05  Uwe Schulzweida
+
+	* New operator: yseasadd - Add multi-year seasonal time series
+	* New operator: yseassub - Subtract multi-year seasonal time series
+	* New operator: yseasmul - Multiply multi-year seasonal time series
+	* New operator: yseasdiv - Divide multi-year seasonal time series
+
+2014-12-26  Uwe Schulzweida
+
+	* sinfo: limit length of model and institute to CDI_MAX_NAME (bug fix)
+
+2014-12-19  Uwe Schulzweida
+
+	* Seaspctl: changed timestat_date to mean
+	* Seaspctl: added support for env. CDO_TIMESTAT_DATE
+	* Seasstat: changed timestat_date to mean
+	* Timpctl: changed timestat_date to mean
+	* Timpctl: added support for env. CDO_TIMESTAT_DATE
+	* Timstat: changed timestat_date to mean
+
+2014-12-18  Uwe Schulzweida
+
+	* Timselpctl: changed timestat_date to mean
+	* Timselpctl: added support for env. CDO_TIMESTAT_DATE
+	* Timselpctl: last output time step is written two times (bug fix)
+	* Timselstat: changed timestat_date to mean
+
+2014-12-16  Uwe Schulzweida
+
+	* intlevel3d: works only for regular grids, grid coordinate check disabled (bug fix)
+
+2014-12-15  Uwe Schulzweida
+
+	* Seasstat: added support for env. CDO_TIMESTAT_DATE
+	* Timselstat: added support for env. CDO_TIMESTAT_DATE
+
+2014-12-14  Uwe Schulzweida
+
+	* Timstat: added support for env. CDO_TIMESTAT_DATE
+
+2014-12-13  Uwe Schulzweida
+
+	* Runstat: added time bounds
+
+2014-12-12  Uwe Schulzweida
 
 	* using CDI library version 1.6.7
 	* Version 1.6.7 released
+
+2014-12-11  Uwe Schulzweida
+
+	* intlevel3d: does not work (bug fix)
 
 2014-12-03  Uwe Schulzweida
 
@@ -2038,7 +2169,7 @@
 	* pstream: add function pstreamInqFiletype
 	* Reduced grids: read/write record if -R is used
 	* Version 0.9.5 released
-	
+
 2005-01-03  Uwe Schulzweida
 
 	* using CDI library version 0.8.7

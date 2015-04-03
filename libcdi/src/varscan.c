@@ -2,20 +2,18 @@
 #  include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <string.h>
 #include <math.h>
 
 #include "cdi.h"
 #include "cdi_int.h"
 #include "dmemory.h"
+#include "resource_handle.h"
 #include "varscan.h"
 #include "vlist.h"
 #include "grid.h"
 #include "zaxis.h"
-
-
-extern void zaxisGetIndexList(int, int *);
-extern void zaxisDefLtype2(int zaxisID, int ltype2);
 
 
 #undef  UNDEFID
@@ -84,12 +82,12 @@ vartable_t;
 
 
 static vartable_t *vartable;
-static int varTablesize = 0;
-static int nvars = 0;
+static unsigned varTablesize = 0;
+static unsigned nvars = 0;
 
 
-static
-void paramInitEntry(int varID, int param)
+static void
+paramInitEntry(unsigned varID, int param)
 {
   vartable[varID].param          = param;
   vartable[varID].prec           = 0;
@@ -122,12 +120,10 @@ void paramInitEntry(int varID, int param)
   vartable[varID].ensdata        = NULL;
 }
 
-static
-int varGetEntry(int param, int zaxistype, int ltype1, int tsteptype, const char *name)
+static unsigned
+varGetEntry(int param, int zaxistype, int ltype1, int tsteptype, const char *name)
 {
-  int varID;
-
-  for ( varID = 0; varID < varTablesize; varID++ )
+  for ( unsigned varID = 0; varID < varTablesize; varID++ )
     {
       if ( vartable[varID].param      == param       &&
 	   vartable[varID].zaxistype  == zaxistype   &&
@@ -145,15 +141,13 @@ int varGetEntry(int param, int zaxistype, int ltype1, int tsteptype, const char 
         }
     }
 
-  return (UNDEFID);
+  return (unsigned)-1;
 }
 
 static
 void varFree(void)
 {
-  int varID;
-
-  for ( varID = 0; varID < nvars; varID++ )
+  for ( unsigned varID = 0; varID < nvars; varID++ )
     {
       if ( vartable[varID].levelTable )
 	free(vartable[varID].levelTable);
@@ -179,8 +173,8 @@ void varFree(void)
   Vctsize = 0;
 }
 
-static
-int levelNewEntry(int varID, int level1, int level2)
+static int
+levelNewEntry(unsigned varID, int level1, int level2)
 {
   int levelID = 0;
   int levelTableSize;
@@ -251,10 +245,10 @@ int levelNewEntry(int varID, int level1, int level2)
 
 #define  UNDEF_PARAM  -4711
 
-static
-int paramNewEntry(int param)
+static unsigned
+paramNewEntry(int param)
 {
-  int varID = 0;
+  unsigned varID = 0;
 
   /*
     Look for a free slot in vartable.
@@ -262,8 +256,6 @@ int paramNewEntry(int param)
   */
   if ( ! varTablesize )
     {
-      int i;
-
       varTablesize = 2;
       vartable = (vartable_t *)xmalloc((size_t)varTablesize
                                        * sizeof (vartable_t));
@@ -273,7 +265,7 @@ int paramNewEntry(int param)
 	  SysError("Allocation of vartable failed");
 	}
 
-      for( i = 0; i < varTablesize; i++ )
+      for( unsigned i = 0; i < varTablesize; i++ )
 	{
 	  vartable[i].param = UNDEF_PARAM;
 #if  defined  (HAVE_LIBGRIB_API)
@@ -295,7 +287,6 @@ int paramNewEntry(int param)
   */
   if ( varID == varTablesize )
     {
-      int i;
 
       varTablesize = 2 * varTablesize;
       vartable = (vartable_t *)xrealloc(vartable, (size_t)varTablesize
@@ -307,7 +298,7 @@ int paramNewEntry(int param)
 	}
       varID = varTablesize/2;
 
-      for( i = varID; i < varTablesize; i++ )
+      for( unsigned i = varID; i < varTablesize; i++ )
 	{
 	  vartable[i].param = UNDEF_PARAM;
 #if  defined  (HAVE_LIBGRIB_API)
@@ -328,13 +319,10 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
 		  int *pvarID, int *plevelID, int tsteptype, int numavg, int ltype1, int ltype2,
 		  const char *name, const char *stdname, const char *longname, const char *units)
 {
-  int varID = UNDEFID;
-  int levelID = -1;
+  unsigned varID = (cdiSplitLtype105 != 1 || zaxistype != ZAXIS_HEIGHT) ?
+    varGetEntry(param, zaxistype, ltype1, tsteptype, name) : (unsigned)UNDEFID;
 
-  if ( ! (cdiSplitLtype105 == 1 && zaxistype == ZAXIS_HEIGHT) )
-    varID = varGetEntry(param, zaxistype, ltype1, tsteptype, name);
-
-  if ( varID == UNDEFID )
+  if ( varID == (unsigned)UNDEFID )
     {
       nvars++;
       varID = paramNewEntry(param);
@@ -372,10 +360,10 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
 
   if ( prec > vartable[varID].prec ) vartable[varID].prec = prec;
 
-  levelID = levelNewEntry(varID, level1, level2);
+  int levelID = levelNewEntry(varID, level1, level2);
   vartable[varID].levelTable[levelID].recID = recID;
 
-  *pvarID   = varID;
+  *pvarID   = (int)varID;
   *plevelID = levelID;
 }
 /*
@@ -445,7 +433,7 @@ int cmpparam(const void* s1, const void* s2)
 
 void cdi_generate_vars(stream_t *streamptr)
 {
-  int varID, gridID, zaxisID;
+  int gridID, zaxisID;
   int instID, modelID, tableID;
   int param, zaxistype, ltype1, ltype2;
   int prec;
@@ -457,40 +445,33 @@ void cdi_generate_vars(stream_t *streamptr)
   double *dlevels = NULL;
   double *dlevels1 = NULL;
   double *dlevels2 = NULL;
-  int index, varid;
   double level_sf = 1;
   int vlistID = streamptr->vlistID;
 
-  int *varids = (int *)xmalloc((size_t)nvars*sizeof(int));
-  for ( varID = 0; varID < nvars; varID++ ) varids[varID] = varID;
+  int *varids = (int *)xmalloc(nvars*sizeof(int));
+  for ( unsigned varID = 0; varID < nvars; varID++ ) varids[varID] = (int)varID;
 
   if ( streamptr->sortname )
     {
-      param_t **varInfo;
-      varInfo    = (param_t **)xmalloc((size_t)nvars * sizeof (param_t *));
-      varInfo[0] = (param_t *)xmalloc((size_t)nvars * sizeof (param_t));
+      param_t *varInfo = (param_t *)xmalloc((size_t)nvars * sizeof (param_t));
 
-      for ( int index = 1; index < nvars; index++ )
-	varInfo[index] = varInfo[0] + index;
-
-      for ( varid = 0; varid < nvars; varid++ )
+      for ( unsigned varID = 0; varID < nvars; varID++ )
 	{
-	  varInfo[varid]->varid = varids[varid];
-	  varInfo[varid]->param = vartable[varid].param;
-	  varInfo[varid]->ltype = vartable[varid].ltype1;
+	  varInfo[varID].varid = varids[varID];
+	  varInfo[varID].param = vartable[varID].param;
+	  varInfo[varID].ltype = vartable[varID].ltype1;
 	}
-      qsort(varInfo[0], (size_t)nvars, sizeof(param_t), cmpparam);
-      for ( varid = 0; varid < nvars; varid++ )
+      qsort(varInfo, (size_t)nvars, sizeof(param_t), cmpparam);
+      for ( unsigned varID = 0; varID < nvars; varID++ )
 	{
-	  varids[varid] = varInfo[varid]->varid;
+	  varids[varID] = varInfo[varID].varid;
 	}
-      free(varInfo[0]);
       free(varInfo);
     }
 
-  for ( index = 0; index < nvars; index++ )
+  for ( unsigned index = 0; index < nvars; index++ )
     {
-      varid      = varids[index];
+      int varid      = varids[index];
 
       gridID     = vartable[varid].gridID;
       param      = vartable[varid].param;
@@ -604,7 +585,7 @@ void cdi_generate_vars(stream_t *streamptr)
       if ( lbounds ) free(dlevels2);
       free(dlevels);
 
-      varID = stream_new_var(streamptr, gridID, zaxisID);
+      int varID = stream_new_var(streamptr, gridID, zaxisID);
       varID = vlistDefVar(vlistID, gridID, zaxisID, tsteptype);
 
       vlistDefVarParam(vlistID, varID, param);
@@ -692,10 +673,10 @@ void cdi_generate_vars(stream_t *streamptr)
       if ( tableID != UNDEFID ) vlistDefVarTable(vlistID, varID, tableID);
     }
 
-  for ( index = 0; index < nvars; index++ )
+  for ( unsigned index = 0; index < nvars; index++ )
     {
-      varID     = index;
-      varid     = varids[index];
+      int varID = (int)index;
+      int varid = varids[index];
 
       unsigned nlevels = vartable[varid].nlevels;
       /*
@@ -745,6 +726,25 @@ void varDefZAxisReference(int nhlev, int nvgrid, unsigned char uuid[CDI_UUID_SIZ
   memcpy(uuidVGrid, uuid, CDI_UUID_SIZE);
 }
 
+struct varDefGridSearchState
+{
+  int resIDValue;
+  const grid_t *queryKey;
+};
+
+static enum cdiApplyRet
+varDefGridSearch(int id, void *res, void *data)
+{
+  struct varDefGridSearchState *state = data;
+  (void)res;
+  if (gridCompare(id, state->queryKey) == 0)
+    {
+      state->resIDValue = id;
+      return CDI_APPLY_STOP;
+    }
+  else
+    return CDI_APPLY_GO_ON;
+}
 
 int varDefGrid(int vlistID, const grid_t *grid, int mode)
 {
@@ -754,19 +754,14 @@ int varDefGrid(int vlistID, const grid_t *grid, int mode)
    */
   int gridglobdefined = FALSE;
   int griddefined;
-  int ngrids;
   int gridID = CDI_UNDEFID;
-  int index;
-  vlist_t *vlistptr;
-  int * gridIndexList, i;
-
-  vlistptr = vlist_to_pointer(vlistID);
+  vlist_t *vlistptr = vlist_to_pointer(vlistID);
 
   griddefined = FALSE;
-  ngrids = vlistptr->ngrids;
+  unsigned ngrids = (unsigned)vlistptr->ngrids;
 
   if ( mode == 0 )
-    for ( index = 0; index < ngrids; index++ )
+    for (unsigned index = 0; index < ngrids; index++ )
       {
 	gridID = vlistptr->gridIDs[index];
 	if ( gridID == UNDEFID )
@@ -781,26 +776,14 @@ int varDefGrid(int vlistID, const grid_t *grid, int mode)
 
   if ( ! griddefined )
     {
-      ngrids = gridSize();
-      if ( ngrids > 0 )
-        {
-          gridIndexList = (int*)xmalloc((size_t)ngrids * sizeof(int));
-          gridGetIndexList ( ngrids, gridIndexList );
-          for ( i = 0; i < ngrids; i++ )
-            {
-              gridID = gridIndexList[i];
-              if ( gridCompare(gridID, grid) == 0 )
-                {
-                  gridglobdefined = TRUE;
-                  break;
-                }
-            }
-          if ( gridIndexList ) free ( gridIndexList );
-        }
+      struct varDefGridSearchState query = { .queryKey = grid };
+      if ((gridglobdefined
+           = (cdiResHFilterApply(&gridOps, varDefGridSearch, &query)
+              == CDI_APPLY_STOP)))
+        gridID = query.resIDValue;
 
-      ngrids = vlistptr->ngrids;
-      if ( mode == 1 )
-	for ( index = 0; index < ngrids; index++ )
+      if ( mode == 1 && gridglobdefined)
+	for (unsigned index = 0; index < ngrids; index++ )
 	  if ( vlistptr->gridIDs[index] == gridID )
 	    {
 	      gridglobdefined = FALSE;
@@ -811,7 +794,7 @@ int varDefGrid(int vlistID, const grid_t *grid, int mode)
   if ( ! griddefined )
     {
       if ( ! gridglobdefined ) gridID = gridGenerate(grid);
-      ngrids = vlistptr->ngrids;
+      ngrids = (unsigned)vlistptr->ngrids;
       vlistptr->gridIDs[ngrids] = gridID;
       vlistptr->ngrids++;
     }
@@ -866,6 +849,33 @@ int zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, const dou
   return (differ);
 }
 
+struct varDefZAxisSearchState
+{
+  int resIDValue;
+  int zaxistype;
+  int nlevels;
+  double *levels;
+  int lbounds;
+  char *longname, *units;
+  int ltype;
+};
+
+static enum cdiApplyRet
+varDefZAxisSearch(int id, void *res, void *data)
+{
+  struct varDefZAxisSearchState *state = data;
+  (void)res;
+  if (zaxisCompare(id, state->zaxistype, state->nlevels, state->lbounds,
+                   state->levels, state->longname, state->units, state->ltype)
+      == 0)
+    {
+      state->resIDValue = id;
+      return CDI_APPLY_STOP;
+    }
+  else
+    return CDI_APPLY_GO_ON;
+}
+
 
 int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbounds,
 		double *levels1, double *levels2, int vctsize, double *vct, char *name,
@@ -875,17 +885,15 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
     mode: 0 search in vlist and zaxis table
           1 search in zaxis table
    */
-  int zaxisdefined;
+  int zaxisdefined = 0;
   int nzaxis;
   int zaxisID = UNDEFID;
   int index;
   int zaxisglobdefined = 0;
   vlist_t *vlistptr;
-  int i;
 
   vlistptr = vlist_to_pointer(vlistID);
 
-  zaxisdefined = 0;
   nzaxis = vlistptr->nzaxis;
 
   if ( mode == 0 )
@@ -902,27 +910,22 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
 
   if ( ! zaxisdefined )
     {
-      nzaxis = zaxisSize();
-      if ( nzaxis > 0 )
-        {
-          int *zaxisIndexList;
-          zaxisIndexList = (int *)xmalloc((size_t)nzaxis * sizeof (int));
-          zaxisGetIndexList ( nzaxis, zaxisIndexList );
-          for ( i = 0; i < nzaxis; i++ )
-            {
-              zaxisID = zaxisIndexList[i];
-              if ( zaxisCompare(zaxisID, zaxistype, nlevels, lbounds, levels, longname, units, ltype1) == 0 )
-                {
-                  zaxisglobdefined = 1;
-                  break;
-                }
-            }
-          if ( zaxisIndexList ) free ( zaxisIndexList );
-        }
+      struct varDefZAxisSearchState query = {
+        .zaxistype = zaxistype,
+        .nlevels = nlevels,
+        .levels = levels,
+        .lbounds = lbounds,
+        .longname = longname,
+        .units = units,
+        .ltype = ltype1,
+      };
+      if ((zaxisglobdefined
+           = (cdiResHFilterApply(&zaxisOps, varDefZAxisSearch, &query)
+              == CDI_APPLY_STOP)))
+        zaxisID = query.resIDValue;
 
-      nzaxis = vlistptr->nzaxis;
-      if ( mode == 1 )
-	for ( index = 0; index < nzaxis; index++ )
+      if ( mode == 1 && zaxisglobdefined)
+	for (int index = 0; index < nzaxis; index++ )
 	  if ( vlistptr->zaxisIDs[index] == zaxisID )
 	    {
 	      zaxisglobdefined = FALSE;
@@ -959,7 +962,6 @@ int varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbo
 	  zaxisDefLtype(zaxisID, ltype1);
 	}
 
-      nzaxis = vlistptr->nzaxis;
       vlistptr->zaxisIDs[nzaxis] = zaxisID;
       vlistptr->nzaxis++;
     }

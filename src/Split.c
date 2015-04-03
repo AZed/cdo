@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,19 @@
 #include "cdo_int.h"
 #include "pstream.h"
 
+void create_uuid(unsigned char uuid[CDI_UUID_SIZE]);
+void uuid2str(const unsigned char *uuid, char *uuidstr);
+
+
+#define UUIDSTR_SIZE (CDI_UUID_SIZE*2 + 4)
+
+static
+void get_uuid(char uuidstr[UUIDSTR_SIZE])
+{
+  unsigned char uuid[CDI_UUID_SIZE];
+  create_uuid(uuid);
+  uuid2str(uuid, uuidstr);
+}
 
 static
 void gen_filename(char *filename, int swap_obase, const char *obase, const char *suffix)
@@ -44,16 +57,13 @@ void gen_filename(char *filename, int swap_obase, const char *obase, const char 
 
 void *Split(void *argument)
 {
-  int SPLITCODE, SPLITPARAM, SPLITNAME, SPLITLEVEL, SPLITGRID, SPLITZAXIS, SPLITTABNUM;
-  int operatorID;
   int nchars = 0;
-  int streamID1;
   int varID;
   int code, tabnum, param;
-  int nrecs, nvars, nzaxis, nlevs;
-  int tsID, recID, levelID, zaxisID, levID;
+  int nlevs;
+  int recID, levelID, zaxisID, levID;
   int varID2, levelID2;
-  int vlistID1, vlistID2;
+  int vlistID2;
   int *vlistIDs = NULL, *streamIDs = NULL;
   int  itmp[999];
   double ftmp[999];
@@ -67,36 +77,40 @@ void *Split(void *argument)
   int gridsize;
   int nmiss;
   int swap_obase = FALSE;
-  double *array = NULL;
+  const char *uuid_attribute = NULL;
 
   cdoInitialize(argument);
 
   if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
 
-  SPLITCODE   = cdoOperatorAdd("splitcode",   0, 0, NULL);
-  SPLITPARAM  = cdoOperatorAdd("splitparam",  0, 0, NULL);
-  SPLITNAME   = cdoOperatorAdd("splitname",   0, 0, NULL);
-  SPLITLEVEL  = cdoOperatorAdd("splitlevel",  0, 0, NULL);
-  SPLITGRID   = cdoOperatorAdd("splitgrid",   0, 0, NULL);
-  SPLITZAXIS  = cdoOperatorAdd("splitzaxis",  0, 0, NULL);
-  SPLITTABNUM = cdoOperatorAdd("splittabnum", 0, 0, NULL);
+  int SPLITCODE   = cdoOperatorAdd("splitcode",   0, 0, NULL);
+  int SPLITPARAM  = cdoOperatorAdd("splitparam",  0, 0, NULL);
+  int SPLITNAME   = cdoOperatorAdd("splitname",   0, 0, NULL);
+  int SPLITLEVEL  = cdoOperatorAdd("splitlevel",  0, 0, NULL);
+  int SPLITGRID   = cdoOperatorAdd("splitgrid",   0, 0, NULL);
+  int SPLITZAXIS  = cdoOperatorAdd("splitzaxis",  0, 0, NULL);
+  int SPLITTABNUM = cdoOperatorAdd("splittabnum", 0, 0, NULL);
 
-  operatorID = cdoOperatorID();
+  int operatorID = cdoOperatorID();
 
-  if ( operatorArgc() == 1 )
-    if ( memcmp("swap", operatorArgv()[0], 4) == 0 ) swap_obase = TRUE;
-
-  if ( operatorArgc() > 1 ) cdoAbort("Too many arguments!");
+  for( i = 0; i < operatorArgc(); ++i )
+    {
+      if ( strcmp("swap", operatorArgv()[i]) == 0 )
+          swap_obase = TRUE;
+      else if ( strncmp("uuid=", operatorArgv()[i], 5 ) == 0 )
+          uuid_attribute = operatorArgv()[i] + 5;
+      else cdoAbort("Unknown parameter: >%s<", operatorArgv()[0]); 
+    }
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
+  int vlistID1 = streamInqVlist(streamID1);
 
-  nvars  = vlistNvars(vlistID1);
-  nrecs  = vlistNrecs(vlistID1);
-  nzaxis = vlistNzaxis(vlistID1);
+  int nvars  = vlistNvars(vlistID1);
+  int nrecs  = vlistNrecs(vlistID1);
+  int nzaxis = vlistNzaxis(vlistID1);
 
   if ( swap_obase == 0 )
     {
@@ -171,8 +185,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
       if ( codes ) free(codes);
     }
@@ -230,8 +242,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
       if ( params ) free(params);
     }
@@ -284,8 +294,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistIDs[index]);
 	}
       if ( tabnums ) free(tabnums);
     }
@@ -321,8 +329,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistID2);
 	}
     }
   else if ( operatorID == SPLITLEVEL )
@@ -376,8 +382,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistID2);
 	}
       if ( levels ) free(levels);
     }
@@ -421,8 +425,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistID2);
 	}
       if ( gridIDs ) free(gridIDs);
     }
@@ -465,8 +467,6 @@ void *Split(void *argument)
 	  argument_t *fileargument = file_argument_new(filename);
 	  streamIDs[index] = streamOpenWrite(fileargument, cdoFiletype());
 	  file_argument_free(fileargument);
-
-	  streamDefVlist(streamIDs[index], vlistID2);
 	}
       if ( zaxisIDs ) free(zaxisIDs);
     }
@@ -475,14 +475,28 @@ void *Split(void *argument)
       cdoAbort("not implemented!");
     }
 
+  for ( index = 0; index < nsplit; index++ )
+    {
+      if ( uuid_attribute )
+        {
+          char uuidstr[UUIDSTR_SIZE];
+          get_uuid(uuidstr);
+          vlistDefAttTxt(vlistIDs[index], CDI_GLOBAL, uuid_attribute, 
+                         UUIDSTR_SIZE, uuidstr);
+        }
+
+      streamDefVlist(streamIDs[index], vlistIDs[index]);
+    }
+
+  double *array = NULL;
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-      array = (double*) malloc(gridsize*sizeof(double));
+      array = (double *) malloc(gridsize*sizeof(double));
     }
 
-  tsID = 0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       for ( index = 0; index < nsplit; index++ )

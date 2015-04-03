@@ -88,12 +88,6 @@ void instituteDefaultEntries ( void )
 }
 
 
-int instituteCount ( void )
-{
-  return reshCountType ( &instituteOps );
-}
-
-
 static int
 instituteCompareKernel(institute_t *  ip1, institute_t * ip2)
 {

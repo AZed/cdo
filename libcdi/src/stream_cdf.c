@@ -208,20 +208,29 @@ int isTimeAxisUnits(const char *timeunits)
 static
 void scanTimeString(const char *ptu, int *rdate, int *rtime)
 {
-  int year, month, day;
+  int year = 1, month = 1, day = 1;
   int hour = 0, minute = 0, second = 0;
-  int v1, v2, v3;
+  int v1 = 1, v2 = 1, v3 = 1;
 
   *rdate = 0;
   *rtime = 0;
 
-  v1 = atoi(ptu);
-  if ( v1 < 0 ) ptu++;
-  while ( isdigit((int) *ptu) ) ptu++;
-  v2 = atoi(++ptu);
-  while ( isdigit((int) *ptu) ) ptu++;
-  v3 = atoi(++ptu);
-  while ( isdigit((int) *ptu) ) ptu++;
+  if ( *ptu )
+    {
+      v1 = atoi(ptu);
+      if ( v1 < 0 ) ptu++;
+      while ( isdigit((int) *ptu) ) ptu++;
+      if ( *ptu )
+        {
+          v2 = atoi(++ptu);
+          while ( isdigit((int) *ptu) ) ptu++;
+          if ( *ptu )
+            {
+              v3 = atoi(++ptu);
+              while ( isdigit((int) *ptu) ) ptu++;
+            }
+        }
+    }
 
   if ( v3 > 999 && v1 < 32 )
     { year = v3; month = v2; day = v1; }
@@ -360,44 +369,60 @@ int setBaseTime(const char *timeunits, taxis_t *taxis)
 static
 void cdfGetAttInt(int fileID, int ncvarid, char *attname, int attlen, int *attint)
 {
+  nc_type atttype;
   size_t nc_attlen;
-  int *pintatt;
 
+  *attint = 0;
+
+  cdf_inq_atttype(fileID, ncvarid, attname, &atttype);
   cdf_inq_attlen(fileID, ncvarid, attname, &nc_attlen);
 
-  if ( (int)nc_attlen > attlen )
-    pintatt = (int *) malloc(nc_attlen * sizeof (int));
-  else
-    pintatt = attint;
-
-  cdf_get_att_int(fileID, ncvarid, attname, pintatt);
-
-  if ( (int)nc_attlen > attlen )
+  if ( atttype != NC_CHAR )
     {
-      memcpy(attint, pintatt, (size_t)attlen * sizeof (int));
-      free(pintatt);
+      int *pintatt = NULL;
+
+      if ( (int)nc_attlen > attlen )
+        pintatt = (int *) malloc(nc_attlen * sizeof (int));
+      else
+        pintatt = attint;
+
+      cdf_get_att_int(fileID, ncvarid, attname, pintatt);
+
+      if ( (int)nc_attlen > attlen )
+        {
+          memcpy(attint, pintatt, (size_t)attlen * sizeof (int));
+          free(pintatt);
+        }
     }
 }
 
 static
 void cdfGetAttDouble(int fileID, int ncvarid, char *attname, int attlen, double *attdouble)
 {
+  nc_type atttype;
   size_t nc_attlen;
-  double *pdoubleatt;
 
+  *attdouble = 0;
+
+  cdf_inq_atttype(fileID, ncvarid, attname, &atttype);
   cdf_inq_attlen(fileID, ncvarid, attname, &nc_attlen);
 
-  if ( (int)nc_attlen > attlen )
-    pdoubleatt = (double *) malloc(nc_attlen * sizeof (double));
-  else
-    pdoubleatt = attdouble;
-
-  cdf_get_att_double(fileID, ncvarid, attname, pdoubleatt);
-
-  if ( (int)nc_attlen > attlen )
+  if ( atttype != NC_CHAR )
     {
-      memcpy(attdouble, pdoubleatt, (size_t)attlen * sizeof (double));
-      free(pdoubleatt);
+      double *pdoubleatt = NULL;
+
+      if ( (int)nc_attlen > attlen )
+        pdoubleatt = (double *) malloc(nc_attlen * sizeof (double));
+      else
+        pdoubleatt = attdouble;
+
+      cdf_get_att_double(fileID, ncvarid, attname, pdoubleatt);
+
+      if ( (int)nc_attlen > attlen )
+        {
+          memcpy(attdouble, pdoubleatt, (size_t)attlen * sizeof (double));
+          free(pdoubleatt);
+        }
     }
 }
 
@@ -417,9 +442,9 @@ void cdfGetAttText(int fileID, int ncvarid, char *attname, int attlen, char *att
         {
           cdf_get_att_text(fileID, ncvarid, attname, attbuf);
 
-          attbuf[nc_attlen++] = 0;
+          if ( (int) nc_attlen > (attlen-1) ) nc_attlen = (size_t)(attlen-1);
 
-          if ( (int) nc_attlen > attlen ) nc_attlen = (size_t)attlen;
+          attbuf[nc_attlen++] = 0;
           memcpy(atttext, attbuf, nc_attlen);
         }
       else
@@ -599,13 +624,15 @@ void defineAttributes(int vlistID, int varID, int fileID, int ncvarID)
   free(attBuf);
 }
 
+
 void cdfCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
 {
   int memtype  = MEMTYPE_DOUBLE;
   int vlistID1 = streamptr1->vlistID;
-  int tsID1    = streamptr1->curTsID;
-  int recID1   = streamptr1->tsteps[tsID1].curRecID;
-  int ivarID   = streamptr1->tsteps[tsID1].records[recID1].varID;
+  int tsID     = streamptr1->curTsID;
+  int vrecID   = streamptr1->tsteps[tsID].curRecID;
+  int recID    = streamptr1->tsteps[tsID].recIDs[vrecID];
+  int ivarID   = streamptr1->tsteps[tsID].records[recID].varID;
   int gridID   = vlistInqVarGrid(vlistID1, ivarID);
   int datasize = gridInqSize(gridID);
 
@@ -867,8 +894,8 @@ int cdfDefTimeBounds(int fileID, int nctimevarid, int nctimedimid, char* taxis_n
 
   /* fprintf(stderr, "time has bounds\n"); */
 
-  if ( nc_inq_dimid(fileID, "nb2", &dims[1]) != NC_NOERR )
-    cdf_def_dim(fileID, "nb2", 2, &dims[1]);
+  if ( nc_inq_dimid(fileID, "bnds", &dims[1]) != NC_NOERR )
+    cdf_def_dim(fileID, "bnds", 2, &dims[1]);
 
   if ( taxis->climatology )
     {
@@ -1483,8 +1510,8 @@ void cdfDefXaxis(stream_t *streamptr, int gridID, int ndims)
           if ( gridInqXboundsPtr(gridID) || gridInqYboundsPtr(gridID) )
             {
               size_t nvertex = 2;
-              if ( nc_inq_dimid(fileID, "nb2", &nvdimID) != NC_NOERR )
-                cdf_def_dim(fileID, "nb2", nvertex, &nvdimID);
+              if ( nc_inq_dimid(fileID, "bnds", &nvdimID) != NC_NOERR )
+                cdf_def_dim(fileID, "bnds", nvertex, &nvdimID);
             }
         }
 
@@ -1613,8 +1640,8 @@ void cdfDefYaxis(stream_t *streamptr, int gridID, int ndims)
           if ( gridInqXboundsPtr(gridID) || gridInqYboundsPtr(gridID) )
             {
               size_t nvertex = 2;
-              if ( nc_inq_dimid(fileID, "nb2", &nvdimID) != NC_NOERR )
-                cdf_def_dim(fileID, "nb2", nvertex, &nvdimID);
+              if ( nc_inq_dimid(fileID, "bnds", &nvdimID) != NC_NOERR )
+                cdf_def_dim(fileID, "bnds", nvertex, &nvdimID);
             }
         }
 
@@ -1769,8 +1796,8 @@ void cdfDefCurvilinear(stream_t *streamptr, int gridID)
       if ( gridInqXboundsPtr(gridID) || gridInqYboundsPtr(gridID) )
         {
           size_t nvertex = 4;
-          if ( nc_inq_dimid(fileID, "nv4", &nvdimID) != NC_NOERR )
-            cdf_def_dim(fileID, "nv4", nvertex, &nvdimID);
+          if ( nc_inq_dimid(fileID, "vertices", &nvdimID) != NC_NOERR )
+            cdf_def_dim(fileID, "vertices", nvertex, &nvdimID);
         }
 
       dimIDs[0] = ydimID;
@@ -1793,7 +1820,7 @@ void cdfDefCurvilinear(stream_t *streamptr, int gridID)
 
           if ( gridInqXboundsPtr(gridID) && nvdimID != UNDEFID )
             {
-              strcat(xaxisname, "_bnds");
+              strcat(xaxisname, "_vertices");
               dimIDs[0] = ydimID;
               dimIDs[1] = xdimID;
               dimIDs[2] = nvdimID;
@@ -1821,7 +1848,7 @@ void cdfDefCurvilinear(stream_t *streamptr, int gridID)
 
           if ( gridInqYboundsPtr(gridID) && nvdimID != UNDEFID )
             {
-              strcat(yaxisname, "_bnds");
+              strcat(yaxisname, "_vertices");
               dimIDs[0] = ydimID;
               dimIDs[1] = xdimID;
               dimIDs[2] = nvdimID;
@@ -2144,7 +2171,7 @@ void cdfDefUnstructured(stream_t *streamptr, int gridID)
       char axisname[CDI_MAX_NAME];
       char vertname[CDI_MAX_NAME];
       strcpy(axisname, "ncells");
-      strcpy(vertname, "nv");
+      strcpy(vertname, "vertices");
 
       checkGridName('V', xaxisname, fileID, vlistID, gridID, ngrids, 'X');
       checkGridName('V', yaxisname, fileID, vlistID, gridID, ngrids, 'Y');
@@ -2549,8 +2576,8 @@ void cdfDefZaxis(stream_t *streamptr, int zaxisID)
 	  if ( zaxisInqLbounds(zaxisID, NULL) && zaxisInqUbounds(zaxisID, NULL) )
             {
               size_t nvertex = 2;
-	      if ( nc_inq_dimid(fileID, "nb2", &nvdimID) != NC_NOERR )
-		cdf_def_dim(fileID, "nb2", nvertex, &nvdimID);
+	      if ( nc_inq_dimid(fileID, "bnds", &nvdimID) != NC_NOERR )
+		cdf_def_dim(fileID, "bnds", nvertex, &nvdimID);
 
 	      if ( nvdimID != UNDEFID )
 		{
@@ -3383,12 +3410,11 @@ size_t cdfDoInputDataTransformationDP(size_t valueCount, double *data, bool have
   const bool haveOffset   = IS_NOT_EQUAL(offset, 0);
   const bool haveScaleFactor = IS_NOT_EQUAL(scaleFactor, 1);
   size_t missValCount = 0;
-  if (validMin == VALIDMISS)
-    validMin = DBL_MIN;
-  if (validMax == VALIDMISS)
-    validMax = DBL_MAX;
 
-  bool haveRangeCheck = (validMax != DBL_MAX) | (validMin != DBL_MIN);
+  if ( IS_EQUAL(validMin, VALIDMISS) ) validMin = DBL_MIN;
+  if ( IS_EQUAL(validMax, VALIDMISS) ) validMax = DBL_MAX;
+
+  bool haveRangeCheck = (IS_NOT_EQUAL(validMax, DBL_MAX)) | (IS_NOT_EQUAL(validMin,DBL_MIN));
   assert(!haveRangeCheck || haveMissVal);
 
   switch ((int)haveMissVal | ((int)haveScaleFactor << 1)
@@ -3482,12 +3508,10 @@ size_t cdfDoInputDataTransformationSP(size_t valueCount, float *data, bool haveM
   const bool haveScaleFactor = IS_NOT_EQUAL(scaleFactor, 1);
   size_t missValCount = 0;
 
-  if (validMin == VALIDMISS)
-    validMin = DBL_MIN;
-  if (validMax == VALIDMISS)
-    validMax = DBL_MAX;
+  if ( IS_EQUAL(validMin, VALIDMISS) ) validMin = DBL_MIN;
+  if ( IS_EQUAL(validMax, VALIDMISS) ) validMax = DBL_MAX;
 
-  bool haveRangeCheck = (validMax != DBL_MAX) | (validMin != DBL_MIN);
+  bool haveRangeCheck = (IS_NOT_EQUAL(validMax, DBL_MAX)) | (IS_NOT_EQUAL(validMin,DBL_MIN));
   assert(!haveRangeCheck || haveMissVal);
 
   switch ((int)haveMissVal | ((int)haveScaleFactor << 1)
@@ -4442,37 +4466,37 @@ static
 void cdfCreateRecords(stream_t *streamptr, int tsID)
 {
   int varID, levelID, recID, vrecID, zaxisID;
-  int nvars, nlev, nrecs, nvrecs;
-  record_t *records = NULL;
-  int *recIDs = NULL;
-  int vlistID;
+  int nlev, nvrecs;
 
-  vlistID  = streamptr->vlistID;
+  int vlistID  = streamptr->vlistID;
 
   if ( tsID < 0 || (tsID >= streamptr->ntsteps && tsID > 0) ) return;
 
   if ( streamptr->tsteps[tsID].nallrecs > 0 ) return;
 
+  tsteps_t* sourceTstep = streamptr->tsteps;
+  tsteps_t* destTstep = sourceTstep + tsID;
+
+  int nvars = vlistNvars(vlistID);
+  int nrecs = vlistNrecs(vlistID);
+
+  if ( nrecs <= 0 ) return;
+
   if ( tsID == 0 )
     {
-      nvars = vlistNvars(vlistID);
-      nrecs = vlistNrecs(vlistID);
+      nvrecs = nrecs; /* use all records at first timestep */
 
       streamptr->nrecs += nrecs;
 
-      if ( nrecs > 0 )
-        records = (record_t *)xmalloc((size_t)nrecs * sizeof (record_t));
-      streamptr->tsteps[tsID].records    = records;
-      streamptr->tsteps[tsID].nrecs      = nrecs;
-      streamptr->tsteps[tsID].nallrecs   = nrecs;
-      streamptr->tsteps[tsID].recordSize = nrecs;
-      streamptr->tsteps[tsID].curRecID   = UNDEFID;
+      destTstep->records    = (record_t *)xmalloc((size_t)nrecs*sizeof(record_t));
+      destTstep->nrecs      = nrecs;
+      destTstep->nallrecs   = nrecs;
+      destTstep->recordSize = nrecs;
+      destTstep->curRecID   = UNDEFID;
+      destTstep->recIDs     = (int *)xmalloc((size_t)nvrecs*sizeof (int));;
+      for ( recID = 0; recID < nvrecs; recID++ ) destTstep->recIDs[recID] = recID;
 
-      nvrecs = nrecs; /* use all records at first timestep */
-      if ( nvrecs > 0 ) recIDs = (int *)xmalloc((size_t)nvrecs * sizeof (int));
-      streamptr->tsteps[tsID].recIDs     = recIDs;
-      for ( recID = 0; recID < nvrecs; recID++ )
-        recIDs[recID] = recID;
+      record_t *records = destTstep->records;
 
       recID = 0;
       for ( varID = 0; varID < nvars; varID++ )
@@ -4490,9 +4514,6 @@ void cdfCreateRecords(stream_t *streamptr, int tsID)
     }
   else if ( tsID == 1 )
     {
-      nvars = vlistNvars(vlistID);
-      nrecs = vlistNrecs(vlistID);
-
       nvrecs = 0;
       for ( varID = 0; varID < nvars; varID++ )
         {
@@ -4505,58 +4526,47 @@ void cdfCreateRecords(stream_t *streamptr, int tsID)
 
       streamptr->nrecs += nvrecs;
 
-      records = (record_t *) malloc((size_t)nrecs * sizeof (record_t));
-      streamptr->tsteps[tsID].records    = records;
-      streamptr->tsteps[tsID].nrecs      = nvrecs;
-      streamptr->tsteps[tsID].nallrecs   = nrecs;
-      streamptr->tsteps[tsID].recordSize = nrecs;
-      streamptr->tsteps[tsID].curRecID   = UNDEFID;
+      destTstep->records    = (record_t *) xmalloc((size_t)nrecs*sizeof(record_t));
+      destTstep->nrecs      = nvrecs;
+      destTstep->nallrecs   = nrecs;
+      destTstep->recordSize = nrecs;
+      destTstep->curRecID   = UNDEFID;
 
-      memcpy(streamptr->tsteps[tsID].records,
-             streamptr->tsteps[0].records,
-             (size_t)nrecs * sizeof (record_t));
+      memcpy(destTstep->records, sourceTstep->records, (size_t)nrecs*sizeof(record_t));
 
       if ( nvrecs )
         {
-          recIDs = (int *) malloc((size_t)nvrecs * sizeof (int));
-          streamptr->tsteps[tsID].recIDs     = recIDs;
+          destTstep->recIDs = (int *) xmalloc((size_t)nvrecs * sizeof (int));
           vrecID = 0;
           for ( recID = 0; recID < nrecs; recID++ )
             {
-              varID = records[recID].varID;
+              varID = destTstep->records[recID].varID;
               if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
                 {
-                  recIDs[vrecID++] = recID;
+                  destTstep->recIDs[vrecID++] = recID;
                 }
             }
         }
     }
   else
     {
-      nvars = vlistNvars(vlistID);
-      nrecs = vlistNrecs(vlistID);
+      if ( streamptr->tsteps[1].records == 0 ) cdfCreateRecords(streamptr, 1);
 
       nvrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->nrecs += nvrecs;
 
-      records = (record_t *)xmalloc((size_t)nrecs * sizeof (record_t));
-      streamptr->tsteps[tsID].records    = records;
-      streamptr->tsteps[tsID].nrecs      = nvrecs;
-      streamptr->tsteps[tsID].nallrecs   = nrecs;
-      streamptr->tsteps[tsID].recordSize = nrecs;
-      streamptr->tsteps[tsID].curRecID   = UNDEFID;
+      destTstep->records    = (record_t *) xmalloc((size_t)nrecs*sizeof(record_t));
+      destTstep->nrecs      = nvrecs;
+      destTstep->nallrecs   = nrecs;
+      destTstep->recordSize = nrecs;
+      destTstep->curRecID   = UNDEFID;
 
-      memcpy(streamptr->tsteps[tsID].records,
-             streamptr->tsteps[0].records,
-             (size_t)nrecs * sizeof (record_t));
+      memcpy(destTstep->records, sourceTstep->records, (size_t)nrecs*sizeof(record_t));
 
-      recIDs = (int *) malloc((size_t)nvrecs * sizeof(int));
-      streamptr->tsteps[tsID].recIDs     = recIDs;
+      destTstep->recIDs     = (int *) xmalloc((size_t)nvrecs * sizeof(int));
 
-      memcpy(streamptr->tsteps[tsID].recIDs,
-             streamptr->tsteps[1].recIDs,
-             (size_t)nvrecs * sizeof (int));
+      memcpy(destTstep->recIDs, streamptr->tsteps[1].recIDs, (size_t)nvrecs*sizeof(int));
     }
 }
 
@@ -5000,7 +5010,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
                   for ( int i = 0; i < nvdims; ++i ) ncvars[ncvarid].chunks[i] = (int)chunks[i];
                   if ( CDI_Debug )
                     {
-                      fprintf(stderr, "\nchunking %d %d %d\nchunks ", storage_in, NC_CONTIGUOUS, NC_CHUNKED);
+                      fprintf(stderr, "%s: chunking %d %d %d  chunks ", name, storage_in, NC_CONTIGUOUS, NC_CHUNKED);
                       for ( int i = 0; i < nvdims; ++i ) fprintf(stderr, "%ld ", chunks[i]);
                       fprintf(stderr, "\n");
                     }
@@ -5087,13 +5097,13 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "trunc_type") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               if ( memcmp(attstring, "Triangular", attlen) == 0 )
                 ncvars[ncvarid].gridtype = GRID_SPECTRAL;
             }
           else if ( strcmp(attname, "grid_type") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               strtolower(attstring);
 
               if      ( strcmp(attstring, "gaussian reduced") == 0 )
@@ -5136,7 +5146,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "level_type") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               strtolower(attstring);
 
               if      ( strcmp(attstring, "toa") == 0 )
@@ -5209,7 +5219,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             {
               int status, ncboundsid;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 
               status = nc_inq_varid(ncid, attstring, &ncboundsid);
 
@@ -5227,7 +5237,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             {
               int status, ncboundsid;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 
               status = nc_inq_varid(ncid, attstring, &ncboundsid);
 
@@ -5244,7 +5254,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             {
               char *pstring, *cell_measures = NULL, *cell_var = NULL;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               pstring = attstring;
 
               while ( isspace((int) *pstring) ) pstring++;
@@ -5285,7 +5295,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             {
               char *pstring, *xvarname = NULL, *yvarname = NULL;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               pstring = attstring;
 
               while ( isspace((int) *pstring) ) pstring++;
@@ -5313,7 +5323,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
               int dimvarid;
               extern int cdiIgnoreAttCoordinates;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               pstring = attstring;
 
               for ( i = 0; i < MAX_COORDVARS; i++ )
@@ -5351,7 +5361,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
               int dimvarid;
               extern int cdiIgnoreAttCoordinates;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               pstring = attstring;
 
               for ( i = 0; i < MAX_AUXVARS; i++ )
@@ -5386,7 +5396,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
               int status;
               int nc_gmap_id;
 
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 
               status = nc_inq_varid(ncid, attstring, &nc_gmap_id);
               if ( status == NC_NOERR )
@@ -5401,7 +5411,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "positive") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               strtolower(attstring);
 
               if    ( memcmp(attstring, "down", 4) == 0 ) ncvars[ncvarid].positive = POSITIVE_DOWN;
@@ -5485,7 +5495,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "_Unsigned") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
               strtolower(attstring);
 
               if ( memcmp(attstring, "true", 4) == 0 )
@@ -5501,7 +5511,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "cdi") == 0 && xtypeIsText(atttype) )
             {
-	      cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+	      cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 	      strtolower(attstring);
 
 	      if ( memcmp(attstring, "ignore", 6) == 0 )
@@ -5512,7 +5522,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
             }
           else if ( strcmp(attname, "axis") == 0 && xtypeIsText(atttype) )
             {
-              cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+              cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 	      attlen = strlen(attstring);
 
 	      if ( (int) attlen > nvdims )
@@ -5624,7 +5634,7 @@ void cdfScanVarAttributes(int nvars, ncvar_t *ncvars, ncdim_t *ncdims,
 		}
 	      else if ( attrtype == NC_CHAR )
 		{
-		  cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+		  cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 		  attstring[attlen] = 0;
 		  printf("txt: %s.%s = %s\n", ncvars[ncvarid].name, attname, attstring);
 		}
@@ -6414,7 +6424,7 @@ void define_all_grids(stream_t *streamptr, int vlistID, ncdim_t *ncdims, int nva
                       };
                       char attstring[attstringlen];
 
-		      cdfGetAttText(ncvars[ncvarid].ncid, ncvars[ncvarid].gmapid, attname, attstringlen-1, attstring);
+		      cdfGetAttText(ncvars[ncvarid].ncid, ncvars[ncvarid].gmapid, attname, attstringlen, attstring);
 		      strtolower(attstring);
 
 		      if ( strcmp(attstring, "rotated_latitude_longitude") == 0 )
@@ -7010,7 +7020,7 @@ void define_all_vars(stream_t *streamptr, int vlistID, int instID, int modelID, 
 		}
 	      else if ( xtypeIsText(attrtype) )
 		{
-		  cdfGetAttText(ncid, ncvarid, attname, attstringlen-1, attstring);
+		  cdfGetAttText(ncid, ncvarid, attname, attstringlen, attstring);
 		  vlistDefAttTxt(vlistID, varID, attname, (int)attlen, attstring);
 		}
 	      else
@@ -7108,9 +7118,7 @@ void scan_global_attributes(int fileID, int vlistID, stream_t *streamptr, int ng
   nc_type xtype;
   size_t attlen;
   char attname[CDI_MAX_NAME];
-  enum {
-    attstringlen = 8192,
-  };
+  enum { attstringlen = 65636 };
   char attstring[attstringlen];
   int iatt;
 
@@ -7122,7 +7130,7 @@ void scan_global_attributes(int fileID, int vlistID, stream_t *streamptr, int ng
 
       if ( xtypeIsText(xtype) )
 	{
-	  cdfGetAttText(fileID, NC_GLOBAL, attname, attstringlen-1, attstring);
+	  cdfGetAttText(fileID, NC_GLOBAL, attname, attstringlen, attstring);
 
           size_t attstrlen = strlen(attstring);
 
@@ -7790,7 +7798,7 @@ int cdfInqContents(stream_t *streamptr)
         };
         char attstring[attstringlen];
 
-	cdfGetAttText(fileID, ncvarid, "calendar", attstringlen-1, attstring);
+	cdfGetAttText(fileID, ncvarid, "calendar", attstringlen, attstring);
 	strtolower(attstring);
 
 	if ( memcmp(attstring, "standard", 8)  == 0 ||

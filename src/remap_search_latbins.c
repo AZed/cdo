@@ -156,15 +156,15 @@ void calc_lat_bins(remapgrid_t* src_grid, remapgrid_t* tgt_grid, int map_type)
 }
 
 
-long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr2,
+long get_srch_cells(long tgt_cell_add, long nbins, int *bin_addr1, int *bin_addr2,
 		    restr_t *tgt_cell_bound_box, restr_t *src_cell_bound_box, long src_grid_size, int *srch_add)
 {
   long num_srch_cells;  /* num cells in restricted search arrays   */
   long min_add;         /* addresses for restricting search of     */
   long max_add;         /* destination grid                        */
   long n, n2;           /* generic counters                        */
-  long src_grid_add;    /* current linear address for src cell     */
-  long src_grid_addm4;
+  long src_cell_add;    /* current linear address for src cell     */
+  long src_cell_addm4;
   restr_t bound_box_lat1, bound_box_lat2, bound_box_lon1, bound_box_lon2;
 
   /* Restrict searches first using search bins */
@@ -175,7 +175,7 @@ long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr
   for ( n = 0; n < nbins; ++n )
     {
       n2 = n<<1;
-      if ( tgt_grid_add >= bin_addr1[n2] && tgt_grid_add <= bin_addr1[n2+1] )
+      if ( tgt_cell_add >= bin_addr1[n2] && tgt_cell_add <= bin_addr1[n2+1] )
 	{
 	  if ( bin_addr2[n2  ] < min_add ) min_add = bin_addr2[n2  ];
 	  if ( bin_addr2[n2+1] > max_add ) max_add = bin_addr2[n2+1];
@@ -190,16 +190,16 @@ long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr
   bound_box_lon2 = tgt_cell_bound_box[3];
 
   num_srch_cells = 0;
-  for ( src_grid_add = min_add; src_grid_add <= max_add; ++src_grid_add )
+  for ( src_cell_add = min_add; src_cell_add <= max_add; ++src_cell_add )
     {
-      src_grid_addm4 = src_grid_add<<2;
-      if ( (src_cell_bound_box[src_grid_addm4+2] <= bound_box_lon2)  &&
-	   (src_cell_bound_box[src_grid_addm4+3] >= bound_box_lon1) )
+      src_cell_addm4 = src_cell_add<<2;
+      if ( (src_cell_bound_box[src_cell_addm4+2] <= bound_box_lon2)  &&
+	   (src_cell_bound_box[src_cell_addm4+3] >= bound_box_lon1) )
 	{
-	  if ( (src_cell_bound_box[src_grid_addm4  ] <= bound_box_lat2)  &&
-	       (src_cell_bound_box[src_grid_addm4+1] >= bound_box_lat1) )
+	  if ( (src_cell_bound_box[src_cell_addm4  ] <= bound_box_lat2)  &&
+	       (src_cell_bound_box[src_cell_addm4+1] >= bound_box_lat1) )
 	    {
-	      srch_add[num_srch_cells] = src_grid_add;
+	      srch_add[num_srch_cells] = src_cell_add;
 	      num_srch_cells++;
 	    }
 	}
@@ -218,22 +218,22 @@ long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr
 	  bound_box_lon2 -= RESTR_SCALE(PI2);
 	}
 
-      for ( src_grid_add = min_add; src_grid_add <= max_add; ++src_grid_add )
+      for ( src_cell_add = min_add; src_cell_add <= max_add; ++src_cell_add )
 	{
-	  src_grid_addm4 = src_grid_add<<2;
-	  if ( (src_cell_bound_box[src_grid_addm4+2] <= bound_box_lon2)  &&
-	       (src_cell_bound_box[src_grid_addm4+3] >= bound_box_lon1) )
+	  src_cell_addm4 = src_cell_add<<2;
+	  if ( (src_cell_bound_box[src_cell_addm4+2] <= bound_box_lon2)  &&
+	       (src_cell_bound_box[src_cell_addm4+3] >= bound_box_lon1) )
 	    {
-	      if ( (src_cell_bound_box[src_grid_addm4  ] <= bound_box_lat2)  &&
-		   (src_cell_bound_box[src_grid_addm4+1] >= bound_box_lat1) )
+	      if ( (src_cell_bound_box[src_cell_addm4  ] <= bound_box_lat2)  &&
+		   (src_cell_bound_box[src_cell_addm4+1] >= bound_box_lat1) )
 		{
 		  long ii;
 		  for ( ii = 0; ii < num_srch_cells; ++ii )
-		    if ( srch_add[ii] == src_grid_add ) break;
+		    if ( srch_add[ii] == src_cell_add ) break;
 		  
 		  if ( ii == num_srch_cells )
 		    {
-		      srch_add[num_srch_cells] = src_grid_add;
+		      srch_add[num_srch_cells] = src_cell_add;
 		      num_srch_cells++;
 		    }
 		}

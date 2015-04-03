@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -58,8 +58,8 @@ void *Harmonic(void *argument)
 
   operatorCheckArgc(2);
 
-  n_out = atoi(operatorArgv()[0]);
-  n     = atoi(operatorArgv()[1]);
+  n_out = parameter2int(operatorArgv()[0]);
+  n     = parameter2int(operatorArgv()[1]);
 
   if ( n_out > 9 ) cdoAbort("Maximum number of wave numbers is 9!");
 

@@ -148,6 +148,9 @@ void legini(int ntr, int nlat, double *poli, double *pold, double *rcoslat)
 #if defined(SX)
 #pragma vdir nodep
 #endif
+#if defined(HAVE_OPENMP4)
+#pragma omp simd
+#endif
 	  for ( jn = 0; jn < waves - jm; jn++ )
 	    {
 	      is = (jn+1)%2 * 2 - 1;

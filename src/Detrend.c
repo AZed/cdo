@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -65,30 +65,6 @@ void detrend(long nts, double missval1, double *array1, double *array2)
 }
 
 
-void taxisInqDTinfo(int taxisID, dtinfo_t *dtinfo)
-{
-  dtinfo->v.date = taxisInqVdate(taxisID);
-  dtinfo->v.time = taxisInqVtime(taxisID);
-  if ( taxisHasBounds(taxisID) )
-    {
-      taxisInqVdateBounds(taxisID, &(dtinfo->b[0].date), &(dtinfo->b[1].date));
-      taxisInqVtimeBounds(taxisID, &(dtinfo->b[0].time), &(dtinfo->b[1].time));
-    }
-}
-
-
-void taxisDefDTinfo(int taxisID, dtinfo_t dtinfo)
-{
-  taxisDefVdate(taxisID, dtinfo.v.date);
-  taxisDefVtime(taxisID, dtinfo.v.time);
-  if ( taxisHasBounds(taxisID) )
-    {
-      taxisDefVdateBounds(taxisID, dtinfo.b[0].date, dtinfo.b[1].date);
-      taxisDefVtimeBounds(taxisID, dtinfo.b[0].time, dtinfo.b[1].time);
-    }
-}
-
-
 void *Detrend(void *argument)
 {
   int gridsize;
@@ -104,7 +80,7 @@ void *Detrend(void *argument)
   int nvars, nlevel;
   double missval;
   field_t ***vars = NULL;
-  dtinfo_t *dtinfo = NULL;
+  dtlist_type *dtlist = dtlist_new();
   typedef struct
   {
     double *array1;
@@ -135,11 +111,10 @@ void *Detrend(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  dtinfo = (dtinfo_t*) realloc(dtinfo, nalloc*sizeof(dtinfo_t));
 	  vars   = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
-      taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
+      dtlist_taxisInqTimestep(dtlist, taxisID1, tsID);
 
       vars[tsID] = field_malloc(vlistID1, FIELD_NONE);
 
@@ -200,7 +175,7 @@ void *Detrend(void *argument)
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {
-      taxisDefDTinfo(taxisID2, dtinfo[tsID]);
+      dtlist_taxisDefTimestep(dtlist, taxisID2, tsID);
       streamDefTimestep(streamID2, tsID);
 
       for ( varID = 0; varID < nvars; varID++ )
@@ -223,7 +198,8 @@ void *Detrend(void *argument)
     }
 
   if ( vars  ) free(vars);
-  if ( dtinfo ) free(dtinfo);
+
+  dtlist_delete(dtlist);
 
   streamClose(streamID2);
   streamClose(streamID1);

@@ -57,13 +57,13 @@ void   reshRemove ( cdiResH, const resOps * );
 /*> doesn't check resource type */
 void reshDestroy(cdiResH);
 
-int    reshCountType ( const resOps * );
+unsigned reshCountType(const resOps *resTypeOps);
 
 void * reshGetValue(const char* caller, const char* expressionString, cdiResH id, const resOps* ops);
 #define reshGetVal(resH, ops)  reshGetValue(__func__, #resH, resH, ops)
 
 
-void   reshGetResHListOfType ( int, int *, const resOps * );
+void reshGetResHListOfType(unsigned numIDs, int IDs[numIDs], const resOps *ops);
 
 enum cdiApplyRet {
   CDI_APPLY_ERROR = -1,

@@ -138,8 +138,8 @@ typedef struct {
   int      norm_opt;         /* option for normalization (conserv only)  */
   int      resize_increment; /* default amount to increase array size    */
 
-  int*     src_grid_add;     /* source grid address for each link        */
-  int*     tgt_grid_add;     /* target grid address for each link        */
+  int*     src_cell_add;     /* source grid address for each link        */
+  int*     tgt_cell_add;     /* target grid address for each link        */
 
   double*  wts;              /* map weights for each link [max_links*num_wts] */
 
@@ -211,11 +211,9 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type, i
 void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *map_type, int *submap_type, int *num_neighbors,
 		      int *remap_order, remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
 
-void store_link_bilin(remapvars_t *rv, int dst_add, int src_add[4], double weights[4]);
-
 void calc_bin_addr(long gridsize, long nbins, const restr_t* restrict bin_lats, const restr_t* restrict cell_bound_box, int* restrict bin_addr);
 void calc_lat_bins(remapgrid_t* src_grid, remapgrid_t* tgt_grid, int map_type);
-long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr2,
+long get_srch_cells(long tgt_cell_add, long nbins, int *bin_addr1, int *bin_addr2,
 		    restr_t *tgt_cell_bound_box, restr_t *src_cell_bound_box, long src_grid_size, int *srch_add);
 
 int grid_search_reg2d_nn(long nx, long ny, int *restrict nbr_add, double *restrict nbr_dist, double plat, double plon,

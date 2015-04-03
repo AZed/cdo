@@ -496,7 +496,7 @@ void vlistInqVarName(int vlistID, int varID, char *name)
 	}
     }
   else
-    strcpy(name, vlistptr->vars[varID].name);
+    strcpy(name, vlistptr->vars[varID].name);   //FIXME: This may overrun the provided buffer.
 
   return;
 }

@@ -132,11 +132,6 @@ void modelInit(void)
   if ( env ) MODEL_Debug = atoi(env);
 }
 
-int modelSize ( void )
-{
-  return reshCountType ( &modelOps );
-}
-
 struct modelLoc
 {
   char *name;

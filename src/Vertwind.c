@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -35,8 +35,8 @@
 
 void *Vertwind(void *argument)
 {
-  int streamID1, streamID2;
-  int vlistID1, vlistID2;
+  int streamID2;
+  int vlistID2;
   int taxisID1, taxisID2;
   int gridID, zaxisID, tsID;
   int nlevel, nrecs, recID, code;
@@ -45,7 +45,6 @@ void *Vertwind(void *argument)
   int gridsize, i;
   int offset;
   int nmiss, nmiss_out;
-  int ngp = 0, ngrids;
   int temp_code, sq_code, ps_code, omega_code, lsp_code;
   int tempID = -1, sqID = -1, psID = -1, omegaID = -1, lnpsID = -1;
   char varname[CDI_MAX_NAME];
@@ -58,31 +57,11 @@ void *Vertwind(void *argument)
 
   cdoInitialize(argument);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
+  int vlistID1 = streamInqVlist(streamID1);
 
-  ngrids  = vlistNgrids(vlistID1);
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  ngp = gridInqSize(gridID);
-	  break;
-	}
-    }
-
-  /* check gridsize */
-  for ( i = 0; i < ngrids; i++ )
-    {
-      gridID = vlistGrid(vlistID1, i);
-      if ( gridInqType(gridID) != GRID_SPECTRAL )
-	{
-	  if ( ngp != gridInqSize(gridID) )
-	    cdoAbort("Grids have different size!");
-	}
-    }
+  int ngp = vlist_check_gridsize(vlistID1);
 
   temp_code  = 130;
   sq_code    = 133;

@@ -1,10 +1,15 @@
 #! @SHELL@
-echo 1..26 # Number of tests to be executed.
+if [ "$USER" = "m214003" ]; then
+echo 1..32 # Number of tests to be executed.
+else
+echo 1..20 # Number of tests to be executed.
+fi
 #
 test -n "$CDO"      || CDO=cdo
 test -n "$DATAPATH" || DATAPATH=./data
 #
-ABSLIM=0.001
+ABSLIMMAX=0.001
+ABSLIMYCON=0.25
 CDOOUT=cout
 CDOERR=cerr
 FORMAT="-f srv -b 32"
@@ -18,9 +23,12 @@ for GRIDTYPE in "regular" "curvilinear" "unstructured"; do
   if [ "$GRIDTYPE" != "regular" ]; then SETGRID="-setgridtype,$GRIDTYPE"; fi
   for GRID in $GRIDS; do
 # remaplaf: sort could give different results"
-    RMODS="bil bic nn con ycon"
-    if [ "$GRIDTYPE" = "unstructured" ]; then RMODS="nn con ycon"; fi
+    RMODS="bil bic con ycon"
+    if [ "$GRIDTYPE" = "unstructured" ]; then RMODS="con ycon"; fi
+    if [ "$USER" = "m214003" ]; then RMODS="dis nn $RMODS"; fi
     for RMOD in $RMODS; do
+      ABSLIM=$ABSLIMMAX
+      if [ $RMOD = ycon ]; then ABSLIM=$ABSLIMYCON; fi
       RSTAT=0
       OFILE=${GRID}_${RMOD}
       RFILE=$DATAPATH/${OFILE}_ref

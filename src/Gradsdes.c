@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,8 +31,6 @@
 #include "cdo_int.h"
 #include "pstream.h"
 #include "grid.h"
-//#include <string.h> // necessary for compatability? GNU basename
-#include "libgen.h" // posix basename POSIX.1-2001
 
 
 /*
@@ -354,6 +352,8 @@ void dumpmap()
             }
         }
     }
+
+  UNUSED(nbytes);
 
   fclose(mapfp);
 
@@ -935,38 +935,26 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
   fclose(mapfp);
 }
 
-
+/*
 static
 void write_map_grib2(const char *ctlfile, int map_version, int nrecords, int *intnum, float *fltnum, off_t *bignum)
 {
-    // to be implemented
 }
+*/
 
 void *Gradsdes(void *argument)
 {
-  int GRADSDES, DUMPMAP;
-  int operatorID;
-  int streamID = 0;
   int gridID = -1;
   int gridtype = -1;
-  int nvars, ngrids;
-  int nvarsout;
-  int ntsteps;
   int index;
-  int vlistID, tsID, varID;
+  int varID;
   int recID, levelID;
-  int filetype, byteorder;
-  int taxisID, nrecs;
+  int nrecs;
   int vdate, vtime;
-  const char *datfile;
-  char ctlfile[1024];
-  char idxfile[1024];
+  char *idxfile = NULL;
   char varname[CDI_MAX_NAME];
-  FILE *gdp;
   int yrev = FALSE;
   int zrev = FALSE;
-  int xsize = 0, ysize = 0;
-  int res;
   int xyheader = 0;
   int nrecords = 0;
   int bigendian = FALSE, littleendian = FALSE;
@@ -984,11 +972,8 @@ void *Gradsdes(void *argument)
   int nmiss;
   int prec;
   int map_version = 2;
-  int nrecsout = 0;
   int maxrecs = 0;
   int monavg = -1;
-  int *vars = NULL;
-  int *recoffset = NULL;
   int *intnum = NULL;
   float *fltnum = NULL;
   off_t *bignum = NULL;
@@ -997,16 +982,17 @@ void *Gradsdes(void *argument)
 
   cdoInitialize(argument);
 
-  GRADSDES  = cdoOperatorAdd("gradsdes",  0, 0, NULL);
-  DUMPMAP   = cdoOperatorAdd("dumpmap",   0, 0, NULL);
+  int GRADSDES = cdoOperatorAdd("gradsdes",  0, 0, NULL);
+  int DUMPMAP  = cdoOperatorAdd("dumpmap",   0, 0, NULL);
 
-  operatorID = cdoOperatorID();
+  UNUSED(GRADSDES);
 
-  strcpy(ctlfile, cdoStreamName(0)->args);
-  char relpath_sign = '^';
-  if ( ctlfile[0] == '/' )
-    relpath_sign = '\0';
-  datfile = cdoStreamName(0)->args;
+  int operatorID = cdoOperatorID();
+
+  const char *datfile = cdoStreamName(0)->args;
+  size_t len = strlen(datfile);
+  char *ctlfile = (char *) malloc(len+10);
+  strcpy(ctlfile, datfile);
 
   if ( cdoStreamName(0)->args[0] == '-' )
     cdoAbort("This operator does not work with pipes!");
@@ -1014,7 +1000,6 @@ void *Gradsdes(void *argument)
   if ( operatorID == DUMPMAP )
     {
       dumpmap();
-
       goto END_LABEL;
     }
 
@@ -1022,7 +1007,7 @@ void *Gradsdes(void *argument)
 
   if ( operatorArgc() == 1 )
     {
-      map_version = atoi(operatorArgv()[0]);
+      map_version = parameter2int(operatorArgv()[0]);
       if ( map_version != 1 && map_version != 2 && map_version != 4 )
         cdoAbort("map_version=%d unsupported!", map_version);
     }
@@ -1037,17 +1022,16 @@ void *Gradsdes(void *argument)
     cdoAbort("GrADS GRIB map version %d requires size of off_t to be 8! The size of off_t is %ld.",
              map_version, sizeof(off_t));
 
+  int streamID = streamOpenRead(cdoStreamName(0));
 
-  streamID = streamOpenRead(cdoStreamName(0));
+  int vlistID = streamInqVlist(streamID);
 
-  vlistID = streamInqVlist(streamID);
+  int nvars   = vlistNvars(vlistID);
+  int ntsteps = vlistNtsteps(vlistID);
+  int ngrids  = vlistNgrids(vlistID);
 
-  nvars   = vlistNvars(vlistID);
-  ntsteps = vlistNtsteps(vlistID);
-  ngrids  = vlistNgrids(vlistID);
-
-  filetype  = streamInqFiletype(streamID);
-  byteorder = streamInqByteorder(streamID);
+  int filetype  = streamInqFiletype(streamID);
+  int byteorder = streamInqByteorder(streamID);
 
   if ( filetype == FILETYPE_NC2 || filetype == FILETYPE_NC4 ) filetype = FILETYPE_NC;
 
@@ -1080,10 +1064,10 @@ void *Gradsdes(void *argument)
     cdoAbort("No Lon/Lat, Gaussian or Lambert grid found (%s data unsupported)!", gridNamePtr(gridtype));
 
   /* select all variables with used gridID */
-  vars = (int*) malloc(nvars*sizeof(int));
-  recoffset = (int*) malloc(nvars*sizeof(int));
-  nvarsout = 0;
-  nrecsout = 0;
+  int *vars = (int*) malloc(nvars*sizeof(int));
+  int *recoffset = (int*) malloc(nvars*sizeof(int));
+  int nvarsout = 0;
+  int nrecsout = 0;
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( vlistInqVarGrid(vlistID, varID) == gridID )
@@ -1146,19 +1130,28 @@ void *Gradsdes(void *argument)
   repl_filetypeext(ctlfile, filetypeext(filetype), ".ctl");
 
   /* open ctl file*/
-  gdp = fopen(ctlfile, "w");
+  FILE *gdp = fopen(ctlfile, "w");
   if ( gdp == NULL ) cdoAbort("Open failed on %s", ctlfile);
 
   /* VERSION */
+  fprintf(gdp, "* Generated by CDO operator gradsdes\n");
+  fprintf(gdp, "*\n");
+  /*
 #if defined(VERSION)
   fprintf(gdp, "* Generated by CDO version %s\n", VERSION);
   fprintf(gdp, "*\n");
 #endif
-
+  */
   /* DSET */
-  if ( relpath_sign ) 
-      datfile = basename((char *) datfile);
-  fprintf(gdp, "DSET  %c%s\n", relpath_sign, datfile);
+  if ( datfile[0] == '/' )
+    fprintf(gdp, "DSET  %s\n", datfile);
+  else
+    {
+      datfile = strrchr(datfile, '/');
+      if ( datfile == 0 ) datfile = cdoStreamName(0)->args;
+      else                datfile++;
+      fprintf(gdp, "DSET  ^%s\n", datfile);
+    }
 
   /*
    * DTYPE Print file type
@@ -1166,8 +1159,7 @@ void *Gradsdes(void *argument)
    */
   if ( filetype == FILETYPE_GRB ||  filetype == FILETYPE_GRB2 )
     {
-
-      strcpy(idxfile, ctlfile);
+      idxfile = strdup(ctlfile);
       char *pidxfile = idxfile;
 
       // print GRIB[12] file type
@@ -1176,19 +1168,23 @@ void *Gradsdes(void *argument)
         {
           fprintf(gdp, "DTYPE  GRIB\n");
           repl_filetypeext(idxfile, ".ctl", ".gmp");
-          write_map_grib1(idxfile, map_version, nrecords, intnum, fltnum, bignum);
         }
       else if ( filetype == FILETYPE_GRB2 )
         {
           fprintf(gdp, "DTYPE  GRIB2\n");
           repl_filetypeext(pidxfile, ".ctl", ".idx");
-          // TODO: write_map_grib2();
         }
 
       // print file name of index file
-      if ( relpath_sign ) 
-          pidxfile = basename((char *) pidxfile);
-      fprintf(gdp, "INDEX  %c%s\n", relpath_sign, pidxfile);
+      if ( datfile[0] == '/' )
+        fprintf(gdp, "INDEX  %s\n", pidxfile);
+      else
+        {
+          pidxfile = strrchr(pidxfile, '/');
+          if ( pidxfile == 0 ) pidxfile = idxfile;
+          else                 pidxfile++;
+          fprintf(gdp, "INDEX  ^%s\n", pidxfile);
+        }
 
       gridsize = vlistGridsizeMax(vlistID);
       array = (double*) malloc(gridsize*sizeof(double));
@@ -1203,11 +1199,11 @@ void *Gradsdes(void *argument)
 
   /* TIME */
 
-  taxisID = vlistInqTaxis(vlistID);
+  int taxisID = vlistInqTaxis(vlistID);
 
   if ( taxisInqCalendar(taxisID) == CALENDAR_365DAYS ) cal365day = 1;
 
-  tsID = 0;
+  int tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID, tsID)) )
     {
       vdate = taxisInqVdate(taxisID);
@@ -1280,7 +1276,7 @@ void *Gradsdes(void *argument)
           if ( iddd < 0 ) iddd *= -1;
           if ( idyy > 0 ) idmm += idyy*12;
 
-          if ( idmn == 0 && idhh == 0 && (iddd == 0 || idd > 27 ) &&
+          if ( /*idmn == 0 && idhh == 0 &&*/ (iddd == 0 || iddd == 1 || idd > 27 ) &&
                idmm > 0 && (mdt == 0 || idmm == mdt) )
             {
               mdt = idmm;
@@ -1290,7 +1286,7 @@ void *Gradsdes(void *argument)
             {
               monavg = FALSE;
             }
-          /*
+          /*          
           printf("monavg %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d\n",
                  tsID, monavg, mdt, imm , imms, idmm, iyy, iyys, idyy, idd, idds, iddd);
           */
@@ -1363,17 +1359,17 @@ void *Gradsdes(void *argument)
         }
     }
 
-  sprintf (Time, "%02d:%02dZ%02d%s%04d", ihh0, imn0, idd0, cmons[imm0-1], iyy0);
-  sprintf (Incr, "%d%s", dt, IncrKey[iik]);
+  sprintf(Time, "%02d:%02dZ%02d%s%04d", ihh0, imn0, idd0, cmons[imm0-1], iyy0);
+  sprintf(Incr, "%d%s", dt, IncrKey[iik]);
 
-  fprintf (gdp, "TDEF %d LINEAR %s %s\n", tsID, Time, Incr);
+  fprintf(gdp, "TDEF %d LINEAR %s %s\n", tsID, Time, Incr);
 
   /* TITLE */
 
-  xsize  = gridInqXsize(gridID);
-  ysize  = gridInqYsize(gridID);
+  int xsize  = gridInqXsize(gridID);
+  int ysize  = gridInqYsize(gridID);
 
-  res = 0;
+  int res = 0;
   if ( gridtype == GRID_GAUSSIAN ) res = nlat2ntr(ysize);
 
   if ( res )
@@ -1394,15 +1390,18 @@ void *Gradsdes(void *argument)
   /* INDEX file */
   if ( filetype == FILETYPE_GRB )
     {
+      write_map_grib1(idxfile, map_version, nrecords, intnum, fltnum, bignum);
     }
   if ( filetype == FILETYPE_GRB2 )
     {
       cdoAbort("\nThe fileformat GRIB2 is not fully supported yet\nfor the gradsdes operator.\nThe .ctl file %s was generated.\nYou can add the necessary .idx file by running\n\tgribmap -i %s", ctlfile, ctlfile);
-      write_map_grib2(idxfile, map_version, nrecords, intnum, fltnum, bignum);
+      // write_map_grib2(idxfile, map_version, nrecords, intnum, fltnum, bignum);
     }
 
-
   streamClose(streamID);
+
+  if ( ctlfile ) free(ctlfile);
+  if ( idxfile ) free(idxfile);
 
   if ( vars ) free(vars);
   if ( recoffset ) free(recoffset);

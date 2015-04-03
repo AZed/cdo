@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -37,27 +37,20 @@
 
 void *Seasstat(void *argument)
 {
-  int operatorID;
-  int operfunc;
+  int timestat_date = TIMESTAT_MEAN;
   int gridsize;
   int vdate = 0, vtime = 0;
   int vdate0 = 0, vtime0 = 0;
   int vdate1 = 0, vtime1 = 0;
-  int vdate_lb = 0, vdate_ub = 0, date_lb = 0, date_ub = 0;
-  int vtime_lb = 0, vtime_ub = 0, time_lb = 0, time_ub = 0;
-  int nrecs, nrecords;
+  int nrecs;
   int varID, levelID, recID;
   int tsID;
   int otsID;
   long nsets;
   int i;
   int year, month, day, seas, seas0 = 0;
-  int streamID1, streamID2;
-  int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
-  int nvars, nlevel;
-  int *recVarID, *recLevelID;
-  int taxis_has_bounds = FALSE;
+  int nlevel;
   int newseas, oldmon = 0, newmon;
   int nseason = 0;
   field_t **vars1 = NULL, **vars2 = NULL, **samp1 = NULL;
@@ -75,32 +68,35 @@ void *Seasstat(void *argument)
   cdoOperatorAdd("seasvar",  func_var,  0, NULL);
   cdoOperatorAdd("seasstd",  func_std,  0, NULL);
 
-  operatorID = cdoOperatorID();
-  operfunc = cdoOperatorF1(operatorID);
+  int operatorID = cdoOperatorID();
+  int operfunc = cdoOperatorF1(operatorID);
 
   season_start = get_season_start();
   get_season_name(seas_name);
 
-  streamID1 = streamOpenRead(cdoStreamName(0));
+  int streamID1 = streamOpenRead(cdoStreamName(0));
 
-  vlistID1 = streamInqVlist(streamID1);
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID1 = streamInqVlist(streamID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
-  taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisDuplicate(taxisID1);
+  int taxisID1 = vlistInqTaxis(vlistID1);
+  int taxisID2 = taxisDuplicate(taxisID1);
   if ( taxisInqType(taxisID2) == TAXIS_FORECAST ) taxisDefType(taxisID2, TAXIS_RELATIVE);
-  taxis_has_bounds = taxisHasBounds(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+  int streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
-  nrecords = vlistNrecs(vlistID1);
+  int nvars    = vlistNvars(vlistID1);
+  int nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int*) malloc(nrecords*sizeof(int));
-  recLevelID = (int*) malloc(nrecords*sizeof(int));
+  int *recVarID   = (int*) malloc(nrecords*sizeof(int));
+  int *recLevelID = (int*) malloc(nrecords*sizeof(int));
+
+  dtlist_type *dtlist = dtlist_new();
+  dtlist_set_stat(dtlist, timestat_date);
+  dtlist_set_calendar(dtlist, taxisInqCalendar(taxisID1));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -120,21 +116,9 @@ void *Seasstat(void *argument)
       newseas = FALSE;
       while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
 	{
-	  vdate = taxisInqVdate(taxisID1);
-	  vtime = taxisInqVtime(taxisID1);
-
-	  if ( taxis_has_bounds )
-	    {
-	      taxisInqVdateBounds(taxisID1, &date_lb, &date_ub);
-	      taxisInqVtimeBounds(taxisID1, &time_lb, &time_ub);
-	      if ( nsets == 0 )
-		{ vdate_lb = date_lb; vtime_lb = time_lb; }
-	    }
-	  else
-	    {
-	      if ( nsets == 0 )
-		{ vdate_lb = vdate; vtime_lb = vtime; }
-	    }
+	  dtlist_taxisInqTimestep(dtlist, taxisID1, nsets);
+	  vdate = dtlist_get_vdate(dtlist, nsets);
+	  vtime = dtlist_get_vtime(dtlist, nsets);
 
 	  cdiDecodeDate(vdate, &year, &month, &day);
 	  if ( month < 1 || month > 12 )
@@ -176,11 +160,6 @@ void *Seasstat(void *argument)
 	  if ( (seas != seas0) || newseas ) break;
 
 	  oldmon = newmon;
-
-	  if ( taxis_has_bounds )
-	    { vdate_ub = date_ub; vtime_ub = time_ub; }
-	  else
-	    { vdate_ub = vdate; vtime_ub = vtime; }
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -312,10 +291,7 @@ void *Seasstat(void *argument)
 		   vdatestr0, vtimestr0, vdatestr1, vtimestr1, nsets);
 	}
 
-      taxisDefVdate(taxisID2, vdate1);
-      taxisDefVtime(taxisID2, vtime1);
-      taxisDefVdateBounds(taxisID2, vdate_lb, vdate_ub);
-      taxisDefVtimeBounds(taxisID2, vtime_lb, vtime_ub);
+      dtlist_stat_taxisDefTimestep(dtlist, taxisID2, nsets);
       streamDefTimestep(streamID2, otsID);
 
       if ( nsets < 3 )
@@ -350,6 +326,8 @@ void *Seasstat(void *argument)
 
   if ( recVarID   ) free(recVarID);
   if ( recLevelID ) free(recLevelID);
+
+  dtlist_delete(dtlist);
 
   streamClose(streamID2);
   streamClose(streamID1);

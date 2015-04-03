@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -68,9 +68,7 @@ void *Output(void *argument)
   double missval;
   double lon, lat;
   char name[CDI_MAX_NAME];
-  int npar = 0;
   int year, month, day;
-  char **parnames = NULL;
   int *keys = NULL, nkeys = 0, k;
   int nKeys;
   int Keylen[]           = {      0,        8,      11,      4,      8,     6,     6,     6,     6,      4,      4,          6,     10,      8,      5,       2,     2 };
@@ -102,14 +100,14 @@ void *Output(void *argument)
       if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
 
       format = operatorArgv()[0];
-      if ( operatorArgc() == 2 ) nelem  = atoi(operatorArgv()[1]);
+      if ( operatorArgc() == 2 ) nelem = parameter2int(operatorArgv()[1]);
     }
   else if ( operatorID == OUTPUTTAB )
     {
       operatorInputArg("keys to print");
  
-      npar     = operatorArgc();
-      parnames = operatorArgv();
+      int npar = operatorArgc();
+      char **parnames = operatorArgv();
 
       if ( cdoVerbose )
 	for ( i = 0; i < npar; i++ )

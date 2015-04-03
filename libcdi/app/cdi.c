@@ -298,14 +298,15 @@ const char* calendar2str(int calendar)
 }
 
 static
-void limit_string_length(char* string)
+void limit_string_length(char* string, size_t maxlen)
 {
+  string[maxlen-1] = 0;
   size_t len = strlen(string);
 
   if ( len > 10 )
     {
       for ( size_t i = 3; i < len; ++i )
-	if ( string[i] == ' ' )
+	if ( string[i] == ' ' || string[i] == ',' || (i>10 && string[i] == '.') )
 	  {
 	    string[i] = 0;
 	    break;
@@ -355,15 +356,15 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  /* institute info */
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  strcpy(tmpname, "unknown");
-	  if ( instptr ) strcpy(tmpname, instptr);
-	  limit_string_length(tmpname);
+	  if ( instptr ) strncpy(tmpname, instptr, CDI_MAX_NAME);
+	  limit_string_length(tmpname, CDI_MAX_NAME);
 	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* source info */
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  strcpy(tmpname, "unknown");
-	  if ( modelptr ) strcpy(tmpname, modelptr);
-	  limit_string_length(tmpname);
+	  if ( modelptr ) strncpy(tmpname, modelptr, CDI_MAX_NAME);
+	  limit_string_length(tmpname, CDI_MAX_NAME);
 	  fprintf(stdout, "%-8s ", tmpname);
 
 	  /* tsteptype */
@@ -843,8 +844,8 @@ int main(int argc, char *argv[])
 	  vlistPrint(vlistID1);
 	  ngrids = vlistNgrids(vlistID1);
 	  nzaxis = vlistNzaxis(vlistID1);
-	  for ( gridID = 0; gridID < ngrids; gridID++ ) gridPrint(gridID, 1);
-	  for ( zaxisID = 0; zaxisID < nzaxis; zaxisID++ ) zaxisPrint(zaxisID);
+	  for ( gridID = 0; gridID < ngrids; gridID++ ) gridPrint(gridID, gridID, 1);
+	  for ( zaxisID = 0; zaxisID < nzaxis; zaxisID++ ) zaxisPrint(zaxisID, zaxisID);
 	}
 
       nvars   = vlistNvars(vlistID1);

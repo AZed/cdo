@@ -11,7 +11,7 @@ else
   noinst_LTLIBRARIES += libcdi.la
 endif
 
-AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
+AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS) $(MPI_C_INCLUDE)
 
 libcdi_la_SOURCES = 	 \
 	basetime.c     	 \
@@ -39,6 +39,7 @@ libcdi_la_SOURCES = 	 \
 	cksum.h		\
 	cdi_cksum.c	\
 	cdi_cksum.h	\
+	create_uuid.h	 \
 	dtypes.h	 \
 	error.c        	 \
 	error.h	 	 \
@@ -155,11 +156,9 @@ libcdipio_la_SOURCES =							\
 	pio_cdf_int.c							\
 	pio_cdf_int.h
 
-libcdipio_la_LIBADD    = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS)
+libcdipio_la_LIBADD    = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS) $(MPI_C_LIB)
 
-
-#libcdi_la_CPPFLAGS  = @CPPFLAGS@
-libcdi_la_LIBADD    =
+libcdi_la_LIBADD    = $(UUID_C_LIB)
 #
 #cdilib.c:
 #	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src

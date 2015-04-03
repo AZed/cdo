@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,6 @@ void *CDIwrite(void *argument)
   double tw, tw0, t0, twsum = 0;
   double ***vars = NULL;
   float *farray = NULL;
-  extern int timer_write;
 
   srand(seed);
   sinfo[0] = 0;
@@ -130,11 +129,11 @@ void *CDIwrite(void *argument)
   if ( operatorArgc() > 5 ) cdoAbort("Too many arguments!");
 
   gridfile = defaultgrid;
-  if ( operatorArgc() >= 1 ) nruns = atol(operatorArgv()[0]);
+  if ( operatorArgc() >= 1 ) nruns = parameter2int(operatorArgv()[0]);
   if ( operatorArgc() >= 2 ) gridfile = operatorArgv()[1];
-  if ( operatorArgc() >= 3 ) nlevs = atol(operatorArgv()[2]);
-  if ( operatorArgc() >= 4 ) ntimesteps = atol(operatorArgv()[3]);
-  if ( operatorArgc() >= 5 ) nvars = atol(operatorArgv()[4]);
+  if ( operatorArgc() >= 3 ) nlevs = parameter2int(operatorArgv()[2]);
+  if ( operatorArgc() >= 4 ) ntimesteps = parameter2int(operatorArgv()[3]);
+  if ( operatorArgc() >= 5 ) nvars = parameter2int(operatorArgv()[4]);
 
   if ( nruns <  0 ) nruns = 0;
   if ( nruns > 99 ) nruns = 99;

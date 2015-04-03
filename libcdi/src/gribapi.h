@@ -2,8 +2,14 @@
 #define _GRIBAPI_H
 
 #ifdef HAVE_LIBGRIB_API
-#  include "error.h"
-#  include <grib_api.h>
+#include <grib_api.h>
+#ifndef  _ERROR_H
+#include "error.h"
+#endif
+#endif
+
+#ifndef  _CDI_INT_H
+#include "cdi_int.h"
 #endif
 
 #define  GRIBAPI_MISSVAL  -9.E33
@@ -50,13 +56,14 @@
 const char *gribapiLibraryVersionString(void);
 void gribContainersNew(stream_t * streamptr);
 void gribContainersDelete(stream_t * streamptr);
+
 #ifdef HAVE_LIBGRIB_API
 static inline void *gribHandleNew(int editionNumber)
 {
-  void *gh =
-    (void *)grib_handle_new_from_samples(NULL, (editionNumber == 1) ? "GRIB1" : "GRIB2");
+  void *gh = (void *)grib_handle_new_from_samples(NULL, (editionNumber == 1) ? "GRIB1" : "GRIB2");
 
   if ( gh == NULL ) Error("grib_handle_new_from_samples failed!");
+
   return gh;
 }
 

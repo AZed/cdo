@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -223,22 +223,8 @@ void *Gridcell(void *argument)
 
 	  gridInqXunits(gridID, units);
 
-	  if ( memcmp(units, "degree", 6) == 0 )
-	    {
-	      for ( i = 0; i < gridsize; ++i )
-		{
-		  xv[i] *= DEG2RAD;
-		  yv[i] *= DEG2RAD;
-		}
-	    }
-	  else if ( memcmp(units, "radian", 6) == 0 )
-	    {
-	      /* No conversion necessary */
-	    }
-	  else
-	    {
-	      cdoWarning("Unknown units supplied for grid1 center lat/lon: proceeding assuming radians");
-	    }
+	  grid_to_radian(units, gridsize, yv, "grid longitudes");
+	  grid_to_radian(units, gridsize, yv, "grid latitudes");
 
 	  if ( operatorID == GRIDDX )
 	    {

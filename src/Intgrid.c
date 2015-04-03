@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
+  Copyright (C) 2003-2015 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -345,8 +345,8 @@ void *Intgrid(void *argument)
     {
       operatorInputArg("longitude and latitude");
       operatorCheckArgc(2);
-      slon = atof(operatorArgv()[0]);
-      slat = atof(operatorArgv()[1]);
+      slon = parameter2double(operatorArgv()[0]);
+      slat = parameter2double(operatorArgv()[1]);
       gridID2 = gridCreate(GRID_LONLAT, 1);
       gridDefXsize(gridID2, 1);
       gridDefYsize(gridID2, 1);
@@ -357,8 +357,8 @@ void *Intgrid(void *argument)
     {
       operatorInputArg("xinc, yinc");
       operatorCheckArgc(2);
-      xinc = atoi(operatorArgv()[0]);
-      yinc = atoi(operatorArgv()[1]);
+      xinc = parameter2int(operatorArgv()[0]);
+      yinc = parameter2int(operatorArgv()[1]);
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
