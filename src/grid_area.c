@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -223,7 +223,7 @@ double huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corn
 }
 
 
-int gridGenArea(int gridID, double *area)
+int gridGenArea(int gridID, double* area)
 {
   int status = 0;
   int gridtype;
@@ -231,9 +231,9 @@ int gridGenArea(int gridID, double *area)
   int lgriddestroy = FALSE;
   long i;
   long nv, gridsize;
-  double *grid_corner_lon = NULL;
-  double *grid_corner_lat = NULL;
-  int *grid_mask = NULL;
+  int* grid_mask = NULL;
+  double* grid_corner_lon = NULL;
+  double* grid_corner_lat = NULL;
 
   gridsize = gridInqSize(gridID);
   gridtype = gridInqType(gridID);
@@ -257,7 +257,7 @@ int gridGenArea(int gridID, double *area)
 	{
 	  lgriddestroy = TRUE;
 	  gridID = gridToUnstructured(gridID, 1);
-	  grid_mask = (int *) malloc(gridsize*sizeof(int));
+	  grid_mask = malloc(gridsize*sizeof(int));
 	  gridInqMaskGME(gridID, grid_mask);
 	}
       else
@@ -302,8 +302,8 @@ int gridGenArea(int gridID, double *area)
       return (status);
     }
 
-  grid_corner_lon = (double *) malloc(nv*gridsize*sizeof(double));
-  grid_corner_lat = (double *) malloc(nv*gridsize*sizeof(double));
+  grid_corner_lon = malloc(nv*gridsize*sizeof(double));
+  grid_corner_lat = malloc(nv*gridsize*sizeof(double));
 
   if ( gridInqYbounds(gridID, NULL) && gridInqXbounds(gridID, NULL) )
     {
@@ -314,25 +314,27 @@ int gridGenArea(int gridID, double *area)
     {
       if ( lgrid_gen_bounds )
 	{
+	  char xunitstr[CDI_MAX_NAME];
+	  char yunitstr[CDI_MAX_NAME];
 	  int nlon = gridInqXsize(gridID);
 	  int nlat = gridInqYsize(gridID);
 	  double dlon = 0;
-	  if ( nlon == 1 )
-	    {
-	      dlon = 1;
-	    }
+	  if ( nlon == 1 ) dlon = 1;
 
 	  double *grid_center_lon = NULL;
 	  double *grid_center_lat = NULL;
 
-	  grid_center_lon = (double *) malloc(gridsize*sizeof(double));
-	  grid_center_lat = (double *) malloc(gridsize*sizeof(double));
+	  grid_center_lon = malloc(gridsize*sizeof(double));
+	  grid_center_lat = malloc(gridsize*sizeof(double));
 
 	  gridInqXvals(gridID, grid_center_lon);
 	  gridInqYvals(gridID, grid_center_lat);
 
-	  genXbounds(nlon, nlat, grid_center_lon, grid_corner_lon, dlon);
-	  genYbounds(nlon, nlat, grid_center_lat, grid_corner_lat);
+	  gridInqXunits(gridID, xunitstr);
+	  gridInqYunits(gridID, yunitstr);
+
+	  grid_cell_center_to_bounds_X2D(xunitstr, nlon, nlat, grid_center_lon, grid_corner_lon, dlon);
+	  grid_cell_center_to_bounds_Y2D(yunitstr, nlon, nlat, grid_center_lat, grid_corner_lat);
 
 	  free(grid_center_lon);
 	  free(grid_center_lat);

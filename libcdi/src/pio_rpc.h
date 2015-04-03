@@ -37,48 +37,48 @@ extern const char * const funcMap[numRPCFuncs];
 
 struct headerSize
 {
-  int sizeID, numDataEntries, numRPCEntries;
+  int numDataEntries, numRPCEntries;
 };
 
 struct dataRecord
 {
-  int streamID, varID, offset, nmiss;
+  int varID, nmiss;
 };
 
-struct funcCallDesc
+union funcArgs
 {
-  int funcID;
-  union
+  struct
   {
-    struct
-    {
-      int streamID, vlistID;
-    } streamChange;
-    struct
-    {
-      int streamID, tsID, offset;
-    } streamNewTimestep;
-    struct
-    {
-      int fnamelen, offset, filetype;
-    } newFile;
-  } funcArgs;
+    int streamID, vlistID;
+  } streamChange;
+  struct
+  {
+    int streamID, tsID;
+  } streamNewTimestep;
+  struct
+  {
+    int fnamelen, filetype;
+  } newFile;
 };
 
 /* Describes offset and ID of serialized partition descriptor.
  * partDescMarker == PARTDESCMARKER, always. */
 struct partDescRecord
 {
-  int partDescMarker, offset;
   Xt_uid uid;
 };
 
-union winHeaderEntry
+struct winHeaderEntry
 {
-  struct headerSize headerSize;
-  struct dataRecord dataRecord;
-  struct funcCallDesc funcCall;
-  struct partDescRecord partDesc;
+  int id;
+  union
+  {
+    struct headerSize headerSize;
+    struct dataRecord dataRecord;
+    union funcArgs funcArgs;
+    struct partDescRecord partDesc;
+  }  specific;
+  int offset;
 };
 
 /* round size to next multiple of factor */

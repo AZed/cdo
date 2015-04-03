@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -147,8 +147,8 @@ void *Importobs(void *argument)
 
   // printf("gridsize=%d, xsize=%d, ysize=%d\n", gridsize, xsize, ysize);
 
-  xvals = (double *) malloc(gridsize*sizeof(double));
-  yvals = (double *) malloc(gridsize*sizeof(double));
+  xvals = malloc(gridsize*sizeof(double));
+  yvals = malloc(gridsize*sizeof(double));
 
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);
@@ -178,7 +178,7 @@ void *Importobs(void *argument)
   vlistDefTaxis(vlistID, taxisID);
 
     {
-      for ( i = 0; i < nvars; ++i ) data[i] = (double *) malloc(gridsize*sizeof(double));
+      for ( i = 0; i < nvars; ++i ) data[i] = malloc(gridsize*sizeof(double));
 
       init_vars(vlistID, gridID, zaxisID, nvars);
 

@@ -28,6 +28,7 @@
 #include "pstream.h"
 #include "vinterp.h"
 #include "list.h"
+#include "stdnametable.h"
 #include "hetaeta.h"
 
 
@@ -110,7 +111,7 @@ double *vctFromFile(const char *filename, int *nvct)
   fp = fopen(filename, "r");
   if ( fp == NULL ) { perror(filename); exit(EXIT_FAILURE); }
 
-  vct2 = (double *) malloc(maxvct*sizeof(double));
+  vct2 = malloc(maxvct*sizeof(double));
 
   while ( readline(fp, line, 1024) )
     {
@@ -140,7 +141,7 @@ double *vctFromFile(const char *filename, int *nvct)
   for ( i = 0; i < nlevh2+1; ++i )
     vct2[i+nvct2/2] = vct2[i+maxvct/2];
   
-  vct2 = (double *) realloc(vct2, nvct2*sizeof(double));
+  vct2 = realloc(vct2, nvct2*sizeof(double));
 
   *nvct = nvct2;
 
@@ -274,14 +275,14 @@ void *Remapeta(void *argument)
       gridID  = vlistInqVarGrid(vlistID1, varID);
       nfis2gp = gridInqSize(gridID);
 
-      fis2 = (double *) malloc(nfis2gp*sizeof(double));
+      fis2 = malloc(nfis2gp*sizeof(double));
 
       streamReadRecord(streamID1, fis2, &nmiss);
 
       if ( nmiss )
 	{
 	  missval = vlistInqVarMissval(vlistID1, varID);
-	  imiss = (int *) malloc (nfis2gp*sizeof(int));
+	  imiss = malloc (nfis2gp*sizeof(int));
 	  for ( i = 0; i < nfis2gp; ++i )
 	    {
 	      if ( DBL_IS_EQUAL(fis2[i], missval) )
@@ -293,13 +294,13 @@ void *Remapeta(void *argument)
 	  nmissout = nmiss;
 	}
 
-      /* check range of geop */
+      /* check range of surface_geopotential */
       minmaxval(nfis2gp, fis2, imiss, &minval, &maxval);
       if ( minval < MIN_FIS || maxval > MAX_FIS )
-	cdoWarning("Orography out of range (min=%g max=%g)!", minval, maxval);
+	cdoWarning("%s out of range (min=%g max=%g)!", var_stdname(surface_geopotential), minval, maxval);
 
       if ( minval < -1.e10 || maxval > 1.e10 )
-	cdoAbort("Orography out of range!");
+	cdoAbort("%s out of range!", var_stdname(surface_geopotential));
 
       streamClose(streamID1); 
     }
@@ -340,7 +341,7 @@ void *Remapeta(void *argument)
     }
 
   zaxisID2 = zaxisCreate(ZAXIS_HYBRID, nhlevf2);
-  lev2 = (double *) malloc(nhlevf2*sizeof(double));
+  lev2 = malloc(nhlevf2*sizeof(double));
   for ( i = 0; i < nhlevf2; ++i ) lev2[i] = i+1;
   zaxisDefLevels(zaxisID2, lev2);
   free(lev2);
@@ -380,7 +381,7 @@ void *Remapeta(void *argument)
                       if ( cdoVerbose )
                         cdoPrint("lhavevct=TRUE  zaxisIDh = %d, nhlevf1   = %d", zaxisIDh, nlevel);
  
-		      vct1 = (double *) malloc(nvct1*sizeof(double));
+		      vct1 = malloc(nvct1*sizeof(double));
 		      zaxisInqVct(zaxisID, vct1);
 		      
 		      vlistChangeZaxisIndex(vlistID2, i, zaxisID2);
@@ -496,57 +497,57 @@ void *Remapeta(void *argument)
   */
   if ( operatorID == REMAPETAS || operatorID == REMAPETAZ)
     {
-      sum1 = (double *) malloc(ngp*sizeof(double));
-      sum2 = (double *) malloc(ngp*sizeof(double));
+      sum1 = malloc(ngp*sizeof(double));
+      sum2 = malloc(ngp*sizeof(double));
     }
 
   if ( operatorID == REMAPETAZ )
     {
-      deltap1 = (double *) malloc(ngp*nhlevf1*sizeof(double));
-      deltap2 = (double *) malloc(ngp*nhlevf2*sizeof(double));
-      half_press1 = (double *) malloc(ngp*(nhlevf1+1)*sizeof(double));
-      half_press2 = (double *) malloc(ngp*(nhlevf2+1)*sizeof(double));
+      deltap1 = malloc(ngp*nhlevf1*sizeof(double));
+      deltap2 = malloc(ngp*nhlevf2*sizeof(double));
+      half_press1 = malloc(ngp*(nhlevf1+1)*sizeof(double));
+      half_press2 = malloc(ngp*(nhlevf2+1)*sizeof(double));
     }
 
-  array = (double *) malloc(ngp*sizeof(double));
+  array = malloc(ngp*sizeof(double));
 
-  fis1  = (double *) malloc(ngp*sizeof(double));
-  ps1   = (double *) malloc(ngp*sizeof(double));
+  fis1  = malloc(ngp*sizeof(double));
+  ps1   = malloc(ngp*sizeof(double));
 
-  if ( lfis2 == FALSE ) fis2  = (double *) malloc(ngp*sizeof(double));
+  if ( lfis2 == FALSE ) fis2  = malloc(ngp*sizeof(double));
   if ( lfis2 == TRUE && ngp != nfis2gp ) cdoAbort("Orographies have different grid size!");
 
-  ps2   = (double *) malloc(ngp*sizeof(double));
+  ps2   = malloc(ngp*sizeof(double));
 
   if ( ltq )
     {
-      tscor = (double *) malloc(ngp*sizeof(double));
-      pscor = (double *) malloc(ngp*sizeof(double));
-      secor = (double *) malloc(ngp*sizeof(double));
+      tscor = malloc(ngp*sizeof(double));
+      pscor = malloc(ngp*sizeof(double));
+      secor = malloc(ngp*sizeof(double));
 
-      t1    = (double *) malloc(ngp*nhlevf1*sizeof(double));
-      q1    = (double *) malloc(ngp*nhlevf1*sizeof(double));
+      t1    = malloc(ngp*nhlevf1*sizeof(double));
+      q1    = malloc(ngp*nhlevf1*sizeof(double));
 
-      t2    = (double *) malloc(ngp*nhlevf2*sizeof(double));
-      q2    = (double *) malloc(ngp*nhlevf2*sizeof(double));
+      t2    = malloc(ngp*nhlevf2*sizeof(double));
+      q2    = malloc(ngp*nhlevf2*sizeof(double));
     }
 
   if ( nvars3D )
     {
-      vars1  = (double **) malloc(nvars*sizeof(double));
-      vars2  = (double **) malloc(nvars*sizeof(double));
+      vars1  = malloc(nvars*sizeof(double));
+      vars2  = malloc(nvars*sizeof(double));
 
       for ( varID = 0; varID < nvars3D; ++varID )
 	{
-	  vars1[varID] = (double *) malloc(ngp*nhlevf1*sizeof(double));
-	  vars2[varID] = (double *) malloc(ngp*nhlevf2*sizeof(double));
+	  vars1[varID] = malloc(ngp*nhlevf1*sizeof(double));
+	  vars2[varID] = malloc(ngp*nhlevf2*sizeof(double));
 	}
     }
 
   if ( zaxisIDh != -1 && geopID == -1 )
     {
       if ( ltq )
-	cdoWarning("Orography (surf. geopotential) not found - using zero orography!");
+	cdoWarning("%s not found - using zero %s!", var_stdname(surface_geopotential), var_stdname(surface_geopotential));
 
       memset(fis1, 0, ngp*sizeof(double));
     }
@@ -556,9 +557,9 @@ void *Remapeta(void *argument)
     {
       presID = psID;
       if ( psID != -1 )
-	cdoWarning("LOG surface pressure (lsp) not found - using surface pressure (asp)!");
+	cdoWarning("LOG(%s) not found - using %s!", var_stdname(surface_air_pressure), var_stdname(surface_air_pressure));
       else
-	cdoAbort("Surface pressure not found!");
+	cdoAbort("%s not found!", var_stdname(surface_air_pressure));
     }
 
   if ( cdoVerbose ) cdoPrint("nvars3D = %d   ltq = %d", nvars3D, ltq);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -100,21 +100,21 @@ void *Intgridtraj(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
-  vardata1 = (double **) malloc(nvars*sizeof(double*));
-  vardata2 = (double **) malloc(nvars*sizeof(double*));
+  vardata1 = malloc(nvars*sizeof(double*));
+  vardata2 = malloc(nvars*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata1[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
-      vardata2[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
+      vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
+      vardata2[varID] = malloc(gridsize*nlevel*sizeof(double));
     }
 
   gridID2 = gridCreate(GRID_TRAJECTORY, 1);

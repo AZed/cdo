@@ -11,7 +11,7 @@
 #include "cdi.h"
 #include "cdi_int.h"
 #include "vlist.h"
-#include "pio_util.h"
+#include "error.h"
 #include "serialize.h"
 
 static
@@ -105,7 +105,7 @@ void fill_att(cdi_att_t *attp, int indtype, int exdtype, size_t nelems, size_t x
 
 @Prototype int vlistInqNatts(int vlistID, int varID, int *nattsp)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  nattsp   Pointer to location for returned number of variable attributes.
 
@@ -136,7 +136,7 @@ int vlistInqNatts(int vlistID, int varID, int *nattsp)
 
 @Prototype int vlistInqAtt(int vlistID, int varID, int attnum, char *name, int *typep, int *lenp)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  attnum   Attribute number (from 0 to natts-1).
     @Item  name     Pointer to the location for the returned attribute name. The caller must allocate space for the 
@@ -389,7 +389,7 @@ int vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char
 
 @Prototype int vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.
@@ -411,7 +411,7 @@ int vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip)
 
 @Prototype int vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *dp)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.
@@ -433,7 +433,7 @@ int vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *d
 
 @Prototype int vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char *tp)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  name     Attribute name.
     @Item  mlen     Number of allocated values provided for the attribute.

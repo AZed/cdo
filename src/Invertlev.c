@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -55,8 +55,8 @@ void invertLevDes(int vlistID)
       /* if ( zaxisInqLevels(zaxisID1, NULL) ) */
 	{
 
-	  yv1 = (double *) malloc(nlev*sizeof(double));
-	  yv2 = (double *) malloc(nlev*sizeof(double));
+	  yv1 = malloc(nlev*sizeof(double));
+	  yv2 = malloc(nlev*sizeof(double));
 
 	  zaxisInqLevels(zaxisID1, yv1);
 	  for ( ilev = 0; ilev < nlev; ++ilev ) yv2[nlev-ilev-1] = yv1[ilev];
@@ -68,8 +68,8 @@ void invertLevDes(int vlistID)
 
       if ( zaxisInqLbounds(zaxisID1, NULL) && zaxisInqUbounds(zaxisID1, NULL) )
 	{
-	  yb1 = (double *) malloc(nlev*sizeof(double));
-	  yb2 = (double *) malloc(nlev*sizeof(double));
+	  yb1 = malloc(nlev*sizeof(double));
+	  yb2 = malloc(nlev*sizeof(double));
 
 	  zaxisInqLbounds(zaxisID1, yb1);
 	  for ( ilev = 0; ilev < nlev; ++ilev ) yb2[nlev-ilev-1] = yb1[ilev];
@@ -137,12 +137,12 @@ void *Invertlev(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   nvars = vlistNvars(vlistID1);
 
-  vardata  = (double **) malloc(nvars*sizeof(double*));
-  varnmiss = (int **) malloc(nvars*sizeof(int*));
+  vardata  = malloc(nvars*sizeof(double*));
+  varnmiss = malloc(nvars*sizeof(int*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -160,8 +160,8 @@ void *Invertlev(void *argument)
       else
 	{
 	  linvert = TRUE;
-	  vardata[varID]  = (double *) malloc(gridsize*nlev*sizeof(double));
-	  varnmiss[varID] = (int *) malloc(nlev*sizeof(int));
+	  vardata[varID]  = malloc(gridsize*nlev*sizeof(double));
+	  varnmiss[varID] = malloc(nlev*sizeof(int));
 	}
     }
 

@@ -71,7 +71,7 @@ void sort_par(long num_links, double *restrict add1, int parent, int par_depth)
 	     "       in this implementation of merge sort\n");
     }
 
-  idx = (long *) malloc(num_links*sizeof(long));
+  idx = malloc(num_links*sizeof(long));
 
   /* SPLIT AND SORT THE DATA FRAGMENTS */
   add_srt[0] = 0;                  add_srt[1] = num_links/nsplit;

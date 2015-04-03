@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -194,9 +194,9 @@ void *Spectrum(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vdate = (int *) realloc(vdate, nalloc*sizeof(int));
-	  vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
+	  vdate = realloc(vdate, nalloc*sizeof(int));
+	  vtime = realloc(vtime, nalloc*sizeof(int));
+	  vars  = realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
@@ -209,7 +209,7 @@ void *Spectrum(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = (double *) malloc(gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 
@@ -251,15 +251,15 @@ void *Spectrum(void *argument)
 
   nfreq = seg_l/2 + 1;
 
-  vars2 = (field_t ***) malloc(nfreq*sizeof(field_t **));
+  vars2 = malloc(nfreq*sizeof(field_t **));
   for ( freq = 0; freq < nfreq; freq++ )
     vars2[freq] = field_malloc(vlistID1, FIELD_PTR);
 
-  array1  = (double *) malloc(nts   * sizeof(double));
-  array2  = (double *) malloc(nfreq * sizeof(double));
-  real    = (double *) malloc(seg_l * sizeof(double));
-  imag    = (double *) malloc(seg_l * sizeof(double));
-  window  = (double *) malloc(seg_l * sizeof(double));
+  array1  = malloc(nts   * sizeof(double));
+  array2  = malloc(nfreq * sizeof(double));
+  real    = malloc(seg_l * sizeof(double));
+  imag    = malloc(seg_l * sizeof(double));
+  window  = malloc(seg_l * sizeof(double));
   	   
   switch (which_window)
     {

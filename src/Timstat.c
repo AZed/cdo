@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -225,14 +225,14 @@ void *Timstat(void *argument)
       streamDefVlist(streamID3, vlistID3);
     }
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
 
   field_init(&field);
-  field.ptr = (double *) malloc(gridsize*sizeof(double));
+  field.ptr = malloc(gridsize*sizeof(double));
 
   vars1 = field_malloc(vlistID1, FIELD_PTR);
   samp1 = field_malloc(vlistID1, FIELD_NONE);
@@ -292,7 +292,7 @@ void *Timstat(void *argument)
 		  if ( nmiss > 0 || samp1[varID][levelID].ptr )
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
-			samp1[varID][levelID].ptr = (double *) malloc(nwpv*gridsize*sizeof(double));
+			samp1[varID][levelID].ptr = malloc(nwpv*gridsize*sizeof(double));
 
 		      for ( i = 0; i < nwpv*gridsize; i++ )
 			if ( DBL_IS_EQUAL(vars1[varID][levelID].ptr[i], vars1[varID][levelID].missval) )
@@ -311,7 +311,7 @@ void *Timstat(void *argument)
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
 			{
-			  samp1[varID][levelID].ptr = (double *) malloc(nwpv*gridsize*sizeof(double));
+			  samp1[varID][levelID].ptr = malloc(nwpv*gridsize*sizeof(double));
 			  for ( i = 0; i < nwpv*gridsize; i++ )
 			    samp1[varID][levelID].ptr[i] = nsets;
 			}

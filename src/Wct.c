@@ -112,8 +112,8 @@ void *Wct(void *argument)
   field_init(&field1);
   field_init(&field2);
 
-  field1.ptr = (double *) malloc(gridsize*sizeof(double));
-  field2.ptr = (double *) malloc(gridsize*sizeof(double));
+  field1.ptr = malloc(gridsize*sizeof(double));
+  field2.ptr = malloc(gridsize*sizeof(double));
 
   if ( cdoVerbose )
     cdoPrint("Number of timesteps: file1 %d, file2 %d", vlistNtsteps(vlistID1), vlistNtsteps(vlistID2));

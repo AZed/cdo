@@ -14,16 +14,15 @@ endif
 
 collectData_SOURCES=collectData.c
 
-collectData_LDADD=$(top_builddir)/src/libcdi.la
+if USE_MPI
+LDADD=$(top_builddir)/src/libcdipio.la
+else
+LDADD=
+endif
+LDADD+=$(top_builddir)/src/libcdi.la
 
 collectData2003_SOURCES=collectData2003.F90
 
-collectData2003_LDADD=$(top_builddir)/src/libcdi.la
-
 collectDataNStreams_SOURCES=collectDataNStreams.c
 
-collectDataNStreams_LDADD=$(top_builddir)/src/libcdi.la
-
 compareResourcesArray_SOURCES=compareResourcesArray.c
-
-compareResourcesArray_LDADD=$(top_builddir)/src/libcdi.la

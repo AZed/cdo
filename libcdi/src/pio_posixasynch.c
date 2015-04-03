@@ -10,22 +10,23 @@
 #ifdef USE_MPI
 #ifndef _SX
 
+#include <aio.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
-
-#include <aio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include <unistd.h>
 
-#include "mpi.h"
+#include <mpi.h>
+
 #include "pio.h"
 #include "pio_comm.h"
 #include "pio_impl.h"
 #include "pio_util.h"
+#include "dmemory.h"
 
 extern char * command2charP[6];
 

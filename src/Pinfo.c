@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -74,8 +74,8 @@ void *Pinfo(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize*sizeof(double));
 
   indg = 0;
   tsID = 0;

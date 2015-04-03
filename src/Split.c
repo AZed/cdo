@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -123,9 +123,9 @@ void *Split(void *argument)
 	    }
 	}
 
-      codes     = (int *) malloc(nsplit*sizeof(int));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      codes     = malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
       memcpy(codes, itmp, nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
@@ -192,9 +192,9 @@ void *Split(void *argument)
 	    }
 	}
 
-      params    = (int *) malloc(nsplit*sizeof(int));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      params    = malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
       memcpy(params, itmp, nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
@@ -250,9 +250,9 @@ void *Split(void *argument)
 	    }
 	}
 
-      tabnums   = (int *) malloc(nsplit*sizeof(int));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      tabnums   = malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
       memcpy(tabnums, itmp, nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
@@ -292,8 +292,8 @@ void *Split(void *argument)
       char varname[CDI_MAX_NAME];
       nsplit = nvars;
 
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
 	{
@@ -342,9 +342,9 @@ void *Split(void *argument)
 	    }
 	}
 
-      levels    = (double *) malloc(nsplit*sizeof(double));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      levels    = malloc(nsplit*sizeof(double));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
       memcpy(levels, ftmp, nsplit*sizeof(double));
 
       for ( index = 0; index < nsplit; index++ )
@@ -385,9 +385,9 @@ void *Split(void *argument)
 
       nsplit = vlistNgrids(vlistID1);
 
-      gridIDs   = (int *) malloc(nsplit*sizeof(int));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      gridIDs   = malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
 	gridIDs[index] = vlistGrid(vlistID1, index);
@@ -430,9 +430,9 @@ void *Split(void *argument)
 
       nsplit = vlistNzaxis(vlistID1);
 
-      zaxisIDs  = (int *) malloc(nsplit*sizeof(int));
-      vlistIDs  = (int *) malloc(nsplit*sizeof(int));
-      streamIDs = (int *) malloc(nsplit*sizeof(int));
+      zaxisIDs  = malloc(nsplit*sizeof(int));
+      vlistIDs  = malloc(nsplit*sizeof(int));
+      streamIDs = malloc(nsplit*sizeof(int));
 
       for ( index = 0; index < nsplit; index++ )
 	zaxisIDs[index] = vlistZaxis(vlistID1, index);
@@ -477,7 +477,7 @@ void *Split(void *argument)
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-      array = (double *) malloc(gridsize*sizeof(double));
+      array = malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

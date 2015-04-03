@@ -957,7 +957,7 @@ void gribapiAddRecord(stream_t * streamptr, int param, grib_handle *gh,
       if ( linitial_field )
 	{
 	  if ( grib_get_double(gh, cdiAdditionalGRIBKeys[i], &dval) == 0 )
-            varDefOptGribInt(varID, dval, cdiAdditionalGRIBKeys[i]);
+            varDefOptGribDbl(varID, dval, cdiAdditionalGRIBKeys[i]);
 	}
       /* note: if the key is not defined, we do not throw an error! */
     }
@@ -2601,7 +2601,8 @@ void gribapiDefGrid(int editionNumber, grib_handle *gh, int gridID, int ljpeg, i
 	    GRIB_CHECK(grib_set_long(gh, "numberOfGridUsed", number), 0);
 	    GRIB_CHECK(grib_set_long(gh, "numberOfGridInReference", position), 0);
             len = 16;
-	    if (grib_set_bytes(gh, "uuidOfHGrid", (unsigned char *) gridInqUUID(gridID, uuid), &len) != 0)
+            gridInqUUID(gridID, uuid);
+	    if (grib_set_bytes(gh, "uuidOfHGrid", (unsigned char *) uuid, &len) != 0)
 	      Warning("Can't write UUID!");
 	  }
 
@@ -2896,7 +2897,8 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
                 GRIB_CHECK(grib_set_long(gh, "nlev", zaxisInqNlevRef(zaxisID)), 0);
                 GRIB_CHECK(grib_set_long(gh, "numberOfVGridUsed", number), 0);
                 len = 16;
-                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) zaxisInqUUID(zaxisID, uuid), &len) != 0)
+                zaxisInqUUID(zaxisID, uuid);
+                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) uuid, &len) != 0)
                   Warning("Can't write UUID!");
                 GRIB_CHECK(grib_set_long(gh, "topLevel", (long) dlevel1), 0);
                 GRIB_CHECK(grib_set_long(gh, "bottomLevel", (long) dlevel2), 0);
@@ -2914,7 +2916,8 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
                 GRIB_CHECK(grib_set_long(gh, "nlev", zaxisInqNlevRef(zaxisID)), 0);
                 GRIB_CHECK(grib_set_long(gh, "numberOfVGridUsed", number), 0);
                 len = 16;
-                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) zaxisInqUUID(zaxisID, uuid), &len) != 0)
+                zaxisInqUUID(zaxisID, uuid);
+                if (grib_set_bytes(gh, "uuidOfVGrid", (unsigned char *) uuid, &len) != 0)
                   Warning("Can't write UUID!");
                 GRIB_CHECK(grib_set_double(gh, "level", level), 0);
               }
@@ -3044,13 +3047,25 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
     int i;
     for (i=0; i<vlistptr->vars[varID].opt_grib_dbl_nentries; i++)
       {
-	GRIB_CHECK(grib_set_double(gh, vlistptr->vars[varID].opt_grib_dbl_keyword[i],
-				   vlistptr->vars[varID].opt_grib_dbl_val[i]), 0);
+	int ret = grib_set_double(gh, vlistptr->vars[varID].opt_grib_dbl_keyword[i],
+                                  vlistptr->vars[varID].opt_grib_dbl_val[i]);
+	if (ret != 0) {
+	    fprintf(stderr, "key \"%s\"  :   value = %g\n",
+                    vlistptr->vars[varID].opt_grib_dbl_keyword[i],
+		    vlistptr->vars[varID].opt_grib_dbl_val[i]);
+	}
+	GRIB_CHECK(ret, 0);
       }
     for (i=0; i<vlistptr->vars[varID].opt_grib_int_nentries; i++)
       {
-	GRIB_CHECK(grib_set_long(gh, vlistptr->vars[varID].opt_grib_int_keyword[i],
-				 vlistptr->vars[varID].opt_grib_int_val[i]), 0);
+	int ret = grib_set_long(gh, vlistptr->vars[varID].opt_grib_int_keyword[i],
+	                        vlistptr->vars[varID].opt_grib_int_val[i]);
+	if (ret != 0) {
+	    fprintf(stderr, "key \"%s\"  :   value = %d\n",
+		    vlistptr->vars[varID].opt_grib_int_keyword[i],
+		    vlistptr->vars[varID].opt_grib_int_val[i]);
+	}
+	GRIB_CHECK(ret, 0);
       }
   }
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,7 @@
 #include "pstream.h"
 #include "vinterp.h"
 #include "list.h"
+#include "stdnametable.h"
 
 #define  C_EARTH_GRAV    (9.80665)
 
@@ -174,7 +175,7 @@ void *Vertint(void *argument)
 	{
 	  double *level;
 	  int l;
-	  level = (double *) malloc(nlevel*sizeof(double));
+	  level = malloc(nlevel*sizeof(double));
 	  zaxisInqLevels(zaxisID, level);
 	  for ( l = 0; l < nlevel; l++ )
 	    {
@@ -198,7 +199,7 @@ void *Vertint(void *argument)
 		  nhlevf   = nhlev;
 		  nhlevh   = nhlevf + 1;
 	      
-		  vct = (double *) malloc(nvct*sizeof(double));
+		  vct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
@@ -219,7 +220,7 @@ void *Vertint(void *argument)
 		  nhlevf   = nhlev - 1;
 		  nhlevh   = nhlev;
 	      
-		  vct = (double *) malloc(nvct*sizeof(double));
+		  vct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
@@ -237,7 +238,7 @@ void *Vertint(void *argument)
 		  int vctsize;
 		  int voff = 4;
 		  
-		  rvct = (double *) malloc(nvct*sizeof(double));
+		  rvct = malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, rvct);
 
 		  if ( (int)(rvct[0]+0.5) == 100000 && rvct[voff] < rvct[voff+1] )
@@ -249,7 +250,7 @@ void *Vertint(void *argument)
 		      nhlevh   = nhlev + 1;
 
 		      vctsize = 2*nhlevh;
-		      vct = (double *) malloc(vctsize*sizeof(double));
+		      vct = malloc(vctsize*sizeof(double));
 
 		      vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
 
@@ -287,16 +288,16 @@ void *Vertint(void *argument)
 
   nvars = vlistNvars(vlistID1);
 
-  vars      = (int *) malloc(nvars*sizeof(int));
-  vardata1  = (double **) malloc(nvars*sizeof(double*));
-  vardata2  = (double **) malloc(nvars*sizeof(double*));
-  varnmiss  = (int **) malloc(nvars*sizeof(int*));
-  varinterp = (int *) malloc(nvars*sizeof(int));
+  vars      = malloc(nvars*sizeof(int));
+  vardata1  = malloc(nvars*sizeof(double*));
+  vardata2  = malloc(nvars*sizeof(double*));
+  varnmiss  = malloc(nvars*sizeof(int*));
+  varinterp = malloc(nvars*sizeof(int));
 
   maxlev   = nhlevh > nplev ? nhlevh : nplev;
 
   if ( Extrapolate == 0 )
-    pnmiss   = (int *) malloc(nplev*sizeof(int));
+    pnmiss   = malloc(nplev*sizeof(int));
 
   // check levels
   if ( zaxisIDh != -1 )
@@ -318,17 +319,17 @@ void *Vertint(void *argument)
 
   if ( zaxisIDh != -1 && ngp > 0 )
     {
-      vert_index = (int *) malloc(ngp*nplev*sizeof(int));
-      ps_prog    = (double *) malloc(ngp*sizeof(double));
-      full_press = (double *) malloc(ngp*nhlevf*sizeof(double));
-      half_press = (double *) malloc(ngp*nhlevh*sizeof(double));
+      vert_index = malloc(ngp*nplev*sizeof(int));
+      ps_prog    = malloc(ngp*sizeof(double));
+      full_press = malloc(ngp*nhlevf*sizeof(double));
+      half_press = malloc(ngp*nhlevh*sizeof(double));
     }
   else
     cdoWarning("No data on hybrid model level found!");
 
   if ( operfunc == func_hl )
     {
-      phlev = (double *) malloc(nplev*sizeof(double));
+      phlev = malloc(nplev*sizeof(double));
       h2p(phlev, plev, nplev);
 
       if ( cdoVerbose )
@@ -411,18 +412,15 @@ void *Vertint(void *argument)
 	  vlistInqVarStdname(vlistID1, varID, stdname);
 	  strtolower(stdname);
 
-	  if      ( strcmp(stdname, "surface_air_pressure") == 0 ) code = 134;
-	  else if ( strcmp(stdname, "air_temperature")      == 0 ) code = 130;
-	  else if ( strcmp(stdname, "surface_geopotential") == 0 ) code = 129;
-	  else if ( strcmp(stdname, "geopotential")         == 0 ) code = 129;
-	  else if ( strcmp(stdname, "geopotential_height")  == 0 ) code = 156;
-	  else
+	  code = echamcode_from_stdname(stdname);
+
+	  if ( code < 0 )
 	    {
-	      /*                        ECHAM                            ECMWF       */
-	      if      ( strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0 ) code = 129;
-	      else if ( strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0 ) code = 130;
-	      else if ( strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0 ) code = 134;
-	      else if ( strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0 ) code = 152;
+	      /*                                  ECHAM                            ECMWF       */
+	      if      ( geopID == -1  && (strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0) ) code = 129;
+	      else if ( tempID == -1  && (strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0) ) code = 130;
+	      else if ( psID   == -1  && (strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0) ) code = 134;
+	      else if ( lnpsID == -1  && (strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0) ) code = 152;
 	      /* else if ( strcmp(varname, "geopoth") == 0 ) code = 156; */
 	    }
 	}
@@ -449,17 +447,17 @@ void *Vertint(void *argument)
 	cdoAbort("Spectral data unsupported!");
 
       if ( varID == gheightID )
-	vardata1[varID] = (double *) malloc(gridsize*(nlevel+1)*sizeof(double));
+	vardata1[varID] = malloc(gridsize*(nlevel+1)*sizeof(double));
       else
-	vardata1[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
+	vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
 
       /* if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlev ) */
       if ( zaxisID == zaxisIDh ||
 	   (zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && (nlevel == nhlevh || nlevel == nhlevf)) )
 	{
 	  varinterp[varID] = TRUE;
-	  vardata2[varID]  = (double *) malloc(gridsize*nplev*sizeof(double));
-	  varnmiss[varID]  = (int *) malloc(maxlev*sizeof(int));
+	  vardata2[varID]  = malloc(gridsize*nplev*sizeof(double));
+	  varnmiss[varID]  = malloc(maxlev*sizeof(int));
 	  memset(varnmiss[varID], 0, maxlev*sizeof(int));
 	}
       else
@@ -469,27 +467,27 @@ void *Vertint(void *argument)
 		       varID+1, paramstr, nlevel);
 	  varinterp[varID] = FALSE;
 	  vardata2[varID]  = vardata1[varID];
-	  varnmiss[varID]  = (int *) malloc(nlevel*sizeof(int));
+	  varnmiss[varID]  = malloc(nlevel*sizeof(int));
 	}
     }
 
   if ( cdoVerbose )
     {
       cdoPrint("Found:");
-      if ( tempID != -1 ) cdoPrint("  air temperature");
-      if ( psID   != -1 ) cdoPrint("  surface pressure");
-      if ( geopID != -1 ) cdoPrint("  surface geopotential");
-      if ( gheightID != -1 ) cdoPrint("  geopotential height");
+      if ( tempID != -1 )    cdoPrint("  %s", var_stdname(air_temperature));
+      if ( psID   != -1 )    cdoPrint("  %s", var_stdname(surface_air_pressure));
+      if ( geopID != -1 )    cdoPrint("  %s", var_stdname(surface_geopotential));
+      if ( gheightID != -1 ) cdoPrint("  %s", var_stdname(geopotential_height));
     }
 
   if ( tempID != -1 || gheightID != -1 ) geop_needed = TRUE;
 
   if ( zaxisIDh != -1 && geop_needed )
     {
-      geop = (double *) malloc(ngp*sizeof(double));
+      geop = malloc(ngp*sizeof(double));
       if ( geopID == -1 )
 	{
-	  cdoWarning("Orography (surf. geopotential) not found - using zero orography!");
+	  cdoWarning("%s not found - using zero %s!", var_stdname(surface_geopotential), var_stdname(surface_geopotential));
 	  memset(geop, 0, ngp*sizeof(double));
 	}
     }
@@ -504,10 +502,10 @@ void *Vertint(void *argument)
 	  param = vlistInqVarParam(vlistID1, psID);
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 	  if ( cdoVerbose )
-	    cdoPrint("LOG surface pressure not found - using surface pressure (param=%s)!", paramstr);
+	    cdoWarning("LOG(%s) not found - using %s!", var_stdname(surface_air_pressure), var_stdname(surface_air_pressure));
 	}
       else
-	cdoAbort("Surface pressure not found!");
+	cdoAbort("%s not found!", var_stdname(surface_air_pressure));
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());

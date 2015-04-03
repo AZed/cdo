@@ -11,6 +11,7 @@
 
 #include "namespace.h"
 #include "pio.h"
+#include "cdipio.h"
 #include "pio_comm.h"
 #include "pio_cdf_int.h"
 #include "pio_util.h"

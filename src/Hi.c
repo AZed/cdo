@@ -123,9 +123,9 @@ void *Hi(void *argument)
   field_init(&field1);
   field_init(&field2);
   field_init(&field3);
-  field1.ptr = (double *) malloc(gridsize*sizeof(double));
-  field2.ptr = (double *) malloc(gridsize*sizeof(double));
-  field3.ptr = (double *) malloc(gridsize*sizeof(double));
+  field1.ptr = malloc(gridsize*sizeof(double));
+  field2.ptr = malloc(gridsize*sizeof(double));
+  field3.ptr = malloc(gridsize*sizeof(double));
 
   if ( cdoVerbose )
     cdoPrint("Number of timesteps: file1 %d, file2 %d, file3 %d",

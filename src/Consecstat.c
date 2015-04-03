@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -152,7 +152,7 @@ void *Consecstat (void *argument)
   vlistDefTaxis(ovlistID, otaxisID);
 
   field_init(&field);
-  field.ptr = (double *) malloc(vlistGridsizeMax(ovlistID)*sizeof(double));
+  field.ptr = malloc(vlistGridsizeMax(ovlistID)*sizeof(double));
 
   nvars     = vlistNvars(ivlistID);
   vars      = field_calloc(ivlistID, FIELD_PTR);

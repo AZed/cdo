@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -40,8 +40,8 @@ void compareGrids(int gridID1, int gridID2)
 		{
 		  double *yvals1, *yvals2;
 
-		  yvals1 = (double *) malloc(ysize*sizeof(double));
-		  yvals2 = (double *) malloc(ysize*sizeof(double));
+		  yvals1 = malloc(ysize*sizeof(double));
+		  yvals2 = malloc(ysize*sizeof(double));
 
 		  gridInqYvals(gridID1, yvals1);
 		  gridInqYvals(gridID2, yvals2);
@@ -78,8 +78,8 @@ void compareGrids(int gridID1, int gridID2)
 		{
 		  double *xvals1, *xvals2;
 
-		  xvals1 = (double *) malloc(xsize*sizeof(double));
-		  xvals2 = (double *) malloc(xsize*sizeof(double));
+		  xvals1 = malloc(xsize*sizeof(double));
+		  xvals2 = malloc(xsize*sizeof(double));
 
 		  gridInqXvals(gridID1, xvals1);
 		  gridInqXvals(gridID2, xvals2);
@@ -109,8 +109,8 @@ void compareGrids(int gridID1, int gridID2)
 static
 int cmpnames(const void *s1, const void *s2)
 {
-  char *name1 = (char *) s1;
-  char *name2 = (char *) s2;
+  const char *name1 = s1;
+  const char *name2 = s2;
 
   return (strcmp(name1, name2));
 }
@@ -140,6 +140,8 @@ void vlistCompare(int vlistID1, int vlistID2, int flag)
 	  char name1[CDI_MAX_NAME], name2[CDI_MAX_NAME];
 	  vlistInqVarName(vlistID1, varID, name1);
 	  vlistInqVarName(vlistID2, varID, name2);
+	  strtolower(name1);
+	  strtolower(name2);
 	  if ( strcmp(name1, name2) != 0 )
 	    {
 	      cdoWarning("Input streams have different parameters!");

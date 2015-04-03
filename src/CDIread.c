@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -61,26 +61,6 @@ const char *datatypestr(int datatype)
   else if ( datatype == DATATYPE_UINT16 ) return ("U16");
   else if ( datatype == DATATYPE_UINT32 ) return ("U32");
   else                                    return ("");
-}
-
-static
-off_t filesize(const char *filename)
-{
-  FILE *fp;
-  off_t pos = 0;
-
-  fp = fopen(filename, "r");
-  if ( fp == NULL )
-    {
-      fprintf(stderr, "Open failed on %s\n", filename);
-    }
-  else
-    {
-      fseek(fp, 0L, SEEK_END);
-      pos = ftello(fp);
-    }
-  
-  return pos;
 }
 
 static
@@ -160,8 +140,8 @@ void *CDIread(void *argument)
 	  
       gridsize = vlistGridsizeMax(vlistID);
       
-      if ( darray == NULL ) darray = (double *) malloc(gridsize*sizeof(double));
-      if ( farray == NULL && memtype == MEMTYPE_FLOAT ) farray = (float *) malloc(gridsize*sizeof(float));
+      if ( darray == NULL ) darray = malloc(gridsize*sizeof(double));
+      if ( farray == NULL && memtype == MEMTYPE_FLOAT ) farray = malloc(gridsize*sizeof(float));
 
       t0 = timer_val(timer_read);
 

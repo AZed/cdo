@@ -65,7 +65,7 @@ void listSetForeach(listSet *q, elemOp func, void *data);
 int       fowMPINONB ( const char * );
 int       fcMPINONB ( int );
 size_t    fwMPINONB( int, int, const void *, size_t );
-void      initMPINONB ( void );
+void initMPINONB(void (*postCommSetupActions)(void));
 void      finalizeMPINONB ( void );
 
 
@@ -73,7 +73,7 @@ void      finalizeMPINONB ( void );
 int pioSendClose(int);
 int pioSendOpen(const char *);
 size_t pioSendWrite(int, int, const void *, size_t);
-void pioSendInitialize(void);
+void pioSendInitialize(void (*postCommSetupActions)(void));
 void pioSendFinalize(void);
 
 
@@ -87,7 +87,7 @@ void      fpgPOSIXFPGUARDSENDRECV ( void );
 int       fowPOSIXFPGUARDSENDRECV ( const char * );
 int       fcPOSIXFPGUARDSENDRECV ( int );
 size_t    fwPOSIXFPGUARDSENDRECV ( int, int, const void *, size_t );
-void      initPOSIXFPGUARDSENDRECV ( void );
+void      initPOSIXFPGUARDSENDRECV(void (*postCommSetupActions)(void));
 void      finalizePOSIXFPGUARDSENDRECV ( void );
 
 /* pio_posixnonb.c */

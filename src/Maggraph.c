@@ -256,20 +256,20 @@ void maggraph(const char *plotfile, const char *varname,const char *varunits, lo
   if ( stat == TRUE )
     {
 	/* if all files are of same number of steps, only one date_time_str array is being used */
-        date_time_str[0] = (char **)malloc( ntime_steps*sizeof(char *) ); 
+        date_time_str[0] = malloc( ntime_steps*sizeof(char *) ); 
 	
-	date_time   = (double *) malloc( ntime_steps*sizeof(double) );
-	mean_val    = (double *) malloc( ntime_steps*sizeof(double) );
-	std_dev_val = (double *) malloc( ntime_steps*sizeof(double) );
-	spread_min  = (double *) malloc( ntime_steps*sizeof(double) );
-	spread_max  = (double *) malloc( ntime_steps*sizeof(double) );
+	date_time   = malloc( ntime_steps*sizeof(double) );
+	mean_val    = malloc( ntime_steps*sizeof(double) );
+	std_dev_val = malloc( ntime_steps*sizeof(double) );
+	spread_min  = malloc( ntime_steps*sizeof(double) );
+	spread_max  = malloc( ntime_steps*sizeof(double) );
 	
 	for ( tsID = 0; tsID < ntime_steps; ++tsID )
 	  {
 	    date_time[tsID] = tsID+1;
 	    date2str(vdate[0][tsID], vdatestr, sizeof(vdatestr));
 	    time2str(vtime[0][tsID], vtimestr, sizeof(vtimestr));
-	    date_time_str[0][tsID] = (char *)malloc(256);
+	    date_time_str[0][tsID] = malloc(256);
 	    sprintf(date_time_str[0][tsID], "%s %s", vdatestr, vtimestr);
 	    mean_val[tsID] = 0.;
 	    std_dev_val[tsID] = 0.;
@@ -358,8 +358,8 @@ void maggraph(const char *plotfile, const char *varname,const char *varunits, lo
 	{
 	  if ( DBG )
 	    fprintf(stderr,"FILE  %ld\n", fileID );
-	  date_time             = (double *) malloc( nts[fileID]*sizeof(double) );
-	  date_time_str[fileID] = (char **)malloc( nts[fileID]*sizeof(char *) );
+	  date_time             = malloc( nts[fileID]*sizeof(double) );
+	  date_time_str[fileID] = malloc( nts[fileID]*sizeof(char *) );
 	  
 	  for ( tsID = 0; tsID <  nts[fileID]; ++tsID )
 	    {
@@ -367,7 +367,7 @@ void maggraph(const char *plotfile, const char *varname,const char *varunits, lo
 	      date2str(vdate[fileID][tsID], vdatestr, sizeof(vdatestr));
 	      time2str(vtime[fileID][tsID], vtimestr, sizeof(vtimestr));
 	      
-	      date_time_str[fileID][tsID] = (char *)malloc(256);
+	      date_time_str[fileID][tsID] = malloc(256);
 	      sprintf(date_time_str[fileID][tsID], "%s %s", vdatestr, vtimestr);
 	      if ( DBG )
 		fprintf( stderr,"%s %s %s\n", vdatestr, vtimestr, date_time_str[fileID][tsID] );
@@ -668,7 +668,7 @@ void maggraph(const char *plotfile, const char *varname,const char *varunits, lo
     }
   
   
-  lines[0] = (char *)malloc(1024);
+  lines[0] = malloc(1024);
   /* To be obtained from Meta Data */
   /*sprintf( lines[0],"%s","ExpID : " );*/ 
   /*sprintf( lines[0],"%sxxxx  Variable : %s[%s]",lines[0], varname, varunits );*/
@@ -824,10 +824,10 @@ void *Maggraph(void *argument)
        fprintf( stderr," files %s\n",ofilename );
     }
 	
-  datatab = (double **) malloc(nfiles*sizeof(double *));
-  vdate   = (int **) malloc(nfiles*sizeof(int *));
-  vtime   = (int **) malloc(nfiles*sizeof(int *));
-  nts     = (long *) malloc(nfiles*sizeof(long));
+  datatab = malloc(nfiles*sizeof(double *));
+  vdate   = malloc(nfiles*sizeof(int *));
+  vtime   = malloc(nfiles*sizeof(int *));
+  nts     = malloc(nfiles*sizeof(long));
   
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
@@ -876,9 +876,9 @@ void *Maggraph(void *argument)
 	  if ( tsID == 0 )
 	    {
 	      nts_alloc += NINC_ALLOC;
-	      datatab[ fileID ] = (double *) malloc( nts_alloc*sizeof(double) );
-	      vdate[ fileID ]   = (int *) malloc(  nts_alloc*sizeof(int) );
-	      vtime[ fileID ]   = (int *) malloc(  nts_alloc*sizeof(int) );
+	      datatab[ fileID ] = malloc( nts_alloc*sizeof(double) );
+	      vdate[ fileID ]   = malloc(  nts_alloc*sizeof(int) );
+	      vtime[ fileID ]   = malloc(  nts_alloc*sizeof(int) );
 	    }
 		
 	  nts[ fileID ]++;
@@ -886,9 +886,9 @@ void *Maggraph(void *argument)
 	  if ( nts[ fileID ] > nts_alloc )
 	    {
 	      nts_alloc += NINC_ALLOC;
-	      datatab[ fileID ] = (double *) realloc(datatab[fileID], nts_alloc*sizeof(double));
-	      vdate[ fileID ]   = (int *) realloc(vdate[fileID], nts_alloc*sizeof(int));
-	      vtime[ fileID ]   = (int *) realloc(vtime[fileID], nts_alloc*sizeof(int));
+	      datatab[ fileID ] = realloc(datatab[fileID], nts_alloc*sizeof(double));
+	      vdate[ fileID ]   = realloc(vdate[fileID], nts_alloc*sizeof(int));
+	      vtime[ fileID ]   = realloc(vtime[fileID], nts_alloc*sizeof(int));
 	    }
 	  
 	  streamInqRecord( streamID, &varID, &levelID );

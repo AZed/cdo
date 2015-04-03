@@ -287,12 +287,12 @@ void sort_add(long num_links, long num_wts, int *restrict add1, int *restrict ad
 
   if ( num_links <= 1 ) return;
 
-  idx = (int *) malloc(num_links*sizeof(int));
+  idx = malloc(num_links*sizeof(int));
   for ( i = 0; i < num_links; ++i ) idx[i] = i;
 
   remap_heapsort(num_links, add1, add2, idx);
 
-  wgt_tmp = (double*) malloc(num_wts*num_links*sizeof(double));
+  wgt_tmp = malloc(num_wts*num_links*sizeof(double));
   memcpy(wgt_tmp, weights, num_wts*num_links*sizeof(double));
 
   for ( i = 0; i < num_links; ++i )
@@ -620,7 +620,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
       exit(-1);
     }
 
-  idx = (long *) malloc(num_links*sizeof(long));
+  idx = malloc(num_links*sizeof(long));
 
   /* SPLIT AND SORT THE DATA FRAGMENTS */
   /*
@@ -675,7 +675,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
       //	       who_am_i,parent,my_depth,omp_get_thread_num()+1,omp_get_num_threads());
 #endif
             
-      wgttmp = (double *) malloc(num_wts*nl[i]*sizeof(double));
+      wgttmp = malloc(num_wts*nl[i]*sizeof(double));
        
       for ( m = 0; m < nl[i]; m++ )
 	for ( n = 0; n < num_wts; n++ )                      
@@ -698,7 +698,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
                                                               /* ********************** */
   merge_lists(nl,add1s[0],add2s[0],add1s[1],add2s[1], idx);   /* MERGE THE SEGMENTS     */
                                                               /* ********************** */
-  tmp = (int *) malloc(num_links*sizeof(int));
+  tmp = malloc(num_links*sizeof(int));
   
 #if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i) num_threads(2)
@@ -724,7 +724,7 @@ void sort_par(long num_links, long num_wts, int *restrict add1, int *restrict ad
   free(tmp);
   tmp = NULL;
   
-  tmp2 = (double *) malloc(num_links*num_wts*sizeof(double) );
+  tmp2 = malloc(num_links*num_wts*sizeof(double) );
   
 #if defined(_OPENMP)
 #pragma omp parallel for if ( depth < par_depth ) private(i,n) num_threads(2)

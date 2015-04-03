@@ -758,7 +758,7 @@ void glo_coor(double *pxn, double *prlon, double *prlat,
    * icosahedral triangles into mni equal parts.                 
    */  
 
-  if ((mcosv = (int *) malloc (knd*sizeof(int))) == NULL ) 
+  if ((mcosv = malloc (knd*sizeof(int))) == NULL ) 
     {
       perror("malloc mcosv");
       exit (-1);
@@ -1341,9 +1341,9 @@ void gme_grid(int lbounds, int gridsize, double *rlon, double *rlat,
       exit (-1);
     }
 
-  xn    = (double *) malloc(gridsize*3*sizeof(double));
-  rlonx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double));
-  rlatx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double));
+  xn    = malloc(gridsize*3*sizeof(double));
+  rlonx = malloc((ni+3)*(ni+3)*nd*sizeof(double));
+  rlatx = malloc((ni+3)*(ni+3)*nd*sizeof(double));
 
   im1s = 0;
   im1e = ni;
@@ -1361,7 +1361,7 @@ void gme_grid(int lbounds, int gridsize, double *rlon, double *rlat,
     {
       struct polygon *poly;
       
-      poly  = (struct polygon *) malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon));
+      poly  = malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon));
 
       neighbours(rlonx,rlatx,im1s-1,im1e+1,im2s-1,im2e+1,nd, poly,im1s,im1e,im2s,im2e,nd);
 
@@ -1415,42 +1415,42 @@ int main(int argc, char *argv[])
 
   factorni(ni, &ni2, &ni3);  
 
-  if (( poly  = (struct polygon *) malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon))) == NULL) {
+  if (( poly  = malloc((ni+1)*(ni+1)*nd*sizeof(struct polygon))) == NULL) {
     perror("malloc poly");
     exit (-1);
   } 
   
-  if (( xn  = (double *) malloc((ni+1)*(ni+1)*3*nd*sizeof(double))) == NULL) {
+  if (( xn  = malloc((ni+1)*(ni+1)*3*nd*sizeof(double))) == NULL) {
     perror("malloc xn");
     exit (-1);
   } 
   
-  if ((rlon = (double *) malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
+  if ((rlon = malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
     perror("malloc rlon");
     exit (-1);
   } 
   
-  if ((rlat = (double *) malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
+  if ((rlat = malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
     perror("malloc rlat");
     exit (-1);
   } 
 
-  if ((rlonx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double))) == NULL) {
+  if ((rlonx = malloc((ni+3)*(ni+3)*nd*sizeof(double))) == NULL) {
     perror("malloc rlonx");
     exit (-1);
   } 
   
-  if ((rlatx = (double *) malloc((ni+3)*(ni+3)*nd*sizeof(double))) == NULL) {
+  if ((rlatx = malloc((ni+3)*(ni+3)*nd*sizeof(double))) == NULL) {
     perror("malloc rlatx");
     exit (-1);
   } 
 
-  if ((mask = (int *) malloc((ni+1)*(ni+1)*nd*sizeof(int))) == NULL) {
+  if ((mask = malloc((ni+1)*(ni+1)*nd*sizeof(int))) == NULL) {
     perror("malloc mask");
     exit (-1);
   } 
 
-  if (( area  = (double *) malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
+  if (( area  = malloc((ni+1)*(ni+1)*nd*sizeof(double))) == NULL) {
     perror("malloc area");
     exit (-1);
   } 

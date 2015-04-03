@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -79,20 +79,20 @@ void *Vardup(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = (int *) malloc(nrecords*sizeof(int));
-  recLevelID = (int *) malloc(nrecords*sizeof(int));
+  recVarID   = malloc(nrecords*sizeof(int));
+  recLevelID = malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array    = (double *) malloc(gridsize*sizeof(double));
-  vardata  = (double **) malloc(nvars*sizeof(double *));
-  varnmiss = (int **) malloc(nvars*sizeof(int *));
+  array    = malloc(gridsize*sizeof(double));
+  vardata  = malloc(nvars*sizeof(double *));
+  varnmiss = malloc(nvars*sizeof(int *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata[varID]  = (double *) malloc(gridsize*nlevel*sizeof(double));
-      varnmiss[varID] = (int *) malloc(nlevel*sizeof(int));
+      vardata[varID]  = malloc(gridsize*nlevel*sizeof(double));
+      varnmiss[varID] = malloc(nlevel*sizeof(int));
     }
 
   for ( i = 1; i < nmul; i++ )

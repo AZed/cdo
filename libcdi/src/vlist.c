@@ -5,15 +5,14 @@
 #include "dmemory.h"
 #include "cdi.h"
 #include "cdi_int.h"
+#include "error.h"
 #include "vlist.h"
 #include "zaxis.h"
 #include "varscan.h"
 #include "namespace.h"
-#include "pio_util.h"
 #include "resource_handle.h"
 #include "vlist_var.h"
 #include "vlist_att.h"
-#include "pio_rpc.h"
 
 #include "resource_unpack.h"
 #include "serialize.h"
@@ -250,7 +249,7 @@ vlist_delete(vlist_t *vlistptr)
 
 @Prototype void vlistDestroy(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
 
 @EndFunction
 */
@@ -269,8 +268,8 @@ void vlistDestroy(int vlistID)
 
 @Prototype void vlistCopy(int vlistID2, int vlistID1)
 @Parameter
-    @Item  vlistID2  Target variable list ID
-    @Item  vlistID1  Source variable list ID
+    @Item  vlistID2  Target variable list ID.
+    @Item  vlistID1  Source variable list ID.
 
 @Description
 The function @func{vlistCopy} copies all entries from vlistID1 to vlistID2.
@@ -294,7 +293,7 @@ void vlistCopy(int vlistID2, int vlistID1)
   if ( vlistptr1->vars )
     {
       int nvars = vlistptr1->nvars;
-      int nlevs, varID;
+      int varID;
 
       //vlistptr2->varsAllocated = nvars;
       vlistptr2->vars = (var_t *) malloc(vlistptr2->varsAllocated*sizeof(var_t));
@@ -345,10 +344,13 @@ void vlistCopy(int vlistID2, int vlistID1)
 	  vlistptr2->vars[varID].atts.nelems = 0;
 	  vlistCopyVarAtts(vlistID1, varID, vlistID2, varID);
 
-          nlevs = vlistptr1->vars[varID].nlevs;
-          vlistptr2->vars[varID].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
-          memcpy(vlistptr2->vars[varID].levinfo,
-                 vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+          if ( vlistptr1->vars[varID].levinfo )
+            {
+              int nlevs = zaxisInqSize(vlistptr1->vars[varID].zaxisID);
+              vlistptr2->vars[varID].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
+              memcpy(vlistptr2->vars[varID].levinfo,
+                     vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+            }
 	}
     }
 }
@@ -359,7 +361,7 @@ void vlistCopy(int vlistID2, int vlistID1)
 
 @Prototype int vlistDuplicate(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
 
 @Description
 The function @func{vlistDuplicate} duplicates the variable list from vlistID1.
@@ -396,9 +398,13 @@ void vlistClearFlag(int vlistID)
   for ( varID = 0; varID < vlistptr->nvars; varID++ )
     {
       vlistptr->vars[varID].flag = FALSE;
-      for ( levID = 0; levID < vlistptr->vars[varID].nlevs; levID++ )
+      if ( vlistptr->vars[varID].levinfo )
         {
-          vlistptr->vars[varID].levinfo[levID].flag = FALSE;
+          int nlevs = zaxisInqSize(vlistptr->vars[varID].zaxisID);
+          for ( levID = 0; levID < nlevs; levID++ )
+            {
+              vlistptr->vars[varID].levinfo[levID].flag = FALSE;
+            }
         }
     }
 }
@@ -491,8 +497,8 @@ int vlist_generate_zaxis(int vlistID, int zaxistype, int nlevels, double *levels
 
 @Prototype void vlistCopyFlag(int vlistID2, int vlistID1)
 @Parameter
-    @Item  vlistID2  Target variable list ID
-    @Item  vlistID1  Source variable list ID
+    @Item  vlistID2  Target variable list ID.
+    @Item  vlistID1  Source variable list ID.
 
 @Description
 The function @func{vlistCopyFlag} copies all entries with a flag from vlistID1 to vlistID2.
@@ -593,10 +599,11 @@ void vlistCopyFlag(int vlistID2, int vlistID1)
 	    vlistptr2->vars[varID2].atts.nelems = 0;
 	    vlistCopyVarAtts(vlistID1, varID, vlistID2, varID2);
 
-	    nlevs  = vlistptr1->vars[varID].nlevs;
+	    nlevs  = zaxisInqSize(vlistptr1->vars[varID].zaxisID);
 	    nlevs2 = 0;
-	    for ( levID = 0; levID < nlevs; levID++ )
-	      if ( vlistptr1->vars[varID].levinfo[levID].flag ) nlevs2++;
+            if ( vlistptr1->vars[varID].levinfo )
+              for ( levID = 0; levID < nlevs; levID++ )
+                if ( vlistptr1->vars[varID].levinfo[levID].flag ) nlevs2++;
 
 	    vlistptr2->vars[varID2].levinfo = (levinfo_t *) malloc(nlevs2*sizeof(levinfo_t));
 
@@ -613,6 +620,8 @@ void vlistCopyFlag(int vlistID2, int vlistID1)
 		zaxisID = vlistptr1->vars[varID].zaxisID;
 		levels = (double *) malloc(nlevs2*sizeof(double));
 		levID2 = 0;
+                if (!vlistptr1->vars[varID].levinfo)
+                  cdiVlistCreateVarLevInfo(vlistptr1, varID);
 		for ( levID = 0; levID < nlevs; ++levID )
 		  if ( vlistptr1->vars[varID].levinfo[levID].flag )
 		    {
@@ -668,7 +677,6 @@ void vlistCopyFlag(int vlistID2, int vlistID1)
 
 		zaxisID = zaxisID2;
 		vlistptr2->vars[varID2].zaxisID = zaxisID2;
-		vlistptr2->vars[varID2].nlevs   = nlevs2;
 	      }
 
 	    for ( levID = 0; levID < nlevs2; levID++ )
@@ -717,8 +725,8 @@ void vlistCopyFlag(int vlistID2, int vlistID1)
 
 @Prototype void vlistCat(int vlistID2, int vlistID1)
 @Parameter
-    @Item  vlistID2  Target variable list ID
-    @Item  vlistID1  Source variable list ID
+    @Item  vlistID2  Target variable list ID.
+    @Item  vlistID1  Source variable list ID.
 
 @Description
 Concatenate the variable list vlistID1 at the end of vlistID2.
@@ -779,9 +787,12 @@ void vlistCat(int vlistID2, int vlistID1)
       if ( vlistptr1->vars[varID].units )
         vlistptr2->vars[varID2].units = strdupx(vlistptr1->vars[varID].units);
 
-      nlevs = vlistptr1->vars[varID].nlevs;
-      vlistptr2->vars[varID2].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
-      memcpy(vlistptr2->vars[varID2].levinfo, vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+      nlevs = zaxisInqSize(vlistptr1->vars[varID].zaxisID);
+      if (vlistptr1->vars[varID].levinfo)
+        {
+          vlistptr2->vars[varID2].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
+          memcpy(vlistptr2->vars[varID2].levinfo, vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+        }
 
       if ( vlistptr1->vars[varID].ensdata )
         {
@@ -844,8 +855,8 @@ void vlistCat(int vlistID2, int vlistID1)
 
 @Prototype void vlistMerge(int vlistID2, int vlistID1)
 @Parameter
-    @Item  vlistID2  Target variable list ID
-    @Item  vlistID1  Source variable list ID
+    @Item  vlistID2  Target variable list ID.
+    @Item  vlistID1  Source variable list ID.
 
 @Description
 Merge the variable list vlistID1 to the variable list vlistID2.
@@ -898,21 +909,24 @@ void vlistMerge(int vlistID2, int vlistID1)
           vlistptr1->vars[varID].mvarID = varID;
           vlistptr2->vars[varID].mvarID = varID;
 
-          nlevs1 = vlistptr1->vars[varID].nlevs;
-          nlevs2 = vlistptr2->vars[varID].nlevs;
+          nlevs1 = zaxisInqSize(vlistptr1->vars[varID].zaxisID);
+          nlevs2 = zaxisInqSize(vlistptr2->vars[varID].zaxisID);
 
           nlevs = nlevs1 + nlevs2;
 
-          vlistptr2->vars[varID].nlevs = nlevs;
           /*
           fprintf(stderr, "var %d %d %d %d %d\n", varID, nlevs1, nlevs2, nlevs, sizeof(levinfo_t));
           */
-          vlistptr2->vars[varID].levinfo =
-            (levinfo_t *) realloc(vlistptr2->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+          if (vlistptr1->vars[varID].levinfo)
+            {
+              vlistptr2->vars[varID].levinfo =
+                xrealloc(vlistptr2->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
 
-	  memcpy(vlistptr2->vars[varID].levinfo+nlevs2,
-		 vlistptr1->vars[varID].levinfo, nlevs1*sizeof(levinfo_t));
-
+              memcpy(vlistptr2->vars[varID].levinfo+nlevs2,
+                     vlistptr1->vars[varID].levinfo, nlevs1*sizeof(levinfo_t));
+            }
+          else
+            cdiVlistCreateVarLevInfo(vlistptr1, varID);
 	  for ( levID = 0; levID < nlevs1; levID++ )
 	    {
 	      vlistptr1->vars[varID].levinfo[levID].mlevelID = nlevs2 + levID;
@@ -929,8 +943,8 @@ void vlistMerge(int vlistID2, int vlistID1)
           zaxisID1 = vlistptr1->vars[varID].zaxisID;
           zaxisID2 = vlistptr2->vars[varID].zaxisID;
           /*
-          nlevs1 = vlistptr1->vars[varID].nlevs;
-          nlevs2 = vlistptr2->vars[varID].nlevs;
+          nlevs1 = zaxisInqSize(vlistptr1->vars[varID].zaxisID);
+          nlevs2 = zaxisInqSize(vlistptr2->vars[varID].zaxisID);
           */
           nlevs1 = zaxisInqSize(zaxisID1);
           nlevs2 = zaxisInqSize(zaxisID2);
@@ -981,7 +995,7 @@ void vlistMerge(int vlistID2, int vlistID1)
 
 @Prototype int vlistNvars(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
 
 @Description
 The function @func{vlistNvars} returns the number of variables in the variable list vlistID.
@@ -1013,7 +1027,7 @@ int vlistNrecs(int vlistID)
   vlist_check_ptr(__func__, vlistptr);
 
   for ( varID = 0; varID < vlistptr->nvars; varID++ )
-    nrecs +=  vlistptr->vars[varID].nlevs;
+    nrecs +=  zaxisInqSize(vlistptr->vars[varID].zaxisID);
 
   return (nrecs);
 }
@@ -1058,7 +1072,7 @@ int vlistNumber(int vlistID)
 
 @Prototype int vlistNgrids(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
 
 @Description
 The function @func{vlistNgrids} returns the number of grids in the variable list vlistID.
@@ -1085,7 +1099,7 @@ int vlistNgrids(int vlistID)
 
 @Prototype int vlistNzaxis(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
 
 @Description
 The function @func{vlistNzaxis} returns the number of zaxis in the variable list vlistID.
@@ -1117,7 +1131,7 @@ void vlistDefNtsteps(int vlistID, int nts)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1166,7 +1180,7 @@ vlistPrintKernel(vlist_t *vlistptr, FILE * fp )
 
   if ( nvars > 0 )
     {
-      fprintf(fp, " varID param    gridID zaxisID tsteptype nlevel flag "
+      fprintf(fp, " varID param    gridID zaxisID tsteptype flag "
               " name     longname iorank\n");
       for ( varID = 0; varID < nvars; varID++ )
         {
@@ -1174,7 +1188,6 @@ vlistPrintKernel(vlist_t *vlistptr, FILE * fp )
           gridID   = vlistptr->vars[varID].gridID;
           zaxisID  = vlistptr->vars[varID].zaxisID;
 	  tsteptype= vlistptr->vars[varID].tsteptype;
-          nlevs    = vlistptr->vars[varID].nlevs;
           name     = vlistptr->vars[varID].name;
           longname = vlistptr->vars[varID].longname;
           units    = vlistptr->vars[varID].units;
@@ -1182,9 +1195,9 @@ vlistPrintKernel(vlist_t *vlistptr, FILE * fp )
           iorank   = vlistptr->vars[varID].iorank;
 
           cdiParamToString(param, paramstr, sizeof(paramstr));
-          fprintf(fp, "%6d %-8s %6d %6d %6d %6d %5d %-8s"
+          fprintf(fp, "%6d %-8s %6d %6d %6d %5d %-8s"
                   " %s %6d",
-                  varID, paramstr, gridID, zaxisID, tsteptype, nlevs, flag,
+                  varID, paramstr, gridID, zaxisID, tsteptype, flag,
                   name ? name : "", longname ? longname : "",
                   iorank);
 
@@ -1196,18 +1209,24 @@ vlistPrintKernel(vlist_t *vlistptr, FILE * fp )
       fprintf(fp, " varID  levID fvarID flevID mvarID mlevID  index  dtype  flag  level\n");
       for ( varID = 0; varID < nvars; varID++ )
         {
-          nlevs    = vlistptr->vars[varID].nlevs;
           zaxisID  = vlistptr->vars[varID].zaxisID;
+          nlevs    = zaxisInqSize(zaxisID);
           fvarID   = vlistptr->vars[varID].fvarID;
           mvarID   = vlistptr->vars[varID].mvarID;
           dtype    = vlistptr->vars[varID].datatype;
           for ( levID = 0; levID < nlevs; levID++ )
             {
-              flevID = vlistptr->vars[varID].levinfo[levID].flevelID;
-              mlevID = vlistptr->vars[varID].levinfo[levID].mlevelID;
-              index  = vlistptr->vars[varID].levinfo[levID].index;
-              flag   = vlistptr->vars[varID].levinfo[levID].flag;
+              levinfo_t li;
+              if (vlistptr->vars[varID].levinfo)
+                li = vlistptr->vars[varID].levinfo[levID];
+              else
+                li = DEFAULT_LEVINFO(levID);
+              flevID = li.flevelID;
+              mlevID = li.mlevelID;
+              index  = li.index;
+              flag   = li.flag;
               level  = zaxisInqLevel(zaxisID, levID);
+
               fprintf(fp, "%6d %6d %6d %6d %6d %6d %6d %6d %5d  %.9g\n",
                       varID, levID, fvarID, flevID, mvarID, mlevID, index,
                       dtype, flag, level);
@@ -1218,7 +1237,7 @@ vlistPrintKernel(vlist_t *vlistptr, FILE * fp )
       fprintf(fp, " varID  size iorank\n");
       for ( varID = 0; varID < nvars; varID++ )
         fprintf(fp, "%3d %8d %6d\n", varID,
-                vlistptr->vars[varID].nlevs
+                zaxisInqSize(vlistptr->vars[varID].zaxisID)
                 * gridInqSize(vlistptr->vars[varID].gridID),
                 vlistptr->vars[varID].iorank);
     }
@@ -1242,8 +1261,8 @@ void vlistPrint(int vlistID)
 
 @Prototype void vlistDefTaxis(int vlistID, int taxisID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
-    @Item  taxisID  Time axis ID, from a previous call to @fref{taxisCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}.
+    @Item  taxisID  Time axis ID, from a previous call to @fref{taxisCreate}.
 
 @Description
 The function @func{vlistDefTaxis} defines the time axis of a variable list.
@@ -1260,7 +1279,7 @@ void vlistDefTaxis(int vlistID, int taxisID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1273,7 +1292,7 @@ void vlistDefTaxis(int vlistID, int taxisID)
 
 @Prototype int vlistInqTaxis(int vlistID)
 @Parameter
-    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate}
+    @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
 
 @Description
 The function @func{vlistInqTaxis} returns the time axis of a variable list.
@@ -1305,7 +1324,7 @@ void  vlistDefTable(int vlistID, int tableID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1335,9 +1354,7 @@ void vlistDefInstitut(int vlistID, int instID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
-
-      xdebug("%s", "");
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1383,7 +1400,7 @@ void vlistDefModel(int vlistID, int modelID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1487,7 +1504,7 @@ void vlistChangeGridIndex(int vlistID, int index, int gridID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1513,7 +1530,7 @@ void vlistChangeGrid(int vlistID, int gridID1, int gridID2)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1580,7 +1597,7 @@ void vlistChangeZaxisIndex(int vlistID, int index, int zaxisID)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1594,19 +1611,14 @@ void vlistChangeZaxisIndex(int vlistID, int index, int zaxisID)
         vlistptr->vars[varID].zaxisID = zaxisID;
 
         nlevs = zaxisInqSize(zaxisID);
-        if ( nlevs != vlistptr->vars[varID].nlevs )
+        if ( vlistptr->vars[varID].levinfo
+             && nlevs != zaxisInqSize(zaxisIDold) )
           {
-            vlistptr->vars[varID].nlevs   = nlevs;
             vlistptr->vars[varID].levinfo = (levinfo_t *) realloc(vlistptr->vars[varID].levinfo,
                                                                      nlevs*sizeof(levinfo_t));
 
             for ( levID = 0; levID < nlevs; levID++ )
-              {
-                vlistptr->vars[varID].levinfo[levID].flevelID = levID;
-                vlistptr->vars[varID].levinfo[levID].mlevelID = levID;
-                vlistptr->vars[varID].levinfo[levID].index    = -1;
-                vlistptr->vars[varID].levinfo[levID].flag     = FALSE;
-              }
+              vlistptr->vars[varID].levinfo[levID] = DEFAULT_LEVINFO(levID);
           }
       }
 }
@@ -1616,7 +1628,7 @@ void vlistChangeZaxis(int vlistID, int zaxisID1, int zaxisID2)
 {
   int varID, nvars;
   int index, nzaxis;
-  int nlevs, levID;
+  int nlevs1 = zaxisInqSize(zaxisID1), nlevs2 = zaxisInqSize(zaxisID2), levID;
   vlist_t *vlistptr;
 
   vlistptr = vlist_to_pointer(vlistID);
@@ -1625,7 +1637,7 @@ void vlistChangeZaxis(int vlistID, int zaxisID1, int zaxisID2)
 
   if ( reshGetStatus ( vlistID, &vlist_ops ) == CLOSED )
     {
-      xwarning("%s", "Operation not executed." );
+      Warning("%s", "Operation not executed." );
       return;
     }
 
@@ -1645,20 +1657,14 @@ void vlistChangeZaxis(int vlistID, int zaxisID1, int zaxisID2)
       {
         vlistptr->vars[varID].zaxisID = zaxisID2;
 
-        nlevs = zaxisInqSize(zaxisID2);
-        if ( nlevs != vlistptr->vars[varID].nlevs )
+        if ( vlistptr->vars[varID].levinfo && nlevs2 != nlevs1 )
           {
-            vlistptr->vars[varID].nlevs   = nlevs;
-            vlistptr->vars[varID].levinfo = (levinfo_t *) realloc(vlistptr->vars[varID].levinfo,
-                                                                     nlevs*sizeof(levinfo_t));
+            vlistptr->vars[varID].levinfo
+              = realloc(vlistptr->vars[varID].levinfo,
+                        nlevs2 * sizeof(levinfo_t));
 
-            for ( levID = 0; levID < nlevs; levID++ )
-              {
-                vlistptr->vars[varID].levinfo[levID].flevelID = levID;
-                vlistptr->vars[varID].levinfo[levID].mlevelID = levID;
-                vlistptr->vars[varID].levinfo[levID].index    = -1;
-                vlistptr->vars[varID].levinfo[levID].flag     = FALSE;
-              }
+            for ( levID = 0; levID < nlevs2; levID++ )
+              vlistptr->vars[varID].levinfo[levID] = DEFAULT_LEVINFO(levID);
           }
       }
 }
@@ -1703,7 +1709,7 @@ int  vlistGetSizeP ( void * vlistptr, void *context)
   txsize = serializeGetSize(vlist_nints, DATATYPE_INT, context);
   txsize += vlistAttsGetSize(p, CDI_GLOBAL, context);
   for ( varID = 0; varID <  p->nvars; varID++ )
-    txsize += vlistVarGetSize(p, varID, context);
+    txsize += vlistVarGetPackSize(p, varID, context);
   return txsize;
 }
 
@@ -1736,10 +1742,11 @@ void vlistUnpack(char * buf, int size, int *position, int nspTarget, void *conte
   serializeUnpack(buf, size, position, tempbuf, vlist_nints, DATATYPE_INT, context);
   newvlist = vlistCreate();
   /* xassert(newvlist == tempbuf[0]); */
-  vlistDefTaxis ( newvlist, namespaceAdaptKey ( tempbuf[3], nspTarget ));
-  vlistDefTable(newvlist, tempbuf[4]);
-  vlistDefInstitut ( newvlist, namespaceAdaptKey ( tempbuf[5], nspTarget ));
-  vlistDefModel ( newvlist, namespaceAdaptKey ( tempbuf[6], nspTarget ));
+  vlist_t *p = vlist_to_pointer(newvlist);
+  p->taxisID = namespaceAdaptKey(tempbuf[3], nspTarget);
+  p->tableID = tempbuf[4];
+  p->instID = namespaceAdaptKey(tempbuf[5], nspTarget);
+  p->modelID = namespaceAdaptKey(tempbuf[6], nspTarget);
   vlistAttsUnpack(newvlist, CDI_GLOBAL, buf, size, position, context);
   for ( varID = 0; varID < tempbuf[1]; varID++ )
     vlistVarUnpack(newvlist, buf, size, position, nspTarget, context);

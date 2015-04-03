@@ -71,6 +71,13 @@ int    reshGetStatus ( cdiResH, resOps * );
 
 void   reshLock   ( void );
 void   reshUnlock ( void );
+
+enum reshListMismatch {
+  cdiResHListOccupationMismatch,
+  cdiResHListResourceTypeMismatch,
+  cdiResHListResourceContentMismatch,
+};
+
 int reshListCompare(int nsp0, int nsp1);
 void reshListPrint(FILE *fp);
 

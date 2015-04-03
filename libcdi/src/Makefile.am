@@ -27,13 +27,18 @@ libcdi_la_SOURCES = 	 \
 	cdi_limits.h	 \
 	cdi_util.c       \
 	cdiFortran.c     \
-	cdiFortran.h     \
 	cfortran.h       \
 	cgribex.h	 \
 	cgribexlib.c  	 \
 	datetime.h	 \
 	dmemory.c      	 \
 	dmemory.h	 \
+	cksum.c		\
+	cksum.h		\
+	cdi_cksum.c	\
+	cdi_cksum.h	\
+	pio_util.c							\
+	pio_util.h							\
 	dtypes.h	 \
 	error.c        	 \
 	error.h	 	 \
@@ -57,33 +62,6 @@ libcdi_la_SOURCES = 	 \
 	namespace.h      \
 	serialize.h	\
 	serialize.c	\
-	pio.c            \
-	pio.h            \
-	pio_comm.c       \
-	pio_comm.h       \
-	pio_dbuffer.c    \
-	pio_impl.h 	 \
-	pio_interface.c  \
-	pio_interface.h	 \
-	pio_mpinonb.c    \
-	pio_record_send.c\
-	pio_posixasynch.c\
-	pio_posixfpguardsendrecv.c \
-	pio_posixnonb.c  \
-	pio_list_set.c	 \
-	resource_unpack.h \
-	resource_unpack.c \
-	pio_rpc.h        \
-	pio_client.c	\
-	pio_client.h	\
-	pio_server.c     \
-	pio_server.h     \
-	pio_util.c       \
-	pio_util.h       \
-	pio_serialize.h	\
-	pio_serialize.c	\
-	pio_cdf_int.c	\
-	pio_cdf_int.h	\
 	resource_handle.c\
 	resource_handle.h\
 	service.h	 \
@@ -131,8 +109,50 @@ libcdi_la_SOURCES = 	 \
         stream.c         \
         swap.c
 
+if USE_MPI
+if ENABLE_CDI_LIB
+lib_LTLIBRARIES += libcdipio.la
+include_HEADERS += cdipio.h cdipio.inc
+else
+noinst_LTLIBRARIES += libcdipio.la
+endif
+endif
+
+libcdipio_la_SOURCES =							\
+	cdipio.h							\
+	cdipioFortran.c							\
+	cfortran.h							\
+	pio.c								\
+	pio.h								\
+	pio_comm.c							\
+	pio_comm.h							\
+	pio_dbuffer.c							\
+	pio_impl.h							\
+	pio_interface.c							\
+	pio_interface.h							\
+	pio_mpinonb.c							\
+	pio_record_send.c						\
+	pio_posixasynch.c						\
+	pio_posixfpguardsendrecv.c					\
+	pio_posixnonb.c							\
+	pio_list_set.c							\
+	resource_unpack.h						\
+	resource_unpack.c						\
+	pio_rpc.h							\
+	pio_client.c							\
+	pio_client.h							\
+	pio_server.c							\
+	pio_server.h							\
+	pio_serialize.h							\
+	pio_serialize.c							\
+	pio_cdf_int.c							\
+	pio_cdf_int.h
+
+libcdipio_la_LIBADD    = libcdi.la $(PPM_CORE_LIBS) $(YAXT_LIBS)
+
+
 #libcdi_la_CPPFLAGS  = @CPPFLAGS@
-libcdi_la_LIBADD    = $(PPM_CORE_LIBS) $(YAXT_LIBS)
+libcdi_la_LIBADD    =
 #
 #cdilib.c:
 #	$(top_srcdir)/src/make_cdilib $(top_srcdir)/src
@@ -140,9 +160,12 @@ libcdi_la_LIBADD    = $(PPM_CORE_LIBS) $(YAXT_LIBS)
 #cdilib.o: cdilib.c
 #	$(COMPILE) -c $<
 
-LOCALTARGETS  = 
+LOCALTARGETS  =
 if ENABLE_CDI_LIB
 LOCALTARGETS += pkgconfig/cdi.pc
+if USE_MPI
+LOCALTARGETS += pkgconfig/cdipio.pc
+endif
 endif
 
 if CREATE_ISOC
@@ -160,8 +183,11 @@ mo_cdi.$(FCMODEXT): mo_cdi.f90
 
 pkgconfig/cdi.pc: pkgconfig/cdi.pc.in ../config.status
 	(cd .. ; ./config.status src/pkgconfig/cdi.pc)
+
+pkgconfig/cdipio.pc: pkgconfig/cdipio.pc.in ../config.status
+	(cd .. ; ./config.status src/pkgconfig/cdipio.pc)
 #
-all-local: $(LOCALTARGETS) 
+all-local: $(LOCALTARGETS)
 #
 CLEANFILES  = `ls *~`
 #CLEANFILES += cdilib.c
@@ -170,15 +196,28 @@ CLEANFILES += $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.
 endif
 
 if ENABLE_CDI_LIB
+PKGCONFIG_FILES = pkgconfig/cdi.pc
 CLEANFILES += pkgconfig/cdi.pc
+if USE_MPI
+CLEANFILES += pkgconfig/cdipio.pc
+PKGCONFIG_FILES += pkgconfig/cdipio.pc
+endif
 
-install-exec-local: pkgconfig/cdi.pc
+install-exec-local: $(PKGCONFIG_FILES)
 	$(mkinstalldirs) "$(DESTDIR)$(libdir)/pkgconfig"
-	$(install_sh_DATA) pkgconfig/cdi.pc "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
+	@for pkgconfigfile in $(PKGCONFIG_FILES) ; do \
+		echo $(install_sh_DATA) $$pkgconfigfile \
+		"$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+		$(install_sh_DATA) $$pkgconfigfile \
+		"$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+	done
 
 uninstall-local:
-	rm -f "$(DESTDIR)$(libdir)/pkgconfig/cdi.pc"
-	rmdir "$(DESTDIR)$(libdir)/pkgconfig"
+	@for pkgconfigfile in $(PKGCONFIG_FILES) ; do \
+		echo rm -f "$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+		rm -f "$(DESTDIR)$(libdir)/$$pkgconfigfile" ; \
+	done
+	-@rmdir "$(DESTDIR)$(libdir)/pkgconfig"
 
 endif
 

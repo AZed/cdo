@@ -472,8 +472,7 @@ Operator catalog:
 -------------------------------------------------------------
    Miscellaneous
 -------------------------------------------------------------
-   Gradsdes      gradsdes1       GrADS data descriptor file (version 1 GRIB map)
-   Gradsdes      gradsdes2       GrADS data descriptor file (version 2 GRIB map)
+   Gradsdes      gradsdes        GrADS data descriptor file
    Filter        bandpass        Bandpass filtering
    Filter        lowpass         Lowpass filtering
    Filter        highpass        Highpass filtering

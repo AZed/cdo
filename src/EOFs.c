@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 #include "statistic.h"
 
 enum T_EIGEN_MODE {JACOBI, DANIELSON_LANCZOS};
@@ -143,7 +144,7 @@ void *EOFs(void * argument)
   nvars       = vlistNvars(vlistID1);
   nrecs       = vlistNrecs(vlistID1);
 
-  weight      = (double*) malloc(gridsize*sizeof(double));
+  weight      = malloc(gridsize*sizeof(double));
   if ( WEIGHTS )
     gridWeights(gridID1, &weight[0]);
   else
@@ -236,11 +237,11 @@ void *EOFs(void * argument)
   if ( cdoTimer ) timer_start(timer_alloc);
 
   /* allocation of temporary fields and output structures */
-  in           = (double    *) malloc(gridsize*sizeof(double));
-  datafields   = (double ****) malloc(nvars*sizeof(double ***));
-  datacounts   = (int     ***) malloc(nvars*sizeof(int **));
-  eigenvectors = (double ****) malloc(nvars*sizeof(double ***));
-  eigenvalues  = (double ****) malloc(nvars*sizeof(double ***));
+  in           = malloc(gridsize*sizeof(double));
+  datafields   = malloc(nvars*sizeof(double ***));
+  datacounts   = malloc(nvars*sizeof(int **));
+  eigenvectors = malloc(nvars*sizeof(double ***));
+  eigenvalues  = malloc(nvars*sizeof(double ***));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -249,22 +250,22 @@ void *EOFs(void * argument)
       nlevs               = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval             = vlistInqVarMissval(vlistID1, varID);
 
-      datafields[varID]   = (double ***) malloc(nlevs*sizeof(double **));
-      datacounts[varID]   = (int **)     malloc(nlevs*sizeof(int* ));
-      eigenvectors[varID] = (double ***) malloc(nlevs*sizeof(double **));
-      eigenvalues[varID]  = (double ***) malloc(nlevs*sizeof(double **));
+      datafields[varID]   = malloc(nlevs*sizeof(double **));
+      datacounts[varID]   = malloc(nlevs*sizeof(int* ));
+      eigenvectors[varID] = malloc(nlevs*sizeof(double **));
+      eigenvalues[varID]  = malloc(nlevs*sizeof(double **));
 
       for ( levelID = 0; levelID < nlevs; ++levelID )
         {
           if ( grid_space )
             {
-              datafields[varID][levelID]            = (double **) malloc(1*sizeof(double *));
+              datafields[varID][levelID]            = malloc(1*sizeof(double *));
               //datafields[varID][levelID][0].grid    = gridID1;
               //datafields[varID][levelID][0].nmiss   = 0;
               //datafields[varID][levelID][0].missval = missval;
-              datafields[varID][levelID][0]     = (double *) malloc(gridsize*gridsize*sizeof(double));
+              datafields[varID][levelID][0]     = malloc(gridsize*gridsize*sizeof(double));
 
-              datacounts[varID][levelID]            = (int *) malloc(gridsize*gridsize*sizeof(int));
+              datacounts[varID][levelID]            = malloc(gridsize*gridsize*sizeof(int));
 	      for ( i = 0; i<gridsize*gridsize; i++ )
 		{
 		  datacounts[varID][levelID][i] = 0;
@@ -273,34 +274,34 @@ void *EOFs(void * argument)
 	    }
           else if ( time_space )
             {
-              datafields[varID][levelID] = (double **) malloc(nts*sizeof(double *));
+              datafields[varID][levelID] = malloc(nts*sizeof(double *));
               for ( tsID = 0; tsID < nts; tsID++ )
                 {
                   //datafields[varID][levelID][tsID].grid    = gridID1;
                   //datafields[varID][levelID][tsID].nmiss   = 0;
                   //datafields[varID][levelID][tsID].missval = missval;
-                  datafields[varID][levelID][tsID]    = (double *) malloc(gridsize*sizeof(double));
+                  datafields[varID][levelID][tsID]    = malloc(gridsize*sizeof(double));
                   for ( i = 0; i < gridsize; ++i )
                     datafields[varID][levelID][tsID][i] = 0;
                 }
-              datacounts[varID][levelID] = (int *) malloc(gridsize*sizeof(int));	      
+              datacounts[varID][levelID] = malloc(gridsize*sizeof(int));	      
 	      for(i=0;i<gridsize;i++)
 		datacounts[varID][levelID][i] = 0;
             }
 
-          eigenvectors[varID][levelID] = (double **) malloc(n_eig*sizeof(double *));
-          eigenvalues[varID][levelID]  = (double **) malloc(n*sizeof(double *));
+          eigenvectors[varID][levelID] = malloc(n_eig*sizeof(double *));
+          eigenvalues[varID][levelID]  = malloc(n*sizeof(double *));
 
           for ( i = 0; i < n; i++ )
             {
               if ( i < n_eig )
                 {
-                  eigenvectors[varID][levelID][i] = (double *) malloc(gridsize*sizeof(double));
+                  eigenvectors[varID][levelID][i] = malloc(gridsize*sizeof(double));
                   for ( ii = 0; ii < gridsize; ++ii )
                     eigenvectors[varID][levelID][i][ii] = missval;
                 }
 
-              eigenvalues[varID][levelID][i] = (double *) malloc(1*sizeof(double));
+              eigenvalues[varID][levelID][i] = malloc(1*sizeof(double));
               eigenvalues[varID][levelID][i][0]  = missval;
             }
         }
@@ -399,8 +400,8 @@ void *EOFs(void * argument)
         }
 
   /*
-  pack = (int *) malloc(gridsize*sizeof(int)); //TODO
-  miss = (int *) malloc(gridsize*sizeof(int));
+  pack = malloc(gridsize*sizeof(int)); //TODO
+  miss = malloc(gridsize*sizeof(int));
   */
 
   if ( cdoTimer ) timer_stop(timer_read);
@@ -435,8 +436,8 @@ void *EOFs(void * argument)
 
           if ( grid_space )
             {
-	      pack = (int *) malloc(gridsize*sizeof(int));
-	      miss = (int *) malloc(gridsize*sizeof(int));
+	      pack = malloc(gridsize*sizeof(int));
+	      miss = malloc(gridsize*sizeof(int));
 
               for ( i1 = 0; i1 < gridsize; i1++ )
                 {
@@ -452,10 +453,10 @@ void *EOFs(void * argument)
 	      n = npack;
 	      if ( npack )
 		{
-		  cov = (double **) malloc(npack*sizeof(double *));
+		  cov = malloc(npack*sizeof(double *));
 		  for (i1 = 0; i1 < npack; i1++ )
-		    cov[i1] = (double*) malloc(npack*sizeof(double));
-		  eigv = (double *) malloc(npack*sizeof(double));
+		    cov[i1] = malloc(npack*sizeof(double));
+		  eigv = malloc(npack*sizeof(double));
 		}
 
               for (i1 = 0; i1 < npack; i1++)
@@ -470,8 +471,8 @@ void *EOFs(void * argument)
             {
               sum_w = 0;
 
-	      pack = (int *) malloc ( gridsize * sizeof(int) );
-	      miss = (int *) malloc ( gridsize * sizeof(int) );
+	      pack = malloc ( gridsize * sizeof(int) );
+	      miss = malloc ( gridsize * sizeof(int) );
 
               for ( i = 0; i < gridsize ; i++ )
                 {
@@ -486,10 +487,10 @@ void *EOFs(void * argument)
 	      if ( cdoVerbose )
 		cdoPrint("allocating cov with %i x %i elements | npack=%i",nts,nts,npack);
 
-              cov = (double **) malloc (nts*sizeof(double*));
+              cov = malloc (nts*sizeof(double*));
               for ( j1 = 0; j1 < nts; j1++)
-                cov[j1] = (double*) malloc(nts*sizeof(double));
-	      eigv = (double *) malloc (nts*sizeof(double));
+                cov[j1] = malloc(nts*sizeof(double));
+	      eigv = malloc (nts*sizeof(double));
 
 #if defined(_OPENMP)
 #pragma omp parallel for private(j1,j2,i,sum, df1p, df2p) default(shared) schedule(dynamic)

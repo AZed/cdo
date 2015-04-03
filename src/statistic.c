@@ -72,7 +72,7 @@ void eigen_solution_of_symmetric_matrix (double **a, double *eig_val,
   int i, j;
   double temp;
   
-  e = (double *) malloc (n * sizeof (double));
+  e = malloc (n * sizeof (double));
   
   make_symmetric_matrix_triangular (a, n, eig_val, e, prompt);
   
@@ -366,7 +366,7 @@ int solution_of_linear_equation (double **a, double *b, int n)
   int sign;
   int not_singular;
   
-  index = (int *) malloc (n * sizeof (int));
+  index = malloc (n * sizeof (int));
   
   not_singular = lu_decomposition (a, n, index, &sign);
   
@@ -387,8 +387,8 @@ int inverse_of_matrix (double **a, double **b, int n)
   int not_singular;
   double *col;
   
-  index = (int *) malloc (n * sizeof (int));
-  col = (double *) malloc (n * sizeof (double));
+  index = malloc (n * sizeof (int));
+  col = malloc (n * sizeof (double));
   
   not_singular = lu_decomposition (a, n, index, &sign);
   
@@ -418,7 +418,7 @@ int lu_decomposition (double **a, int n, int *index, int *sign)
   double big, sum, temp;
   double *v;
   
-  v = (double *) malloc (n * sizeof (double));
+  v = malloc (n * sizeof (double));
   *sign = 1;
   for (i = 0; i < n; i++)
     {
@@ -577,12 +577,12 @@ void ft (double *real, double *imag, int n, int sign)
   
   if (!work_r)
     {
-      work_r = (double *) malloc (n * sizeof (double));
+      work_r = malloc (n * sizeof (double));
       /* free_at_exit (work_r); */
     }
   if (!work_i)
     {
-      work_i = (double *) malloc (n * sizeof (double));
+      work_i = malloc (n * sizeof (double));
       /* free_at_exit (work_i); */
     }
   

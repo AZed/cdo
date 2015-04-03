@@ -3,21 +3,26 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 
-#ifdef USE_MPI
-#include <mpi.h>
 #include "cdi.h"
-#include "pio_util.h"
+#include "dmemory.h"
+#include "error.h"
 #include "resource_handle.h"
 #include "resource_unpack.h"
+
+#ifdef MPI_MARSHALLING
+#include <mpi.h>
+#include "cdipio.h"
 #include "pio_serialize.h"
+#include "pio_util.h"
+#else
+typedef int MPI_Comm;
+#endif
 
 extern void   arrayDestroy          ( void );
 
 enum {
-  IOMode           = PIO_NONE,
-  nProcsIO         = 1,
-  nNamespaces      = 2,
   DOUBLE_PRECISION = 8,
   nlon             = 12,
   nlat             = 6,
@@ -173,16 +178,18 @@ int defineModel ( int instID )
   return modelID;
 }
 
-int modelRun ( MPI_Comm comm )
+static int destNamespace;
+
+int modelRun(MPI_Comm comm)
 {
   int gridID, zaxisID, taxisID, instID, modelID, vlistID, streamID;
 
   char * recvBuffer, * sendBuffer;
   int bufferSize, differ;
 
-  pioNamespaceSetActive ( 0 );
-  if (IOMode != PIO_NONE)
-    serializeSetMPI();
+#ifdef MPI_MARSHALLING
+  serializeSetMPI();
+#endif
 
   gridID  = defineGrid      ();
   zaxisID = defineZaxis     ();
@@ -196,49 +203,41 @@ int modelRun ( MPI_Comm comm )
 
   reshPackBufferCreate ( &sendBuffer, &bufferSize, &comm );
   recvBuffer = xmalloc(bufferSize);
+#ifdef MPI_MARSHALLING
   xmpi(MPI_Sendrecv(sendBuffer, bufferSize, MPI_PACKED, 0, 0,
                     recvBuffer, bufferSize, MPI_PACKED, 0, 0,
                     MPI_COMM_SELF, MPI_STATUS_IGNORE));
-  pioNamespaceSetActive ( 1 );
+#else
+  memcpy(recvBuffer, sendBuffer, bufferSize);
+#endif
+  namespaceSetActive(destNamespace);
   reshUnpackResources(recvBuffer, bufferSize, &comm);
-  free ( recvBuffer );
-  reshPackBufferDestroy ( &sendBuffer );
+  free(recvBuffer);
+  reshPackBufferDestroy(&sendBuffer);
 
   differ = reshListCompare ( 0, 1 );
 
-  pioNamespaceSetActive ( 0 );
+  namespaceSetActive(0);
   streamClose(streamID);
   return differ;
 }
 
-#endif
-
 int main (int argc, char *argv[])
 {
   int exitCode = 77;
-#ifdef USE_MPI
-  int sizeGlob, pioNamespace;
-  MPI_Comm commGlob, commModel;
-
+  MPI_Comm commModel;
+#ifdef MPI_MARSHALLING
   MPI_Init(&argc, &argv);
-  xmpi ( MPI_Comm_dup ( MPI_COMM_WORLD, &commGlob ));
-  xmpi ( MPI_Comm_set_errhandler ( commGlob, MPI_ERRORS_RETURN ));
-  xmpi ( MPI_Comm_size ( commGlob, &sizeGlob ));
-
-  if ( sizeGlob != 1 )
-      xabort ( "test transition of resource array only with 1 PE." );
-
-  if ( nProcsIO != 1 )
-    xabort ( "bad distribution of tasks on PEs" );
-
-  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f);
-  pioNamespaceSetActive(pioNamespace);
+  commModel = MPI_COMM_WORLD;
+#else
+  commModel = 0;
+#endif
+  destNamespace = namespaceNew();
 
   exitCode = modelRun(commModel);
 
+#ifdef MPI_MARSHALLING
   xmpi(MPI_Finalize());
-#else
-  printf ( "Use MPI for this testprogram.\n" );
 #endif
 
   return exitCode;

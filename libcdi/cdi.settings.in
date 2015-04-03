@@ -44,7 +44,7 @@
     "lib"      : "@NETCDF_LIBS@",
     "include"  : "@NETCDF_INCLUDE@"
   },
-  "grip_api" : {
+  "grib_api" : {
     "lib"      : "@GRIB_API_LIBS@",
     "include"  : "@GRIB_API_INCLUDE@"
   },

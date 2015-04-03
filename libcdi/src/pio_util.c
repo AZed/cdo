@@ -10,6 +10,7 @@
 
 #include "pio_util.h"
 #include "cdi.h"
+#include "dmemory.h"
 
 #ifdef USE_MPI
 static
@@ -42,39 +43,18 @@ cdiAbortC_MPI(const char *caller, const char *filename,
   exit(EXIT_FAILURE);
   va_end(ap);
 }
+
+void cdiPioWarning(const char *caller, const char *fmt, va_list ap)
+{
+  int rank = getMPICommWorldRank();
+  fprintf(stderr, "pe%d: Warning (%s) : ", rank, caller);
+  vfprintf(stderr, fmt, ap);
+  fputc('\n', stderr);
+}
+
 #endif
 
 /*****************************************************************************/
-
-void * pcdiXmalloc ( size_t size, const char *filename, const char *functionname,
-		     int line )
-{
-  void * value = calloc (1, size );
-  if ( value == NULL )
-    cdiAbort(filename, functionname, line, "malloc failed: %s",
-             strerror(errno));
-  return value;
-}
-
-void * pcdiXcalloc ( size_t nmemb, size_t size, const char *filename,
-		     const char *functionname, int line )
-{
-  void * value = calloc ( nmemb, size );
-  if ( value == NULL )
-    cdiAbort(filename, functionname, line, "calloc failed: %s",
-             strerror(errno) );
-  return value;
-}
-
-void * pcdiXrealloc ( void *p, size_t size, const char *functionname,
-		      const char *filename, int line )
-{
-  void * value = realloc ( p, size );
-  if ( value == NULL )
-    cdiAbort(filename, functionname, line, "realloc failed: %s",
-             strerror(errno));
-  return value;
-}
 
 /***************************************************************/
 
@@ -189,47 +169,6 @@ void pcdiDebugMsg2 ( const char *filename, const char *functionname, int line,
             &commands[tag][0], source, text );
 }
 #endif
-
-
-/****************************************************/
-
-
-int xmaxInt ( int a, int b )
-{
-  return a >= b ? a : b;
-}
-
-
-/****************************************************/
-
-
-int xminInt ( int a, int b )
-{
-  return a <= b ? a : b;
-}
-
-
-/****************************************************/
-
-
-int xsum ( int n, int * argarray )
-{
-  int i, sum = 0;
-
-  for ( i = 0; i < n; i++ )
-    sum += * ( argarray + i );
-
-  return sum;
-}
-
-
-/****************************************************/
-
-
-double xchecksum ( int type, int count, void * buffer )
-{
-  return 0.0;
-}
 
 
 /****************************************************/

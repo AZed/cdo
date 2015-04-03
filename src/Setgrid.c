@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -113,7 +113,7 @@ void *Setgrid(void *argument)
 
       gridID = vlistInqVarGrid(vlistID, varID);
       areasize = gridInqSize(gridID);
-      areaweight = (double *) malloc(areasize*sizeof(double));
+      areaweight = malloc(areasize*sizeof(double));
   
       streamReadRecord(streamID, areaweight, &nmiss);
 
@@ -157,7 +157,7 @@ void *Setgrid(void *argument)
       missval  = vlistInqVarMissval(vlistID, varID);
       gridID   = vlistInqVarGrid(vlistID, varID);
       masksize = gridInqSize(gridID);
-      gridmask = (double *) malloc(masksize*sizeof(double));
+      gridmask = malloc(masksize*sizeof(double));
   
       streamReadRecord(streamID, gridmask, &nmiss);
 
@@ -275,7 +275,7 @@ void *Setgrid(void *argument)
 		  if ( ligme )
 		    {
 		      grid2_nvgp = gridInqSize(gridID2);
-		      grid2_vgpm = (int *) malloc(grid2_nvgp*sizeof(int));
+		      grid2_vgpm = malloc(grid2_nvgp*sizeof(int));
 		      gridInqMaskGME(gridID2, grid2_vgpm);
 		      gridCompress(gridID2);
 		    }
@@ -322,7 +322,7 @@ void *Setgrid(void *argument)
 	  if ( gridsize == masksize )
 	    {
 	      int *mask;
-	      mask = (int *) malloc(masksize*sizeof(int));
+	      mask = malloc(masksize*sizeof(int));
 	      for ( i = 0; i < masksize; i++ )
 		{
 		  if ( gridmask[i] < 0 || gridmask[i] > 255 )
@@ -358,7 +358,7 @@ void *Setgrid(void *argument)
     gridsize = vlistGridsizeMax(vlistID1);
 
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = (double *) malloc(gridsize*sizeof(double));
+  array = malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

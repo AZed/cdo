@@ -253,6 +253,7 @@ double extra_Z(double pres, double halfp, double fullp, double geop, double temp
   double alpha, tstar, tmsl, zalp, zalpal;
   double zrg;
   double zlapse = 0.0065;
+  double ztlim = 290.5;
 
   zrg   = 1.0 / Grav;
   alpha = RD * zlapse * zrg;
@@ -262,13 +263,13 @@ double extra_Z(double pres, double halfp, double fullp, double geop, double temp
 
   tmsl = tstar + zlapse * zrg * geop;
 
-  if ( tmsl > 290.5 && tstar > 290.5 )
+  if ( tmsl > ztlim && tstar > ztlim )
     {
-      tstar = 0.5 * (290.5 + tstar);
+      tstar = 0.5 * (ztlim + tstar);
       tmsl  = tstar;
     }
 
-  if ( tmsl > 290.5 && tstar <= 290.5 ) tmsl = 290.5;
+  if ( tmsl > ztlim && tstar <= ztlim ) tmsl = ztlim;
 
   if ( tmsl-tstar < 0.000001 && tstar-tmsl < 0.000001 )
     alpha = 0.0;
@@ -279,7 +280,6 @@ double extra_Z(double pres, double halfp, double fullp, double geop, double temp
   zalpal = zalp * alpha;
 
   return ((geop - RD*tstar*zalp*(1.0 + zalpal*(0.5 + zalpal/6.0)))*zrg);
-
 }  /* extra_Z */
 
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -87,28 +87,28 @@ void pipe_init(pipe_t *pipe)
   pipe->usedata = TRUE;
   pipe->pstreamptr_in = 0;
 
-  pipe->mutex = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
+  pipe->mutex = malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(pipe->mutex, &m_attr);
 
-  pipe->tsDef = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->tsDef = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->tsDef, &c_attr);
-  pipe->tsInq = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->tsInq = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->tsInq, &c_attr);
 
-  pipe->recDef = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->recDef = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->recDef, &c_attr);
-  pipe->recInq = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->recInq = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->recInq, &c_attr);
   
-  pipe->vlistDef = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->vlistDef = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->vlistDef, &c_attr);
-  pipe->isclosed = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->isclosed = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->isclosed, &c_attr);
 
-  pipe->writeCond = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->writeCond = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->writeCond, &c_attr);
 
-  pipe->readCond = (pthread_cond_t *) malloc(sizeof(pthread_cond_t));
+  pipe->readCond = malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->readCond, &c_attr);
 
   pthread_mutexattr_destroy(&m_attr);
@@ -120,7 +120,7 @@ pipe_t *pipeNew()
 {
   pipe_t *pipe;
 
-  pipe = (pipe_t *) malloc(sizeof(pipe_t));
+  pipe = malloc(sizeof(pipe_t));
 
   pipe_init(pipe);
 

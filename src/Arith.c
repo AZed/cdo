@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -150,12 +150,12 @@ void *Arith(void *argument)
 
   field_init(&field1);
   field_init(&field2);
-  field1.ptr = (double *) malloc(gridsize*sizeof(double));
-  field2.ptr = (double *) malloc(gridsize*sizeof(double));
+  field1.ptr = malloc(gridsize*sizeof(double));
+  field2.ptr = malloc(gridsize*sizeof(double));
   if ( filltype == FILL_VAR || filltype == FILL_VARTS )
     {
-      vardata2 = (double *) malloc(gridsize*nlevels2*sizeof(double));
-      varnmiss2 = (int *) malloc(nlevels2*sizeof(int));
+      vardata2 = malloc(gridsize*nlevels2*sizeof(double));
+      varnmiss2 = malloc(nlevels2*sizeof(int));
     }
 
   if ( cdoVerbose ) cdoPrint("Number of timesteps: file1 %d, file2 %d", ntsteps1, ntsteps2);
@@ -183,14 +183,14 @@ void *Arith(void *argument)
       if ( filltype == FILL_TS )
 	{
 	  nvars  = vlistNvars(vlistIDx2);
-	  vardata  = (double **) malloc(nvars*sizeof(double *));
-	  varnmiss = (int **) malloc(nvars*sizeof(int *));
+	  vardata  = malloc(nvars*sizeof(double *));
+	  varnmiss = malloc(nvars*sizeof(int *));
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridsize = gridInqSize(vlistInqVarGrid(vlistIDx2, varID));
 	      nlev     = zaxisInqSize(vlistInqVarZaxis(vlistIDx2, varID));
-	      vardata[varID]  = (double *) malloc(nlev*gridsize*sizeof(double));
-	      varnmiss[varID] = (int *) malloc(nlev*sizeof(int));
+	      vardata[varID]  = malloc(nlev*gridsize*sizeof(double));
+	      varnmiss[varID] = malloc(nlev*sizeof(int));
 	    }
 	}
     }

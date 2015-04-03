@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
 void *Varrms(void *argument)
@@ -97,15 +98,15 @@ void *Varrms(void *argument)
 
   streamDefVlist(streamID3, vlistID3);
 
-  vardata1 = (double **) malloc(nvars*sizeof(double*));
-  vardata2 = (double **) malloc(nvars*sizeof(double*));
+  vardata1 = malloc(nvars*sizeof(double*));
+  vardata2 = malloc(nvars*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata1[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
-      vardata2[varID] = (double *) malloc(gridsize*nlevel*sizeof(double));
+      vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
+      vardata2[varID] = malloc(gridsize*nlevel*sizeof(double));
     }
 
   field_init(&field1);
@@ -115,7 +116,7 @@ void *Varrms(void *argument)
   lim = vlistGridsizeMax(vlistID1);
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = (double *) malloc(lim*sizeof(double));
+    field1.weight = malloc(lim*sizeof(double));
 
   field2.weight = NULL;
 

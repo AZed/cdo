@@ -380,16 +380,31 @@ int dblcmp(const void *s1, const void *s2)
 }
 */
 static
-int cmpLevelTable(const void *s1, const void *s2)
+int cmpLevelTable(const void* s1, const void* s2)
 {
   int cmp = 0;
-  leveltable_t *x = (leveltable_t *) s1;
-  leveltable_t *y = (leveltable_t *) s2;
+  const leveltable_t* x = s1;
+  const leveltable_t* y = s2;
   /*
   printf("%g %g  %d %d\n", x->leve11, y->level1, x, y);
   */
   if      ( x->level1 < y->level1 ) cmp = -1;
   else if ( x->level1 > y->level1 ) cmp =  1;
+
+  return (cmp);
+}
+
+static
+int cmpLevelTableInv(const void* s1, const void* s2)
+{
+  int cmp = 0;
+  const leveltable_t* x = s1;
+  const leveltable_t* y = s2;
+  /*
+  printf("%g %g  %d %d\n", x->leve11, y->level1, x, y);
+  */
+  if      ( x->level1 < y->level1 ) cmp =  1;
+  else if ( x->level1 > y->level1 ) cmp = -1;
 
   return (cmp);
 }
@@ -405,11 +420,11 @@ param_t;
 
 
 static
-int cmpparam(const void *s1, const void *s2)
+int cmpparam(const void* s1, const void* s2)
 {
   int cmp = 0;
-  param_t *x = (param_t *) s1;
-  param_t *y = (param_t *) s2;
+  const param_t* x = s1;
+  const param_t* y = s2;
 
   if      ( x->param > y->param ) cmp =  1;
   else if ( x->param < y->param ) cmp = -1;
@@ -419,11 +434,11 @@ int cmpparam(const void *s1, const void *s2)
 
 
 static
-int cmpltype(const void *s1, const void *s2)
+int cmpltype(const void* s1, const void* s2)
 {
   int cmp = 0;
-  param_t *x = (param_t *) s1;
-  param_t *y = (param_t *) s2;
+  const param_t* x = s1;
+  const param_t* y = s2;
 
   if      ( x->ltype > y->ltype ) cmp =  1;
   else if ( x->ltype < y->ltype ) cmp = -1;
@@ -523,39 +538,47 @@ void cdi_generate_vars(stream_t *streamptr)
 
       if ( nlevels > 1 )
 	{
-	  int linc = FALSE, ldec = FALSE;
-	  /* check increasing of levels */
-	  for ( levelID = 1; levelID < nlevels; levelID++ )
-	    if ( dlevels[levelID] < dlevels[levelID-1] ) break;
+          bool linc = true, ldec = true, lsort = false;
+          for ( levelID = 1; levelID < nlevels; levelID++ )
+            {
+              /* check increasing of levels */
+              linc &= (dlevels[levelID] > dlevels[levelID-1]);
+              /* check decreasing of levels */
+              ldec &= (dlevels[levelID] < dlevels[levelID-1]);
+            }
+          /*
+           * always sort pressure z-axis to ensure
+           * vartable[varid].levelTable[levelID1].level1 < vartable[varid].levelTable[levelID2].level1 <=> levelID1 > levelID2
+           * unless already sorted in decreasing order
+           */
+          if ( !ldec && zaxistype == ZAXIS_PRESSURE )
+            {
+              qsort(vartable[varid].levelTable, (size_t)nlevels, sizeof(leveltable_t), cmpLevelTableInv);
+              lsort = true;
+            }
+          /*
+           * always sort hybrid and depth-below-land z-axis to ensure
+           * vartable[varid].levelTable[levelID1].level1 < vartable[varid].levelTable[levelID2].level1 <=> levelID1 < levelID2
+           * unless already sorted in increasing order
+           */
+          else if ( (!linc && !ldec) ||
+                    zaxistype == ZAXIS_HYBRID ||
+                    zaxistype == ZAXIS_DEPTH_BELOW_LAND )
+            {
+              qsort(vartable[varid].levelTable, (size_t)nlevels, sizeof(leveltable_t), cmpLevelTable);
+              lsort = true;
+            }
 
-	  if ( levelID == nlevels ) linc = TRUE;
-
-	  if ( linc == FALSE )
-	    {
-	      /* check decreasing of levels */
-	      for ( levelID = 1; levelID < nlevels; levelID++ )
-		if ( dlevels[levelID] > dlevels[levelID-1] ) break;
-
-	      if ( levelID == nlevels ) ldec = TRUE;
-
-	      if ( ldec == FALSE ||
-		   zaxistype == ZAXIS_HYBRID ||
-		   zaxistype == ZAXIS_DEPTH_BELOW_LAND )
-		{
-		  /*
-		  qsort(dlevels, nlevels, sizeof(double), dblcmp);
-		  */
-		  qsort(vartable[varid].levelTable, nlevels, sizeof(leveltable_t), cmpLevelTable);
-
-		  if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
-		    for ( levelID = 0; levelID < nlevels; levelID++ )
-		      dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
-					  level_sf*vartable[varid].levelTable[levelID].level2)/2.;
-		  else
-		    for ( levelID = 0; levelID < nlevels; levelID++ )
-		      dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
-		}
-	    }
+          if ( lsort )
+            {
+              if ( lbounds && zaxistype != ZAXIS_HYBRID && zaxistype != ZAXIS_HYBRID_HALF )
+                for ( levelID = 0; levelID < nlevels; levelID++ )
+                  dlevels[levelID] = (level_sf*vartable[varid].levelTable[levelID].level1 +
+                                      level_sf*vartable[varid].levelTable[levelID].level2)/2.;
+              else
+                for ( levelID = 0; levelID < nlevels; levelID++ )
+                  dlevels[levelID] = level_sf*vartable[varid].levelTable[levelID].level1;
+            }
 	}
 
       if ( lbounds )
@@ -566,7 +589,7 @@ void cdi_generate_vars(stream_t *streamptr)
 	  dlevels2 = (double *) malloc(nlevels*sizeof(double));
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
 	    dlevels2[levelID] = level_sf*vartable[varid].levelTable[levelID].level2;
-	}
+        }
 
       char *unitptr = cdiUnitNamePtr(vartable[varid].level_unit);
       zaxisID = varDefZaxis(vlistID, zaxistype, nlevels, dlevels, lbounds, dlevels1, dlevels2,

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -284,7 +284,7 @@ void *kvlParseFile(const char *filename)
   filesize = (size_t) ftell(fp);
   fseek(fp, 0L, SEEK_SET);
 
-  buffer = (char *) malloc(filesize);
+  buffer = malloc(filesize);
   nitems = fread(buffer, 1, filesize, fp);
 
   fclose(fp);
@@ -295,7 +295,7 @@ void *kvlParseFile(const char *filename)
       return (kvl);
     }
  
-  kvl = (kvl_t *) calloc(1, sizeof(kvl_t));
+  kvl = calloc(1, sizeof(kvl_t));
   kvl->buffer = buffer;
   kvl->buffersize = filesize;
   kvl->filename = strdup(filename);

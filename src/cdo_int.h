@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,7 @@ char *strdup(const char *s);
 ({					      	  \
    const char *__old = (s);			  \
    size_t __len = strlen(__old) + 1;		  \
-   char *__new = (char *) malloc(__len);	  \
+   char *__new = malloc(__len);	  \
    (char *) memcpy(__new, __old, __len);	  \
 })
 */
@@ -188,6 +188,8 @@ void printFiletype(int streamID, int vlistID);
 void job_submit(const char *expname, const char *jobfilename, const char *jobname, const char *tmppath, const char *ftppath);
 
 void minmaxval(long nvals, double *array, int *imiss, double *minval, double *maxval);
+
+off_t filesize(const char *filename);
 
 
 #endif  /* _CDO_INT_H */

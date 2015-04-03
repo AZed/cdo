@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,7 @@ void *Mergetime(void *argument)
 
   nfiles = cdoStreamCnt() - 1;
 
-  sf = (sfile_t *) malloc(nfiles*sizeof(sfile_t));
+  sf = malloc(nfiles*sizeof(sfile_t));
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
@@ -130,7 +130,7 @@ void *Mergetime(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(sf[0].vlistID);
-      array = (double *) malloc(gridsize*sizeof(double));
+      array = malloc(gridsize*sizeof(double));
     }
 
   while ( TRUE )

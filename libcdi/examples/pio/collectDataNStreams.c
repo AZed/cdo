@@ -12,6 +12,10 @@ typedef int MPI_Comm;
 #include "cdi.h"
 #include "pio_util.h"
 
+#ifdef USE_MPI
+#include "cdipio.h"
+#endif
+
 static void hoursPassingHack ( int * vdate, int * vtime, int hoursPassed )
 {
   int sum, days, hours, oldDays;
@@ -223,7 +227,9 @@ int main (int argc, char *argv[])
     nProcsIODef    = 3,
     //IOModeDef       = PIO_NONE,
     //IOModeDef       = PIO_MPI,
+#ifdef USE_MPI
     IOModeDef       = PIO_FPGUARD,
+#endif
     //IOModeDef       = PIO_ASYNCH,
     //IOModeDef       = PIO_WRITER,
   };
@@ -257,13 +263,17 @@ int main (int argc, char *argv[])
       nProcsIO = nProcsIODef;
     }
 
-  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f);
-  pioNamespaceSetActive(pioNamespace);
+  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f,
+                      cdiPioNoPostCommSetup);
+  if (commModel != MPI_COMM_NULL)
+    {
+      namespaceSetActive(pioNamespace);
 #endif
 
-  modelRun(commModel);
+      modelRun(commModel);
 
 #ifdef USE_MPI
+    }
   pioFinalize ();
   xt_finalize();
   MPI_Finalize ();
@@ -282,3 +292,13 @@ uniform_partition_start(int set_interval[2], int nparts, int part_idx)
   return start;
 }
 #endif
+
+/*
+ * Local Variables:
+ * c-file-style: "Java"
+ * c-basic-offset: 2
+ * indent-tabs-mode: nil
+ * show-trailing-whitespace: t
+ * require-trailing-newline: t
+ * End:
+ */

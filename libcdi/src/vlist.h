@@ -47,6 +47,8 @@ typedef struct
 }
 levinfo_t;
 
+#define DEFAULT_LEVINFO(levID) \
+  (levinfo_t){ .flag = 0, .index = -1, .flevelID = levID, .mlevelID = levID}
 
 typedef struct
 {
@@ -67,7 +69,6 @@ ensinfo_t;
 typedef struct
 {
   int         flag;
-  int         nlevs;
   int         isUsed;
   int         mvarID;
   int         fvarID;

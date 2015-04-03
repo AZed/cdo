@@ -18,6 +18,19 @@
 void grid_to_radian(const char *units, long nvals, double *restrict values, const char *description);
 void grid_to_degree(const char *units, long nvals, double *restrict values, const char *description);
 
+void grid_gen_corners(long n, const double* restrict vals, double* restrict corners);
+void grid_cell_center_to_bounds_X2D(const char* xunitstr, long xsize, long ysize,
+				    const double* restrict grid_center_lon, double* restrict grid_corner_lon, double dlon);
+void grid_cell_center_to_bounds_Y2D(const char* yunitstr, long xsize, long ysize,
+				    const double* restrict grid_center_lat, double* restrict grid_corner_lat);
+
+void gridGenXvals(int xsize, double xfirst, double xlast, double xinc, double *xvals);
+void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double yinc, double *yvals);
+
+int  gridWeights(int gridID, double *weights);
+int  gridGenArea(int gridID, double *area);
+void gaussaw(double pa[], double pw[], int nlat);
+
 int referenceToGrid(int gridID);
 int gridToZonal(int gridID);
 int gridToMeridional(int gridID);

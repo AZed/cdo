@@ -37,7 +37,7 @@ void     commDefNProcsIO        ( int );
 int      commInqNProcsIO        ( void );
 int      commInqNProcsModel     ( void );
 int      commInqIsProcIO        ( void );
-void     commDefIOMode          ( int, int, int );
+void     commDefIOMode          ( int );
 int      commInqIOMode          ( void );
 
 void     commDefCommPio         ( void );

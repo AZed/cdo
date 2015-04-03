@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -66,8 +66,8 @@ void invertLonDes(int vlistID)
 	  else
             size = nlon;
 
-	  xv1 = (double *) malloc(size*sizeof(double));
-	  xv2 = (double *) malloc(size*sizeof(double));
+	  xv1 = malloc(size*sizeof(double));
+	  xv2 = malloc(size*sizeof(double));
 
 	  gridInqXvals(gridID1, xv1);
 
@@ -101,8 +101,8 @@ void invertLonDes(int vlistID)
 	  else
             size = nv*nlon;
 
-	  xb1 = (double *) malloc(size*sizeof(double));
-	  xb2 = (double *) malloc(size*sizeof(double));
+	  xb1 = malloc(size*sizeof(double));
+	  xb2 = malloc(size*sizeof(double));
 
 	  gridInqXbounds(gridID1, xb1);
 
@@ -165,8 +165,8 @@ void invertLatDes(int vlistID)
 	  else
             size = nlat;
 
-	  yv1 = (double *) malloc(size*sizeof(double));
-	  yv2 = (double *) malloc(size*sizeof(double));
+	  yv1 = malloc(size*sizeof(double));
+	  yv2 = malloc(size*sizeof(double));
 
 
 	  if ( gridtype == GRID_CURVILINEAR )
@@ -213,8 +213,8 @@ void invertLatDes(int vlistID)
 	  else
             size = nv*nlat;
 
-	  yb1 = (double *) malloc(size*sizeof(double));
-	  yb2 = (double *) malloc(size*sizeof(double));
+	  yb1 = malloc(size*sizeof(double));
+	  yb2 = malloc(size*sizeof(double));
 
 	  gridInqYbounds(gridID1, yb1);
 
@@ -256,8 +256,8 @@ void invertLonData(double *array1, double *array2, int gridID1)
 
   if ( nlat > 0 )
     {
-      field1 = (double **) malloc(nlat*sizeof(double *));
-      field2 = (double **) malloc(nlat*sizeof(double *));
+      field1 = malloc(nlat*sizeof(double *));
+      field2 = malloc(nlat*sizeof(double *));
   
       for ( ilat = 0; ilat < nlat; ilat++ )
 	{
@@ -290,8 +290,8 @@ void invertLatData(double *array1, double *array2, int gridID1)
 
   if ( nlat > 0 )
     {
-      field1 = (double **) malloc(nlat*sizeof(double *));
-      field2 = (double **) malloc(nlat*sizeof(double *));
+      field1 = malloc(nlat*sizeof(double *));
+      field2 = malloc(nlat*sizeof(double *));
   
       for ( ilat = 0; ilat < nlat; ilat++ )
 	{
@@ -366,8 +366,8 @@ void *Invert(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = (double *) malloc(gridsize*sizeof(double));
-  array2 = (double *) malloc(gridsize*sizeof(double));
+  array1 = malloc(gridsize*sizeof(double));
+  array2 = malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

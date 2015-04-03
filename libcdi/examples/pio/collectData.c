@@ -17,6 +17,8 @@ typedef int MPI_Comm;
 #include "pio_util.h"
 
 #ifdef USE_MPI
+#include "cdipio.h"
+
 static int
 uniform_partition_start(int set_interval[2], int nparts, int part_idx);
 #endif
@@ -159,7 +161,8 @@ static void modelRun(MPI_Comm commModel)
 #endif
 }
 
-struct {
+#ifdef USE_MPI
+static struct {
   char *text;
   int mode;
 } mode_map[] = {
@@ -169,6 +172,7 @@ struct {
   { "PIO_WRITER", PIO_WRITER },
   { "PIO_FPGUARD", PIO_FPGUARD},
 };
+#endif
 
 
 int main (int argc, char *argv[])
@@ -217,13 +221,17 @@ int main (int argc, char *argv[])
       }
   }
 
-  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f);
-  pioNamespaceSetActive(pioNamespace);
+  commModel = pioInit(commGlob, nProcsIO, IOMode, &pioNamespace, 1.0f,
+                      cdiPioNoPostCommSetup);
+  if (commModel != MPI_COMM_NULL)
+    {
+      namespaceSetActive(pioNamespace);
 #endif
 
-  modelRun(commModel);
+      modelRun(commModel);
 
 #ifdef USE_MPI
+    }
   pioFinalize ();
   xt_finalize();
   MPI_Finalize ();

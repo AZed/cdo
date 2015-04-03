@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -162,8 +162,8 @@ void uv_to_p_grid(int nlon, int nlat, double *grid1x, double *grid1y,
   double *gxhelp, *gyhelp;
 
   gridsizex = (nlon+2)*nlat;
-  gxhelp  = (double *) malloc(gridsizex*sizeof(double));
-  gyhelp  = (double *) malloc(gridsizex*sizeof(double));
+  gxhelp  = malloc(gridsizex*sizeof(double));
+  gyhelp  = malloc(gridsizex*sizeof(double));
 
   /* load to a help field */
   for ( j = 0; j < nlat; j++ )
@@ -323,12 +323,12 @@ void *Mrotuvb(void *argument)
   nlon    = gridInqXsize(gridID1);
   nlat    = gridInqYsize(gridID1);
 
-  grid1x  = (double *) malloc(gridsize*sizeof(double));
-  grid1y  = (double *) malloc(gridsize*sizeof(double));
-  grid2x  = (double *) malloc(gridsize*sizeof(double));
-  grid2y  = (double *) malloc(gridsize*sizeof(double));
-  grid3x  = (double *) malloc(gridsize*sizeof(double));
-  grid3y  = (double *) malloc(gridsize*sizeof(double));
+  grid1x  = malloc(gridsize*sizeof(double));
+  grid1y  = malloc(gridsize*sizeof(double));
+  grid2x  = malloc(gridsize*sizeof(double));
+  grid2y  = malloc(gridsize*sizeof(double));
+  grid3x  = malloc(gridsize*sizeof(double));
+  grid3y  = malloc(gridsize*sizeof(double));
 
   gridInqXvals(gridID1, grid1x);
   gridInqYvals(gridID1, grid1y);
@@ -407,16 +407,16 @@ void *Mrotuvb(void *argument)
   missval1 = vlistInqVarMissval(vlistID1, 0);
   missval2 = vlistInqVarMissval(vlistID2, 0);
 
-  ufield  = (double *) malloc(gridsize*sizeof(double));
-  vfield  = (double *) malloc(gridsize*sizeof(double));
-  urfield = (double *) malloc(gridsize*sizeof(double));
-  vrfield = (double *) malloc(gridsize*sizeof(double));
+  ufield  = malloc(gridsize*sizeof(double));
+  vfield  = malloc(gridsize*sizeof(double));
+  urfield = malloc(gridsize*sizeof(double));
+  vrfield = malloc(gridsize*sizeof(double));
 
   if ( gpint )
     {
       int gridsizex = (nlon+2)*nlat;
-      uhelp   = (double *) malloc(gridsizex*sizeof(double));
-      vhelp   = (double *) malloc(gridsizex*sizeof(double));
+      uhelp   = malloc(gridsizex*sizeof(double));
+      vhelp   = malloc(gridsizex*sizeof(double));
     }
 
   tsID = 0;

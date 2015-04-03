@@ -270,6 +270,9 @@ cdo_SOURCES += Adisit.c        \
                remaplib.c      \
                remapsort.c     \
                remap_scrip_io.c \
+               remap_search_latbins.c \
+               stdnametable.c  \
+               stdnametable.h  \
                specspace.c     \
                specspace.h     \
                statistic.c     \
@@ -283,6 +286,23 @@ cdo_SOURCES += Adisit.c        \
                vinterp.c       \
                vinterp.h       \
                zaxis.c
+
+cdo_SOURCES += clipping/clipping.c           \
+               clipping/clipping.h           \
+               clipping/area.c               \
+               clipping/area.h               \
+               clipping/ensure_array_size.c  \
+               clipping/ensure_array_size.h  \
+               clipping/geometry_tools.c     \
+               clipping/geometry.h           \
+               clipping/grid.h               \
+               clipping/points.h             \
+               clipping/dep_list.h           \
+               clipping/grid_cell.c          \
+               clipping/grid_cell.h          \
+               clipping/intersection.c       \
+               clipping/utils.c              \
+               clipping/utils.h 
 
 if ENABLE_MAGICS
 cdo_SOURCES += Magplot.c       \

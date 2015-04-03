@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -49,8 +49,8 @@ static
 int cmpvarcode(const void *s1, const void *s2)
 {
   int cmp = 0;
-  varinfo_t *x = (varinfo_t *) s1;
-  varinfo_t *y = (varinfo_t *) s2;
+  const varinfo_t *x = s1;
+  const varinfo_t *y = s2;
   /*
   printf("%d %d  %d %d\n", x->code, y->code, x, y);
   */
@@ -63,8 +63,8 @@ int cmpvarcode(const void *s1, const void *s2)
 static
 int cmpvarname(const void *s1, const void *s2)
 {
-  varinfo_t *x = (varinfo_t *) s1;
-  varinfo_t *y = (varinfo_t *) s2;
+  const varinfo_t *x = s1;
+  const varinfo_t *y = s2;
 
   return (strcmp(x->name, y->name));
 }
@@ -73,8 +73,8 @@ static
 int cmpvarlevel(const void *s1, const void *s2)
 {
   int cmp = 0;
-  levinfo_t *x = (levinfo_t *) s1;
-  levinfo_t *y = (levinfo_t *) s2;
+  const levinfo_t *x = s1;
+  const levinfo_t *y = s2;
 
   if      ( x->level < y->level ) cmp = -1;
   else if ( x->level > y->level ) cmp =  1;
@@ -86,8 +86,8 @@ static
 int cmpvarlevelrev(const void *s1, const void *s2)
 {
   int cmp = 0;
-  levinfo_t *x = (levinfo_t *) s1;
-  levinfo_t *y = (levinfo_t *) s2;
+  const levinfo_t *x = s1;
+  const levinfo_t *y = s2;
 
   if      ( x->level > y->level ) cmp = -1;
   else if ( x->level < y->level ) cmp =  1;
@@ -164,21 +164,21 @@ void *Sort(void *argument)
 
   nvars   = vlistNvars(vlistID1);
 
-  varInfo = (varinfo_t *) malloc(nvars*sizeof(varinfo_t));
+  varInfo = malloc(nvars*sizeof(varinfo_t));
   for ( varID = 0; varID < nvars; ++varID )
     {
       nlevs = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       varInfo[varID].nlevs = nlevs;
-      varInfo[varID].levInfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
+      varInfo[varID].levInfo = malloc(nlevs*sizeof(levinfo_t));
     }
 
-  vardata = (double **) malloc(nvars*sizeof(double*));
+  vardata = malloc(nvars*sizeof(double*));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata[varID] = (double *) malloc(gridsize*nlevs*sizeof(double));
+      vardata[varID] = malloc(gridsize*nlevs*sizeof(double));
     }
 
   tsID = 0;

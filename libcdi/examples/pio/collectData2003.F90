@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#endif
-
 PROGRAM collectdata2003
 #ifdef USE_MPI
   USE yaxt, ONLY: xt_initialize, xt_finalize, xt_idxlist, xt_idxstripes_new, &
@@ -11,6 +7,7 @@ PROGRAM collectdata2003
   IMPLICIT NONE
 
   INCLUDE 'cdi.inc'
+  INCLUDE 'cdipio.inc'
 
 #ifdef USE_MPI
   INCLUDE 'mpif.h'
@@ -29,6 +26,11 @@ PROGRAM collectdata2003
   INTEGER, PARAMETER :: IOMode       = PIO_FPGUARD
 
   INTEGER ::commGlob, commModel, error, pio_namespace
+#ifdef USE_MPI
+  LOGICAL :: run_model
+#else
+  LOGICAL, PARAMETER :: run_model = .TRUE.
+#endif
 
   ! Start parallel environment
 #ifdef USE_MPI
@@ -38,16 +40,18 @@ PROGRAM collectdata2003
 
   ! For parallel IO:
   ! Initialize environment.
-  commModel = pioInit(commGlob, nProcsIO, IOMode, pio_namespace, 1.1)
-  CALL pioNamespaceSetActive(pio_namespace)
+  commModel = pioInit(commGlob, nProcsIO, IOMode, pio_namespace, 1.1, &
+       cdiPioNoPostCommSetup)
+  run_model = commModel /= MPI_COMM_NULL
+  IF (run_model) CALL namespaceSetActive(pio_namespace)
 #endif
 
-  CALL modelrun ( commModel )
+  IF (run_model) CALL modelrun ( commModel )
 
 #ifdef USE_MPI
   ! For parallel IO:
   ! Cleanup environment.
-  CALL pioFinalize ()
+  IF (run_model) CALL pioFinalize ()
   CALL xt_finalize
   CALL MPI_FINALIZE ( error )
 #endif

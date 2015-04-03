@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,7 @@ LIST *listNew(int type)
     }
   else
     {
-      list = (LIST *) malloc(sizeof(LIST));
+      list = malloc(sizeof(LIST));
       listInit(list, type);
     }
 
@@ -75,9 +75,9 @@ static void listCheck(LIST *list, int num)
     {
       list->nalloc += list->allinc;
       if ( list->type == INT_LIST )
-	list->array = (int *) realloc(list->array, list->nalloc*sizeof(int));
+	list->array = realloc(list->array, list->nalloc*sizeof(int));
       else
-	list->array = (double *) realloc(list->array, list->nalloc*sizeof(double));
+	list->array = realloc(list->array, list->nalloc*sizeof(double));
     }
 }
 

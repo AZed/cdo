@@ -10,6 +10,7 @@
 #include "namespace.h"
 #include "taxis.h"
 
+#include "cdipio.h"
 #include "pio.h"
 #include "pio_client.h"
 #include "pio_comm.h"
@@ -18,12 +19,18 @@
 #include "pio_util.h"
 #include "pio_serialize.h"
 
+static void
+nullPackFunc(void *obj, void *buf, int size, int *pos, void *context)
+{
+}
+
+
 static int
 cdiPioClientStreamOpen(const char *filename, const char *filemode,
                        int filetype, stream_t *streamptr,
                        int recordBufIsToBeCreated)
 {
-  union winHeaderEntry header;
+  struct winHeaderEntry header;
   size_t filename_len;
   if ( tolower ( * filemode ) == 'w' )
     {
@@ -35,12 +42,14 @@ cdiPioClientStreamOpen(const char *filename, const char *filemode,
         case STAGE_TIMELOOP:
           filename_len = strlen(filename);
           xassert(filename_len > 0 && filename_len < MAXDATAFILENAME);
-          header.funcCall
-            = (struct funcCallDesc){
-            .funcID = STREAMOPEN,
-            .funcArgs.newFile = { .fnamelen = (int)filename_len,
-                                  .filetype = filetype } };
-          pioBufferFuncCall(header, filename, filename_len + 1);
+          header = (struct winHeaderEntry){
+            .id = STREAMOPEN,
+            .specific.funcArgs.newFile
+            = { .fnamelen = (int)filename_len,
+                .filetype = filetype } };
+          pioBufferFuncCall(header,
+                            &(struct memCpyDataDesc){filename,
+                                filename_len + 1}, memcpyPackFunc);
           xdebug("WROTE FUNCTION CALL IN BUFFER OF WINS:  %s, filenamesz=%zu,"
                  " filename=%s, filetype=%d",
                  funcMap[(-1 - STREAMOPEN)], filename_len + 1, filename,
@@ -61,18 +70,17 @@ cdiPioClientStreamOpen(const char *filename, const char *filemode,
 static void
 cdiPioClientStreamDefVlist_(int streamID, int vlistID)
 {
-  union winHeaderEntry header;
+  struct winHeaderEntry header;
   statusCode nspStatus = namespaceInqResStatus ();
   switch ( nspStatus )
     {
     case STAGE_DEFINITION:
       break;
     case STAGE_TIMELOOP:
-      header.funcCall
-        = (struct funcCallDesc){
-        .funcID = STREAMDEFVLIST,
-        .funcArgs.streamChange = { streamID, vlistID } };
-      pioBufferFuncCall(header, NULL, 0);
+      header = (struct winHeaderEntry){
+        .id = STREAMDEFVLIST,
+        .specific.funcArgs.streamChange = { streamID, vlistID } };
+      pioBufferFuncCall(header, NULL, nullPackFunc);
       xdebug("WROTE FUNCTION CALL IN BUFFER OF WINS:  %s, streamID=%d,"
              " vlistID=%d", funcMap[(-1 - STREAMDEFVLIST)], streamID, vlistID);
       break;
@@ -102,7 +110,8 @@ cdiPioClientStreamWriteVarChunk_(int streamID, int varID, int memtype,
   int size = vlistInqVarSize(vlistID, varID),
     varShape[3];
   unsigned ndims = (unsigned)cdiPioQueryVarDims(varShape, vlistID, varID);
-  Xt_int varShapeXt[3], chunkShape[3] = { 1, 1, 1 }, origin[3] = { 0, 0, 0 };
+  Xt_int varShapeXt[3], origin[3] = { 0, 0, 0 };
+  int chunkShape[3] = { 1, 1, 1 };
   /* FIXME: verify xt_int ranges are good enough */
   for (unsigned i = 0; i < 3; ++i)
     varShapeXt[i] = varShape[i];
@@ -136,6 +145,30 @@ cdiPioClientStreamWriteVarPart(int streamID, int varID, const void *data,
     }
 }
 
+static void
+cdiPioClientStreamWriteScatteredVarPart(int streamID, int varID,
+                                        const void *data,
+                                        int numBlocks, const int blocklengths[],
+                                        const int displacements[],
+                                        int nmiss, Xt_idxlist partDesc)
+{
+  switch (namespaceInqResStatus())
+    {
+    case STAGE_DEFINITION:
+      xabort("DEFINITION STAGE: PARALLEL WRITING NOT POSSIBLE.");
+      break;
+    case STAGE_TIMELOOP:
+      cdiPioBufferPartDataGather(streamID, varID, data, numBlocks,
+                                 blocklengths, displacements, nmiss, partDesc);
+      return;
+    case STAGE_CLEANUP:
+      xabort("CLEANUP STAGE: PARALLEL WRITING NOT POSSIBLE.");
+      break;
+    default:
+      xabort("INTERNAL ERROR");
+    }
+}
+
 #if defined HAVE_LIBNETCDF
 static void
 cdiPioCdfDefTimestepNOP(stream_t *streamptr, int tsID)
@@ -152,18 +185,18 @@ cdiPioClientStreamNOP(stream_t *streamptr)
 static void
 cdiPioClientStreamClose(stream_t *streamptr, int recordBufIsToBeDeleted)
 {
-  union winHeaderEntry header;
+  struct winHeaderEntry header;
   statusCode nspStatus = namespaceInqResStatus ();
   switch ( nspStatus )
     {
     case STAGE_DEFINITION:
       break;
     case STAGE_TIMELOOP:
-      header.funcCall
-        = (struct funcCallDesc){
-        .funcID = STREAMCLOSE,
-        .funcArgs.streamChange = { streamptr->self, CDI_UNDEFID } };
-      pioBufferFuncCall(header, NULL, 0);
+      header = (struct winHeaderEntry){
+        .id = STREAMCLOSE,
+        .specific.funcArgs.streamChange
+        = { streamptr->self, CDI_UNDEFID } };
+      pioBufferFuncCall(header, NULL, nullPackFunc);
       xdebug("WROTE FUNCTION CALL IN BUFFER OF WINS:  %s, streamID=%d",
              funcMap[-1 - STREAMCLOSE], streamptr->self);
       break;
@@ -174,32 +207,31 @@ cdiPioClientStreamClose(stream_t *streamptr, int recordBufIsToBeDeleted)
     }
 }
 
+static void
+cdiPioTaxisPackWrap(void *data, void *buf, int size, int *pos,
+                    void *context)
+{
+  int taxisID = (int)(intptr_t)data;
+  reshPackResource(taxisID, &taxisOps, buf, size, pos, context);
+}
+
 static int
 cdiPioClientStreamDefTimestep_(stream_t *streamptr, int tsID)
 {
-  union winHeaderEntry header;
+  struct winHeaderEntry header;
   statusCode nspStatus = namespaceInqResStatus ();
-  int taxisID, buf_size, position;
-  char *buf;
-  MPI_Comm commCalc;
+  int taxisID;
   switch ( nspStatus )
     {
     case STAGE_DEFINITION:
       break;
     case STAGE_TIMELOOP:
-      position = 0;
       taxisID = vlistInqTaxis(streamptr->vlistID);
-      header.funcCall
-        = (struct funcCallDesc){
-        .funcID = STREAMDEFTIMESTEP,
-        .funcArgs.streamNewTimestep = { streamptr->self, tsID } };
-      commCalc = commInqCommCalc();
-      buf_size = reshResourceGetPackSize(taxisID, &taxisOps, &commCalc);
-      buf = xmalloc((size_t)buf_size);
-      reshPackResource(taxisID, &taxisOps, buf, buf_size, &position,
-                       &commCalc);
-      pioBufferFuncCall(header, buf, buf_size);
-      free(buf);
+      header = (struct winHeaderEntry){
+        .id = STREAMDEFTIMESTEP,
+        .specific.funcArgs.streamNewTimestep = { streamptr->self, tsID } };
+      xassert(sizeof (void *) >= sizeof (int));
+      pioBufferFuncCall(header, (void *)(intptr_t)taxisID, cdiPioTaxisPackWrap);
       break;
     case STAGE_CLEANUP:
       break;
@@ -216,7 +248,7 @@ cdiPioClientSetup(int *pioNamespace_, int *pioNamespace)
   commDefCommsIO ();
   *pioNamespace_ = *pioNamespace = namespaceNew();
   int callerCDINamespace = namespaceGetActive();
-  pioNamespaceSetActive(*pioNamespace_);
+  namespaceSetActive(*pioNamespace_);
   serializeSetMPI();
   namespaceSwitchSet(NSSWITCH_STREAM_OPEN_BACKEND,
                      NSSW_FUNC(cdiPioClientStreamOpen));
@@ -228,6 +260,8 @@ cdiPioClientSetup(int *pioNamespace_, int *pioNamespace)
                      NSSW_FUNC(cdiPioClientStreamWriteVarChunk_));
   namespaceSwitchSet(NSSWITCH_STREAM_WRITE_VAR_PART_,
                      NSSW_FUNC(cdiPioClientStreamWriteVarPart));
+  namespaceSwitchSet(NSSWITCH_STREAM_WRITE_SCATTERED_VAR_PART_,
+                     NSSW_FUNC(cdiPioClientStreamWriteScatteredVarPart));
   namespaceSwitchSet(NSSWITCH_STREAM_CLOSE_BACKEND,
                      NSSW_FUNC(cdiPioClientStreamClose));
   namespaceSwitchSet(NSSWITCH_STREAM_DEF_TIMESTEP_,
@@ -240,7 +274,7 @@ cdiPioClientSetup(int *pioNamespace_, int *pioNamespace)
   namespaceSwitchSet(NSSWITCH_CDF_STREAM_SETUP,
                      NSSW_FUNC(cdiPioClientStreamNOP));
 #endif
-  pioNamespaceSetActive(callerCDINamespace);
+  namespaceSetActive(callerCDINamespace);
 }
 
 

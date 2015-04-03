@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "ensure_array_size.h"
-#include "pio_util.h"
+#include "error.h"
 
 void
 realloc_array(void **array, size_t elem_size, size_t *curr_array_size,

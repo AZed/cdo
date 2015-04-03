@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 static
 void print_location_LL(int operfunc, int vlistID, int varID, int levelID, int gridID, double sglval, double *fieldptr,
@@ -164,10 +165,10 @@ void *Fldstat(void *argument)
   field_init(&field);
 
   lim = vlistGridsizeMax(vlistID1);
-  field.ptr    = (double *) malloc(lim*sizeof(double));
+  field.ptr    = malloc(lim*sizeof(double));
   field.weight = NULL;
   if ( needWeights )
-    field.weight = (double *) malloc(lim*sizeof(double));
+    field.weight = malloc(lim*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

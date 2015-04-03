@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -75,9 +75,9 @@ void *Change_e5slm(void *argument)
 
   gridsize = gridInqSize(vlistInqVarGrid(vlistIDslm, 0));
 
-  array = (double *) malloc(gridsize*sizeof(double));
-  cland = (double *) malloc(gridsize*sizeof(double));
-  lsea  = (short *)  malloc(gridsize*sizeof(short));
+  array = malloc(gridsize*sizeof(double));
+  cland = malloc(gridsize*sizeof(double));
+  lsea  = malloc(gridsize*sizeof(short));
 
   streamInqTimestep(streamIDslm, 0);
 
@@ -102,7 +102,7 @@ void *Change_e5slm(void *argument)
 
 
   nvars = vlistNvars(vlistID1);
-  codes = (short *) malloc(nvars*sizeof(short));
+  codes = malloc(nvars*sizeof(short));
 
   for ( varID = 0; varID < nvars; ++varID )
     {

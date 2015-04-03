@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2013 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -99,11 +99,11 @@ void *Testdata(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = (double *) malloc(gridsize*sizeof(double));
-  fval = (float *) malloc(gridsize*sizeof(float));
-  ival = (int *) malloc(gridsize*sizeof(int));
-  cval = (unsigned char *) malloc(gridsize*sizeof(unsigned char)*4);
-  cval2 = (unsigned char *) malloc(gridsize*sizeof(unsigned char)*4);
+  array = malloc(gridsize*sizeof(double));
+  fval = malloc(gridsize*sizeof(float));
+  ival = malloc(gridsize*sizeof(int));
+  cval = malloc(gridsize*sizeof(unsigned char)*4);
+  cval2 = malloc(gridsize*sizeof(unsigned char)*4);
 
   fp = fopen("testdata", "w");
 

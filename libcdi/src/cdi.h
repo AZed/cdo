@@ -4,8 +4,8 @@
   This is the only file that must be included to use the CDI library from C.
 */
 
-#ifndef  _CDI_H
-#define  _CDI_H
+#ifndef  CDI_H_
+#define  CDI_H_
 
 #include <sys/types.h>
 
@@ -172,20 +172,20 @@ extern "C" {
 
 /* TSTEP types */
 
-#define  TSTEP_CONSTANT           0
-#define  TSTEP_INSTANT            1
-#define  TSTEP_AVG                2
-#define  TSTEP_ACCUM              3
-#define  TSTEP_MAX                4
-#define  TSTEP_MIN                5
-#define  TSTEP_DIFF               6
-#define  TSTEP_RMS                7
-#define  TSTEP_SD                 8
-#define  TSTEP_COV                9
-#define  TSTEP_RATIO             10
-#define  TSTEP_RANGE             11
-#define  TSTEP_INSTANT2          12
-#define  TSTEP_INSTANT3          13
+#define  TSTEP_CONSTANT             0  /* Constant            */
+#define  TSTEP_INSTANT              1  /* Instant             */
+#define  TSTEP_AVG                  2  /* Average             */
+#define  TSTEP_ACCUM                3  /* Accumulation        */
+#define  TSTEP_MAX                  4  /* Maximum             */
+#define  TSTEP_MIN                  5  /* Minimum             */
+#define  TSTEP_DIFF                 6  /* Difference          */
+#define  TSTEP_RMS                  7  /* Root mean square    */
+#define  TSTEP_SD                   8  /* Standard deviation  */
+#define  TSTEP_COV                  9  /* Covariance          */
+#define  TSTEP_RATIO               10  /* Ratio               */
+#define  TSTEP_RANGE               11
+#define  TSTEP_INSTANT2            12
+#define  TSTEP_INSTANT3            13
 
 /* TAXIS types */
 
@@ -214,38 +214,6 @@ extern "C" {
 #define  CALENDAR_366DAYS         4
 #define  CALENDAR_NONE            5
 
-/* parallel IO IOMode */
-
-#define  PIO_NONE                 0
-#define  PIO_MPI                  1
-#define  PIO_WRITER               2
-#define  PIO_ASYNCH               3
-#define  PIO_FPGUARD              4
-
-#define  PIO_MINIOMODE                  PIO_NONE
-#define  PIO_MAXIOMODE                  PIO_FPGUARD
-#define  PIO_MINIOMODEWITHSPECIALPROCS  PIO_WRITER
-
-/* parallel IO routines */
-#ifdef MPI_VERSION
-#  include <yaxt.h>
-#endif
-
-#ifdef MPI_VERSION /* make_fint keep */
-void     pioEndDef             ( void );
-void     pioEndTimestepping    ( void );
-void     pioFinalize           ( void );
-/*      pioInit: initialize I/O server processes and communication */
-MPI_Comm pioInit(MPI_Comm commSuper, int nProcsIO, int IOMode,
-                 int *pioNamespace, float partInflate);
-void     pioWriteTimestep();
-
-void     streamWriteVarPart    (int streamID, int varID,
-                                const void *data, int nmiss,
-                                Xt_idxlist partDesc);
-
-#endif /* make_fint keep */
-void     pioNamespaceSetActive ( int );
 
 /* CDI control routines */
 
@@ -263,6 +231,11 @@ int     cdiHaveFiletype(int filetype);
 void    cdiDefMissval(double missval);
 double  cdiInqMissval(void);
 void    cdiDefGlobal(const char *string, int val);
+
+int     namespaceNew();
+void    namespaceSetActive(int namespaceID);
+void    namespaceDelete(int namespaceID);
+
 
 /* CDI converter routines */
 
@@ -330,6 +303,9 @@ int     streamInqCompLevel(int streamID);
 /*      streamDefTimestep: Define time step */
 int     streamDefTimestep(int streamID, int tsID);
 
+/* query currently set timestep id  */
+int streamInqCurTimestepID(int streamID);
+
 /*      streamInqTimestep: Get time step */
 int     streamInqTimestep(int streamID, int tsID);
 
@@ -369,7 +345,7 @@ void    streamWriteRecord(int streamID, const double *data_vec, int nmiss);
 void    streamWriteRecordF(int streamID, const float *data_vec, int nmiss);
 void    streamCopyRecord(int streamIDdest, int streamIDsrc);
 
-void    streamInqGinfo(int streamID, int *intnum, float *fltnum);
+void    streamInqGinfo(int streamID, int *intnum, float *fltnum, off_t *bignum);
 
 /* VLIST routines */
 
@@ -759,7 +735,7 @@ int     gridInqReference(int gridID, char *reference);
 void    gridDefUUID(int gridID, const char *uuid_cbuf);
 
 /*      gridInqUUID: Get the UUID of an unstructured grid */
-char   *gridInqUUID(int gridID, char *uuid_cbuf);
+void    gridInqUUID(int gridID, char *uuid_cbuf);
 
 
 /* Lambert Conformal Conic grid (GRIB version) */
@@ -855,7 +831,7 @@ int     zaxisInqNumber(int gridID);
 void    zaxisDefUUID(int zaxisID, const char *uuid_cbuf);
 
 /*      zaxisInqUUID: Get the UUID of a generalized Z-axis */
-char   *zaxisInqUUID(int zaxisID, char *uuid_cbuf);
+void    zaxisInqUUID(int zaxisID, char *uuid_cbuf);
 
 /*      zaxisDefName: Define the name of a Z-axis */
 void    zaxisDefName(int zaxisID, const char *name);
@@ -1026,7 +1002,7 @@ void    streamInqHistoryString(int streamID, char *history);
 }
 #endif
 
-#endif  /* _CDI_H */
+#endif  /* CDI_H_ */
 /*
  * Local Variables:
  * c-file-style: "Java"

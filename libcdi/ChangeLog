@@ -1,3 +1,37 @@
+2014-02-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.6.3 released
+	* using CGRIBEX library version 1.6.3
+
+2014-02-03 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridInqUUID: changed return value from char* to void
+	* zaxisInqUUID: changed return value from char* to void
+
+2014-01-31 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf: added cdfDefZaxisUUID() [patch: Florian Prill]
+
+2014-01-13 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* stream_cdf::define_all_grids: bug fix for unstructured grids and an additional undefined dimension [report: Florian Prill]
+
+2014-01-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* streamInqGinfo: added support for GRIB files > 2GB
+
+2014-01-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* streamOpenA, streamOpen: parameter recordBufIsToBeCreated missing in call to cdiStreamOpenDefaultDelegate() (bug fix)
+
+2013-12-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* streamOpenA: removed line "streamptr->record = record"; record is allocated in cdiStreamOpenDefaultDelegate() (bug fix)
+
+2013-11-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Merged branch cdi-pio to trunk cdi
+
 2013-11-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Version 1.6.2 released
@@ -9,7 +43,7 @@
 
 2013-11-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
-	* merged branch cdi-pio to trunk cdi
+	* Merged branch cdi-pio to trunk cdi
 
 2013-10-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 

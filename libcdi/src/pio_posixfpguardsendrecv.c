@@ -15,12 +15,13 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "mpi.h"
+#include <mpi.h>
+
 #include "pio.h"
 #include "pio_comm.h"
 #include "pio_impl.h"
 #include "pio_util.h"
-
+#include "dmemory.h"
 
 extern char * command2charP[6];
 
@@ -519,27 +520,22 @@ finalizePOSIXFPGUARDSENDRECV(void)
 
 /***************************************************************/
 
-void initPOSIXFPGUARDSENDRECV ( void )
+void
+initPOSIXFPGUARDSENDRECV(void (*postCommSetupActions)(void))
 {
   if ( commInqSizeNode () < 2 ) 
     xabort ( "USAGE: # IO PROCESSES ON A PHYSICAL NODE >= 2" );
-  
-  if ( commInqRankNode () == commInqSpecialRankNode ()) 
-    {
-      commDefCommColl ( 0 );
-      commSendNodeInfo ();
-      commRecvNodeMap ();
-      commDefCommsIO ();
-      fpgPOSIXFPGUARDSENDRECV ();
-    }
+
+  int isCollector = commInqRankNode () != commInqSpecialRankNode ();
+  commDefCommColl(isCollector);
+  commSendNodeInfo ();
+  commRecvNodeMap ();
+  commDefCommsIO ();
+  postCommSetupActions();
+  if (!isCollector)
+    fpgPOSIXFPGUARDSENDRECV ();
   else
-    {
-      commDefCommColl ( 1 );
-      commSendNodeInfo ();
-      commRecvNodeMap ();
-      commDefCommsIO ();
-      bibAFiledataPF = listSetNew( destroyAFiledataPF, compareNamesAPF );
-    }
+    bibAFiledataPF = listSetNew( destroyAFiledataPF, compareNamesAPF );
 }
 
 #endif

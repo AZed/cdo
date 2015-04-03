@@ -2005,9 +2005,9 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
   jump = (nlon + 2);
   lot  = nlev * nlat;
 
-  wfc = (double *) malloc(lot*jump*sizeof(double));
+  wfc = malloc(lot*jump*sizeof(double));
 #if ! defined(_OPENMP)
-  wgp = (double *) malloc(lot*jump*sizeof(double));
+  wgp = malloc(lot*jump*sizeof(double));
 #endif
 
   for ( lev = 0; lev < nlev; ++lev )
@@ -2033,7 +2033,7 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
   nvex  = lot - (nblox-1)*NFFT;
   nvex0 = nvex;
 
-  istartv = (long *) malloc(nblox*sizeof(long));
+  istartv = malloc(nblox*sizeof(long));
 
   istart = 0;
   for ( nb = 0; nb < nblox; nb++ )
@@ -2049,7 +2049,7 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
   for ( nb = 0; nb < nblox; nb++ )
     {
 #if defined(_OPENMP)
-      wgp = (double *) malloc(lot*jump*sizeof(double));
+      wgp = malloc(lot*jump*sizeof(double));
 #endif
       istart = istartv[nb];
       if ( nb == 0 ) nvex = nvex0;
@@ -2174,8 +2174,8 @@ void gp2fc(double *trig, long *ifax, double *gp, double *fc, long nlat, long nlo
   jump = (nlon + 2);
   lot  = nlev * nlat;
 
-  wfc = (double *) malloc(lot * jump * sizeof(double));
-  wgp = (double *) malloc(lot * jump * sizeof(double));
+  wfc = malloc(lot * jump * sizeof(double));
+  wgp = malloc(lot * jump * sizeof(double));
 
   rix = 0;
   wix = 0;

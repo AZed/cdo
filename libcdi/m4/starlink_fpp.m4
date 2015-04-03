@@ -171,11 +171,15 @@ AC_DEFUN([_ACX_SL_LANG_PROGRAM_FPP_SUBS],
 # to macro substitution.
 # If not, this gives an "unterminated character constant" error
 AC_DEFUN([_ACX_SL_LANG_PROGRAM_FPP_WRAP],
-[AC_LANG_PROGRAM(,[
-@%:@define LONG '901234567890123456789012345678901234567890123456789012345678901234567890'
+[AC_LANG_PROGRAM(,[m4_case(_AC_LANG,[Fortran],
+[@%:@define LONG '901234567890123456789012345678901234567890123456789012345678901234567890'
+      CHARACTER(LEN=80) :: A
+      A=LONG
+],[Fortran 77],
+[@%:@define LONG '901234567890123456789012345678901234567890123456789012345678901234567890'
       CHARACTER*80 A
       A=LONG
-])])#_ACX_SL_LANG_PROGRAM_FPP_WRAP
+],[m4_fatal([$0: current language is not Fortran: ] _AC_LANG)])])])#_ACX_SL_LANG_PROGRAM_FPP_WRAP
 
 
 # _ACX_SL_LANG_PROGRAM_FPP_CSTYLE
@@ -190,11 +194,15 @@ AC_DEFUN([_ACX_SL_LANG_PROGRAM_FPP_CSTYLE],
 # ---------------------------
 # Test program for C++ style comments
 AC_DEFUN([_ACX_SL_LANG_PROGRAM_FPP_CXXSTYLE],
-[AC_LANG_SOURCE([dnl
-      PROGRAM MAIN
+[AC_LANG_SOURCE([m4_case(_AC_LANG,[Fortran],dnl
+[      PROGRAM MAIN
+      CHARACTER(LEN=10) :: C
+      C = "abcde" // "fghij"; END PROGRAM
+],[Fortran 77],
+[      PROGRAM MAIN
       CHARACTER*10 C
       C = "abcde" // "fghij"; END PROGRAM
-])
+])])
 ])#_ACX_SL_LANG_PROGRAM_FPP_CXXSTYLE
 
 # _ACX_SL_SET_FPP_FEATURE_VARS ([feature list])
@@ -317,9 +325,12 @@ AC_DEFUN([_ACX_SL_PROG_FPP],dnl
            _ACX_SL_TEST_FPP([$ac_fpp -P],[$acx_sl_fpp_srcext],dnl
              [FPP="$ac_fpp -P"
               break])
-         done])
+         done
+         dnl the above tests might generate an executable
+         \rm a.out 2>/dev/null])
       AS_IF([test -z "$FPP"], [$3],
-        [AS_VAR_SET([acx_sl_prog_fpp], [$FPP])])])
+        [AS_VAR_SET([acx_sl_prog_fpp], [$FPP])
+         $2])])
    AS_VAR_PUSHDEF([acx_sl_prog_fpp])
 ])# _ACX_SL_PROG_FPP
 
@@ -373,7 +384,7 @@ m4_define([_ACX_FPP_COMPILE_IFELSE],dnl
      [_AC_RUN_LOG([$FPP $FPPFLAGS m4_ifval([$1],[$1 ])conftest.$acx_sl_fpp_srcext \
         >conftest.${ac_ext}.tmp],
         [echo Running preprocessor $FPP $FPPFLAGS m4_ifval([$1],[$1 ])conftest.$acx_sl_fpp_srcext])])
-   m4_if([$2],[direct], [FCFLAGS="$FPPFLAGS $1 $ac_save_FCFLAGS"])
+   m4_if([$2],[direct],[FCFLAGS="$FPPFLAGS $1 $ac_save_FCFLAGS"])
    mv conftest.${ac_ext}.tmp conftest.${ac_ext}
    AC_COMPILE_IFELSE(,[$3],[$4])])
 
@@ -444,7 +455,7 @@ AC_DEFUN([ACX_SL_PROG_FC_FPP_FEATURES],
       AS_IF([test $ac_fpp_need_i = yes],
         [acx_sl_prog_fc_cpp_i=no
          _AS_ECHO_LOG([Trying flag to add directories to preprocessor search path.])
-         mkdir conftst
+         AS_MKDIR_P([conftst])
          cd conftst
          ACX_LANG_OTHER_SUFFIX_CONFTEST([inc],dnl
            [AC_LANG_SOURCE([!     This statement overrides the IMPLICIT statement in the program

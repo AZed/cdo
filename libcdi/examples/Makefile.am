@@ -37,12 +37,5 @@ cdi_read_LDFLAGS         = -all-static
 cdi_copy_LDFLAGS         = -all-static
 cdi_read_f2003_LDFLAGS   = -all-static
 cdi_write_f2003_LDFLAGS  = -all-static
-cdi_read_f2003_LDFLAGS  = -all-static
-cdi_write_f2003_LDFLAGS = -all-static
 endif
-cdi_read_f2003_SOURCES  = cdi_read_f2003.f90
-cdi_read_f2003_LDADD    = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
-
-cdi_write_f2003_SOURCES = cdi_write_f2003.f90
-cdi_write_f2003_LDADD   = $(top_builddir)/src/libcdi.la $(top_builddir)/src/mo_cdi.o
 
