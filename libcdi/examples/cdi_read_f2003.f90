@@ -9,14 +9,22 @@ PROGRAM CDIREADF2003
   INTEGER :: streamID, varID, gridID, zaxisID
   INTEGER :: tsID, vlistID, taxisID
   DOUBLE PRECISION, ALLOCATABLE :: field(:,:)
-  CHARACTER(kind=c_char,len=256) :: name, longname, units, msg
+  CHARACTER(kind=c_char), POINTER, DIMENSION(:) :: &
+       msg, cdi_version
+  CHARACTER(kind=c_char), DIMENSION(cdi_max_name + 1) :: &
+       name, longname, units
+  INTEGER :: name_c_len, longname_c_len, units_c_len
+
+  cdi_version => cdiLibraryVersion()
+
+  WRITE (0, '(a,132a)') 'cdi version: ', cdi_version
 
   ! Open the dataset
   streamID = streamOpenRead(C_CHAR_"example.nc"//C_NULL_CHAR)
   IF ( streamID < 0 ) THEN
     PRINT *,  'Could not Read the file.'
-    msg = cdiStringError(streamID)
-    WRITE(0,*) msg
+    msg => cdiStringError(streamID)
+    WRITE(0,'(132a)') msg
     STOP 1
   END IF
 
@@ -31,12 +39,16 @@ PROGRAM CDIREADF2003
     CALL vlistInqVarLongname(vlistID, varID, longname)
     CALL vlistInqVarUnits(vlistID, varID, units)
 
-    CALL ctrim(name)
-    CALL ctrim(longname)
-    CALL ctrim(units)
+    ! CALL ctrim(name)
+    ! CALL ctrim(longname)
+    ! CALL ctrim(units)
 
-    WRITE(*,*) 'Parameter: ', varID+1, code,' ',trim(name),' ', &
-                trim(longname),' ',trim(units), ' |'
+    longname_c_len = c_len(longname)
+    name_c_len = c_len(name)
+    units_c_len = c_len(units)
+    PRINT '(a,2(i0,a),132a)', 'Parameter: ', varID+1, ' ', code, ' ', &
+         name(1:name_c_len), ' ', longname(1:longname_c_len), ' ', &
+         units(1:units_c_len), ' |'
 
   END DO
 
@@ -53,7 +65,7 @@ PROGRAM CDIREADF2003
     vdate = taxisInqVdate(taxisID)
     vtime = taxisInqVtime(taxisID)
 
-    WRITE(*,*) 'Timestep: ', tsID+1, vdate, vtime
+    PRINT '(a,i3,i10,i10)', 'Timestep: ', tsID+1, vdate, vtime
 
     ! Read the variables at the current timestep
     DO varID = 0, nvars-1
@@ -64,8 +76,9 @@ PROGRAM CDIREADF2003
       ALLOCATE(field(gsize, nlevel))
       CALL streamReadVar(streamID, varID, field, nmiss)
       DO ilev = 1, nlevel
-        WRITE(*,*) '   var=', varID+1, ' level=', ilev, ':', &
-                  MINVAL(field(:,ilev)), MAXVAL(field(:,ilev))
+        PRINT '(a,i3,a,i3,a,f10.5,1x,f10.5)', '   var=', varID+1, &
+             ' level=', ilev, ':', &
+             MINVAL(field(:,ilev)), MAXVAL(field(:,ilev))
       END DO
       DEALLOCATE(field)
     END DO

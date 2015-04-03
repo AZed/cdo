@@ -81,6 +81,7 @@ subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) \
 	$(top_srcdir)/config/mkinstalldirs \
+	$(top_srcdir)/tables/gen_tableheaderfile.in \
 	$(top_srcdir)/util/serialrun.in $(srcdir)/cdi.settings.in \
 	$(top_srcdir)/src/pkgconfig/cdi.pc.in \
 	$(top_srcdir)/src/pkgconfig/cdipio.pc.in AUTHORS COPYING \
@@ -95,6 +96,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
+	$(top_srcdir)/m4/acx_check_strptr_convert.m4 \
 	$(top_srcdir)/m4/acx_lang_other_suffix_conftest.m4 \
 	$(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/acx_sl_fc_mod_path_flag.m4 \
@@ -111,8 +113,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = util/serialrun cdi.settings src/pkgconfig/cdi.pc \
-	src/pkgconfig/cdipio.pc
+CONFIG_CLEAN_FILES = tables/gen_tableheaderfile util/serialrun \
+	cdi.settings src/pkgconfig/cdi.pc src/pkgconfig/cdipio.pc
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -452,6 +454,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+tables/gen_tableheaderfile: $(top_builddir)/config.status $(top_srcdir)/tables/gen_tableheaderfile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 util/serialrun: $(top_builddir)/config.status $(top_srcdir)/util/serialrun.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 cdi.settings: $(top_builddir)/config.status $(srcdir)/cdi.settings.in

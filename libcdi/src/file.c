@@ -3,16 +3,17 @@
 #endif
 
 #include <assert.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <errno.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>  // gettimeofday()
-#include <fcntl.h>
 
 #include "dmemory.h"
 #include "error.h"
@@ -189,7 +190,7 @@ void file_list_new(void)
 {
   assert(_fileList == NULL);
 
-  _fileList = (filePtrToIdx *) malloc(_file_max*sizeof(filePtrToIdx));
+  _fileList = (filePtrToIdx *)xmalloc((size_t)_file_max * sizeof (filePtrToIdx));
 }
 
 static
@@ -531,7 +532,6 @@ off_t fileGetPos(int fileID)
 int fileSetPos(int fileID, off_t offset, int whence)
 {
   int status = 0;
-  off_t position;
   bfile_t *fileptr;
 
   fileptr = file_to_pointer(fileID);
@@ -549,7 +549,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
     case SEEK_SET:
       if ( fileptr->mode == 'r' && fileptr->type == FILE_TYPE_OPEN )
 	{
-	  position = offset;
+	  off_t position = offset;
 	  fileptr->position = position;
 	  if ( position < fileptr->bufferStart || position > fileptr->bufferEnd )
 	    {
@@ -571,7 +571,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
 
 		  fileptr->bufferPos = fileptr->bufferEnd + 1;
 		}
-	      fileptr->bufferCnt = fileptr->bufferEnd - position + 1;
+	      fileptr->bufferCnt = (size_t)(fileptr->bufferEnd - position) + 1;
 	      fileptr->bufferPtr = fileptr->buffer + position - fileptr->bufferStart;
 	    }
 	}
@@ -584,7 +584,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
       if ( fileptr->mode == 'r' && fileptr->type == FILE_TYPE_OPEN )
 	{
 	  fileptr->position += offset;
-	  position = fileptr->position;
+	  off_t position = fileptr->position;
 	  if ( position < fileptr->bufferStart || position > fileptr->bufferEnd )
 	    {
 	      if ( fileptr->bufferType == FILE_BUFTYPE_STD )
@@ -605,7 +605,7 @@ int fileSetPos(int fileID, off_t offset, int whence)
 
 		  fileptr->bufferPos = fileptr->bufferEnd + 1;
 		}
-	      fileptr->bufferCnt -= offset;
+	      fileptr->bufferCnt -= (size_t)offset;
 	      fileptr->bufferPtr += offset;
 	    }
 	}
@@ -780,7 +780,7 @@ void file_initialize(void)
 	{
 	case FILE_TYPE_OPEN:
 	case FILE_TYPE_FOPEN:
-	  FileTypeRead = value;
+	  FileTypeRead = (int)value;
 	  break;
 	default:
 	  Warning("File type %d not implemented!", value);
@@ -794,13 +794,16 @@ void file_initialize(void)
 	{
 	case FILE_TYPE_OPEN:
 	case FILE_TYPE_FOPEN:
-	  FileTypeWrite = value;
+	  FileTypeWrite = (int)value;
 	  break;
 	default:
 	  Warning("File type %d not implemented!", value);
 	}
     }
 
+#if defined (O_NONBLOCK)
+  FileFlagWrite = O_NONBLOCK;
+#endif
   envString = getenv("FILE_FLAG_WRITE");
   if ( envString )
     {
@@ -823,7 +826,7 @@ void file_initialize(void)
 	{
 	case FILE_BUFTYPE_STD:
 	case FILE_BUFTYPE_MMAP:
-	  FileBufferTypeEnv = value;
+	  FileBufferTypeEnv = (int)value;
 	  break;
 	default:
 	  Warning("File buffer type %d not implemented!", value);
@@ -916,7 +919,7 @@ void file_set_buffer(bfile_t *fileptr)
 static
 int file_fill_buffer(bfile_t *fileptr)
 {
-  long nread;
+  ssize_t nread;
   int fd;
   long offset = 0;
   off_t retseek;
@@ -941,7 +944,8 @@ int file_fill_buffer(bfile_t *fileptr)
 	}
       else
 	{
-	  nread = fileptr->bufferSize;
+          xassert(fileptr->bufferSize <= SSIZE_MAX);
+	  nread = (ssize_t)fileptr->bufferSize;
 	  if ( (nread + fileptr->bufferPos) > fileptr->size )
 	    nread = fileptr->size - fileptr->bufferPos;
 
@@ -953,7 +957,7 @@ int file_fill_buffer(bfile_t *fileptr)
 	      fileptr->buffer = NULL;
 	    }
 
-	  fileptr->mappedSize = (size_t) nread;
+	  fileptr->mappedSize = (size_t)nread;
 
 	  fileptr->buffer = (char*) mmap(NULL, (size_t) nread, PROT_READ, MAP_PRIVATE, fd, fileptr->bufferPos);
 
@@ -969,7 +973,7 @@ int file_fill_buffer(bfile_t *fileptr)
       if ( retseek == (off_t)-1 )
 	SysError("lseek error at pos %ld file %s", (long) fileptr->bufferPos, fileptr->name);
 
-      nread = (long) read(fd, fileptr->buffer, fileptr->bufferSize);
+      nread = read(fd, fileptr->buffer, fileptr->bufferSize);
     }
 
   if ( nread <= 0 )
@@ -984,7 +988,7 @@ int file_fill_buffer(bfile_t *fileptr)
     }
 
   fileptr->bufferPtr = fileptr->buffer;
-  fileptr->bufferCnt = nread;
+  fileptr->bufferCnt = (size_t)nread;
 
   fileptr->bufferStart = fileptr->bufferPos;
   fileptr->bufferPos  += nread;
@@ -1007,7 +1011,7 @@ int file_fill_buffer(bfile_t *fileptr)
 	Error("Internal problem with buffer handling. nread = %d offset = %d", nread, offset);
 
       fileptr->bufferPtr += offset;
-      fileptr->bufferCnt -= offset;
+      fileptr->bufferCnt -= (size_t)offset;
     }
 
   fileptr->bufferNumFill++;
@@ -1084,11 +1088,9 @@ size_t file_read_from_buffer(bfile_t *fileptr, void *ptr, size_t size)
 
 void fileSetBufferSize(int fileID, long buffersize)
 {
-  bfile_t *fileptr;
-
-  fileptr = file_to_pointer(fileID);
-
-  if ( fileptr ) fileptr->bufferSize = buffersize;
+  bfile_t *fileptr = file_to_pointer(fileID);
+  xassert(buffersize >= 0);
+  if ( fileptr ) fileptr->bufferSize = (size_t)buffersize;
 }
 
 /*
@@ -1230,8 +1232,10 @@ int fileClose_serial(int fileID)
       if ( fileptr->type == FILE_TYPE_FOPEN )
 	fprintf(stderr, " file pointer     : %p\n",  (void *) fileptr->fp);
       else
-        fprintf(stderr, " file descriptor  : %d\n",  fileptr->fd);
-
+        {
+          fprintf(stderr, " file descriptor  : %d\n",  fileptr->fd);
+          fprintf(stderr, " file flag        : %d\n", FileFlagWrite);
+        }
       fprintf(stderr, " file mode        : %c\n",  fileptr->mode);
 
       if ( sizeof(off_t) > sizeof(long) )
@@ -1258,8 +1262,7 @@ int fileClose_serial(int fileID)
 
       if ( fileptr->time_in_sec > 0 )
         {
-          rout = fileptr->byteTrans;
-          rout /= 1024.*1014.*fileptr->time_in_sec;
+          rout = (double)fileptr->byteTrans / (1024.*1024.*fileptr->time_in_sec);
         }
 
       fprintf(stderr, " wall time [s]    : %.2f\n", fileptr->time_in_sec);
@@ -1380,8 +1383,8 @@ size_t filePtrRead(void *vfileptr, void *restrict ptr, size_t size)
 	    }
 	}
 
-      fileptr->position  += nread;
-      fileptr->byteTrans += nread;
+      fileptr->position  += (off_t)nread;
+      fileptr->byteTrans += (off_t)nread;
       fileptr->access++;
     }
 
@@ -1420,8 +1423,8 @@ size_t fileRead(int fileID, void *restrict ptr, size_t size)
 
       if ( FileInfo ) fileptr->time_in_sec += file_time() - t_begin;
 
-      fileptr->position  += nread;
-      fileptr->byteTrans += nread;
+      fileptr->position  += (off_t)nread;
+      fileptr->byteTrans += (off_t)nread;
       fileptr->access++;
     }
 
@@ -1449,12 +1452,21 @@ size_t fileWrite(int fileID, const void *restrict ptr, size_t size)
       if ( fileptr->type == FILE_TYPE_FOPEN )
         nwrite = fwrite(ptr, 1, size, fileptr->fp);
       else
-        nwrite =  write(fileptr->fd, ptr, size);
+        {
+          ssize_t temp = write(fileptr->fd, ptr, size);
+          if (temp == -1)
+            {
+              perror("error writing to file");
+              nwrite = 0;
+            }
+          else
+            nwrite = (size_t)temp;
+        }
 
       if ( FileInfo ) fileptr->time_in_sec += file_time() - t_begin;
 
-      fileptr->position  += nwrite;
-      fileptr->byteTrans += nwrite;
+      fileptr->position  += (off_t)nwrite;
+      fileptr->byteTrans += (off_t)nwrite;
       fileptr->access++;
     }
 

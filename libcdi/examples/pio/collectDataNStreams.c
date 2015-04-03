@@ -105,7 +105,7 @@ static void modelRun(MPI_Comm commModel)
       {
         varID[i][j] = vlistDefVar(vlistID[i], gridID, zaxisID[i][j],
                                   TIME_VARIABLE );
-        varSize[i][j] = nlon * nlat * nlev[i][j];
+        varSize[i][j] = nlon * nlat * (size_t)nlev[i][j];
 #ifdef USE_MPI
         {
           int start = uniform_partition_start((int [2]){ 0, varSize[i][j] - 1 },
@@ -127,10 +127,10 @@ static void modelRun(MPI_Comm commModel)
         }
 #else
         if (maxChunkSize < varSize[i][j])
-          maxChunkSize = varSize[i][j];
+          maxChunkSize = (int)varSize[i][j];
 #endif
       }
-    var = (double*) malloc(maxChunkSize * sizeof (var[0]));
+    var = (double *)malloc((size_t)maxChunkSize * sizeof (var[0]));
   }
   taxisID = taxisCreate ( TAXIS_ABSOLUTE );
   for ( i = 0; i < nStreams; i++ )
@@ -182,7 +182,7 @@ static void modelRun(MPI_Comm commModel)
                   int start = varDeco[i][j].start;
                   int chunk = varDeco[i][j].chunkSize;
 #else
-                  int start = 0, chunk = varSize[i][j];
+                  int start = 0, chunk = (int)varSize[i][j];
 #endif
                   for(int k = 0; k < chunk; k++)
                     var[k] = 3.3 * (double)(k + start);

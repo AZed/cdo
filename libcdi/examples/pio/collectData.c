@@ -69,7 +69,7 @@ static void modelRun(MPI_Comm commModel)
     {
       zaxisID[i] = zaxisCreate ( ZAXIS_PRESSURE, nlev[i] );
       zaxisDefLevels ( zaxisID[i], levs );
-      varSize[i] = nlon * nlat * nlev[i];
+      varSize[i] = nlon * nlat * (size_t)nlev[i];
     }
   vlistID = vlistCreate ();
 
@@ -130,7 +130,7 @@ static void modelRun(MPI_Comm commModel)
 #ifdef USE_MPI
               int chunk = varDeco[i].chunkSize;
 #else
-              int chunk = varSize[i];
+              int chunk = (int)varSize[i];
 #endif
 	      for (j = 0; j < chunk; ++j) var[j] = 2.2;
 #ifdef USE_MPI

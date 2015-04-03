@@ -77,6 +77,8 @@ libcdi_la_SOURCES = 	 \
 	stream_history.c \
 	stream_ieg.c     \
 	stream_ieg.h	 \
+	stream_fcommon.c \
+	stream_fcommon.h \
 	cdi_int.c        \
 	cdi_int.h	 \
 	stream_record.c  \
@@ -189,7 +191,7 @@ all-local: $(LOCALTARGETS)
 CLEANFILES  = `ls *~`
 #CLEANFILES += cdilib.c
 if CREATE_ISOC
-CLEANFILES += $(top_builddir)/src/mo_cdi.$(FCMODEXT) $(top_builddir)/src/mo_cdi.$(OBJEXT)
+CLEANFILES += mo_cdi.$(FCMODEXT) mo_cdi.$(OBJEXT) mo_cdi.f90
 endif
 
 if ENABLE_CDI_LIB

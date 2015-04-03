@@ -127,7 +127,8 @@ void unpack_grid_cell(struct grid_cell * cell, double * dble_buf,
 
    unsigned num_corners;
 
-   num_corners = uint_buf[0];
+   num_corners = *uint_buf;
+   uint_buf++;
 
    *dble_buf_data_size = 2 * num_corners;
    *uint_buf_data_size = num_corners + 1;
@@ -151,9 +152,8 @@ void unpack_grid_cell(struct grid_cell * cell, double * dble_buf,
    memcpy(cell->coordinates_x, dble_buf, num_corners * sizeof(double));
    memcpy(cell->coordinates_y, dble_buf+num_corners, num_corners * sizeof(double));
 
-   unsigned i;
-   for (i = 1; i <= num_corners; ++i) {
-     cell->edge_type[i-1] = (enum edge_type)uint_buf[i];
+   for (unsigned i = 0; i < num_corners; ++i) {
+     cell->edge_type[i] = (enum edge_type)uint_buf[i];
      LLtoXYZ(cell->coordinates_x[i], cell->coordinates_y[i],
              cell->coordinates_xyz + 3*i);
    }

@@ -117,7 +117,7 @@ typedef struct
 } sgrid_t;
 
 
-void *Scatter(void *argument)
+void *Distgrid(void *argument)
 {
   int nchars;
   int streamID1;

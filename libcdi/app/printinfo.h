@@ -303,8 +303,8 @@ void printGridInfo(int vlistID)
 	      int i;
 	      double *xvals, *yvals;
 	      double xfirst, xlast, yfirst, ylast;
-	      xvals = (double*) malloc(gridsize*sizeof(double));
-	      yvals = (double*) malloc(gridsize*sizeof(double));
+	      xvals = (double *)malloc((size_t)gridsize * sizeof (double));
+	      yvals = (double *)malloc((size_t)gridsize * sizeof (double));
 
 	      gridInqXvals(gridID, xvals);
 	      gridInqYvals(gridID, yvals);

@@ -41,7 +41,8 @@ int tstepsNewEntry(stream_t *streamptr)
     {
       if ( tstepsTableSize == 0 ) tstepsTableSize = 1;
       tstepsTableSize = 2*tstepsTableSize;
-      tstepsTable = (tsteps_t *) realloc(tstepsTable, tstepsTableSize*sizeof(tsteps_t));
+      tstepsTable = (tsteps_t *)xrealloc(tstepsTable,
+                                         (size_t)tstepsTableSize * sizeof (tsteps_t));
       if ( tstepsTable == NULL )
 	{
           Message("tstepsTableSize = %d", tstepsTableSize);
@@ -62,8 +63,8 @@ int tstepsNewEntry(stream_t *streamptr)
 
 void cdiCreateTimesteps(stream_t *streamptr)
 {
-  int ntsteps;
-  int tsID;
+  long ntsteps;
+  long tsID;
 
   if ( streamptr->ntsteps < 0 || streamptr->tstepsTableSize > 0 )
     return;
@@ -71,16 +72,14 @@ void cdiCreateTimesteps(stream_t *streamptr)
   if ( streamptr->ntsteps == 0 ) ntsteps = 1;    /* <<<<<-------- */
   else ntsteps = streamptr->ntsteps;
 
-  streamptr->tsteps = (tsteps_t *) malloc(ntsteps*sizeof(tsteps_t));
-  if ( streamptr->tsteps == NULL )
-    SysError("Allocation of tsteps_t failed");
+  streamptr->tsteps = (tsteps_t *)xmalloc((size_t)ntsteps*sizeof(tsteps_t));
 
-  streamptr->tstepsTableSize = ntsteps;
-  streamptr->tstepsNextID    = ntsteps;
+  streamptr->tstepsTableSize = (int)ntsteps;
+  streamptr->tstepsNextID    = (int)ntsteps;
 
   for ( tsID = 0; tsID < ntsteps; tsID++ )
     {
-      tstepsInitEntry(streamptr, tsID);
+      tstepsInitEntry(streamptr, (int)tsID);
       streamptr->tsteps[tsID].taxis.used = TRUE;
     }
 }

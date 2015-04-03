@@ -83,7 +83,7 @@ void printAtts(FILE *fp, int vlistID, int varID)
 static
 void partab(FILE *fp, int vlistID, int option)
 {
-  int varID, code, tabnum, tableID, datatype = -1;
+  int varID, datatype = -1;
   int param;
   char pstr[32];
   char paramstr[32];
@@ -137,9 +137,6 @@ void partab(FILE *fp, int vlistID, int option)
       varlongname[0] = 0;
       varunits[0]    = 0;
       param    = vlistInqVarParam(vlistID, varID);
-      // code     = vlistInqVarCode(vlistID, varID);
-      // tableID  = vlistInqVarTable(vlistID, varID);
-      // tabnum   = tableInqNum(tableID);
       missval  = vlistInqVarMissval(vlistID, varID);
       vlistInqVarName(vlistID, varID, varname);
       /* printf("1>%s<\n", varname); */
@@ -317,6 +314,7 @@ void *Filedes(void *argument)
 		{
 		  if ( operatorID == VCT )
 		    {
+		      fprintf(stdout, "#   k         vct_a(k) [Pa]             vct_b(k) []\n");
 		      for ( i = 0; i < vctsize/2; i++ )
 			fprintf(stdout, "%5d %25.17f %25.17f\n", i, vct[i], vct[vctsize/2+i]);
 		    }

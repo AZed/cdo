@@ -472,22 +472,25 @@ void *EOF3d(void * argument)
 	    // sum +=  weight[pack[i]%gridsize] *
 	    sum += eigenvec[pack[i]] * eigenvec[pack[i]];
 
-	  if ( sum > 0 ) {
-	    sum = sqrt(sum);
+	  if ( sum > 0 )
+	    {
+	      sum = sqrt(sum);
 #if defined(_OPENMP)
 #pragma omp parallel for private(i) default(none) \
   shared(sum,npack,eigenvec,pack)
 #endif
-	    for( i = 0; i < npack; i++ )
-	      eigenvec[pack[i]] /= sum;
-	  }
+	      for( i = 0; i < npack; i++ )
+		eigenvec[pack[i]] /= sum;
+	    }
 	  else
+	    {
 #if defined(_OPENMP)
 #pragma omp parallel for private(i) default(none) \
   shared(eigenvec,pack,missval,npack)
 #endif
-	    for( i = 0; i < npack; i++ )
-	      eigenvec[pack[i]] = missval;
+	      for( i = 0; i < npack; i++ )
+		eigenvec[pack[i]] = missval;
+	    }
 	}     /* for ( eofID = 0; eofID < n_eig; eofID++ )     */
 
       if ( cdoTimer ) timer_stop(timer_post);

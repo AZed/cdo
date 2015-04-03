@@ -86,10 +86,15 @@ void *Splittime(void *argument)
 
   cdoInitialize(argument);
 
+  if ( processSelf() != 0 ) cdoAbort("This operator can't be combined with other operators!");
+
   SPLITHOUR = cdoOperatorAdd("splithour", func_time, 10000, NULL);
   SPLITDAY  = cdoOperatorAdd("splitday",  func_date,     1, NULL);
   SPLITMON  = cdoOperatorAdd("splitmon",  func_date,   100, NULL);
   SPLITSEAS = cdoOperatorAdd("splitseas", func_date,   100, NULL);
+
+  UNUSED(SPLITDAY);
+  UNUSED(SPLITHOUR);
 
   operatorID = cdoOperatorID();
   operfunc   = cdoOperatorF1(operatorID);

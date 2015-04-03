@@ -730,10 +730,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
   for ( ij = 0; ij < ngp; ++ij )
     {
 #if defined(_OPENMP)
-      int ompthID;
-      long iv;      
-
-      ompthID = omp_get_thread_num();
+      int ompthID = omp_get_thread_num();
 
       ph1    = ph1_2[ompthID];
       lnph1  = lnph1_2[ompthID];
@@ -770,7 +767,7 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 
       if ( nvars > 0 )
 	{
-	  for ( iv = 0; iv < nvars; ++iv )
+	  for ( int iv = 0; iv < nvars; ++iv )
 	    vars_pbl[iv] = vars_pbl_2[ompthID][iv];
 	}
 #endif

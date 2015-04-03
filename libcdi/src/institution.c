@@ -2,6 +2,9 @@
 #  include "config.h"
 #endif
 
+#include <assert.h>
+#include <limits.h>
+
 #include "dmemory.h"
 #include "cdi.h"
 #include "cdi_int.h"
@@ -61,26 +64,27 @@ void instituteDefaultValue ( institute_t * instituteptr )
 
 void instituteDefaultEntries ( void )
 {
-  cdiResH resH[64];
-  int i, n=0;
-
-  resH[n++]  = ECMWF   = institutDef( 98,   0, "ECMWF",     "European Centre for Medium-Range Weather Forecasts");
-  resH[n++]  = MPIMET  = institutDef( 98, 232, "MPIMET",    "Max-Planck-Institute for Meteorology");
-  resH[n++]  =           institutDef( 98, 255, "MPIMET",    "Max-Planck-Institute for Meteorology");
-  resH[n++]  =           institutDef( 98, 232, "MPIMET",    "Max-Planck Institute for Meteorology");
-  resH[n++]  =           institutDef( 78,   0, "DWD",       "Deutscher Wetterdienst");
-  resH[n++]  =           institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst");
-  resH[n++]  = MCH     = institutDef(215, 255, "MCH",       "MeteoSwiss");
-  resH[n++]  =           institutDef(  7,   0, "NCEP",      "National Centers for Environmental Prediction");
-  resH[n++]  =           institutDef(  7,   1, "NCEP",      "National Centers for Environmental Prediction");
-  resH[n++]  =           institutDef( 60,   0, "NCAR",      "National Center for Atmospheric Research");
-  resH[n++]  =           institutDef( 74,   0, "METOFFICE", "U.K. Met Office");
-  resH[n++]  =           institutDef( 97,   0, "ESA",       "European Space Agency");
-  resH[n++]  =           institutDef( 99,   0, "KNMI",      "Royal Netherlands Meteorological Institute");
+  cdiResH resH[]
+    = { ECMWF   = institutDef( 98,   0, "ECMWF",     "European Centre for Medium-Range Weather Forecasts"),
+        MPIMET  = institutDef( 98, 232, "MPIMET",    "Max-Planck-Institute for Meteorology"),
+        institutDef( 98, 255, "MPIMET",    "Max-Planck-Institute for Meteorology"),
+        institutDef( 98, 232, "MPIMET",    "Max-Planck Institute for Meteorology"),
+        institutDef( 78,   0, "DWD",       "Deutscher Wetterdienst"),
+        institutDef( 78, 255, "DWD",       "Deutscher Wetterdienst"),
+        MCH     = institutDef(215, 255, "MCH",       "MeteoSwiss"),
+        institutDef(  7,   0, "NCEP",      "National Centers for Environmental Prediction"),
+        institutDef(  7,   1, "NCEP",      "National Centers for Environmental Prediction"),
+        institutDef( 60,   0, "NCAR",      "National Center for Atmospheric Research"),
+        institutDef( 74,   0, "METOFFICE", "U.K. Met Office"),
+        institutDef( 97,   0, "ESA",       "European Space Agency"),
+        institutDef( 99,   0, "KNMI",      "Royal Netherlands Meteorological Institute"),
+  };
   /*     (void) institutDef(  0,   0, "IPSL", "IPSL (Institut Pierre Simon Laplace, Paris, France)"); */
 
-  for ( i = 0; i < n ; i++ )
-    reshSetStatus(resH[i], &instituteOps, RESH_PRE_ASSIGNED);
+  size_t n = sizeof(resH)/sizeof(*resH);
+
+  for (size_t i = 0; i < n ; i++ )
+    reshSetStatus(resH[i], &instituteOps, RESH_IN_USE);
 }
 
 
@@ -304,10 +308,13 @@ enum {
 
 static int instituteGetPackSize(institute_t *ip, void *context)
 {
-  int txsize = serializeGetSize(institute_nints, DATATYPE_INT, context)
-    + serializeGetSize(strlen(ip->name) + 1, DATATYPE_TXT, context)
-    + serializeGetSize(strlen(ip->longname) + 1, DATATYPE_TXT, context);
-  return txsize;
+  size_t namelen = strlen(ip->name), longnamelen = strlen(ip->longname);
+  xassert(namelen < INT_MAX && longnamelen < INT_MAX);
+  size_t txsize = (size_t)serializeGetSize(institute_nints, DATATYPE_INT, context)
+    + (size_t)serializeGetSize((int)namelen + 1, DATATYPE_TXT, context)
+    + (size_t)serializeGetSize((int)longnamelen + 1, DATATYPE_TXT, context);
+  xassert(txsize <= INT_MAX);
+  return (int)txsize;
 }
 
 static void institutePackP(void * instituteptr, void *buf, int size, int *position, void *context)
@@ -331,7 +338,7 @@ int instituteUnpack(void *buf, int size, int *position, int originNamespace,
   int instituteID;
   char *name, *longname;
   serializeUnpack(buf, size, position, tempbuf, institute_nints, DATATYPE_INT, context);
-  name = (char *)xmalloc(tempbuf[3] + tempbuf[4]);
+  name = (char *)xmalloc((size_t)tempbuf[3] + (size_t)tempbuf[4]);
   longname = name + tempbuf[3];
   serializeUnpack(buf, size, position, name, tempbuf[3], DATATYPE_TXT, context);
   serializeUnpack(buf, size, position, longname, tempbuf[4], DATATYPE_TXT, context);

@@ -30,9 +30,6 @@
       Ensstat    enspctl         Ensemble percentiles
 */
 
-#if defined(_OPENMP)
-#  include <omp.h>
-#endif
 
 #include <cdi.h>
 #include "cdo.h"
@@ -56,7 +53,6 @@ void *Ensstat(void *argument)
   int vlistID, vlistID1, vlistID2;
   int nmiss;
   int taxisID1, taxisID2;
-  int ompthID;
   double missval;
   double *array2 = NULL;
   field_t *field;
@@ -195,15 +191,12 @@ void *Ensstat(void *argument)
 
 	  nmiss = 0;
 #if defined(_OPENMP)
-#pragma omp parallel for default(shared) private(i, ompthID, fileID)
+#pragma omp parallel for default(shared) private(i, fileID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined(_OPENMP)
-	      ompthID = omp_get_thread_num();
-#else
-	      ompthID = 0;
-#endif
+	      int ompthID = cdo_omp_get_thread_num();
+
 	      field[ompthID].missval = missval;
 	      field[ompthID].nmiss = 0;
 	      for ( fileID = 0; fileID < nfiles; fileID++ )

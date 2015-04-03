@@ -317,6 +317,8 @@ AC_DEFUN([_ACX_SL_PROG_FPP],dnl
            "$FC $FCFLAGS -F" "$FC $FCFLAGS -E" "$FC $FCFLAGS -E" \
            "$FC $FCFLAGS -E -cpp" "$FC $FCFLAGS -x f95-cpp-input -E -P" \
            "${F77-f77} -F" "${F77-f77} -E" 'fpp' \
+           "$CPP -std=c89" "$CPP -x c -std=c89" 'cpp -std=c89' '/lib/cpp - std=c89' \
+           '/usr/ccs/lib/cpp -std=c89' 'g77 -E -std=c89' '${CC-cc} -E -std=c89' \
            "$CPP" "$CPP -x c" 'cpp' '/lib/cpp' \
            '/usr/ccs/lib/cpp' 'g77 -E' '${CC-cc} -E'
          do

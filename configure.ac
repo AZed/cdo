@@ -4,7 +4,7 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdo], [1.6.4], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.5], [http://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -13,7 +13,7 @@ AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
 # AM_INIT_AUTOMAKE([foreign -Wall -Werror])
-AM_INIT_AUTOMAKE([foreign -Wall])
+AM_INIT_AUTOMAKE([subdir-objects foreign -Wall])
 AC_CONFIG_HEADERS([src/config.h])
 AM_MAINTAINER_MODE([disable])
 
@@ -105,7 +105,7 @@ AC_SUBST([SYSTEM_TYPE],["$ac_cv_build"])
 #  Check for math library
 AC_CHECK_LIB([m],[floor])
 #  ----------------------------------------------------------------------
-#  Enable GRIB support
+#  Enable DATA support
 AC_MSG_CHECKING([for DATA support])
 AC_ARG_ENABLE([data],
               [AS_HELP_STRING([--enable-data],[DATA support [default=yes]])],
@@ -116,12 +116,88 @@ AC_ARG_ENABLE([data],
                enable_data=yes])
 AC_MSG_RESULT([$enable_data])
 AC_SUBST([ENABLE_DATA],[$enable_data])
+
 #  ----------------------------------------------------------------------
 CFLAGS="$CFLAGS ${OPENMP_CFLAGS}"
 #  ----------------------------------------------------------------------
 
 # Add configure options
 ACX_OPTIONS
+
+#  ----------------------------------------------------------------------
+
+# configure code from valgrind
+
+# does the x86/amd64 assembler understand SSE 4.2 instructions?
+# Note, this doesn't generate a C-level symbol.  It generates a
+# automake-level symbol (BUILD_SSE42_TESTS), used in test Makefile.am's
+AC_MSG_CHECKING([if x86/amd64 assembler speaks SSE4.2])
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
+  do { long long int x; 
+   __asm__ __volatile__(
+      "crc32q %%r15,%%r15" : : : "r15" );
+   __asm__ __volatile__(
+      "pblendvb (%%rcx), %%xmm11" : : : "memory", "xmm11"); 
+   __asm__ __volatile__(
+      "aesdec %%xmm2, %%xmm1" : : : "xmm2", "xmm1"); }
+  while (0)
+]])], [
+ac_have_as_sse42=yes
+AC_MSG_RESULT([yes])
+], [
+ac_have_as_sse42=no
+AC_MSG_RESULT([no])
+])
+
+AM_CONDITIONAL(BUILD_SSE42_TESTS, test x$ac_have_as_sse42 = xyes)
+
+
+# does the x86/amd64 assembler understand AVX instructions?
+# Note, this doesn't generate a C-level symbol.  It generates a
+# automake-level symbol (BUILD_AVX_TESTS), used in test Makefile.am's
+AC_MSG_CHECKING([if x86/amd64 assembler speaks AVX])
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
+  do { long long int x; 
+   __asm__ __volatile__(
+      "vmovupd (%%rsp), %%ymm7" : : : "xmm7" );
+   __asm__ __volatile__(
+      "vaddpd %%ymm6,%%ymm7,%%ymm8" : : : "xmm6","xmm7","xmm8"); }
+  while (0)
+]])], [
+ac_have_as_avx=yes
+AC_MSG_RESULT([yes])
+], [
+ac_have_as_avx=no
+AC_MSG_RESULT([no])
+])
+
+AM_CONDITIONAL(BUILD_AVX_TESTS, test x$ac_have_as_avx = xyes)
+
+
+# does the x86/amd64 assembler understand AVX2 instructions?
+# Note, this doesn't generate a C-level symbol.  It generates a
+# automake-level symbol (BUILD_AVX2_TESTS), used in test Makefile.am's
+AC_MSG_CHECKING([if x86/amd64 assembler speaks AVX2])
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
+  do { long long int x; 
+   __asm__ __volatile__(
+      "vpsravd (%%rsp), %%ymm8, %%ymm7" : : : "xmm7", "xmm8" );
+   __asm__ __volatile__(
+      "vpaddb %%ymm6,%%ymm7,%%ymm8" : : : "xmm6","xmm7","xmm8"); }
+  while (0)
+]])], [
+ac_have_as_avx2=yes
+AC_MSG_RESULT([yes])
+], [
+ac_have_as_avx2=no
+AC_MSG_RESULT([no])
+])
+
+AM_CONDITIONAL(BUILD_AVX2_TESTS, test x$ac_have_as_avx2 = xyes)
+
 #  ----------------------------------------------------------------------
 AC_SUBST([CPPFLAGS])
 AC_SUBST([FCFLAGS])

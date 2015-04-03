@@ -1,7 +1,103 @@
-2014-06-26  Uwe Schulzweida
+2014-10-23  Uwe Schulzweida
+
+	* using CDI library version 1.6.5
+	* Version 1.6.5 released
+
+2014-10-21  Uwe Schulzweida
+
+	* sortlevel: added optional parameter -1 to reverse the sorting
+
+2014-10-16  Uwe Schulzweida
+
+	* Ydrunstat: set the year of all output timesteps to the lowest year of the output timesteps
+
+2014-10-15  Uwe Schulzweida
+
+	* cdoAbort: close all open CDI streams
+
+2014-10-06  Uwe Schulzweida
+
+	* gather: renamed to collgrid
+	* scatter: renamed to distgrid
+
+2014-09-23  Uwe Schulzweida
+
+	* cat: added support for option -O (overwrite existing output file)
+
+2014-09-19  Uwe Schulzweida
+
+	* --with-fftw3: changed default to no
+	* expand gridfile name parameter [Bug #5196]
+
+2014-09-18  Uwe Schulzweida
+
+	* gradsdes: added support for option 365_day_calendar
+
+2014-09-16  Uwe Schulzweida
+
+	* remapnn::grid_search_nbr: removed wrong omp simd pragma (bug fix)
+
+2014-09-04  Uwe Schulzweida
+
+	* vlistCompare: check flag CMP_CODE only if nvars > 1
+
+2014-08-20  Uwe Schulzweida
+
+	* remapycon: added support for concave grid cells
+
+2014-08-19  Uwe Schulzweida
+
+	* remaplaf: changed weight calculation from SCRIP to YAC
+
+2014-08-16  Uwe Schulzweida
+
+	* import_binary: option 365_day_calendar does not work (big fix)
+
+2014-08-13  Uwe Schulzweida
+
+	* lock call to vlistCopyFlag() [Support #5079]
+
+2014-08-11  Uwe Schulzweida
+
+	* select: print progress status
+
+2014-08-10  Uwe Schulzweida
+
+	* gridarea: added support for concave grid cells
+
+2014-08-06  Uwe Schulzweida
+
+	* setpartab: not callable by this name (bug fix)
+
+2014-07-28  Uwe Schulzweida
+
+	* remap_weights_conserv: changed great_circle_type[8] to great_circle_type[32] (bug fix) 
+	* remap_define_grid: bug fix for unstructured grids (ndims[1])
+
+2014-07-17  Yvonne Küstermann
+
+	* Filter: OpenMP version
+
+2014-07-12  Uwe Schulzweida
+
+	* sellonlatbox: skip variables with only one grid point
+
+2014-07-12  Uwe Schulzweida
+
+	* select: wrong result when select only one timestep (bug fix)
+
+2014-07-07  Uwe Schulzweida
+
+	* cat: added progress status
+
+2014-06-30  Uwe Schulzweida
 
 	* using CDI library version 1.6.4
 	* Version 1.6.4 released
+
+2014-06-30  Uwe Schulzweida
+
+	* Selbox: angle of rotated grid missing (bug fix)
 
 2014-06-19  Uwe Schulzweida
 

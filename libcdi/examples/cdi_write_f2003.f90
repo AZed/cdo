@@ -16,8 +16,8 @@
       INTEGER i, nmiss, status
       DOUBLE PRECISION lons(nlon), lats(nlat), levs(nlev)
       DOUBLE PRECISION var1(nlon*nlat), var2(nlon*nlat*nlev)
-      CHARACTER(len=256) :: varname
-      CHARACTER(kind=c_char,len=256) :: msg
+      CHARACTER(len=256, kind=c_char) :: varname
+      CHARACTER(kind=c_char,len=1), POINTER :: msg(:)
 
       DATA lons /0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330/
       DATA lats /-75, -45, -15, 15, 45, 75/
@@ -47,8 +47,8 @@
       varID2 = vlistDefVar(vlistID, gridID, zaxisID2, TIME_VARIABLE)
 
 !     Define the variable names
-      varname = "varname1"
-      CALL vlistDefVarName(vlistID, varID1, TRIM(varname)//C_NULL_CHAR)
+      varname = "varname1" // c_null_char
+      CALL vlistDefVarName(vlistID, varID1, varname)
       CALL vlistDefVarName(vlistID, varID2, C_CHAR_"varname2"//C_NULL_CHAR)
 
 !     Create a Time axis
@@ -60,8 +60,8 @@
 !     Create a dataset in netCDF format
       streamID = streamOpenWrite(C_CHAR_"example.nc"//C_NULL_CHAR, FILETYPE_NC)
       IF ( streamID < 0 ) THEN
-         msg = cdiStringError(streamID)
-         WRITE(0,*) msg
+         msg => cdiStringError(streamID)
+         WRITE(0,'(132a)') msg
          STOP 1
       END IF
 

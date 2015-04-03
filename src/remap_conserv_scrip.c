@@ -1039,7 +1039,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
   long    nsrch_corners;
   int*    srch_add;         /* global address of cells in srch arrays */
   int*    srch_add2[ompNumThreads];
-  int     ompthID, i;
+  int     i;
   double *srch_corner_lat;  /* lat of each corner of srch cells */
   double *srch_corner_lon;  /* lon of each corner of srch cells */
 
@@ -1162,7 +1162,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
          remap_store_link_fast, grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
 	 srch_corner_lat2, srch_corner_lon2, max_srch_cells2, 		\
 	 src_num_cell_corners,	srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, srch_add2, findex) \
-  private(ompthID, srch_add, n, k, num_srch_cells, max_srch_cells, 	\
+  private(srch_add, n, k, num_srch_cells, max_srch_cells, 	\
 	  src_grid_add, tgt_grid_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
 	  weights, intrsct_lat, intrsct_lon, intrsct_lat_off, intrsct_lon_off, intrsct_x, intrsct_y, \
@@ -1170,12 +1170,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 #endif
   for ( src_grid_add = 0; src_grid_add < src_grid_size; ++src_grid_add )
     {
-#if defined(_OPENMP)
-      ompthID = omp_get_thread_num();
-#else
-      ompthID = 0;
-#endif
-
+      int ompthID = cdo_omp_get_thread_num();
       int lprogress = 1;
       if ( ompthID != 0 ) lprogress = 0;
 
@@ -1392,7 +1387,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
          remap_store_link_fast, grid_store, link_add1, link_add2, rv, cdoVerbose, max_subseg, \
 	 srch_corner_lat2, srch_corner_lon2, max_srch_cells2, 		\
 	 tgt_num_cell_corners, srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, srch_add2, findex) \
-  private(ompthID, srch_add, n, k, num_srch_cells, max_srch_cells,	\
+  private(srch_add, n, k, num_srch_cells, max_srch_cells,	\
 	  src_grid_add, tgt_grid_add, ioffset, nsrch_corners, corner, next_corn, beglat, beglon, \
 	  endlat, endlon, lrevers, begseg, lbegin, num_subseg, srch_corner_lat, srch_corner_lon, \
 	  weights, intrsct_lat, intrsct_lon, intrsct_lat_off, intrsct_lon_off, intrsct_x, intrsct_y, \
@@ -1400,12 +1395,7 @@ void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, r
 #endif
   for ( tgt_grid_add = 0; tgt_grid_add < tgt_grid_size; ++tgt_grid_add )
     {
-#if defined(_OPENMP)
-      ompthID = omp_get_thread_num();
-#else
-      ompthID = 0;
-#endif
-
+      int ompthID = cdo_omp_get_thread_num();
       int lprogress = 1;
       if ( ompthID != 0 ) lprogress = 0;
 

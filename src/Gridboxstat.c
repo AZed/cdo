@@ -27,9 +27,6 @@
       Gridboxstat    gridboxvar          Gridbox variance
 */
 
-#if defined(_OPENMP)
-#  include <omp.h>
-#endif
 
 #include <cdi.h>
 #include "cdo.h"
@@ -533,7 +530,6 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
   double missval;
   long ig, i, j, ii, jj, index;
   long gridsize;
-  long ompthID;
   field_t *field;
   int isize;
   int useWeight = FALSE;
@@ -570,15 +566,12 @@ void gridboxstat(field_t *field1, field_t *field2, int xinc, int yinc, int statf
   nlat2 = gridInqYsize(gridID2);
 
 #if defined(_OPENMP)
-#pragma omp parallel for default(shared) private(ig, ilat, ilon, j, jj, i, ii, index, isize, ompthID)
+#pragma omp parallel for default(shared) private(ig, ilat, ilon, j, jj, i, ii, index, isize)
 #endif
   for ( ig = 0; ig < nlat2*nlon2; ++ig )
     {
-#if defined(_OPENMP)
-      ompthID = omp_get_thread_num();
-#else
-      ompthID = 0;
-#endif
+      int ompthID = cdo_omp_get_thread_num();
+
       /*
       int lprogress = 1;
 #if defined(_OPENMP)
@@ -639,16 +632,16 @@ void *Gridboxstat(void *argument)
   int vlistID1, vlistID2;
   int lastgrid = -1;
   int wstatus = FALSE;
-  int code = 0, oldcode = 0;
   int index, ngrids;
   int recID, nrecs;
   int tsID, varID, levelID;
   int needWeights = FALSE;
   int gridID1, gridID2;
   int gridsize1, gridsize2;
-  field_t field1, field2;
   int taxisID1, taxisID2;
   int xinc, yinc;
+  field_t field1, field2;
+  char varname[CDI_MAX_NAME];
 
   cdoInitialize(argument);
 
@@ -734,9 +727,11 @@ void *Gridboxstat(void *argument)
 	      lastgrid = field1.grid;
               wstatus = gridWeights(field1.grid, field1.weight);
             }
-          code = vlistInqVarCode(vlistID1, varID);
-          if ( wstatus != 0 && tsID == 0 && code != oldcode )
-            cdoWarning("Using constant grid cell area weights for code %d!", oldcode=code);
+          if ( wstatus != 0 && tsID == 0 && levelID == 0 )
+	    {
+	      vlistInqVarName(vlistID1, varID, varname);
+	      cdoWarning("Using constant grid cell area weights for variable %s!", varname);
+	    }
           
           gridboxstat(&field1, &field2, xinc, yinc, operfunc);
           

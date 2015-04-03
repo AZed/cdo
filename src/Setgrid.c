@@ -193,8 +193,6 @@ void *Setgrid(void *argument)
   taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
-  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-
   if ( operatorID == SETGRID )
     {
       found = 0;
@@ -350,6 +348,8 @@ void *Setgrid(void *argument)
 	  vlistChangeGridIndex(vlistID2, index, gridID2);
 	}
     }
+
+  streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
   streamDefVlist(streamID2, vlistID2);
   //vlistPrint(vlistID2);

@@ -56,11 +56,13 @@ modelRegionCompute(double region[], int nlev, int nlat, int nlon,
     for (unsigned j = 0; j < n; ++j)
       for (unsigned i = 0; i < m; ++i)
         region[k * kstride + j * jstride + i]
-          = sign_flat(round((cos(2.0 * M_PI * (lons[(i + is + tsID)%nlon]
-                                               - lons[0])
+          = sign_flat(round((cos(2.0 * M_PI
+                                 * (lons[(i + is + (unsigned)tsID)
+                                         %(unsigned)nlon] - lons[0])
                                  / (lons[nlon-1] - lons[0]))
-                             * sin(2.0 * M_PI * (lats[(j + js + k + ks)%nlat]
-                                                 - lats[0])
+                             * sin(2.0 * M_PI
+                                   * (lats[(j + js + k + ks)%(unsigned)nlat]
+                                      - lats[0])
                                    / (lats[nlat-1] - lats[0]))
                              ) * mscale)) * mrscale;
 }
@@ -138,26 +140,26 @@ modelRun(struct model_config setup, MPI_Comm comm)
   gridID = gridCreate ( GRID_LONLAT, nlon*nlat );
   gridDefXsize ( gridID, nlon );
   gridDefYsize ( gridID, nlat );
-  lons = xmalloc(nlon * sizeof (lons[0]));
+  lons = xmalloc((size_t)nlon * sizeof (lons[0]));
   for (i = 0; i < nlon; ++i)
     lons[i] = ((double)(i * 360))/nlon;
-  lats = xmalloc(nlat * sizeof (lats[0]));
+  lats = xmalloc((size_t)nlat * sizeof (lats[0]));
   for (i = 0; i < nlat; ++i)
     lats[i] = ((double)(i * 180))/nlat - 90.0;
   gridDefXvals ( gridID, lons );
   gridDefYvals ( gridID, lats );
 
-  levs = xmalloc(setup.max_nlev * sizeof (levs[0]));
+  levs = xmalloc((size_t)setup.max_nlev * sizeof (levs[0]));
   for (i = 0; i < setup.max_nlev; ++i)
     levs[i] = 101300.0
       - 3940.3 * (exp(1.3579 * (double)(i)/(setup.max_nlev - 1)) - 1.0);
 
   vlistID = vlistCreate ();
 
-  varDesc = xmalloc(nVars * sizeof (varDesc[0]));
+  varDesc = xmalloc((size_t)nVars * sizeof (varDesc[0]));
   for (int varIdx = 0; varIdx < nVars; varIdx++ )
     {
-      int varLevs = random()%4;
+      int varLevs = (int)random()%4;
       switch (varLevs)
         {
         case 1:
@@ -182,9 +184,10 @@ modelRun(struct model_config setup, MPI_Comm comm)
         = zaxisCreate(ZAXIS_PRESSURE, varDesc[varIdx].nlev);
       zaxisDefLevels(varDesc[varIdx].zaxisID, levs);
       zaxisIDset:
-      varDesc[varIdx].id = vlistDefVar(vlistID, gridID, varDesc[varIdx].zaxisID,
-                                       TIME_VARIABLE);
-      varDesc[varIdx].size = nlon * nlat * varDesc[varIdx].nlev;
+      varDesc[varIdx].id
+        = vlistDefVar(vlistID, gridID, varDesc[varIdx].zaxisID, TIME_VARIABLE);
+      varDesc[varIdx].size
+        = (size_t)nlon * (size_t)nlat * (size_t)varDesc[varIdx].nlev;
 #ifdef USE_MPI
       {
         int start[2], chunkSize[3], varSize[2] = { nlon, nlat };
@@ -378,8 +381,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 uint32_t cksum;
                 int code;
                 cksum = memcrc_finish(&varDesc[i].checksum_state,
-                                      (off_t)varDesc[i].size
-                                      * sizeof (var[0]) * setup.nts);
+                                      (off_t)(varDesc[i].size
+                                              * sizeof (var[0])
+                                              * (size_t)setup.nts));
                 code = vlistInqVarCode(vlistID, varDesc[i].id);
                 if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum,
                             code) < 0)

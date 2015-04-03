@@ -1,17 +1,24 @@
 #ifndef _TABLEPAR_H
 #define _TABLEPAR_H
 
+enum {
+  TABLE_DUP_NAME = 1 << 0,
+  TABLE_DUP_LONGNAME = 1 << 1,
+  TABLE_DUP_UNITS = 1 << 2,
+};
+
 typedef struct
 {
   int   id;	     /* Parameter number (GRIB) */
-  char *name;	     /* Parameter name */
-  char *longname;    /* Parameter long name */
-  char *units;	     /* Parameter units */
+  int dupflags;      /* keep track of which attributes got strdup'ed */
+  const char *name;	     /* Parameter name */
+  const char *longname;    /* Parameter long name */
+  const char *units;	     /* Parameter units */
 }
 PAR;
 
 
-void tableLink(int tableID, PAR *pars, int npars);
+static void tableLink(int tableID, const PAR *pars, int npars);
 int tableDef(int modelID, int tablegribID, const char *tablename);
 
 #endif

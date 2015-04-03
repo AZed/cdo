@@ -15,6 +15,7 @@ cdo_SOURCES += Adisit.c        \
                Change.c        \
                Change_e5slm.c  \
                Cloudlayer.c    \
+               Collgrid.c      \
                Command.c       \
                Comp.c          \
                Compc.c         \
@@ -28,6 +29,7 @@ cdo_SOURCES += Adisit.c        \
                Derivepar.c     \
                Detrend.c       \
                Diff.c          \
+               Distgrid.c      \
                Duplicate.c     \
                EOFs.c          \
 	       Eof3d.c         \
@@ -49,11 +51,11 @@ cdo_SOURCES += Adisit.c        \
                Fldstat.c       \
                Fldstat2.c      \
                Fourier.c       \
-               Gather.c        \
                Gengrid.c       \
                Gradsdes.c      \
                Gridboxstat.c   \
                Gridcell.c      \
+               Gridsearch.c    \
                Harmonic.c      \
                Hi.c            \
                Histogram.c     \
@@ -101,7 +103,6 @@ cdo_SOURCES += Adisit.c        \
                Rotuv.c         \
                Runpctl.c       \
                Runstat.c       \
-               Scatter.c       \
                Seascount.c     \
                Seaspctl.c      \
                Seasstat.c      \

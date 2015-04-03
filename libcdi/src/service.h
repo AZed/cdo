@@ -25,7 +25,7 @@ srvrec_t *srvNew(void);
 void srvDelete(srvrec_t *srvp);
 
 int  srvRead(int fileID, srvrec_t *srvp);
-int  srvWrite(int fileID, srvrec_t *srvp);
+void srvWrite(int fileID, srvrec_t *srvp);
 
 int  srvInqHeader(srvrec_t *srvp, int *header);
 int  srvInqDataSP(srvrec_t *srvp, float *data);

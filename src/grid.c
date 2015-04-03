@@ -169,13 +169,19 @@ void grid_gen_corners(long n, const double* restrict vals, double* restrict corn
 {
   long i;
 
-  for ( i = 0; i < n-1; ++i )
+  if ( n == 1 )
     {
-      corners[i+1] = 0.5*(vals[i] + vals[i+1]);
+      corners[0] = vals[0];
+      corners[1] = vals[0];
     }
+  else
+    {
+      for ( i = 0; i < n-1; ++i )
+	corners[i+1] = 0.5*(vals[i] + vals[i+1]);
 
-  corners[0] = 2*vals[0] - corners[1];
-  corners[n] = 2*vals[n-1] - corners[n-1];
+      corners[0] = 2*vals[0] - corners[1];
+      corners[n] = 2*vals[n-1] - corners[n-1];
+    }
 }
 
 
@@ -464,7 +470,6 @@ void lcc_to_geo(int gridID, int gridsize, double *xvals, double *yvals)
   double zlat, zlon;
   double xi, xj;
   int projflag, scanflag;
-  int status;
   long i;
   proj_info_t proj;
 
@@ -692,8 +697,8 @@ void grib_get_reduced_row(long pl,double lon_first,double lon_last,long* npoints
 }
 
 
-int    qu2reg3(double *pfield, int *kpoint, int klat, int klon,
-	       double msval, int *kret, int omisng, int operio, int oveggy);
+int qu2reg3_double(double *pfield, int *kpoint, int klat, int klon,
+		   double msval, int *kret, int omisng, int operio, int oveggy);
 
 static
 int qu2reg_subarea(int gridsize, int np, double xfirst, double xlast, 
@@ -758,7 +763,7 @@ int qu2reg_subarea(int gridsize, int np, double xfirst, double xlast,
 
   if ( gridsize != size ) cdoAbort("gridsize1 inconsistent!");
 
-  (void) qu2reg3(work, rowlon, ny, np4, missval, iret, lmiss, lperio, lveggy);
+  (void) qu2reg3_double(work, rowlon, ny, np4, missval, iret, lmiss, lperio, lveggy);
 
   wlen = 0;
   pwork[0] = work;
@@ -825,7 +830,7 @@ void field2regular(int gridID1, int gridID2, double missval, double *array, int 
   else
     {
       nx = 2*ny;
-      (void) qu2reg3(array, rowlon, ny, nx, missval, &iret, lmiss, lperio, lveggy);
+      (void) qu2reg3_double(array, rowlon, ny, nx, missval, &iret, lmiss, lperio, lveggy);
     }
 
   if ( gridInqSize(gridID2) != nx*ny ) Error("Gridsize differ!");
@@ -1464,7 +1469,6 @@ int gridCurvilinearToRegular(int gridID1)
 {
   int gridID2 = -1;
   int gridtype, gridsize;
-  long index;
   long i, j;
   int nx, ny;
   int lx = TRUE, ly = TRUE;

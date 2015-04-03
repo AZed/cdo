@@ -34,10 +34,19 @@ typedef struct {
 }resOps;
 
 enum {
-  RESH_UNUSED,             /* resource holds no value */
-  RESH_ASSIGNED,           /* resource is user-assigned */
-  RESH_PRE_ASSIGNED,       /* resource is pre-assigned by library */
-  RESH_CLOSED,             /* resource is marked immutable */
+  RESH_IN_USE_BIT = 1 << 0,
+  RESH_SYNC_BIT = 1 << 1,
+  /* resource holds no value */
+  RESH_UNUSED = 0,
+  /* resource was deleted and needs to be synced */
+  RESH_DESYNC_DELETED
+    = RESH_SYNC_BIT,
+  /* resource is synchronized */
+  RESH_IN_USE
+    = RESH_IN_USE_BIT,
+  /* resource is in use, desynchronized and needs to be synced */
+  RESH_DESYNC_IN_USE
+    = RESH_IN_USE_BIT | RESH_SYNC_BIT,
 };
 
 void   reshListCreate(int namespaceID);
@@ -45,6 +54,8 @@ void   reshListDestruct(int namespaceID);
 int    reshPut ( void *, const resOps * );
 void reshReplace(cdiResH resH, void *p, const resOps *ops);
 void   reshRemove ( cdiResH, const resOps * );
+/*> doesn't check resource type */
+void reshDestroy(cdiResH);
 
 int    reshCountType ( const resOps * );
 

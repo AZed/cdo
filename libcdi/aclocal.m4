@@ -1184,6 +1184,7 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([m4/acx_assert_lang_is_fortran_variant.m4])
+m4_include([m4/acx_check_strptr_convert.m4])
 m4_include([m4/acx_lang_other_suffix_conftest.m4])
 m4_include([m4/acx_options.m4])
 m4_include([m4/acx_sl_fc_mod_path_flag.m4])

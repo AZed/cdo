@@ -1,10 +1,6 @@
 #ifndef _REMAP_H
 #define _REMAP_H
 
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
-
 #include <math.h>
 
 #ifndef  M_PI

@@ -109,7 +109,7 @@ struct grid_vtable {
    void (*pack_grid)(struct grid *, double **, unsigned, unsigned *, unsigned *,
                      unsigned **, unsigned, unsigned *, unsigned *);
    struct grid_search * (*get_grid_search)(struct grid * grid);
-   void (*xdelete)(struct grid *);
+   void (*delete)(struct grid *);
 };
 
 struct grid {
@@ -140,6 +140,7 @@ void get_grid_cell (struct grid * grid, unsigned cell_index,
  * @param[in] grid
  * @param[in] cell_index local cell index of the requested cell
  * @param[out] cell requested cell (grid_cell object has be initialised once before)
+ * @param[out] bnd_circle bounding circle of input cell
  * @see init_grid_cell
  */
 void get_grid_cell2 (struct grid * grid, unsigned cell_index, 

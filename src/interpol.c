@@ -4,9 +4,6 @@
 #include "grid.h"
 #include "util.h"  /* progressStatus */
 
-#if defined(_OPENMP)
-#include <omp.h>  // omp_get_thread_num()
-#endif
 
 #define  ZERO     0.0
 #define  ONE      1.0
@@ -260,9 +257,7 @@ void intlinarr2(double missval, int lon_is_circular,
       long iix;
       int lfound;
       int lprogress = 1;
-#if defined(_OPENMP)
-      if ( omp_get_thread_num() != 0 ) lprogress = 0;
-#endif
+      if ( cdo_omp_get_thread_num() != 0 ) lprogress = 0;
 
       field[i] = missval;
 
@@ -458,7 +453,7 @@ void intconarr2(double missval, int lon_is_circular,
       ndeps = 0;
       /*
 #if defined(_OPENMP)
-      if ( omp_get_thread_num() != 0 ) lprogress = 0;
+      if ( cdo_omp_get_thread_num() != 0 ) lprogress = 0;
 #endif
       */
       field[i] = missval;

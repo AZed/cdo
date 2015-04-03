@@ -67,19 +67,18 @@ void cdfComment(int ncid)
 {
   static char comment[256] = "Climate Data Interface version ";
   static int init = 0;
-  char *blank;
-  int size = 0;
 
   if ( ! init )
     {
       init = 1;
-      blank = strchr(cdiLibraryVersion(), ' ');
-      if ( blank ) size = blank - cdiLibraryVersion();
+      const char *libvers = cdiLibraryVersion();
+      const char *blank = strchr(libvers, ' ');
+      size_t size = blank ? (size_t)(blank - libvers) : 0;
 
-      if ( size == 0 || ! isdigit((int) *cdiLibraryVersion()) )
+      if ( size == 0 || ! isdigit((int) *libvers) )
 	strcat(comment, "??");
       else
-	strncat(comment, cdiLibraryVersion(), size);
+	strncat(comment, libvers, size);
       strcat(comment, " (http://code.zmaw.de/projects/cdi)");
     }
 

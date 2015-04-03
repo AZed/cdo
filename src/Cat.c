@@ -40,11 +40,16 @@ void *Cat(void *argument)
   int gridsize;
   int nmiss;
   int ntsteps, nvars;
+  int timer_cat;
+  double tw0 = 0, tw = 0;
   double *array = NULL;
 
   cdoInitialize(argument);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
+
+  timer_cat = timer_new("cat");
+  if ( cdoTimer ) timer_start(timer_cat);
 
   streamCnt = cdoStreamCnt();
   nfiles = streamCnt - 1;
@@ -52,6 +57,7 @@ void *Cat(void *argument)
   for ( indf = 0; indf < nfiles; indf++ )
     {
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf)->args);
+      if ( cdoTimer ) tw0 = timer_val(timer_cat);
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
 
@@ -60,7 +66,10 @@ void *Cat(void *argument)
 
       if ( indf == 0 )
 	{
-	  if ( fileExists(cdoStreamName(nfiles)->args) )
+	  int file_exists = fileExists(cdoStreamName(nfiles)->args);
+	  if ( cdoOverwriteMode ) file_exists = 0;
+
+	  if ( file_exists )
 	    {
 	      streamID2 = streamOpenAppend(cdoStreamName(nfiles));
 
@@ -114,9 +123,17 @@ void *Cat(void *argument)
 	  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 	}
 
+      int ntsteps = vlistNtsteps(vlistID1);
+
       tsID1 = 0;
       while ( (nrecs = streamInqTimestep(streamID1, tsID1)) )
 	{
+	  {
+	    double fstatus = indf+1.;
+	    if ( ntsteps > 1 ) fstatus = indf+(tsID1+1.)/ntsteps;
+	    if ( !cdoVerbose ) progressStatus(0, 1, fstatus/nfiles);
+	  }
+
 	  taxisCopyTimestep(taxisID2, taxisID1);
 
 	  streamDefTimestep(streamID2, tsID2);
@@ -136,14 +153,20 @@ void *Cat(void *argument)
 		  streamWriteRecord(streamID2, array, nmiss);
 		}
 	    }
+
 	  tsID1++;
 	  tsID2++;
 	}
       streamClose(streamID1);
+
+      if ( cdoTimer ) tw = timer_val(timer_cat) - tw0;
+      if ( cdoTimer ) cdoPrint("Processed file: %s   %.2f seconds", cdoStreamName(indf)->args, tw);
     }
 
   streamClose(streamID2);
  
+  if ( cdoTimer ) timer_stop(timer_cat);
+
   if ( array ) free(array);
 
   cdoFinish();

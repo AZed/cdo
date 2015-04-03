@@ -33,7 +33,6 @@ void *Runpctl(void *argument)
   int gridsize;
   int varID;
   int recID;
-  int gridID;
   int nrecs, nrecords;
   int levelID;
   int tsID;

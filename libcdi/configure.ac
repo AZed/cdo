@@ -4,7 +4,7 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdi], [1.6.4], [http://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.5], [http://code.zmaw.de/projects/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
@@ -65,6 +65,7 @@ AC_CHECK_MEMBERS([struct stat.st_blksize])
 #  ----------------------------------------------------------------------
 # Checks for header files
 AC_CHECK_HEADERS(malloc.h)
+AC_CHECK_HEADERS(execinfo.h)
 #  ----------------------------------------------------------------------
 # Checks for the availability of functions
 AC_CHECK_FUNCS([mallinfo])
@@ -208,11 +209,15 @@ AM_CONDITIONAL([USE_PPM_CORE],[test $enable_ppm = yes])
 AC_SUBST([USE_MPI])
 #  ----------------------------------------------------------------------
 #  Create the Fortran Interface via iso_c_binding module (Fortran 2003 Standard)
-AC_ARG_ENABLE(iso-c-interface,
-              AS_HELP_STRING([--enable-iso-c-interface],
-                             [Create Fortran Interface via iso_c_bindings facility of F2003 [default=no]]).
-              ,enable_isoc=${enableval},enable_isoc=no)
+AC_ARG_ENABLE([iso-c-interface],
+              [AS_HELP_STRING([--enable-iso-c-interface],
+                 [Create Fortran Interface via iso_c_bindings facility of F2003 [default=no].])],
+              [enable_isoc=${enableval}],[enable_isoc=no])
+AS_IF([test x"$enable_isoc" = xyes],
+  [ACX_FC_CHECK_STRPTR_CONVERT],[enable_isoc=no])
 AM_CONDITIONAL([CREATE_ISOC],[test $enable_isoc = 'yes'])
+AC_SUBST([ENABLE_F2003_ISOC],[$enable_isoc])
+AM_SUBST_NOTMAKE([ENABLE_F2003_ISOC])
 # in case the Fortran interface uses the more modern F90-style interface,
 # the FCFLAGS for users of the library have to include a switch to use the
 # .mod file
@@ -303,6 +308,10 @@ AC_ARG_VAR([BUILD_LDFLAGS],
   [append to LDFLAGS during build but not in configure phase])dnl
 AC_CONFIG_COMMANDS_PRE([LDFLAGS="$LDFLAGS${BUILD_LDFLAGS+ $BUILD_LDFLAGS}"])dnl
 AM_SUBST_NOTMAKE([BUILD_LDFLAGS])dnl
+AC_ARG_VAR([BUILD_LIBS],
+  [append to LIBS during build but not in configure phase])dnl
+AC_CONFIG_COMMANDS_PRE([LIBS="$LIBS${BUILD_LIBS+ $BUILD_LIBS}"])dnl
+AM_SUBST_NOTMAKE([BUILD_LIBS])dnl
 AC_ARG_VAR([BUILD_CC],
   [replace CC with expansion of $BUILD_CC during build but not in configure phase])dnl
 AC_CONFIG_COMMANDS_PRE([CC="${BUILD_CC-$CC}"])dnl
@@ -333,6 +342,7 @@ AC_CONFIG_FILES([tests/test_cksum_grib \
                  tests/test_cksum_service \
                  tests/test_cksum_ieg \
                  tests/test_chunk_cksum \
+                 tests/test_f2003 \
                  tests/pio_write_run \
                  tests/pio_write_deco2d_run \
                  tests/pio_cksum_mpinonb \
@@ -341,6 +351,7 @@ AC_CONFIG_FILES([tests/test_cksum_grib \
                  tests/pio_cksum_writer \
                  tests/pio_cksum_cdf \
                  tests/test_resource_copy_mpi_run \
+                 tables/gen_tableheaderfile \
                  util/serialrun],[chmod a+x "$ac_file"])
 
 AC_OUTPUT([Makefile src/Makefile interfaces/Makefile app/Makefile \

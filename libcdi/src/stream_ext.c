@@ -11,6 +11,8 @@
 #include "file.h"
 #include "cdi.h"
 #include "cdi_int.h"
+#include "stream_ext.h"
+#include "stream_fcommon.h"
 #include "varscan.h"
 #include "datetime.h"
 #include "extra.h"
@@ -106,7 +108,7 @@ int extInqRecord(stream_t *streamptr, int *varID, int *levelID)
 }
 */
 
-int extReadRecord(stream_t *streamptr, double *data, int *nmiss)
+void extReadRecord(stream_t *streamptr, double *data, int *nmiss)
 {
   int vlistID, fileID;
   int status;
@@ -129,7 +131,8 @@ int extReadRecord(stream_t *streamptr, double *data, int *nmiss)
   fileSetPos(fileID, recpos, SEEK_SET);
 
   status = extRead(fileID, extp);
-  if ( status != 0 ) return (0);
+  if ( status != 0 )
+    Error("Failed to read EXTRA record");
 
   extInqHeader(extp, header);
   extInqDataDP(extp, data);
@@ -159,48 +162,19 @@ int extReadRecord(stream_t *streamptr, double *data, int *nmiss)
 	    (*nmiss)++;
 	  }
     }
-
-  return (1);
 }
 
 
-int extCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
+void extCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
 {
-  int fileID1, fileID2;
-  int tsID, recID, vrecID;
-  long recsize;
-  off_t recpos;
-  int status = 0;
-  char *buffer;
-
-  fileID1 = streamptr1->fileID;
-  fileID2 = streamptr2->fileID;
-
-  tsID    = streamptr1->curTsID;
-  vrecID  = streamptr1->tsteps[tsID].curRecID;
-  recID   = streamptr1->tsteps[tsID].recIDs[vrecID];
-  recpos  = streamptr1->tsteps[tsID].records[recID].position;
-  recsize = streamptr1->tsteps[tsID].records[recID].size;
-
-  fileSetPos(fileID1, recpos, SEEK_SET);
-
-  buffer = (char *) malloc(recsize);
-
-  fileRead(fileID1, buffer, recsize);
-
-  fileWrite(fileID2, buffer, recsize);
-
-  free(buffer);
-
-  return (status);
+  streamFCopyRecord(streamptr2, streamptr1, "EXTRA");
 }
 
 
-int extDefRecord(stream_t *streamptr)
+void extDefRecord(stream_t *streamptr)
 {
   int gridID;
   int header[4];
-  int status = 0;
   int pdis, pcat, pnum;
   extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
@@ -215,30 +189,24 @@ int extDefRecord(stream_t *streamptr)
   extDefDatatype(streamptr->record->prec, &extp->prec, &extp->number);
 
   extDefHeader(extp, header);
-
-  return (status);
 }
 
 
-int extWriteRecord(stream_t *streamptr, const double *data)
+void extWriteRecord(stream_t *streamptr, const double *data)
 {
-  int status = 0;
   int fileID = streamptr->fileID;
   extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   extDefDataDP(extp, data);
-
   extWrite(fileID, extp);
-
-  return (status);
 }
 
 static
 void extAddRecord(stream_t *streamptr, int param, int level, int xysize,
-		  long recsize, off_t position, int prec, int number)
+		  size_t recsize, off_t position, int prec, int number)
 {
   int leveltype;
-  int gridID = UNDEFID;
+  int gridID = CDI_UNDEFID;
   int levelID = 0;
   int tsID, recID, varID;
   record_t *record;
@@ -270,10 +238,10 @@ void extAddRecord(stream_t *streamptr, int param, int level, int xysize,
   leveltype = ZAXIS_GENERIC;
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0, 0, 0,
-	       extInqDatatype(prec, number), &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL, NULL);
+	       extInqDatatype(prec, number), &varID, &levelID, TSTEP_INSTANT, 0, 0, -1, NULL, NULL, NULL, NULL);
 
-  (*record).varID   = varID;
-  (*record).levelID = levelID;
+  (*record).varID   = (short)varID;
+  (*record).levelID = (short)levelID;
 
   streamptr->tsteps[tsID].nallrecs++;
   streamptr->nrecs++;
@@ -391,7 +359,7 @@ void extScanTimestep1(stream_t *streamptr)
       if ( CDI_Debug )
 	Message("%4d%8d%4d%8d%8d%6d", nrecs, (int)recpos, rcode, rlevel, vdate, vtime);
 
-      extAddRecord(streamptr, param, rlevel, rxysize, recsize, recpos, extp->prec, extp->number);
+      extAddRecord(streamptr, param, rlevel, rxysize, (size_t)recsize, recpos, extp->prec, extp->number);
     }
 
   streamptr->rtsteps = 1;
@@ -400,8 +368,8 @@ void extScanTimestep1(stream_t *streamptr)
 
   taxisID = taxisCreate(TAXIS_ABSOLUTE);
   taxis->type  = TAXIS_ABSOLUTE;
-  taxis->vdate = datetime0.date;
-  taxis->vtime = datetime0.time;
+  taxis->vdate = (int)datetime0.date;
+  taxis->vtime = (int)datetime0.time;
 
   vlistID = streamptr->vlistID;
   vlistDefTaxis(vlistID, taxisID);
@@ -413,10 +381,10 @@ void extScanTimestep1(stream_t *streamptr)
     {
       streamptr->tsteps[0].recordSize = nrecords;
       streamptr->tsteps[0].records =
-      (record_t *) realloc(streamptr->tsteps[0].records, nrecords*sizeof(record_t));
+        (record_t *)xrealloc(streamptr->tsteps[0].records, (size_t)nrecords * sizeof (record_t));
     }
 
-  streamptr->tsteps[0].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[0].recIDs = (int *)xmalloc((size_t)nrecords * sizeof (int));
   streamptr->tsteps[0].nrecs = nrecords;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[0].recIDs[recID] = recID;
@@ -455,7 +423,6 @@ int extScanTimestep2(stream_t *streamptr)
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
   int tsID;
   int varID;
-  long recsize;
   off_t recpos = 0;
   int nrecords, nrecs, recID, rindex;
   int nextstep;
@@ -480,7 +447,7 @@ int extScanTimestep2(stream_t *streamptr)
   cdi_create_records(streamptr, tsID);
 
   nrecords = streamptr->tsteps[0].nallrecs;
-  streamptr->tsteps[1].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[1].recIDs = xmalloc((size_t)nrecords * sizeof (int));
   streamptr->tsteps[1].nrecs = 0;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[1].recIDs[recID] = -1;
@@ -503,7 +470,7 @@ int extScanTimestep2(stream_t *streamptr)
 	  streamptr->ntsteps = 2;
 	  break;
 	}
-      recsize = fileGetPos(fileID) - recpos;
+      size_t recsize = (size_t)(fileGetPos(fileID) - recpos);
 
       extInqHeader(extp, header);
 
@@ -622,7 +589,7 @@ int extInqContents(stream_t *streamptr)
 }
 
 static
-int extScanTimestep(stream_t *streamptr)
+long extScanTimestep(stream_t *streamptr)
 {
   int header[4];
   int status;
@@ -631,7 +598,6 @@ int extScanTimestep(stream_t *streamptr)
   // int rxysize = 0;
   int param = 0;
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
-  long recsize = 0;
   off_t recpos = 0;
   int recID;
   taxis_t *taxis;
@@ -660,7 +626,8 @@ int extScanTimestep(stream_t *streamptr)
       nrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->tsteps[tsID].nrecs = nrecs;
-      streamptr->tsteps[tsID].recIDs = (int *) malloc(nrecs*sizeof(int));
+      streamptr->tsteps[tsID].recIDs
+        = (int *)xmalloc((size_t)nrecs * sizeof (int));
       for ( recID = 0; recID < nrecs; recID++ )
 	streamptr->tsteps[tsID].recIDs[recID] = streamptr->tsteps[1].recIDs[recID];
 
@@ -677,7 +644,7 @@ int extScanTimestep(stream_t *streamptr)
 	      streamptr->ntsteps = streamptr->rtsteps + 1;
 	      break;
 	    }
-	  recsize = fileGetPos(fileID) - recpos;
+	  size_t recsize = (size_t)(fileGetPos(fileID) - recpos);
 
 	  extInqHeader(extp, header);
 
@@ -751,7 +718,8 @@ int extScanTimestep(stream_t *streamptr)
 
 int extInqTimestep(stream_t *streamptr, int tsID)
 {
-  int ntsteps, nrecs;
+  int nrecs;
+  long ntsteps;
 
   if ( tsID == 0 && streamptr->rtsteps == 0 )
     Error("Call to cdiInqContents missing!");

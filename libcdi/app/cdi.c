@@ -272,16 +272,18 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
 
 const char * tunit2str(int tunits)
 {
-  if      ( tunits == TUNIT_YEAR )    return ("years");
-  else if ( tunits == TUNIT_MONTH )   return ("months");
-  else if ( tunits == TUNIT_DAY )     return ("days");
-  else if ( tunits == TUNIT_12HOURS ) return ("12hours");
-  else if ( tunits == TUNIT_6HOURS )  return ("6hours");
-  else if ( tunits == TUNIT_3HOURS )  return ("3hours");
-  else if ( tunits == TUNIT_HOUR )    return ("hours");
-  else if ( tunits == TUNIT_MINUTE )  return ("minutes");
-  else if ( tunits == TUNIT_SECOND )  return ("seconds");
-  else                                return ("unknown");
+  if      ( tunits == TUNIT_YEAR )       return ("years");
+  else if ( tunits == TUNIT_MONTH )      return ("months");
+  else if ( tunits == TUNIT_DAY )        return ("days");
+  else if ( tunits == TUNIT_12HOURS )    return ("12hours");
+  else if ( tunits == TUNIT_6HOURS )     return ("6hours");
+  else if ( tunits == TUNIT_3HOURS )     return ("3hours");
+  else if ( tunits == TUNIT_HOUR )       return ("hours");
+  else if ( tunits == TUNIT_30MINUTES )  return ("30minutes");
+  else if ( tunits == TUNIT_QUARTER )    return ("15minutes");
+  else if ( tunits == TUNIT_MINUTE )     return ("minutes");
+  else if ( tunits == TUNIT_SECOND )     return ("seconds");
+  else                                   return ("unknown");
 }
 
 
@@ -373,6 +375,8 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s ", "min");
 	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s ", "max");
 	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s ", "accum");
+	  else if ( tsteptype == TSTEP_RANGE    ) fprintf(stdout, "%-8s ", "range");
+	  else if ( tsteptype == TSTEP_DIFF     ) fprintf(stdout, "%-8s ", "diff");
 	  else                                    fprintf(stdout, "%-8s ", "unknown");
 
 	  /* layer info */
@@ -710,7 +714,7 @@ int main(int argc, char *argv[])
   int Move = 0;
   int Record = 0;
   int Debug = 0;
-  int Quiet  = 0;
+  /* int Quiet  = 0; */
   int Vardis = 0;
   int Version = 0;
   int Longinfo = 0;
@@ -751,7 +755,7 @@ int main(int argc, char *argv[])
 	  Move = 1;
 	  break;
 	case 'q':
-	  Quiet = 1;
+	  /* Quiet = 1; */
 	  break;
 	case 'R':
 	  cdiDefGlobal("REGULARGRID", 1);
@@ -895,7 +899,7 @@ int main(int argc, char *argv[])
 	}
 
       if ( vlistNumber(vlistID1) != CDI_REAL ) datasize *= 2;
-      data = (double *) malloc(datasize*sizeof(double));
+      data = (double *) malloc((size_t)datasize * sizeof (double));
 
       /*
 	nts = cdiInqTimeSize(streamID1);

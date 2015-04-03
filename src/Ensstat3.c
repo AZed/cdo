@@ -22,9 +22,6 @@
    Ensstat3       ensroccurve      Ensamble Receiver Operating Characteristics
 */
 
-#if defined(_OPENMP)
-#  include <omp.h>
-#endif
 
 #include <cdi.h>
 #include "cdo.h"
@@ -68,7 +65,6 @@ void *Ensstat3(void *argument)
   int vlistID, vlistID1, vlistID2;
   int taxisID1, taxisID2;
   int zaxisID2;
-  int ompthID;
   int *varID2;
   int time_mode;
   int **array2 = NULL;
@@ -128,13 +124,8 @@ void *Ensstat3(void *argument)
   /* ("first touch strategy")                            */
   /* --> #pragma omp parallel for ...                    */
   /* *************************************************** */
-#if defined(_OPENMP)
-  field = (field_t*) malloc(omp_get_max_threads()*sizeof(field_t));
-  for ( i = 0; i < omp_get_max_threads(); i++ )
-#else
-  field = (field_t*) malloc(1*sizeof(field_t));
-  for ( i = 0; i < 1; i++ )
-#endif
+  field = (field_t*) malloc(ompNumThreads*sizeof(field_t));
+  for ( i = 0; i < ompNumThreads; i++ )
     {
       field_init(&field[i]);
       field[i].size   = nfiles;
@@ -300,15 +291,12 @@ void *Ensstat3(void *argument)
 	      array2[binID][0] = 0;
 
 #if defined(_OPENMP)
-#pragma omp parallel for default(shared) private(i, binID, ompthID, fileID)
+#pragma omp parallel for default(shared) private(i, binID, fileID)
 #endif
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-#if defined(_OPENMP)
-	      ompthID = omp_get_thread_num();
-#else
-	      ompthID = 0;
-#endif
+	      int ompthID = cdo_omp_get_thread_num();
+
 	      field[ompthID].missval = missval;
 	      field[ompthID].nmiss = 0;
 	      have_miss = 0;

@@ -60,10 +60,8 @@ void *Ydrunstat(void *argument)
 {
   int operatorID;
   int operfunc;
-  int gridsize;
   int varID;
   int recID;
-  int gridID;
   int nrecs, nrecords;
   int levelID;
   int tsID;
@@ -72,11 +70,8 @@ void *Ydrunstat(void *argument)
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int nmiss;
-  int nvars, nlevels;
   int *recVarID, *recLevelID;
-  int lmean = FALSE, lvarstd = FALSE, lstd = FALSE;
-  double missval;
-  double divisor;
+  int lvarstd = FALSE;
   field_t ***vars1 = NULL, ***vars2 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
@@ -103,10 +98,7 @@ void *Ydrunstat(void *argument)
   operatorInputArg("number of timesteps");
   ndates = atoi(operatorArgv()[0]);
 
-  lmean   = operfunc == func_mean || operfunc == func_avg;
-  lstd    = operfunc == func_std || operfunc == func_std1;
   lvarstd = operfunc == func_std || operfunc == func_var || operfunc == func_std1 || operfunc == func_var1;
-  divisor = operfunc == func_std1 || operfunc == func_var1;
   
   streamID1 = streamOpenRead(cdoStreamName(0));
 
@@ -125,7 +117,6 @@ void *Ydrunstat(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
-  nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
   recVarID   = (int*) malloc(nrecords*sizeof(int));
@@ -245,6 +236,23 @@ void *Ydrunstat(void *argument)
       tsID++;
     }
 
+  int outyear = 1e9;
+  for ( dayoy = 0; dayoy < NDAY; dayoy++ )
+    if ( stats->nsets[dayoy] )
+      {
+	int year, month, day;
+	cdiDecodeDate(stats->vdate[dayoy], &year, &month, &day);
+	if ( year < outyear ) outyear = year;
+      }
+
+  for ( dayoy = 0; dayoy < NDAY; dayoy++ )
+    if ( stats->nsets[dayoy] )
+      {
+	int year, month, day;
+	cdiDecodeDate(stats->vdate[dayoy], &year, &month, &day);
+	stats->vdate[dayoy] = cdiEncodeDate(outyear, month, day);
+      }
+
   ydstatFinalize(stats, operfunc);
   otsID = 0;
 
@@ -363,10 +371,8 @@ void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
   lvarstd = vars2 != NULL;
 
   nvars = vlistNvars(stats->vlist);
-  
-  year  =  vdate / 10000;
-  month = (vdate - year * 10000) / 100;
-  day   =  vdate - year * 10000 - month * 100;
+
+  cdiDecodeDate(vdate, &year, &month, &day);
 
   if ( month >= 1 && month <= 12 )
     dayoy = (month - 1) * 31 + day;

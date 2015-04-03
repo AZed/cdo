@@ -2,9 +2,10 @@
 #  include "config.h"
 #endif
 
+#include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include "dmemory.h"
 
@@ -121,11 +122,11 @@ int vlistInqNatts(int vlistID, int varID, int *nattsp)
   cdi_atts_t *attsp;
 
   vlistptr = vlist_to_pointer(vlistID);
-  
+
   attsp = get_attsp(vlistptr, varID);
   xassert(attsp != NULL);
 
-  *nattsp = attsp->nelems;
+  *nattsp = (int)attsp->nelems;
 
   return (status);
 }
@@ -139,7 +140,7 @@ int vlistInqNatts(int vlistID, int varID, int *nattsp)
     @Item  vlistID  Variable list ID, from a previous call to @fref{vlistCreate} or @fref{streamInqVlist}.
     @Item  varID    Variable identifier, or @func{CDI_GLOBAL} for a global attribute.
     @Item  attnum   Attribute number (from 0 to natts-1).
-    @Item  name     Pointer to the location for the returned attribute name. The caller must allocate space for the 
+    @Item  name     Pointer to the location for the returned attribute name. The caller must allocate space for the
                     returned string. The maximum possible length, in characters, of
                     the string is given by the predefined constant @func{CDI_MAX_NAME}.
     @Item  typep    Pointer to location for returned attribute type.
@@ -153,15 +154,13 @@ The function @func{vlistInqAtt} gets information about an attribute.
 int vlistInqAtt(int vlistID, int varID, int attnum, char *name, int *typep, int *lenp)
 {
   int status = CDI_NOERR;
-  vlist_t *vlistptr;
   cdi_att_t *attp = NULL;
-  cdi_atts_t *attsp;
 
   xassert(name != NULL);
 
-  vlistptr = vlist_to_pointer(vlistID);
+  vlist_t *vlistptr = vlist_to_pointer(vlistID);
 
-  attsp = get_attsp(vlistptr, varID);
+  cdi_atts_t *attsp = get_attsp(vlistptr, varID);
   xassert(attsp != NULL);
 
   if ( attnum >= 0 && attnum < (int)attsp->nelems )
@@ -171,13 +170,14 @@ int vlistInqAtt(int vlistID, int varID, int attnum, char *name, int *typep, int 
     {
       memcpy(name, attp->name, attp->namesz+1);
       *typep  = attp->exdtype;
-      *lenp   = attp->nelems;
+      *lenp   = (int)attp->nelems;
     }
   else
     {
       name[0] =  0;
       *typep  = -1;
       *lenp   =  0;
+      status  = -1;
     }
 
   return (status);
@@ -213,6 +213,10 @@ int vlistDelAtts(int vlistID, int varID)
 int vlistDelAtt(int vlistID, int varID, const char *name)
 {
   int status = CDI_NOERR;
+
+  UNUSED(vlistID);
+  UNUSED(varID);
+  UNUSED(name);
 
   fprintf(stderr, "vlistDelAtt not implemented!\n");
 
@@ -279,11 +283,13 @@ int vlist_inq_att(int indtype, int vlistID, int varID, const char *name, size_t 
       else
 	{
 	  Warning("Attribute %s has wrong data type!", name);
+          status = -2;
 	}
     }
   else
     {
-      Warning("Internal problem, attribute %s not found!", name);
+      //Warning("Internal problem, attribute %s not found!", name);
+      status = -1;
     }
 
   return (status);
@@ -333,7 +339,7 @@ The function @func{vlistDefAttInt} defines an integer attribute.
 */
 int vlistDefAttInt(int vlistID, int varID, const char *name, int type, int len, const int *ip)
 {
-  return vlist_def_att(DATATYPE_INT, type, vlistID, varID, name, (size_t) len, len*sizeof(int), (const void *) ip);
+  return vlist_def_att(DATATYPE_INT, type, vlistID, varID, name, (size_t)len, (size_t)len * sizeof (int), ip);
 }
 
 /*
@@ -357,7 +363,7 @@ The function @func{vlistDefAttFlt} defines a floating point attribute.
 */
 int vlistDefAttFlt(int vlistID, int varID, const char *name, int type, int len, const double *dp)
 {
-  return vlist_def_att(DATATYPE_FLT, type, vlistID, varID, name, (size_t) len, len*sizeof(double), (const void *) dp);
+  return vlist_def_att(DATATYPE_FLT, type, vlistID, varID, name, (size_t)len, (size_t)len * sizeof (double), dp);
 }
 
 /*
@@ -380,7 +386,7 @@ The function @func{vlistDefAttTxt} defines a text attribute.
 */
 int vlistDefAttTxt(int vlistID, int varID, const char *name, int len, const char *tp)
 {
-  return vlist_def_att(DATATYPE_TXT, DATATYPE_TXT, vlistID, varID, name, (size_t) len, len*sizeof(char), (const void *) tp);
+  return vlist_def_att(DATATYPE_TXT, DATATYPE_TXT, vlistID, varID, name, (size_t)len, (size_t)len * sizeof (char), tp);
 }
 
 /*
@@ -402,7 +408,7 @@ The function @func{vlistInqAttInt} gets the values(s) of an integer attribute.
 */
 int vlistInqAttInt(int vlistID, int varID, const char *name, int mlen, int *ip)
 {
-  return vlist_inq_att(DATATYPE_INT, vlistID, varID, name, mlen*sizeof(int), (void *) ip);
+  return vlist_inq_att(DATATYPE_INT, vlistID, varID, name, (size_t)mlen * sizeof (int), ip);
 }
 
 /*
@@ -424,7 +430,7 @@ The function @func{vlistInqAttFlt} gets the values(s) of a floating point attrib
 */
 int vlistInqAttFlt(int vlistID, int varID, const char *name, int mlen, double *dp)
 {
-  return vlist_inq_att(DATATYPE_FLT, vlistID, varID, name, mlen*sizeof(double), (void *) dp);
+  return vlist_inq_att(DATATYPE_FLT, vlistID, varID, name, (size_t)mlen * sizeof (double), dp);
 }
 
 /*
@@ -446,7 +452,7 @@ The function @func{vlistInqAttTxt} gets the values(s) of a text attribute.
 */
 int vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char *tp)
 {
-  return vlist_inq_att(DATATYPE_TXT, vlistID, varID, name, mlen*sizeof(char), (void *) tp);
+  return vlist_inq_att(DATATYPE_TXT, vlistID, varID, name, (size_t)mlen * sizeof (char), tp);
 }
 
 enum {
@@ -509,7 +515,7 @@ vlistAttGetSize(vlist_t *vlistptr, int varID, int attnum, void *context)
   xassert(attnum >= 0 && attnum < (int)attsp->nelems);
   attp = &(attsp->value[attnum]);
   int txsize = serializeGetSize(vlist_att_nints, DATATYPE_INT, context)
-    + serializeGetSize(attp->namesz, DATATYPE_TXT, context);
+    + serializeGetSize((int)attp->namesz, DATATYPE_TXT, context);
   txsize += serializeGetSize((int)attp->nelems, vlistAttTypeLookup(attp), context);
   return txsize;
 }
@@ -517,12 +523,11 @@ vlistAttGetSize(vlist_t *vlistptr, int varID, int attnum, void *context)
 int
 vlistAttsGetSize(vlist_t *p, int varID, void *context)
 {
-  int numAtts, i;
   cdi_atts_t *attsp = get_attsp(p, varID);
   int txsize = serializeGetSize(1, DATATYPE_INT, context);
-  numAtts = attsp->nelems;
-  for (i = 0; i < numAtts; ++i)
-    txsize += vlistAttGetSize(p, varID, i, context);
+  size_t numAtts = attsp->nelems;
+  for (size_t i = 0; i < numAtts; ++i)
+    txsize += vlistAttGetSize(p, varID, (int)i, context);
   return txsize;
 }
 
@@ -537,12 +542,12 @@ vlistAttPack(vlist_t *vlistptr, int varID, int attnum,
   xassert(attsp = get_attsp(vlistptr, varID));
   xassert(attnum >= 0 && attnum < (int)attsp->nelems);
   attp = &(attsp->value[attnum]);
-  tempbuf[0] = attp->namesz;
+  tempbuf[0] = (int)attp->namesz;
   tempbuf[1] = attp->exdtype;
   tempbuf[2] = attp->indtype;
-  tempbuf[3] = attp->nelems;
+  tempbuf[3] = (int)attp->nelems;
   serializePack(tempbuf, vlist_att_nints, DATATYPE_INT, buf, size, position, context);
-  serializePack(attp->name, attp->namesz, DATATYPE_TXT, buf, size, position, context);
+  serializePack(attp->name, (int)attp->namesz, DATATYPE_TXT, buf, size, position, context);
   serializePack(attp->xvalue, (int)attp->nelems, vlistAttTypeLookup(attp),
                 buf, size, position, context);
 }
@@ -551,28 +556,28 @@ void
 vlistAttsPack(vlist_t *p, int varID,
               void * buf, int size, int *position, void *context)
 {
-  int numAtts, i;
   cdi_atts_t *attsp = get_attsp(p, varID);
-  numAtts = attsp->nelems;
-  serializePack(&numAtts, 1, DATATYPE_INT, buf, size, position, context);
-  for (i = 0; i < numAtts; ++i)
-    vlistAttPack(p, varID, i, buf, size, position, context);
+  size_t numAtts = attsp->nelems;
+  int numAttsI = (int)numAtts;
+  xassert(numAtts <= INT_MAX);
+  serializePack(&numAttsI, 1, DATATYPE_INT, buf, size, position, context);
+  for (size_t i = 0; i < numAtts; ++i)
+    vlistAttPack(p, varID, (int)i, buf, size, position, context);
 }
 
 static void
 vlistAttUnpack(int vlistID, int varID,
                void * buf, int size, int *position, void *context)
 {
-  char *attName;
   int tempbuf[vlist_att_nints];
-  int attVDt;
-  int elemSize;
 
   serializeUnpack(buf, size, position,
                   tempbuf, vlist_att_nints, DATATYPE_INT, context);
-  attName = (char*) xmalloc(tempbuf[0] + 1);
+  char *attName = (char *)xmalloc((size_t)tempbuf[0] + 1);
   serializeUnpack(buf, size, position, attName, tempbuf[0], DATATYPE_TXT, context);
   attName[tempbuf[0]] = '\0';
+  int attVDt;
+  size_t elemSize;
   switch (tempbuf[2])
   {
   case DATATYPE_FLT:
@@ -591,10 +596,10 @@ vlistAttUnpack(int vlistID, int varID,
     xabort("Unknown datatype encountered in attribute %s: %d\n",
            attName, tempbuf[2]);
   }
-  void *attData = xmalloc(elemSize * tempbuf[3]);
+  void *attData = (void *)xmalloc(elemSize * (size_t)tempbuf[3]);
   serializeUnpack(buf, size, position, attData, tempbuf[3], attVDt, context);
   vlist_def_att(tempbuf[2], tempbuf[1], vlistID, varID, attName,
-                tempbuf[3], tempbuf[3] * elemSize, attData);
+                (size_t)tempbuf[3], (size_t)tempbuf[3] * elemSize, attData);
   free(attName);
   free(attData);
 }

@@ -103,18 +103,18 @@ void *Fldstat2(void *argument)
   int gridID, lastgridID = -1;
   int gridID3;
   int wstatus = FALSE;
-  int code = 0, oldcode = 0;
   int index, ngrids;
   int recID, nrecs, nrecs2;
   int tsID, varID, levelID;
   long gridsize;
   int needWeights = TRUE;
   int nmiss1, nmiss2, nmiss3;
+  int taxisID1, taxisID3;
   double missval1, missval2;
   double slon, slat;
   double sglval;
   double *array1, *array2, *weight;
-  int taxisID1, taxisID3;
+  char varname[CDI_MAX_NAME];
 
   cdoInitialize(argument);
 
@@ -191,9 +191,11 @@ void *Fldstat2(void *argument)
 	      lastgridID = gridID;
 	      wstatus = gridWeights(gridID, weight);
 	    }
-	  code = vlistInqVarCode(vlistID1, varID);
-	  if ( wstatus != 0 && tsID == 0 && code != oldcode )
-	    cdoWarning("Using constant grid cell area weights for code %d!", oldcode=code);
+	  if ( wstatus != 0 && tsID == 0 && levelID == 0 )
+	    {
+	      vlistInqVarName(vlistID1, varID, varname);
+	      cdoWarning("Using constant grid cell area weights for variable %s!", varname);
+	    }
 
 	  missval1 = vlistInqVarMissval(vlistID1, varID);
 	  missval2 = vlistInqVarMissval(vlistID2, varID);

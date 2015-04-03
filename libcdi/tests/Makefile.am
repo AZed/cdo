@@ -7,7 +7,8 @@ TESTS = cksum_verify \
 	test_chunk_cksum \
 	pio_write_run pio_cksum_mpinonb pio_cksum_fpguard \
 	pio_cksum_asynch pio_cksum_writer pio_cksum_cdf \
-	test_resource_copy pio_write_deco2d_run
+	test_resource_copy pio_write_deco2d_run \
+	test_f2003
 check_PROGRAMS = cksum_verify test_grib cksum_write cksum_read pio_write \
 	test_resource_copy cksum_write_chunk pio_write_deco2d
 

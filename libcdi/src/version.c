@@ -7,7 +7,7 @@
  */
 
 #if defined (VERSION)
-   static char cdi_libvers[] = VERSION " of "__DATE__" "__TIME__;
+   static const char cdi_libvers[] = VERSION " of "__DATE__" "__TIME__;
 #else
 #  error "VERSION undefined"
 #endif
@@ -15,12 +15,12 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-char *cdiLibraryVersion(void);
+const char *cdiLibraryVersion(void);
 #if defined(__cplusplus)
 }
 #endif
 */
-char *cdiLibraryVersion(void)
+const char *cdiLibraryVersion(void)
 {
   return (cdi_libvers);
 }

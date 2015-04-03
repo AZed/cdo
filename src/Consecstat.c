@@ -126,7 +126,6 @@ void *Consecstat(void *argument)
   int ostreamID, otaxisID, ovlistID, otsID;
   int vdate = 0, vtime = 0;
   int histvdate = 0, histvtime = 0;
-  int i;
   int recID, nrecs;
   int varID, nvars;
   int levelID, nlevels; 
@@ -221,7 +220,7 @@ void *Consecstat(void *argument)
           }
 #if defined(_OPENMP)
 #pragma omp parallel for default(shared) schedule(static)
-          for ( i = 0; i < gridInqSize(vars[varID][levelID].grid); i++ )
+          for ( int i = 0; i < gridInqSize(vars[varID][levelID].grid); i++ )
             hist[varID][levelID].ptr[i] = vars[varID][levelID].ptr[i];
 #else
           memcpy(hist[varID][levelID].ptr,

@@ -277,7 +277,7 @@ void boundbox_from_corners1r(long ic, long nc, const double *restrict corner_lon
       if ( clon > bound_box[3] ) bound_box[3] = clon;
     }
 
-  if ( fabs(bound_box[3] - bound_box[2]) > RESTR_SCALE(PI) )
+  if ( RESTR_ABS(bound_box[3] - bound_box[2]) > RESTR_SCALE(PI) )
     {
       bound_box[2] = 0;
       bound_box[3] = RESTR_SCALE(PI2);
@@ -323,6 +323,151 @@ void cdo_compute_overlap_areas(unsigned N,
     printf("overlap area : %lf\n", partial_areas[n]);
 #endif
 }
+
+static double const tol = 1.0e-12;
+
+enum cell_type {
+  UNDEF_CELL,
+  LON_LAT_CELL,
+  LAT_CELL,
+  GREAT_CIRCLE_CELL,
+  MIXED_CELL
+};
+/*
+static enum cell_type get_cell_type(struct grid_cell target_cell) {
+
+  int count_lat_edges = 0, count_great_circle_edges = 0;
+
+   if ((target_cell.num_corners == 4) &&
+       ((target_cell.edge_type[0] == LAT_CIRCLE &&
+         target_cell.edge_type[1] == LON_CIRCLE &&
+         target_cell.edge_type[2] == LAT_CIRCLE &&
+         target_cell.edge_type[3] == LON_CIRCLE) ||
+        (target_cell.edge_type[0] == LON_CIRCLE &&
+         target_cell.edge_type[1] == LAT_CIRCLE &&
+         target_cell.edge_type[2] == LON_CIRCLE &&
+         target_cell.edge_type[3] == LAT_CIRCLE)))
+      return LON_LAT_CELL;
+   else
+      for (unsigned i = 0; i < target_cell.num_corners; ++i)
+         if (target_cell.edge_type[i] == LON_CIRCLE ||
+             target_cell.edge_type[i] == GREAT_CIRCLE)
+            count_great_circle_edges++;
+         else
+            count_lat_edges++;
+
+   if (count_lat_edges && count_great_circle_edges)
+      return MIXED_CELL;
+   else if (count_lat_edges)
+      return LAT_CELL;
+   else
+      return GREAT_CIRCLE_CELL;
+}
+*/
+static
+void cdo_compute_concave_overlap_areas(unsigned N,
+				       struct grid_cell *overlap_buffer,
+				       struct grid_cell *source_cell,
+				       struct grid_cell  target_cell,
+				       double target_node_x,
+				       double target_node_y,
+				       double * partial_areas)
+{
+  /*
+  enum cell_type target_cell_type = UNDEF_CELL;
+
+  if ( target_cell.num_corners > 3 )
+    target_cell_type = get_cell_type(target_cell);
+
+  if ( target_cell.num_corners < 4 || target_cell_type == LON_LAT_CELL )
+    {
+      cdo_compute_overlap_areas(N, overlap_buffer, source_cell, target_cell, partial_areas);
+      return;
+    }
+
+  if ( target_node_x == NULL || target_node_y == NULL )
+    cdoAbort("Internal problem (cdo_compute_concave_overlap_areas): missing target point coordinates!");
+  */
+  struct grid_cell target_partial_cell =
+    {.coordinates_x   = (double[3]){-1, -1, -1},
+     .coordinates_y   = (double[3]){-1, -1, -1},
+     .coordinates_xyz = (double[3*3]){-1, -1, -1},
+     .edge_type       = (enum edge_type[3]) {GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE},
+     .num_corners     = 3};
+
+  /* Do the clipping and get the cell for the overlapping area */
+
+  for ( unsigned n = 0; n < N; n++) partial_areas[n] = 0.0;
+
+  // common node point to all partial target cells
+  target_partial_cell.coordinates_x[0] = target_node_x;
+  target_partial_cell.coordinates_y[0] = target_node_y;
+
+  LLtoXYZ ( target_node_x, target_node_y, target_partial_cell.coordinates_xyz );
+
+  for ( unsigned num_corners = 0; num_corners < target_cell.num_corners; ++num_corners )
+    {
+      unsigned corner_a = num_corners;
+      unsigned corner_b = (num_corners+1)%target_cell.num_corners;
+
+      // skip clipping and area calculation for degenerated triangles
+      //
+      // If this is not sufficient, instead we can try something like:
+      //
+      //     struct point_list target_list
+      //     init_point_list(&target_list);
+      //     generate_point_list(&target_list, target_cell);
+      //     struct grid_cell temp_target_cell;
+      //     generate_overlap_cell(target_list, temp_target_cell);
+      //     free_point_list(&target_list);
+      //
+      // and use temp_target_cell for triangulation.
+      //
+      // Compared to the if statement below the alternative seems
+      // to be quite costly.
+
+      if ( ( ( fabs(target_cell.coordinates_xyz[0+3*corner_a]-target_cell.coordinates_xyz[0+3*corner_b]) < tol ) &&
+	     ( fabs(target_cell.coordinates_xyz[1+3*corner_a]-target_cell.coordinates_xyz[1+3*corner_b]) < tol ) &&
+	     ( fabs(target_cell.coordinates_xyz[2+3*corner_a]-target_cell.coordinates_xyz[2+3*corner_b]) < tol ) ) ||
+	   ( ( fabs(target_cell.coordinates_xyz[0+3*corner_a]-target_partial_cell.coordinates_xyz[0]) < tol    ) &&
+	     ( fabs(target_cell.coordinates_xyz[1+3*corner_a]-target_partial_cell.coordinates_xyz[1]) < tol    ) &&
+	     ( fabs(target_cell.coordinates_xyz[2+3*corner_a]-target_partial_cell.coordinates_xyz[2]) < tol    ) ) ||
+	   ( ( fabs(target_cell.coordinates_xyz[0+3*corner_b]-target_partial_cell.coordinates_xyz[0]) < tol    ) &&
+	     ( fabs(target_cell.coordinates_xyz[1+3*corner_b]-target_partial_cell.coordinates_xyz[1]) < tol    ) &&
+	     ( fabs(target_cell.coordinates_xyz[2+3*corner_b]-target_partial_cell.coordinates_xyz[2]) < tol    ) ) )
+	continue;
+
+      target_partial_cell.coordinates_x[1] = target_cell.coordinates_x[corner_a];
+      target_partial_cell.coordinates_y[1] = target_cell.coordinates_y[corner_a];
+      target_partial_cell.coordinates_x[2] = target_cell.coordinates_x[corner_b];
+      target_partial_cell.coordinates_y[2] = target_cell.coordinates_y[corner_b];
+
+      target_partial_cell.coordinates_xyz[0+3*1] = target_cell.coordinates_xyz[0+3*corner_a];
+      target_partial_cell.coordinates_xyz[1+3*1] = target_cell.coordinates_xyz[1+3*corner_a];
+      target_partial_cell.coordinates_xyz[2+3*1] = target_cell.coordinates_xyz[2+3*corner_a];
+      target_partial_cell.coordinates_xyz[0+3*2] = target_cell.coordinates_xyz[0+3*corner_b];
+      target_partial_cell.coordinates_xyz[1+3*2] = target_cell.coordinates_xyz[1+3*corner_b];
+      target_partial_cell.coordinates_xyz[2+3*2] = target_cell.coordinates_xyz[2+3*corner_b];
+
+      cell_clipping(N, source_cell, target_partial_cell, overlap_buffer);
+
+      /* Get the partial areas for the overlapping regions as sum over the partial target cells. */
+
+      for (unsigned n = 0; n < N; n++)
+	{
+	  partial_areas[n] += huiliers_area (overlap_buffer[n]);
+	  // we cannot use pole_area because it is rather inaccurate for great circle
+	  // edges that are nearly circles of longitude
+	  //partial_areas[n] = pole_area (overlap_buffer[n]);
+	}
+    }
+
+#ifdef VERBOSE
+  for (unsigned n = 0; n < N; n++)
+    printf("overlap area %i: %lf \n", n, partial_areas[n]);
+#endif
+}
+
 //#endif
 
 static
@@ -373,7 +518,7 @@ int get_lonlat_circle_index(remapgrid_t *remap_grid)
 
   //printf("lonlat_circle_index %d\n", lonlat_circle_index);
 
-  return(lonlat_circle_index);
+  return (lonlat_circle_index);
 }
 
 
@@ -398,7 +543,7 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
   long   srch_corners;       /* num of corners of srch cells           */
   double norm_factor = 0;    /* factor for normalizing wts */
   int*   srch_add;           /* global address of cells in srch arrays */
-  int    ompthID, i;
+  int    i;
 
   /* Variables necessary if segment manages to hit pole */
   double findex = 0;
@@ -425,11 +570,18 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
   src_num_cell_corners = src_grid->num_cell_corners;
   tgt_num_cell_corners = tgt_grid->num_cell_corners;
 
-  enum edge_type great_circle_type[] = {GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE};
-  enum edge_type lonlat_circle_type[] = {LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE};
+  int max_num_cell_corners = src_num_cell_corners;
+  if ( tgt_num_cell_corners > max_num_cell_corners ) max_num_cell_corners = tgt_num_cell_corners;
+
+  enum edge_type great_circle_type[32];
+  for ( int i = 0; i < max_num_cell_corners; ++i ) great_circle_type[i] = GREAT_CIRCLE;
+
+  enum edge_type lonlat_circle_type[] = {LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE, LAT_CIRCLE, LON_CIRCLE};
 
   enum edge_type *src_edge_type = great_circle_type;
   enum edge_type *tgt_edge_type = great_circle_type;
+
+  enum cell_type target_cell_type = UNDEF_CELL;
 
   if ( src_num_cell_corners == 4 )
     {
@@ -440,7 +592,17 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
   if ( tgt_num_cell_corners == 4 )
     {
       int lonlat_circle_index = get_lonlat_circle_index(tgt_grid);
-      if ( lonlat_circle_index >= 0 ) tgt_edge_type = &lonlat_circle_type[lonlat_circle_index];
+      if ( lonlat_circle_index >= 0 )
+	{
+	  target_cell_type = LON_LAT_CELL;
+	  tgt_edge_type = &lonlat_circle_type[lonlat_circle_index];
+	}
+    }
+
+  if ( !(tgt_num_cell_corners < 4 || target_cell_type == LON_LAT_CELL) )
+    {
+      if ( tgt_grid->cell_center_lon == NULL || tgt_grid->cell_center_lat == NULL )
+	cdoAbort("Internal problem (remap_weights_conserv): missing target point coordinates!");
     }
 
   double tgt_area;
@@ -514,20 +676,15 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 #pragma omp parallel for default(none) \
   shared(ompNumThreads, cdoTimer, lyac, nbins, num_wts, nx, src_remap_grid_type, tgt_remap_grid_type, src_grid_bound_box,	\
 	 src_edge_type, tgt_edge_type, partial_areas2, partial_weights2,  \
-         rv, cdoVerbose, max_srch_cells2, \
-	 tgt_num_cell_corners, srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, \
+         rv, cdoVerbose, max_srch_cells2, tgt_num_cell_corners, target_cell_type, \
+	 srch_corners, src_grid, tgt_grid, tgt_grid_size, src_grid_size, \
 	 overlap_buffer2, src_grid_cells2, srch_add2, tgt_grid_cell2, findex, sum_srch_cells, sum_srch_cells2) \
-  private(ompthID, srch_add, tgt_grid_cell, tgt_area, n, k, num_weights, num_srch_cells, max_srch_cells,  \
+  private(srch_add, tgt_grid_cell, tgt_area, n, k, num_weights, num_srch_cells, max_srch_cells,  \
 	  partial_areas, partial_weights, overlap_buffer, src_grid_cells, src_grid_add, tgt_grid_add, ioffset)
 #endif
   for ( tgt_grid_add = 0; tgt_grid_add < tgt_grid_size; ++tgt_grid_add )
     {
-#if defined(_OPENMP)
-      ompthID = omp_get_thread_num();
-#else
-      ompthID = 0;
-#endif
-
+      int ompthID = cdo_omp_get_thread_num();
       int lprogress = 1;
       if ( ompthID != 0 ) lprogress = 0;
 
@@ -552,6 +709,10 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 		   tgt_grid_add, RAD2DEG*tgt_cell_bound_box[2],RAD2DEG*tgt_cell_bound_box[3],RAD2DEG*tgt_cell_bound_box[0],RAD2DEG*tgt_cell_bound_box[1] );
 	  num_srch_cells = get_srch_cells_reg2d(src_grid->dims, src_grid->reg2d_corner_lat, src_grid->reg2d_corner_lon,
 						tgt_cell_bound_box, srch_add);
+
+	  if ( num_srch_cells == 1 && src_grid->dims[0] == 1 && src_grid->dims[1] == 1 &&
+	       IS_EQUAL(src_grid->reg2d_corner_lat[0], src_grid->reg2d_corner_lat[1]) && 
+	       IS_EQUAL(src_grid->reg2d_corner_lon[0], src_grid->reg2d_corner_lon[1]) ) num_srch_cells = 0;
 	}
       else if ( src_remap_grid_type == REMAP_GRID_TYPE_REG2D )
 	{
@@ -563,6 +724,10 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 		   tgt_grid_add, RAD2DEG*tgt_cell_bound_box[2],RAD2DEG*tgt_cell_bound_box[3],RAD2DEG*tgt_cell_bound_box[0],RAD2DEG*tgt_cell_bound_box[1] );
 	  num_srch_cells = get_srch_cells_reg2d(src_grid->dims, src_grid->reg2d_corner_lat, src_grid->reg2d_corner_lon,
 						tgt_cell_bound_box, srch_add);
+
+	  if ( num_srch_cells == 1 && src_grid->dims[0] == 1 && src_grid->dims[1] == 1 &&
+	       IS_EQUAL(src_grid->reg2d_corner_lat[0], src_grid->reg2d_corner_lat[1]) && 
+	       IS_EQUAL(src_grid->reg2d_corner_lon[0], src_grid->reg2d_corner_lon[1]) ) num_srch_cells = 0;
 	}
       else
 	{
@@ -737,7 +902,16 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 	    }
 	}
 
-      cdo_compute_overlap_areas(num_srch_cells, overlap_buffer, src_grid_cells, *tgt_grid_cell, partial_areas);
+      if ( tgt_num_cell_corners < 4 || target_cell_type == LON_LAT_CELL )
+	{
+	  cdo_compute_overlap_areas(num_srch_cells, overlap_buffer, src_grid_cells, *tgt_grid_cell, partial_areas);
+	}
+      else
+	{
+	  double cell_center_lon = tgt_grid->cell_center_lon[tgt_grid_add];
+	  double cell_center_lat = tgt_grid->cell_center_lat[tgt_grid_add];
+	  cdo_compute_concave_overlap_areas(num_srch_cells, overlap_buffer, src_grid_cells, *tgt_grid_cell, cell_center_lon, cell_center_lat, partial_areas);
+	}
 
       tgt_area = huiliers_area(*tgt_grid_cell);
       // tgt_area = cell_area(tgt_grid_cell);

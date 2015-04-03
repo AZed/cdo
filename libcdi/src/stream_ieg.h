@@ -9,10 +9,10 @@ int    iegInqContents(stream_t *streamptr);
 int    iegInqTimestep(stream_t *streamptr, int tsID);
 
 int    iegInqRecord(stream_t *streamptr, int *varID, int *levelID);
-int    iegDefRecord(stream_t *streamptr);
-int    iegCopyRecord(stream_t *streamptr2, stream_t *streamptr1);
-int    iegReadRecord(stream_t *streamptr, double *data, int *nmiss);
-int    iegWriteRecord(stream_t *streamptr, const double *data);
+void   iegDefRecord(stream_t *streamptr);
+void   iegCopyRecord(stream_t *streamptr2, stream_t *streamptr1);
+void   iegReadRecord(stream_t *streamptr, double *data, int *nmiss);
+void   iegWriteRecord(stream_t *streamptr, const double *data);
 
 void   iegReadVarDP (stream_t *streamptr, int varID,       double *data, int *nmiss);
 void   iegWriteVarDP(stream_t *streamptr, int varID, const double *data);

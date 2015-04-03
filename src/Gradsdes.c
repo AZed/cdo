@@ -75,7 +75,7 @@ struct gaindx {
   float *fltpnt;    /* Pointer to float index values  */
 };
 struct gaindxb {
-  int    bignum;    /* Number of off_t values */	       
+  int    bignum;    /* Number of off_t values */
   off_t *bigpnt;    /* Pointer to off_t values */
 };
 
@@ -110,32 +110,32 @@ char *ch1,*ch2,*ch3,*ch4,cc1,cc2;
 static
 float ibm2flt(unsigned char *ibm) {
 
-	int positive, power;
-	unsigned int abspower;
-	long int mant;
-	double value, exp;
+  int positive, power;
+  unsigned int abspower;
+  long int mant;
+  double value, exp;
 
-	positive = (ibm[0] & 0x80) == 0;
-	mant = (ibm[1] << 16) + (ibm[2] << 8) + ibm[3];
-	power = (int) (ibm[0] & 0x7f) - 64;
-	abspower = power > 0 ? power : -power;
+  positive = (ibm[0] & 0x80) == 0;
+  mant = (ibm[1] << 16) + (ibm[2] << 8) + ibm[3];
+  power = (int) (ibm[0] & 0x7f) - 64;
+  abspower = power > 0 ? power : -power;
 
 
-	/* calc exp */
-	exp = 16.0;
-	value = 1.0;
-	while (abspower) {
-		if (abspower & 1) {
-			value *= exp;
-		}
-		exp = exp * exp;
-		abspower >>= 1;
-	}
+  /* calc exp */
+  exp = 16.0;
+  value = 1.0;
+  while (abspower) {
+    if (abspower & 1) {
+      value *= exp;
+    }
+    exp = exp * exp;
+    abspower >>= 1;
+  }
 
-	if (power < 0) value = 1.0 / value;
-	value = value * mant / 16777216.0;
-	if (positive == 0) value = -value;
-	return (float)value;
+  if (power < 0) value = 1.0 / value;
+  value = value * mant / 16777216.0;
+  if (positive == 0) value = -value;
+  return (float)value;
 }
 
 /*
@@ -148,66 +148,66 @@ float ibm2flt(unsigned char *ibm) {
 static
 int flt2ibm(float x, unsigned char *ibm) {
 
-	int sign, exp, i;
-	double mant;
+  int sign, exp, i;
+  double mant;
 
-	if ( !(fabs((double)x) > 0) ) {
-		ibm[0] = ibm[1] = ibm[2] = ibm[3] = 0;
-		return 0;
-	}
+  if ( !(fabs((double)x) > 0) ) {
+    ibm[0] = ibm[1] = ibm[2] = ibm[3] = 0;
+    return 0;
+  }
 
-	/* sign bit */
-	if (x < 0.0) {
-		sign = 128;
-		x = -x;
-	}
-	else sign = 0;
+  /* sign bit */
+  if (x < 0.0) {
+    sign = 128;
+    x = -x;
+  }
+  else sign = 0;
 
-	mant = frexp((double) x, &exp);
+  mant = frexp((double) x, &exp);
 
-	/* round up by adding 2**-24 */
-	/* mant = mant + 1.0/16777216.0; */
+  /* round up by adding 2**-24 */
+  /* mant = mant + 1.0/16777216.0; */
 
-	if (mant >= 1.0) {
-		mant = 0.5;
-		exp++;
-	}
-	while (exp & 3) {
-		mant *= 0.5;
-		exp++;
-	}
-	
-	exp = exp/4 + 64;
+  if (mant >= 1.0) {
+    mant = 0.5;
+    exp++;
+  }
+  while (exp & 3) {
+    mant *= 0.5;
+    exp++;
+  }
 
-	if (exp < 0) {
-		fprintf(stderr,"underflow in flt2ibm\n");
-		ibm[0] = ibm[1] = ibm[2] = ibm[3] = 0;
-		return 0;
-	}
-	if (exp > 127) {
-		fprintf(stderr,"overflow in flt2ibm\n");
-		ibm[0] = sign | 127;
-		ibm[1] = ibm[2] = ibm[3] = 255;
-		return -1;
-	}
+  exp = exp/4 + 64;
 
-	/* normal number */
+  if (exp < 0) {
+    fprintf(stderr,"underflow in flt2ibm\n");
+    ibm[0] = ibm[1] = ibm[2] = ibm[3] = 0;
+    return 0;
+  }
+  if (exp > 127) {
+    fprintf(stderr,"overflow in flt2ibm\n");
+    ibm[0] = sign | 127;
+    ibm[1] = ibm[2] = ibm[3] = 255;
+    return -1;
+  }
 
-	ibm[0] = sign | exp;
+  /* normal number */
 
-	mant = mant * 256.0;
-	i = (int) floor(mant);
-	mant = mant - i;
-	ibm[1] = i;
+  ibm[0] = sign | exp;
 
-	mant = mant * 256.0;
-	i = (int) floor(mant);
-	mant = mant - i;
-	ibm[2] = i;
+  mant = mant * 256.0;
+  i = (int) floor(mant);
+  mant = mant - i;
+  ibm[1] = i;
 
-	ibm[3] = (int) floor(mant*256.0);
+  mant = mant * 256.0;
+  i = (int) floor(mant);
+  mant = mant - i;
+  ibm[2] = i;
 
-	return 0;
+  ibm[3] = (int) floor(mant*256.0);
+
+  return 0;
 }
 
 #define  GET_UINT4(a,b,c,d) ((int) ((a << 24) + (b << 16) + (c << 8) + (d)))
@@ -260,7 +260,7 @@ void dumpmap()
 
       nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.hinum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
-      
+
       nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
       indx.hfnum = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
 
@@ -273,38 +273,38 @@ void dumpmap()
       nbytes = fread(mrec, sizeof(unsigned char), 7, mapfp);
 
       if ( indx.hinum > 0 )
-	{
-	  indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
-	  for ( i = 0; i < indx.hinum; i++ )
-	    {
-	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
-	      indx.hipnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
-	    }
-	}
+        {
+          indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
+          for ( i = 0; i < indx.hinum; i++ )
+            {
+              nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
+              indx.hipnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
+            }
+        }
       if ( indx.hfnum > 0 )
-	{
-	  indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
-	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
-	}
+        {
+          indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
+          nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
+        }
       if ( indx.intnum > 0 )
-	{
-	  indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
-	  for ( i = 0; i < indx.intnum; i++ )
-	    {
-	      nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
-	      indx.intpnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
-	      if ( indx.intpnt[i] < 0 ) indx.intpnt[i] = 0x7fffffff - indx.intpnt[i] + 1;
-	    }
-	}
+        {
+          indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
+          for ( i = 0; i < indx.intnum; i++ )
+            {
+              nbytes = fread(mrec, sizeof(unsigned char), 4, mapfp);
+              indx.intpnt[i] = GET_UINT4(mrec[0],mrec[1],mrec[2],mrec[3]);
+              if ( indx.intpnt[i] < 0 ) indx.intpnt[i] = 0x7fffffff - indx.intpnt[i] + 1;
+            }
+        }
       if ( indx.fltnum > 0 )
-	{
-	  indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
-	  for ( i = 0; i < indx.fltnum; i++ )
-	    {
-	      nbytes = fread(urec, sizeof(unsigned char), 4, mapfp);
-	      indx.fltpnt[i] = ibm2flt(urec);
-	    }
-	}
+        {
+          indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
+          for ( i = 0; i < indx.fltnum; i++ )
+            {
+              nbytes = fread(urec, sizeof(unsigned char), 4, mapfp);
+              indx.fltpnt[i] = ibm2flt(urec);
+            }
+        }
     }
   else
     {
@@ -314,43 +314,43 @@ void dumpmap()
       if ( indx.type>>24 > 0 ) swpflg = 1;
       if ( swpflg ) printf("swap endian!\n");
       if ( swpflg ) gabswp((float *)&indx.type, 5);
-      
+
       if ( indx.hinum > 0 )
-	{
-	  indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
-	  nbytes = fread (indx.hipnt, sizeof(int), indx.hinum, mapfp);
-	  if ( swpflg ) gabswp((float *)(indx.hipnt),indx.hinum);
-	}
+        {
+          indx.hipnt = (int*) malloc(sizeof(int)*indx.hinum);
+          nbytes = fread (indx.hipnt, sizeof(int), indx.hinum, mapfp);
+          if ( swpflg ) gabswp((float *)(indx.hipnt),indx.hinum);
+        }
       if ( indx.hfnum > 0 )
-	{
-	  indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
-	  nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
-	  if ( swpflg ) gabswp(indx.hfpnt,indx.hfnum);
-	}
+        {
+          indx.hfpnt = (float*) malloc(sizeof(float)*indx.hfnum);
+          nbytes = fread (indx.hfpnt,sizeof(float),indx.hfnum,mapfp);
+          if ( swpflg ) gabswp(indx.hfpnt,indx.hfnum);
+        }
 
       if ( indx.intnum > 0 )
-	{
-	  indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
-	  nbytes = fread (indx.intpnt,sizeof(int),indx.intnum,mapfp);
-	  if ( swpflg ) gabswp((float *)(indx.intpnt),indx.intnum);
-	}
+        {
+          indx.intpnt = (int*) malloc(sizeof(int)*indx.intnum);
+          nbytes = fread (indx.intpnt,sizeof(int),indx.intnum,mapfp);
+          if ( swpflg ) gabswp((float *)(indx.intpnt),indx.intnum);
+        }
       if ( indx.fltnum > 0 )
-	{
-	  indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
-	  nbytes = fread (indx.fltpnt,sizeof(float),indx.fltnum,mapfp);
-	  if ( swpflg ) gabswp(indx.fltpnt,indx.fltnum);
-	}
+        {
+          indx.fltpnt = (float*) malloc(sizeof(float)*indx.fltnum);
+          nbytes = fread (indx.fltpnt,sizeof(float),indx.fltnum,mapfp);
+          if ( swpflg ) gabswp(indx.fltpnt,indx.fltnum);
+        }
 
       if ( indx.hipnt[0] == 4 )
-	{
-	  indxb.bignum = indx.hipnt[4];
-	  if ( indxb.bignum > 0 )
-	    {
-	      indxb.bigpnt = (off_t*) malloc(sizeof(off_t)*indxb.bignum);
-	      nbytes = fread (indxb.bigpnt,sizeof(off_t),indxb.bignum,mapfp);
-	      if ( swpflg ) gabswp(indxb.bigpnt,indxb.bignum);
-	    }
-	}
+        {
+          indxb.bignum = indx.hipnt[4];
+          if ( indxb.bignum > 0 )
+            {
+              indxb.bigpnt = (off_t*) malloc(sizeof(off_t)*indxb.bignum);
+              nbytes = fread (indxb.bigpnt,sizeof(off_t),indxb.bignum,mapfp);
+              if ( swpflg ) gabswp(indxb.bigpnt,indxb.bignum);
+            }
+        }
     }
 
   fclose(mapfp);
@@ -358,12 +358,12 @@ void dumpmap()
   printf("hinum: %d\n", indx.hinum);
   for ( i = 0; i < indx.hinum; i++ )
     printf("%3d %5d\n", i+1, indx.hipnt[i]);
-  
+
   printf("\n");
   printf("hfnum: %d\n", indx.hfnum);
   for ( i = 0; i < indx.hfnum; i++ )
     printf("%3d %g\n", i+1, indx.hfpnt[i]);
-  
+
   printf("\n");
 
   nrecords = indx.hipnt[1]*indx.hipnt[2];
@@ -372,33 +372,33 @@ void dumpmap()
     {
       printf("num: %d\n", indx.intnum);
       for ( i = 0; i < indx.intnum/3; i++ )
-	printf("%3d %8d %6d %4d %8g %10g %8g\n", i+1,
-	       indx.intpnt[i*3], indx.intpnt[i*3+1], indx.intpnt[i*3+2],
-	       indx.fltpnt[i*3], indx.fltpnt[i*3+1], indx.fltpnt[i*3+2]);
+        printf("%3d %8d %6d %4d %8g %10g %8g\n", i+1,
+               indx.intpnt[i*3], indx.intpnt[i*3+1], indx.intpnt[i*3+2],
+               indx.fltpnt[i*3], indx.fltpnt[i*3+1], indx.fltpnt[i*3+2]);
     }
   else if ( indx.intnum == nrecords && indx.fltnum == nrecords*3 && indxb.bignum == nrecords*2 )
     {
       printf("nrecords: %d\n", nrecords);
       for ( i = 0; i < nrecords; i++ )
-	printf("%3d %8zd %6zd %4d %8g %10g %8g\n", i+1,
-	       (size_t)indxb.bigpnt[i*2], (size_t)indxb.bigpnt[i*2+1], indx.intpnt[i],
-	       indx.fltpnt[i*3], indx.fltpnt[i*3+1], indx.fltpnt[i*3+2]);
+        printf("%3d %8zd %6zd %4d %8g %10g %8g\n", i+1,
+               (size_t)indxb.bigpnt[i*2], (size_t)indxb.bigpnt[i*2+1], indx.intpnt[i],
+               indx.fltpnt[i*3], indx.fltpnt[i*3+1], indx.fltpnt[i*3+2]);
     }
   else
     {
       printf("intnum: %d\n", indx.intnum);
       for ( i = 0; i < indx.intnum; i++ )
-	printf("%3d %d\n", i+1, indx.intpnt[i]);
+        printf("%3d %d\n", i+1, indx.intpnt[i]);
 
       printf("\n");
       printf("fltnum: %d\n", indx.fltnum);
       for ( i = 0; i < indx.fltnum; i++ )
-	printf("%3d %g\n", i+1, indx.fltpnt[i]);
+        printf("%3d %g\n", i+1, indx.fltpnt[i]);
 
       printf("\n");
       printf("bignum: %d\n", indxb.bignum);
       for ( i = 0; i < indxb.bignum; i++ )
-	printf("%3d %zd\n", i+1, (size_t)indxb.bigpnt[i]);
+        printf("%3d %zd\n", i+1, (size_t)indxb.bigpnt[i]);
     }
 }
 
@@ -430,9 +430,9 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
       double inc[] = { 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001 };
 
       gridInqLCC(gridID, &originLon, &originLat, &lonParY, &lat1, &lat2, &xincm, &yincm,
-		 &projflag, &scanflag);
-      fprintf(gdp, "PDEF %d %d LCCR %g %g 1 1 %g %g %g %g %g\n", 
-	      xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
+                 &projflag, &scanflag);
+      fprintf(gdp, "PDEF %d %d LCCR %g %g 1 1 %g %g %g %g %g\n",
+              xsize, ysize, originLat, originLon, lat1, lat2, lonParY, xincm, yincm);
 
       gridID = gridToCurvilinear(gridID, 0);
       xvals = (double*) malloc(xsize*ysize*sizeof(double));
@@ -440,13 +440,13 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
       gridInqXvals(gridID, xvals);
       gridInqYvals(gridID, yvals);
       for ( i = 0; i < xsize*ysize; ++i )
-	{
-	  if ( xvals[i] > 180  ) xvals[i] -= 360;
-	  if ( xvals[i] < xmin ) xmin = xvals[i];
-	  if ( xvals[i] > xmax ) xmax = xvals[i];
-	  if ( yvals[i] < ymin ) ymin = yvals[i];
-	  if ( yvals[i] > ymax ) ymax = yvals[i];
-	}
+        {
+          if ( xvals[i] > 180  ) xvals[i] -= 360;
+          if ( xvals[i] < xmin ) xmin = xvals[i];
+          if ( xvals[i] > xmax ) xmax = xvals[i];
+          if ( yvals[i] < ymin ) ymin = yvals[i];
+          if ( yvals[i] > ymax ) ymax = yvals[i];
+        }
       free(xvals);
       free(yvals);
 
@@ -457,13 +457,13 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
 
       ni = sizeof(inc)/sizeof(inc[0]);
       for ( i = 0; i < ni; i++ )
-	{
-	  xinc = yinc = inc[i];
-	  nx = 1 + (int) (xrange / xinc);
-	  ny = 1 + (int) (yrange / yinc);
+        {
+          xinc = yinc = inc[i];
+          nx = 1 + (int) (xrange / xinc);
+          ny = 1 + (int) (yrange / yinc);
 
-	  if ( nx > 1.5*xsize && ny > 1.5*ysize ) break;
-	}
+          if ( nx > 1.5*xsize && ny > 1.5*ysize ) break;
+        }
 
       fprintf(gdp, "XDEF %d LINEAR %f %f\n", nx, xfirst, xinc);
       fprintf(gdp, "YDEF %d LINEAR %f %f\n", ny, yfirst, yinc);
@@ -476,31 +476,31 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
       xfirst = gridInqXval(gridID, 0);
       xinc   = gridInqXinc(gridID);
       if ( IS_EQUAL(xinc, 0) && gridInqXvals(gridID, NULL) )
-	{
-	  xvals = (double*) malloc(xsize*sizeof(double));
-	  gridInqXvals(gridID, xvals);
-	  fprintf(gdp ,"XDEF %d LEVELS ", xsize);
-	  j = 0;
-	  for ( i = 0; i < xsize; i++ )
-	    {
-	      fprintf(gdp, "%7.3f ", xvals[i]); 
-	      j++;
-	      if ( j == 6 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != xsize-1 ) fprintf(gdp, "               ");
-		}
-	    }
-	  if ( j ) fprintf(gdp, "\n");
-	  
-	  free(xvals);
-	}
+        {
+          xvals = (double*) malloc(xsize*sizeof(double));
+          gridInqXvals(gridID, xvals);
+          fprintf(gdp ,"XDEF %d LEVELS ", xsize);
+          j = 0;
+          for ( i = 0; i < xsize; i++ )
+            {
+              fprintf(gdp, "%7.3f ", xvals[i]);
+              j++;
+              if ( j == 6 )
+                {
+                  fprintf(gdp, "\n");
+                  j = 0;
+                  if ( i != xsize-1 ) fprintf(gdp, "               ");
+                }
+            }
+          if ( j ) fprintf(gdp, "\n");
+
+          free(xvals);
+        }
       else
-	{
-	  if ( IS_EQUAL(xinc, 0) ) xinc = 360.0/xsize;
-	  fprintf(gdp, "XDEF %d LINEAR %f %f\n", xsize, xfirst, xinc);	  
-	}
+        {
+          if ( IS_EQUAL(xinc, 0) ) xinc = 360.0/xsize;
+          fprintf(gdp, "XDEF %d LINEAR %f %f\n", xsize, xfirst, xinc);
+        }
     }
 
   /* YDEF */
@@ -512,56 +512,56 @@ void ctl_xydef(FILE *gdp, int gridID, int *yrev)
       if ( gridtype == GRID_GAUSSIAN ) yinc = 0;
 
       if ( IS_EQUAL(yinc, 0) && gridInqYvals(gridID, NULL) )
-	{
-	  yvals = (double*) malloc(ysize*sizeof(double));
-	  gridInqYvals(gridID, yvals);
-	  fprintf(gdp ,"YDEF %d LEVELS ", ysize);
-	  j = 0;
-	  if ( yvals[0] > yvals[ysize-1] )
-	    {
-	      *yrev = TRUE;
-	      for ( i = ysize-1; i >= 0; i-- )
-		{
-		  fprintf(gdp, "%7.3f ", yvals[i]); 
-		  j++;
-		  if ( j == 6 )
-		    {
-		      fprintf(gdp, "\n");
-		      j = 0;
-		      if ( i != 0 ) fprintf(gdp, "               ");
-		    }
-		}
-	    }
-	  else
-	    {
-	      for ( i = 0; i < ysize; i++ )
-		{
-		  fprintf(gdp, "%7.3f ", yvals[i]); 
-		  j++;
-		  if ( j == 6 )
-		    {
-		      fprintf(gdp, "\n");
-		      j = 0;
-		      if ( i != ysize-1 ) fprintf(gdp, "               ");
-		    }
-		}
-	    }
+        {
+          yvals = (double*) malloc(ysize*sizeof(double));
+          gridInqYvals(gridID, yvals);
+          fprintf(gdp ,"YDEF %d LEVELS ", ysize);
+          j = 0;
+          if ( yvals[0] > yvals[ysize-1] )
+            {
+              *yrev = TRUE;
+              for ( i = ysize-1; i >= 0; i-- )
+                {
+                  fprintf(gdp, "%7.3f ", yvals[i]);
+                  j++;
+                  if ( j == 6 )
+                    {
+                      fprintf(gdp, "\n");
+                      j = 0;
+                      if ( i != 0 ) fprintf(gdp, "               ");
+                    }
+                }
+            }
+          else
+            {
+              for ( i = 0; i < ysize; i++ )
+                {
+                  fprintf(gdp, "%7.3f ", yvals[i]);
+                  j++;
+                  if ( j == 6 )
+                    {
+                      fprintf(gdp, "\n");
+                      j = 0;
+                      if ( i != ysize-1 ) fprintf(gdp, "               ");
+                    }
+                }
+            }
 
-	  if ( j ) fprintf(gdp, "\n");
+          if ( j ) fprintf(gdp, "\n");
 
-	  free(yvals);
-	}
+          free(yvals);
+        }
       else
-	{
-	  if ( IS_EQUAL(yinc, 0) ) yinc = 180.0/ysize;
-	  if ( yinc < 0)
-	    {
-	      *yrev = TRUE;
-	      fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst + yinc * (ysize-1 ), -yinc);
-	    }
-	  else
-	    fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst, yinc);
-	}
+        {
+          if ( IS_EQUAL(yinc, 0) ) yinc = 180.0/ysize;
+          if ( yinc < 0)
+            {
+              *yrev = TRUE;
+              fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst + yinc * (ysize-1 ), -yinc);
+            }
+          else
+            fprintf(gdp, "YDEF %d LINEAR %f %f\n", ysize, yfirst, yinc);
+        }
     }
 }
 
@@ -583,10 +583,10 @@ void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
       zaxisID = vlistZaxis(vlistID, index);
       nlev    = zaxisInqSize(zaxisID);
       if ( nlev > nlevmax )
-	{
-	  nlevmax = nlev;
-	  zaxisIDmax = zaxisID;
-	}
+        {
+          nlevmax = nlev;
+          zaxisIDmax = zaxisID;
+        }
     }
 
   levels = (double*) malloc(nlevmax*sizeof(double));
@@ -596,20 +596,20 @@ void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
   if ( nlevmax > 1 )
     {
       if ( levels[0] < levels[1] && zaxisInqType(zaxisIDmax) != ZAXIS_HYBRID )
-	*zrev = TRUE;
+        *zrev = TRUE;
 
       levinc = levels[1] - levels[0];
 
       if ( IS_EQUAL(levinc, 1) ) *zrev = FALSE;
 
       for ( i = 1; i < nlevmax; i++ )
-	{
-	  if ( IS_NOT_EQUAL(levinc, (levels[i] - levels[i-1])) )
-	    {
-	      levinc = 0;
-	      break;
-	    }
-	}
+        {
+          if ( IS_NOT_EQUAL(levinc, (levels[i] - levels[i-1])) )
+            {
+              levinc = 0;
+              break;
+            }
+        }
     }
 
   if ( IS_NOT_EQUAL(levinc, 0) )
@@ -620,36 +620,36 @@ void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
       j  = 0;
       /* zrev not needed !!!
       if ( *zrev )
-	{
-	  for ( i = nlevmax-1; i >=0 ; i-- )
-	    {
-	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
-	      else         fprintf(gdp, "%d ", (int) levels[i]);
-	      j++;
-	      if ( j == 10 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != 0 ) fprintf(gdp, "               ");
-		}
-	    }
-	}
+        {
+          for ( i = nlevmax-1; i >=0 ; i-- )
+            {
+              if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
+              else         fprintf(gdp, "%d ", (int) levels[i]);
+              j++;
+              if ( j == 10 )
+                {
+                  fprintf(gdp, "\n");
+                  j = 0;
+                  if ( i != 0 ) fprintf(gdp, "               ");
+                }
+            }
+        }
       else
       */
-	{
-	  for ( i = 0; i < nlevmax ; i++ )
-	    {
-	      if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
-	      else         fprintf(gdp, "%g ", levels[i]);
-	      j++;
-	      if ( j == 10 )
-		{
-		  fprintf(gdp, "\n");
-		  j = 0;
-		  if ( i != (nlevmax-1) ) fprintf(gdp, "               ");
-		}
-	    }
-	}
+        {
+          for ( i = 0; i < nlevmax ; i++ )
+            {
+              if ( lplev ) fprintf(gdp, "%g ", levels[i]/100);
+              else         fprintf(gdp, "%g ", levels[i]);
+              j++;
+              if ( j == 10 )
+                {
+                  fprintf(gdp, "\n");
+                  j = 0;
+                  if ( i != (nlevmax-1) ) fprintf(gdp, "               ");
+                }
+            }
+        }
       if ( j ) fprintf(gdp, "\n");
     }
 
@@ -657,7 +657,7 @@ void ctl_zdef(FILE *gdp, int vlistID, int *zrev)
 }
 
 static
-void ctl_options(FILE *gdp, int yrev, int zrev, int sequential, int bigendian, int littleendian, int flt64)
+void ctl_options(FILE *gdp, int yrev, int zrev, int sequential, int bigendian, int littleendian, int flt64, int cal365day)
 {
   /* if ( filetype == FILETYPE_GRB ) zrev = FALSE; */
 
@@ -670,6 +670,7 @@ void ctl_options(FILE *gdp, int yrev, int zrev, int sequential, int bigendian, i
       if ( bigendian )    fprintf(gdp, " big_endian");
       if ( littleendian ) fprintf(gdp, " little_endian");
       if ( flt64 )        fprintf(gdp, " flt64");
+      if ( cal365day )    fprintf(gdp, " 365_day_calendar");
       fprintf(gdp, "\n");
     }
 }
@@ -700,87 +701,87 @@ void ctl_vars(FILE *gdp, int filetype, int vlistID, int nvarsout, int *vars)
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( vars[varID] == TRUE )
-	{
-	  zaxisID = vlistInqVarZaxis(vlistID, varID);
-	  ltype   = zaxisInqLtype(zaxisID);
-	  nlev    = zaxisInqSize(zaxisID);
-	  vlistInqVarName(vlistID, varID, varname);
+        {
+          zaxisID = vlistInqVarZaxis(vlistID, varID);
+          ltype   = zaxisInqLtype(zaxisID);
+          nlev    = zaxisInqSize(zaxisID);
+          vlistInqVarName(vlistID, varID, varname);
 
-	  len = (int) strlen(varname);
-	  for ( i = 0; i < len; i++ )
-	    if ( varname[i] == '-' ) break;
+          len = (int) strlen(varname);
+          for ( i = 0; i < len; i++ )
+            if ( varname[i] == '-' ) break;
 
-	  if ( i < len )
-	    for ( j = i; j < len; j++ )
-	      varname[j] = varname[j+1];
+          if ( i < len )
+            for ( j = i; j < len; j++ )
+              varname[j] = varname[j+1];
 
-	  vlistInqVarLongname(vlistID, varID, varlongname);
-	  vlistInqVarUnits(vlistID, varID, varunits);
-	  fprintf(gdp, "%-15s", varname);
-      
-	  if ( nlev == 1 ) nlev = 0;
+          vlistInqVarLongname(vlistID, varID, varlongname);
+          vlistInqVarUnits(vlistID, varID, varunits);
+          fprintf(gdp, "%-15s", varname);
 
-	  fprintf(gdp, "  %3d", nlev);
+          if ( nlev == 1 ) nlev = 0;
 
-	  if ( filetype == FILETYPE_GRB )
-	    {
-	      code = vlistInqVarCode(vlistID, varID);
-	      /*	      
-	      if      ( ltype == ZAXIS_SURFACE )  ltype = 1;
-	      else if ( ltype == ZAXIS_PRESSURE ) ltype = 99;
-	      else if ( nlev == 1 )  ltype = 1;
-	      else ltype = 99;
-	      */
-	      fprintf(gdp, "  %d,%d", code, ltype);
-	    }
-	  else if ( filetype == FILETYPE_NC )
-	    {
-	      int xyz = vlistInqVarXYZ(vlistID, varID);
+          fprintf(gdp, "  %3d", nlev);
 
-	      fprintf(gdp, "  ");
-	      if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
-		fprintf(gdp, "t,");
-	      if ( xyz == 321 )
-		{
-		  if ( nlev > 0 ) fprintf(gdp, "z,");
-		  fprintf(gdp, "y,x");
-		}
-	      else if ( xyz == 312 )
-		{
-		  if ( nlev > 0 ) fprintf(gdp, "z,");
-		  fprintf(gdp, "x,y");
-		}
-	      else if ( xyz == 231 )
-		{
-		  fprintf(gdp, "y,");
-		  if ( nlev > 0 ) fprintf(gdp, "z,");
-		  fprintf(gdp, "x");
-		}
-	      else if ( xyz == 132 )
-		{
-		  fprintf(gdp, "x,");
-		  if ( nlev > 0 ) fprintf(gdp, "z,");
-		  fprintf(gdp, "y");
-		}
-	      else
-		{
-		  if ( nlev > 0 ) fprintf(gdp, "z,");
-		  fprintf(gdp, "y,x");
-		}
-	    }
-	  else
-	    fprintf(gdp, "  99");
+          if ( filetype == FILETYPE_GRB )
+            {
+              code = vlistInqVarCode(vlistID, varID);
+              /*
+              if      ( ltype == ZAXIS_SURFACE )  ltype = 1;
+              else if ( ltype == ZAXIS_PRESSURE ) ltype = 99;
+              else if ( nlev == 1 )  ltype = 1;
+              else ltype = 99;
+              */
+              fprintf(gdp, "  %d,%d", code, ltype);
+            }
+          else if ( filetype == FILETYPE_NC )
+            {
+              int xyz = vlistInqVarXYZ(vlistID, varID);
 
-	  if ( varlongname[0] == 0 )
-	    fprintf(gdp, "  %s", varname);
-	  else
-	    fprintf(gdp, "  %s", varlongname);
+              fprintf(gdp, "  ");
+              if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
+                fprintf(gdp, "t,");
+              if ( xyz == 321 )
+                {
+                  if ( nlev > 0 ) fprintf(gdp, "z,");
+                  fprintf(gdp, "y,x");
+                }
+              else if ( xyz == 312 )
+                {
+                  if ( nlev > 0 ) fprintf(gdp, "z,");
+                  fprintf(gdp, "x,y");
+                }
+              else if ( xyz == 231 )
+                {
+                  fprintf(gdp, "y,");
+                  if ( nlev > 0 ) fprintf(gdp, "z,");
+                  fprintf(gdp, "x");
+                }
+              else if ( xyz == 132 )
+                {
+                  fprintf(gdp, "x,");
+                  if ( nlev > 0 ) fprintf(gdp, "z,");
+                  fprintf(gdp, "y");
+                }
+              else
+                {
+                  if ( nlev > 0 ) fprintf(gdp, "z,");
+                  fprintf(gdp, "y,x");
+                }
+            }
+          else
+            fprintf(gdp, "  99");
 
-	  if ( varunits[0] != 0 )
-	    fprintf(gdp, "  [%s]", varunits);
-	
-	  fprintf(gdp, "\n");      
-	}
+          if ( varlongname[0] == 0 )
+            fprintf(gdp, "  %s", varname);
+          else
+            fprintf(gdp, "  %s", varlongname);
+
+          if ( varunits[0] != 0 )
+            fprintf(gdp, "  [%s]", varunits);
+
+          fprintf(gdp, "\n");
+        }
     }
 
   fprintf(gdp, "ENDVARS\n");
@@ -834,71 +835,71 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
       float fdum;
       unsigned char *map;
       unsigned char ibmfloat[4];
-      
+
       /* calculate the size of the ver==1 index file */
-      
+
       nb = 2 + (indx.hinum*4) +  /* version in byte 2, then 4 ints with number of each data type */
-	indx.hinum*sizeof(int) +
-	indx.hfnum*sizeof(int) +
-	indx.intnum*sizeof(int) +
-	indx.fltnum*sizeof(float);
-      
+        indx.hinum*sizeof(int) +
+        indx.hfnum*sizeof(int) +
+        indx.intnum*sizeof(int) +
+        indx.fltnum*sizeof(float);
+
       /* add additional info */
-      
+
       nb += 7;      /* base time (+ sec)  for compatibility with earlier version 2 maps */
       nb += 8*4;    /* grvals for time <-> grid conversion */
-      
+
       map = (unsigned char*) malloc(nb);
-      
+
       bcnt = 0;
       Put1Byte(map, bcnt, 0);
       Put1Byte(map, bcnt, map_version);
-      
+
       Put4Byte(map, bcnt, indx.hinum);
       Put4Byte(map, bcnt, indx.hfnum);
       Put4Byte(map, bcnt, indx.intnum);
       Put4Byte(map, bcnt, indx.fltnum);
-      
+
       Put2Byte(map, bcnt, 0);   /* initial year   */
-      Put1Byte(map, bcnt, 0);   /* initial month  */ 
+      Put1Byte(map, bcnt, 0);   /* initial month  */
       Put1Byte(map, bcnt, 0);   /* initial day    */
       Put1Byte(map, bcnt, 0);   /* initial hour   */
       Put1Byte(map, bcnt, 0);   /* initial minute */
       Put1Byte(map, bcnt, 0);   /* initial second */
-      
+
       if( indx.hinum )
-	for ( i = 0; i < indx.hinum; i++ )
-	  Put4Byte(map, bcnt, hinum[i]);
-      
+        for ( i = 0; i < indx.hinum; i++ )
+          Put4Byte(map, bcnt, hinum[i]);
+
       if( indx.hfnum ) {
-	/* blank for now */
+        /* blank for now */
       }
-      
+
       for ( i = 0; i < nrecords; i++ )
-	{
-	  PutInt(map, bcnt, (int) bignum[i*2]);
-	  PutInt(map, bcnt, (int) bignum[i*2+1]);
-	  PutInt(map, bcnt, intnum[i]);
-	}
+        {
+          PutInt(map, bcnt, (int) bignum[i*2]);
+          PutInt(map, bcnt, (int) bignum[i*2+1]);
+          PutInt(map, bcnt, intnum[i]);
+        }
 
       for ( i = 0; i < indx.fltnum; i++)
-	{
-	  fdum= fltnum[i];
-	  rc = flt2ibm(fdum, ibmfloat); 
-	  if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
-	  for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
-	}
-      
-      /* write out the factors for converting from grid to absolute time */ 
-      
+        {
+          fdum= fltnum[i];
+          rc = flt2ibm(fdum, ibmfloat);
+          if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
+          for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
+        }
+
+      /* write out the factors for converting from grid to absolute time */
+
       for ( i = 0; i < 8; i++)
-	{
-	  fdum = 0;
-	  rc = flt2ibm(fdum, ibmfloat); 
-	  if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
-	  for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
-	}
-      
+        {
+          fdum = 0;
+          rc = flt2ibm(fdum, ibmfloat);
+          if ( rc < 0 ) cdoAbort("overflow in IBM float conversion");
+          for ( j = 0; j < 4; j++ ) map[bcnt++] = ibmfloat[j];
+        }
+
       fwrite(map, 1, bcnt, mapfp);
 
       free(map);
@@ -908,30 +909,98 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
       fwrite(&indx, sizeof(struct gaindx), 1, mapfp);
       if ( indx.hinum > 0 )  fwrite(hinum, sizeof(int), indx.hinum, mapfp);
       if ( map_version == 1 )
-	{
-	  int *intnumbuf;
-	  intnumbuf = (int*) malloc(indx.intnum*sizeof(int));
-	  for ( i = 0; i < nrecords; i++ )
-	    {
-	      intnumbuf[i*3+0] = (int) bignum[i*2];
-	      intnumbuf[i*3+1] = (int) bignum[i*2+1];
-	      intnumbuf[i*3+2] = intnum[i];
-	    }
-	  if ( indx.intnum > 0 ) fwrite(intnumbuf, sizeof(int), indx.intnum, mapfp);
-	  free(intnumbuf);
-	  if ( indx.fltnum > 0 ) fwrite(fltnum, sizeof(float), indx.fltnum, mapfp);
-	}
+        {
+          int *intnumbuf;
+          intnumbuf = (int*) malloc(indx.intnum*sizeof(int));
+          for ( i = 0; i < nrecords; i++ )
+            {
+              intnumbuf[i*3+0] = (int) bignum[i*2];
+              intnumbuf[i*3+1] = (int) bignum[i*2+1];
+              intnumbuf[i*3+2] = intnum[i];
+            }
+          if ( indx.intnum > 0 ) fwrite(intnumbuf, sizeof(int), indx.intnum, mapfp);
+          free(intnumbuf);
+          if ( indx.fltnum > 0 ) fwrite(fltnum, sizeof(float), indx.fltnum, mapfp);
+        }
       else
-	{
-	  if ( indx.intnum  > 0 ) fwrite(intnum, sizeof(int), indx.intnum, mapfp);
-	  if ( indx.fltnum  > 0 ) fwrite(fltnum, sizeof(float), indx.fltnum, mapfp);
-	  if ( indxb.bignum > 0 ) fwrite(bignum, sizeof(off_t), indxb.bignum, mapfp);
-	}
+        {
+          if ( indx.intnum  > 0 ) fwrite(intnum, sizeof(int), indx.intnum, mapfp);
+          if ( indx.fltnum  > 0 ) fwrite(fltnum, sizeof(float), indx.fltnum, mapfp);
+          if ( indxb.bignum > 0 ) fwrite(bignum, sizeof(off_t), indxb.bignum, mapfp);
+        }
     }
-  
+
   fclose(mapfp);
 }
 
+
+/*
+ * Remove file extension:
+ * -------------------------------------------------
+ * Remove file extension if it is the expected one
+ * Do nothing otherwise
+ */
+static
+void rm_ext(char *file, const char *ext)
+{
+  // length of filename
+  int namelen = (int) strlen(file);
+  // length of the original file extension
+  int extlen =  (int) strlen(ext);
+
+  // delete original extension if it is the expected one
+  if ( strcmp(&file[namelen-extlen], ext) == 0 )
+      file[namelen-extlen] = 0;
+}
+
+
+/* 
+ * Return the filetype extension
+ * for a given filetype (int)
+ * TODO this general function should be somewhere else
+ */
+static
+const char *filetypeext(int filetype)
+{
+  switch ( filetype )
+    {
+    case FILETYPE_GRB:
+    case FILETYPE_GRB2: return (".grb");   break;
+    case FILETYPE_NC:
+    case FILETYPE_NC2:
+    case FILETYPE_NC4:
+    case FILETYPE_NC4C: return (".nc");    break;
+    case FILETYPE_SRV:  return (".srv");   break;
+    case FILETYPE_EXT:  return (".ext");   break;
+    case FILETYPE_IEG:  return (".ieg");   break;
+    default:            return ("");
+    }
+}
+
+
+/*
+ * Replace or just add file extension:
+ * -------------------------------------------------
+ * Replace file extension with new one
+ * or just add the new file extension 
+ * if the original extension is not the expected one
+ */
+static
+void repl_filetypeext(char *file, const char *oldext, const char *newext)
+{
+  // delete original extension if it is the expected one
+  rm_ext(file, oldext);
+
+  // add new file extension
+  strcat(file, newext);
+}
+
+
+static
+void write_map_grib2(const char *ctlfile, int map_version, int nrecords, int *intnum, float *fltnum, off_t *bignum)
+{
+    // to be implemented
+}
 
 void *Gradsdes(void *argument)
 {
@@ -951,6 +1020,7 @@ void *Gradsdes(void *argument)
   int vdate, vtime;
   const char *datfile;
   char ctlfile[1024], *pctlfile;
+  char idxfile[1024], *pidxfile;
   int len;
   char varname[CDI_MAX_NAME];
   FILE *gdp;
@@ -962,6 +1032,7 @@ void *Gradsdes(void *argument)
   int nrecords = 0;
   int bigendian = FALSE, littleendian = FALSE;
   int flt64 = 0;
+  int cal365day = 0;
   int sequential = FALSE;
   char Time[30], Incr[10] = {"1mn"}, *IncrKey[] = {"mn","hr","dy","mo","yr"};
   int isd, imn, ihh, iyy, imm, idd;
@@ -984,7 +1055,7 @@ void *Gradsdes(void *argument)
   off_t *bignum = NULL;
   double *array = NULL;
   const char *cmons[]={"jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"};
-      
+
   cdoInitialize(argument);
 
   GRADSDES  = cdoOperatorAdd("gradsdes",  0, 0, NULL);
@@ -1008,7 +1079,7 @@ void *Gradsdes(void *argument)
     {
       map_version = atoi(operatorArgv()[0]);
       if ( map_version != 1 && map_version != 2 && map_version != 4 )
-	cdoAbort("map_version=%d unsupported!", map_version);
+        cdoAbort("map_version=%d unsupported!", map_version);
     }
   else
     {
@@ -1019,8 +1090,8 @@ void *Gradsdes(void *argument)
 
   if ( map_version == 4 && sizeof(off_t) != 8 )
     cdoAbort("GrADS GRIB map version %d requires size of off_t to be 8! The size of off_t is %ld.",
-	     map_version, sizeof(off_t));
- 
+             map_version, sizeof(off_t));
+
 
   streamID = streamOpenRead(cdoStreamName(0));
 
@@ -1041,12 +1112,13 @@ void *Gradsdes(void *argument)
        filetype != FILETYPE_GRB )
     {
       if ( filetype == FILETYPE_NC )
-	//	cdoAbort("Unsupported file format: netCDF");
-	;
+        //        cdoAbort("Unsupported file format: netCDF");
+        ;
       else if ( filetype == FILETYPE_GRB2 )
-	cdoAbort("Unsupported file format: GRIB2");
+        //cdoAbort("Unsupported file format: GRIB2");
+        ;
       else
-	cdoAbort("Unsupported file format!");
+        cdoAbort("Unsupported file format!");
     }
 
   /* find the first lonlat or Gaussian grid */
@@ -1055,8 +1127,8 @@ void *Gradsdes(void *argument)
       gridID = vlistGrid(vlistID, index);
       gridtype = gridInqType(gridID);
       if ( gridtype == GRID_LONLAT   ||
-	   gridtype == GRID_GAUSSIAN ||
-	   gridtype == GRID_LCC  ) break;
+           gridtype == GRID_GAUSSIAN ||
+           gridtype == GRID_LCC  ) break;
     }
 
   if ( index == ngrids )
@@ -1070,33 +1142,33 @@ void *Gradsdes(void *argument)
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( vlistInqVarGrid(vlistID, varID) == gridID )
-	{
-	  if ( filetype == FILETYPE_SRV ||
-	       filetype == FILETYPE_EXT ||
-	       filetype == FILETYPE_IEG )
-	    {
-	      prec = vlistInqVarDatatype(vlistID, varID);
-	      if ( prec == DATATYPE_FLT64 ) flt64 = 1;
-	    }
-	  vars[varID] = TRUE;
-	  recoffset[varID] = nrecsout;
-	  nvarsout++;
-	  nrecsout += zaxisInqSize(vlistInqVarZaxis(vlistID, varID));
-	  if ( ntsteps != 1 && ntsteps != 0 && vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT )
-	    cdoAbort("Unsupported GrADS record structure! Variable %d has only 1 time step.",
-		     vlistInqVarCode(vlistID, varID));
-	}
+        {
+          if ( filetype == FILETYPE_SRV ||
+               filetype == FILETYPE_EXT ||
+               filetype == FILETYPE_IEG )
+            {
+              prec = vlistInqVarDatatype(vlistID, varID);
+              if ( prec == DATATYPE_FLT64 ) flt64 = 1;
+            }
+          vars[varID] = TRUE;
+          recoffset[varID] = nrecsout;
+          nvarsout++;
+          nrecsout += zaxisInqSize(vlistInqVarZaxis(vlistID, varID));
+          if ( ntsteps != 1 && ntsteps != 0 && vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT )
+            cdoAbort("Unsupported GrADS record structure! Variable %d has only 1 time step.",
+                     vlistInqVarCode(vlistID, varID));
+        }
       else
-	{
-	  vlistInqVarName(vlistID, varID, varname);
-	  cdoPrint("Unsupported grid type >%s<, skipped variable %s!",
-		   gridNamePtr(gridInqType(vlistInqVarGrid(vlistID, varID))), varname);
-	  vars[varID] = FALSE;
-	}
+        {
+          vlistInqVarName(vlistID, varID, varname);
+          cdoPrint("Unsupported grid type >%s<, skipped variable %s!",
+                   gridNamePtr(gridInqType(vlistInqVarGrid(vlistID, varID))), varname);
+          vars[varID] = FALSE;
+        }
     }
 
   if ( filetype != FILETYPE_GRB && nvars != nvarsout )
-    cdoAbort("Too many different grids!");    
+    cdoAbort("Too many different grids!");
 
   if ( filetype == FILETYPE_SRV )
     {
@@ -1125,33 +1197,21 @@ void *Gradsdes(void *argument)
       if ( byteorder == CDI_LITTLEENDIAN ) littleendian = TRUE;
     }
 
+  /* ctl file name */
   strcpy(ctlfile, cdoStreamName(0)->args);
-  len = (int) strlen(ctlfile);
-  if ( len > 4 )
-    {
-      if ( filetype == FILETYPE_SRV )
-	if ( strcmp(&ctlfile[len-4], ".srv") == 0 ) ctlfile[len-4] = 0;
-      if ( filetype == FILETYPE_EXT )
-	if ( strcmp(&ctlfile[len-4], ".ext") == 0 ) ctlfile[len-4] = 0;
-      if ( filetype == FILETYPE_IEG )
-	if ( strcmp(&ctlfile[len-4], ".ieg") == 0 ) ctlfile[len-4] = 0;
-      if ( filetype == FILETYPE_GRB )
-	if ( strcmp(&ctlfile[len-4], ".grb") == 0 ) ctlfile[len-4] = 0;
-      if ( filetype == FILETYPE_NC )
-	if ( strcmp(&ctlfile[len-3], ".nc") == 0 ) ctlfile[len-3] = 0;
-    }
+  repl_filetypeext(ctlfile, filetypeext(filetype), ".ctl");
 
-  strcat(ctlfile, ".ctl");
+  /* open ctl file*/
   gdp = fopen(ctlfile, "w");
   if ( gdp == NULL ) cdoAbort("Open failed on %s", ctlfile);
 
+  /* VERSION */
 #if defined(VERSION)
   fprintf(gdp, "* Generated by CDO version %s\n", VERSION);
   fprintf(gdp, "*\n");
 #endif
 
   /* DSET */
-
   datfile = cdoStreamName(0)->args;
   if ( datfile[0] == '/' )
     fprintf(gdp, "DSET  %s\n", datfile);
@@ -1159,28 +1219,52 @@ void *Gradsdes(void *argument)
     {
       datfile = strrchr(datfile, '/');
       if ( datfile == 0 ) datfile = cdoStreamName(0)->args;
-      else                datfile++;	  
+      else                datfile++;
       fprintf(gdp, "DSET  ^%s\n", datfile);
     }
 
-  /* DTYPE */
+  /*
+   * DTYPE Print file type
+   * INDEX Print filename of the control file .ctl
+   */
   if ( filetype == FILETYPE_GRB )
     {
       fprintf(gdp, "DTYPE  GRIB\n");
 
       pctlfile = ctlfile;
-      len = (int) strlen(pctlfile);
-      strcpy(&pctlfile[len-4], ".gmp");
-      
+      repl_filetypeext(pctlfile, ".ctl", ".gmp");
+
       if ( datfile[0] == '/' )
-	fprintf(gdp, "INDEX  %s\n", pctlfile);
+        fprintf(gdp, "INDEX  %s\n", pctlfile);
       else
-	{
-	  pctlfile = strrchr(pctlfile, '/');
-	  if ( pctlfile == 0 ) pctlfile = ctlfile;
-	  else                 pctlfile++;	  
-	  fprintf(gdp, "INDEX  ^%s\n", pctlfile);
-	}
+        {
+          pctlfile = strrchr(pctlfile, '/');
+          if ( pctlfile == 0 ) pctlfile = ctlfile;
+          else                 pctlfile++;
+          fprintf(gdp, "INDEX  ^%s\n", pctlfile);
+        }
+
+      gridsize = vlistGridsizeMax(vlistID);
+      array = (double*) malloc(gridsize*sizeof(double));
+    }
+  else if ( filetype ==  FILETYPE_GRB2 )
+    {
+      fprintf(gdp, "DTYPE  GRIB2\n");
+
+      strcpy(idxfile, ctlfile);
+      pidxfile = idxfile;
+      repl_filetypeext(pidxfile, ".ctl", ".idx");
+
+      if ( datfile[0] == '/' )
+        fprintf(gdp, "INDEX  %s\n", pidxfile);
+      else
+        {
+          pidxfile = strrchr(pidxfile, '/');
+          if ( pidxfile == 0 ) pidxfile = idxfile;
+          else                 pidxfile++;
+          fprintf(gdp, "INDEX  ^%s\n", pidxfile);
+        }
+
 
       gridsize = vlistGridsizeMax(vlistID);
       array = (double*) malloc(gridsize*sizeof(double));
@@ -1197,6 +1281,9 @@ void *Gradsdes(void *argument)
 
   taxisID = vlistInqTaxis(vlistID);
 
+  int calendar = taxisInqCalendar(taxisID);
+  if ( calendar == CALENDAR_365DAYS ) cal365day = 1;
+
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID, tsID)) )
     {
@@ -1204,128 +1291,128 @@ void *Gradsdes(void *argument)
       vtime = taxisInqVtime(taxisID);
 
       if ( tsID == 0 )
-	{
-	  cdiDecodeDate(vdate, &iyys, &imms, &idds);
-	  cdiDecodeTime(vtime, &ihhs, &imns, &isds);
-     
-	  if ( imms < 1 || imms > 12 )  imms=1;
+        {
+          cdiDecodeDate(vdate, &iyys, &imms, &idds);
+          cdiDecodeTime(vtime, &ihhs, &imns, &isds);
 
-	  ihh0 = ihhs;
-	  imn0 = imns;
-	  iyy0 = iyys;
-	  imm0 = imms;
-	  idd0 = idds;
-	}
+          if ( imms < 1 || imms > 12 )  imms=1;
+
+          ihh0 = ihhs;
+          imn0 = imns;
+          iyy0 = iyys;
+          imm0 = imms;
+          idd0 = idds;
+        }
 
       if ( tsID == 1 )
-	{
-	  cdiDecodeDate(vdate, &iyy, &imm, &idd);
-	  cdiDecodeTime(vtime, &ihh, &imn, &isd);
+        {
+          cdiDecodeDate(vdate, &iyy, &imm, &idd);
+          cdiDecodeTime(vtime, &ihh, &imn, &isd);
 
-	  idmn = imn - imns;
-	  idhh = ihh - ihhs;
-	  iddd = idd - idds;
-	  idmm = imm - imms;
-	  idyy = iyy - iyys;
+          idmn = imn - imns;
+          idhh = ihh - ihhs;
+          iddd = idd - idds;
+          idmm = imm - imms;
+          idyy = iyy - iyys;
 
-	  if ( idmn != 0 )
-	    {
-	      dt = idmn + (idhh + (iddd + (idmm*30 + idyy*12)*30)*24)*60;
-	    }
-	  else if ( idhh != 0 )
-	    {
-	      dt = idhh + (iddd + (idmm + idyy*12)*30)*24;
-	      iik = 1;
-	    }
-	  else if ( iddd != 0 )
-	    {
-	      dt = iddd + (idmm + idyy*12)*30;
-	      iik = 2;
-	    }
-	  else if ( idmm != 0 )
-	    {
-	      dt = idmm + idyy*12;
-	      iik = 3;
-	    }
-	  else if ( idyy != 0 )
-	    {
-	      dt = idyy;
-	      iik = 4;
-	    }
+          if ( idmn != 0 )
+            {
+              dt = idmn + (idhh + (iddd + (idmm*30 + idyy*12)*30)*24)*60;
+            }
+          else if ( idhh != 0 )
+            {
+              dt = idhh + (iddd + (idmm + idyy*12)*30)*24;
+              iik = 1;
+            }
+          else if ( iddd != 0 )
+            {
+              dt = iddd + (idmm + idyy*12)*30;
+              iik = 2;
+            }
+          else if ( idmm != 0 )
+            {
+              dt = idmm + idyy*12;
+              iik = 3;
+            }
+          else if ( idyy != 0 )
+            {
+              dt = idyy;
+              iik = 4;
+            }
 
-	  if ( dt <= 0 ) dt = 1;
-	}
+          if ( dt <= 0 ) dt = 1;
+        }
 
       if ( tsID > 0 && tsID < 6 && iik != 3 && (monavg == TRUE || monavg == -1) )
-	{
-	  cdiDecodeDate(vdate, &iyy, &imm, &idd);
-	  cdiDecodeTime(vtime, &ihh, &imn, &isd);
+        {
+          cdiDecodeDate(vdate, &iyy, &imm, &idd);
+          cdiDecodeTime(vtime, &ihh, &imn, &isd);
 
-	  idmn = imn - imns;
-	  idhh = ihh - ihhs;
-	  iddd = idd - idds;
-	  idmm = imm - imms;
-	  idyy = iyy - iyys;
+          idmn = imn - imns;
+          idhh = ihh - ihhs;
+          iddd = idd - idds;
+          idmm = imm - imms;
+          idyy = iyy - iyys;
 
-	  if ( iddd < 0 ) iddd *= -1;
-	  if ( idyy > 0 ) idmm += idyy*12;
+          if ( iddd < 0 ) iddd *= -1;
+          if ( idyy > 0 ) idmm += idyy*12;
 
-	  if ( idmn == 0 && idhh == 0 && (iddd == 0 || idd > 27 ) &&
-	       idmm > 0 && (mdt == 0 || idmm == mdt) )
-	    {
-	      mdt = idmm;
-	      monavg = TRUE;
-	    }
-	  else
-	    {
-	      monavg = FALSE;
-	    }
-	  /*
-	  printf("monavg %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d\n",
-		 tsID, monavg, mdt, imm , imms, idmm, iyy, iyys, idyy, idd, idds, iddd);
-	  */
+          if ( idmn == 0 && idhh == 0 && (iddd == 0 || idd > 27 ) &&
+               idmm > 0 && (mdt == 0 || idmm == mdt) )
+            {
+              mdt = idmm;
+              monavg = TRUE;
+            }
+          else
+            {
+              monavg = FALSE;
+            }
+          /*
+          printf("monavg %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d\n",
+                 tsID, monavg, mdt, imm , imms, idmm, iyy, iyys, idyy, idd, idds, iddd);
+          */
           imns = imn;
           ihhs = ihh;
-	  idds = idd;
+          idds = idd;
           imms = imm;
           iyys = iyy;
-	}
+        }
 
       if ( filetype == FILETYPE_GRB )
-	{
-	  nrecords += nrecsout;
-	  if ( nrecords >= maxrecs )
-	    {
-	      maxrecs = nrecords;
-	      intnum = (int*) realloc(intnum, 1*maxrecs*sizeof(int));
-	      fltnum = (float*) realloc(fltnum, 3*maxrecs*sizeof(float));
-	      bignum = (off_t*) realloc(bignum, 2*maxrecs*sizeof(off_t));
-	    }
+        {
+          nrecords += nrecsout;
+          if ( nrecords >= maxrecs )
+            {
+              maxrecs = nrecords;
+              intnum = (int*) realloc(intnum, 1*maxrecs*sizeof(int));
+              fltnum = (float*) realloc(fltnum, 3*maxrecs*sizeof(float));
+              bignum = (off_t*) realloc(bignum, 2*maxrecs*sizeof(off_t));
+            }
 
-	  for ( recID = 0; recID < nrecs; recID++ )
-	    {
-	      streamInqRecord(streamID, &varID, &levelID);
-	      if ( vars[varID] == TRUE )
-		{
-		  streamReadRecord(streamID, array, &nmiss);
+          for ( recID = 0; recID < nrecs; recID++ )
+            {
+              streamInqRecord(streamID, &varID, &levelID);
+              if ( vars[varID] == TRUE )
+                {
+                  streamReadRecord(streamID, array, &nmiss);
 
-		  index = (tsID*nrecsout + recoffset[varID] + levelID);
-	      
-		  streamInqGinfo(streamID, &intnum[index], &fltnum[index*3], &bignum[index*2]);
+                  index = (tsID*nrecsout + recoffset[varID] + levelID);
 
-		  if ( map_version != 4 )
-		    {
-		      checksize = (long)bignum[index*2] + (long)gridsize*intnum[index]/8;
-		      if ( checksize < 0L || checksize > 2147483647L )
-			{
-			  nrecords -= nrecsout;
-			  cdoWarning("File size limit reached for GrADS GRIB map_version=%d! Only the first %d time steps (2GB) are processed.", map_version, tsID);
-			  goto LABEL_STOP;
-			}
-		    }
-		}
-	    }
-	}
+                  streamInqGRIBinfo(streamID, &intnum[index], &fltnum[index*3], &bignum[index*2]);
+
+                  if ( map_version != 4 )
+                    {
+                      checksize = (long)bignum[index*2] + (long)gridsize*intnum[index]/8;
+                      if ( checksize < 0L || checksize > 2147483647L )
+                        {
+                          nrecords -= nrecsout;
+                          cdoWarning("File size limit reached for GrADS GRIB map_version=%d! Only the first %d time steps (2GB) are processed.", map_version, tsID);
+                          goto LABEL_STOP;
+                        }
+                    }
+                }
+            }
+        }
 
       tsID++;
     }
@@ -1345,12 +1432,12 @@ void *Gradsdes(void *argument)
       dt = mdt;
       iik = 3;
       if ( idd0 > 28 )
-	{
-	  /* int iddx = idd0; */
-	  idd0 = 1;
-	  cdoPrint("Reset start date to %02d:%02dZ%02d%s%04d",
-		   ihh0, imn0, idd0, cmons[imm0-1], iyy0);
-	}
+        {
+          /* int iddx = idd0; */
+          idd0 = 1;
+          cdoPrint("Reset start date to %02d:%02dZ%02d%s%04d",
+                   ihh0, imn0, idd0, cmons[imm0-1], iyy0);
+        }
     }
 
   sprintf (Time, "%02d:%02dZ%02d%s%04d", ihh0, imn0, idd0, cmons[imm0-1], iyy0);
@@ -1372,7 +1459,7 @@ void *Gradsdes(void *argument)
     fprintf(gdp, "TITLE  %s  %dx%d grid\n", datfile, xsize, ysize);
 
   /* OPTIONS */
-  ctl_options(gdp, yrev, zrev, sequential, bigendian, littleendian, flt64);
+  ctl_options(gdp, yrev, zrev, sequential, bigendian, littleendian, flt64, cal365day);
 
   /* UNDEF */
   ctl_undef(gdp, vlistID);
@@ -1385,6 +1472,11 @@ void *Gradsdes(void *argument)
   if ( filetype == FILETYPE_GRB )
     {
       write_map_grib1(ctlfile, map_version, nrecords, intnum, fltnum, bignum);
+    }
+  if ( filetype == FILETYPE_GRB2 )
+    {
+      cdoAbort("\nThe fileformat GRIB2 is not fully supported yet\nfor the gradsdes operator.\nThe .ctl file %s was generated.\nYou can add the necessary .idx file by running\n\tgribmap -i %s", ctlfile, ctlfile);
+      write_map_grib2(idxfile, map_version, nrecords, intnum, fltnum, bignum);
     }
 
 

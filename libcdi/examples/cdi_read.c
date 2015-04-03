@@ -41,6 +41,7 @@ int main(void)
       // Get the verification date and time 
       vdate = taxisInqVdate(taxisID);
       vtime = taxisInqVtime(taxisID);
+      printf("read timestep %d:  date=%d  time=%d\n", tsID+1, vdate, vtime);
 
       // Read var1 and var2 
       streamReadVar(streamID, varID1, var1, &nmiss);

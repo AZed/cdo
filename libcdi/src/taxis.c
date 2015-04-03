@@ -2,6 +2,7 @@
 #  include "config.h"
 #endif
 
+#include <stddef.h>
 #include <string.h>
 
 #include "dmemory.h"
@@ -27,14 +28,15 @@ char *Timeunits[] = {
   "undefined",
   "seconds",
   "minutes",
-  "hours",
-  "days",
-  "months",
-  "years",
   "quarters",
+  "30minutes",
+  "hours",
   "3hours",
   "6hours",
   "12hours",
+  "days",
+  "months",
+  "years",
 };
 
 
@@ -55,6 +57,50 @@ const resOps taxisOps = {
   taxisTxCode
 };
 
+#define container_of(ptr, type, member) \
+  ((type *)((unsigned char *)ptr - offsetof(type,member)))
+
+struct refcount_string
+{
+  int ref_count;
+  char string[];
+};
+
+static char *
+new_refcount_string(size_t len)
+{
+  struct refcount_string *container
+    = xmalloc(sizeof (*container) + len + 1);
+  container->ref_count = 1;
+  return container->string;
+}
+
+static void
+delete_refcount_string(void *p)
+{
+  if (p)
+    {
+      struct refcount_string *container
+        = container_of(p, struct refcount_string, string);
+      if (!--(container->ref_count))
+        free(container);
+    }
+}
+
+static char *
+dup_refcount_string(char *p)
+{
+  if (p)
+    {
+      struct refcount_string *container
+        = container_of(p, struct refcount_string, string);
+      ++(container->ref_count);
+    }
+  return p;
+}
+
+
+#undef container_of
 
 static int  TAXIS_Debug = 0;   /* If set to 1, debugging */
 
@@ -228,16 +274,14 @@ int taxisCreate(int taxistype)
   return (taxisID);
 }
 
-static
-void taxisDestroyKernel( taxis_t * taxisptr )
+void taxisDestroyKernel(taxis_t *taxisptr)
 {
   taxis_check_ptr(__func__, taxisptr);
-
   int id = taxisptr->self;
-
-  free ( taxisptr );
-
-  reshRemove ( id, &taxisOps );
+  delete_refcount_string(taxisptr->name);
+  delete_refcount_string(taxisptr->longname);
+  if (id != CDI_UNDEFID)
+    reshRemove(id, &taxisOps);
 }
 
 /*
@@ -252,27 +296,23 @@ void taxisDestroyKernel( taxis_t * taxisptr )
 */
 void taxisDestroy(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  if ( taxisptr->name     ) free(taxisptr->name);
-  if ( taxisptr->longname ) free(taxisptr->longname);
-
-  taxisDestroyKernel ( taxisptr );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
+  taxisDestroyKernel(taxisptr);
+  free(taxisptr);
 }
 
 
 void taxisDestroyP( void * taxisptr )
 {
-  taxisDestroyKernel (( taxis_t * ) taxisptr );
+  taxisDestroyKernel((taxis_t *)taxisptr);
+  free(taxisptr);
 }
 
 
 int taxisDuplicate(int taxisID1)
 {
-  taxis_t *taxisptr1 = ( taxis_t * ) reshGetVal ( taxisID1, &taxisOps );
-
+  taxis_t *taxisptr1 = (taxis_t *)reshGetVal(taxisID1, &taxisOps);
   taxis_t *taxisptr2 = taxisNewEntry(CDI_UNDEFID);
-  if ( ! taxisptr2 ) Error("No memory");
 
   int taxisID2 = taxisptr2->self;
 
@@ -280,28 +320,21 @@ int taxisDuplicate(int taxisID1)
     Message("taxisID2: %d", taxisID2);
 
   ptaxisCopy(taxisptr2, taxisptr1);
-  if ( taxisptr1->name     ) taxisptr2->name = strdup(taxisptr1->name);
-  if ( taxisptr1->longname ) taxisptr2->longname = strdup(taxisptr1->longname);
-
-  // taxisptr2->has_bounds = FALSE;
-
   return (taxisID2);
 }
 
 
 void taxisDefType(int taxisID, int type)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed." );
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->type = type;
+  if (taxisptr->type != type)
+    {
+      taxisptr->type = type;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -320,11 +353,15 @@ The function @func{taxisDefVdate} defines the verification date of a Time axis.
 */
 void taxisDefVdate(int taxisID, int vdate)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->vdate = vdate;
+  if (taxisptr->vdate != vdate)
+    {
+      taxisptr->vdate = vdate;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -343,11 +380,15 @@ The function @func{taxisDefVtime} defines the verification time of a Time axis.
 */
 void taxisDefVtime(int taxisID, int vtime)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->vtime = vtime;
+  if (taxisptr->vtime != vtime)
+    {
+      taxisptr->vtime = vtime;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -366,17 +407,15 @@ The function @func{taxisDefRdate} defines the reference date of a Time axis.
 */
 void taxisDefRdate(int taxisID, int rdate)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->rdate = rdate;
+  if (taxisptr->rdate != rdate)
+    {
+      taxisptr->rdate = rdate;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -395,17 +434,15 @@ The function @func{taxisDefRtime} defines the reference time of a Time axis.
 */
 void taxisDefRtime(int taxisID, int rtime)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->rtime = rtime;
+  if (taxisptr->rtime != rtime)
+    {
+      taxisptr->rtime = rtime;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -424,17 +461,15 @@ The function @func{taxisDefFdate} defines the forecast reference date of a Time 
 */
 void taxisDefFdate(int taxisID, int fdate)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->fdate = fdate;
+  if (taxisptr->fdate != fdate)
+    {
+      taxisptr->fdate = fdate;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -453,17 +488,15 @@ The function @func{taxisDefFtime} defines the forecast reference time of a Time 
 */
 void taxisDefFtime(int taxisID, int ftime)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->ftime = ftime;
+  if (taxisptr->ftime != ftime)
+    {
+      taxisptr->ftime = ftime;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -484,81 +517,71 @@ The function @func{taxisDefCalendar} defines the calendar of a Time axis.
 */
 void taxisDefCalendar(int taxisID, int calendar)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->calendar = calendar;
+  if (taxisptr->calendar != calendar)
+    {
+      taxisptr->calendar = calendar;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 void taxisDefTunit(int taxisID, int unit)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->unit = unit;
+  if (taxisptr->unit != unit)
+    {
+      taxisptr->unit = unit;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 void taxisDefForecastTunit(int taxisID, int unit)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->fc_unit = unit;
+  if (taxisptr->fc_unit != unit)
+    {
+      taxisptr->fc_unit = unit;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 void taxisDefForecastPeriod(int taxisID, double fc_period)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->fc_period = fc_period;
+  if (taxisptr->fc_period != fc_period)
+    {
+      taxisptr->fc_period = fc_period;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 void taxisDefNumavg(int taxisID, int numavg)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->numavg = numavg;
+  if (taxisptr->numavg != numavg)
+    {
+      taxisptr->numavg = numavg;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -567,7 +590,7 @@ The valid CDI time types are TAXIS_ABSOLUTE and TAXIS_RELATIVE.
 */
 int taxisInqType(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -577,7 +600,7 @@ int taxisInqType(int taxisID)
 
 int taxisHasBounds(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -587,29 +610,27 @@ int taxisHasBounds(int taxisID)
 
 void taxisDeleteBounds(int taxisID)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->has_bounds = FALSE;
+  if (taxisptr->has_bounds != FALSE)
+    {
+      taxisptr->has_bounds = FALSE;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 
 void taxisCopyTimestep(int taxisID2, int taxisID1)
 {
-  taxis_t *taxisptr1 = ( taxis_t * ) reshGetVal ( taxisID1, &taxisOps );
-  taxis_t *taxisptr2 = ( taxis_t * ) reshGetVal ( taxisID2, &taxisOps );
+  taxis_t *taxisptr1 = (taxis_t *)reshGetVal(taxisID1, &taxisOps),
+    *taxisptr2 = (taxis_t *)reshGetVal(taxisID2, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr1);
   taxis_check_ptr(__func__, taxisptr2);
 
-  reshLock ();
+  reshLock();
 
   taxisptr2->rdate = taxisptr1->rdate;
   taxisptr2->rtime = taxisptr1->rtime;
@@ -631,7 +652,8 @@ void taxisCopyTimestep(int taxisID2, int taxisID1)
   taxisptr2->fc_unit   = taxisptr1->fc_unit;
   taxisptr2->fc_period = taxisptr1->fc_period;
 
-  reshUnlock ();
+  reshSetStatus(taxisID2, &taxisOps, RESH_DESYNC_IN_USE);
+  reshUnlock();
 }
 
 /*
@@ -652,7 +674,7 @@ The function @func{taxisInqVdate} returns the verification date of a Time axis.
 */
 int taxisInqVdate(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -662,7 +684,7 @@ int taxisInqVdate(int taxisID)
 
 void taxisInqVdateBounds(int taxisID, int *vdate_lb, int *vdate_ub)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -673,20 +695,19 @@ void taxisInqVdateBounds(int taxisID, int *vdate_lb, int *vdate_ub)
 
 void taxisDefVdateBounds(int taxisID, int vdate_lb, int vdate_ub)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->vdate_lb = vdate_lb;
-  taxisptr->vdate_ub = vdate_ub;
-
-  taxisptr->has_bounds = TRUE;
+  if (taxisptr->vdate_lb != vdate_lb
+      || taxisptr->vdate_ub != vdate_ub
+      || taxisptr->has_bounds != TRUE)
+    {
+      taxisptr->vdate_lb = vdate_lb;
+      taxisptr->vdate_ub = vdate_ub;
+      taxisptr->has_bounds = TRUE;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -707,7 +728,7 @@ The function @func{taxisInqVtime} returns the verification time of a Time axis.
 */
 int taxisInqVtime(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -717,7 +738,7 @@ int taxisInqVtime(int taxisID)
 
 void taxisInqVtimeBounds(int taxisID, int *vtime_lb, int *vtime_ub)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
@@ -728,20 +749,19 @@ void taxisInqVtimeBounds(int taxisID, int *vtime_lb, int *vtime_ub)
 
 void taxisDefVtimeBounds(int taxisID, int vtime_lb, int vtime_ub)
 {
-  if ( reshGetStatus ( taxisID, &taxisOps ) == RESH_CLOSED )
-    {
-      Warning("%s", "Operation not executed.");
-      return;
-    }
-
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
   taxis_check_ptr(__func__, taxisptr);
 
-  taxisptr->vtime_lb = vtime_lb;
-  taxisptr->vtime_ub = vtime_ub;
-
-  taxisptr->has_bounds = TRUE;
+  if (taxisptr->vtime_lb != vtime_lb
+      || taxisptr->vtime_ub != vtime_ub
+      || taxisptr->has_bounds != TRUE)
+    {
+      taxisptr->vtime_lb = vtime_lb;
+      taxisptr->vtime_ub = vtime_ub;
+      taxisptr->has_bounds = TRUE;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
+    }
 }
 
 /*
@@ -770,6 +790,7 @@ int taxisInqRdate(int taxisID)
     {
       taxisptr->rdate = taxisptr->vdate;
       taxisptr->rtime = taxisptr->vtime;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
     }
 
   return (taxisptr->rdate);
@@ -801,6 +822,7 @@ int taxisInqRtime(int taxisID)
     {
       taxisptr->rdate = taxisptr->vdate;
       taxisptr->rtime = taxisptr->vtime;
+      reshSetStatus(taxisID, &taxisOps, RESH_DESYNC_IN_USE);
     }
 
   return (taxisptr->rtime);
@@ -939,13 +961,38 @@ int taxisInqNumavg(int taxisID)
 
 taxis_t *taxisPtr(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   taxis_check_ptr(__func__, taxisptr);
 
   return (taxisptr);
 }
 
+void
+ptaxisDefName(taxis_t *taxisptr, const char *name)
+{
+  if (name)
+    {
+      taxis_check_ptr(__func__, taxisptr);
+      size_t len = strlen(name);
+      delete_refcount_string(taxisptr->name);
+      char *taxisname = taxisptr->name = new_refcount_string(len);
+      strcpy(taxisname, name);
+    }
+}
+
+void
+ptaxisDefLongname(taxis_t *taxisptr, const char *longname)
+{
+  if (longname)
+    {
+      taxis_check_ptr(__func__, taxisptr);
+      size_t len = strlen(longname);
+      delete_refcount_string(taxisptr->longname);
+      char *taxislongname = taxisptr->longname = new_refcount_string(len);
+      strcpy(taxislongname, longname);
+    }
+}
 
 void cdiDecodeTimevalue(int timeunit, double timevalue, int *days, int *secs)
 {
@@ -1007,8 +1054,9 @@ void cdiEncodeTimevalue(int days, int secs, int timeunit, double *timevalue)
     {
       *timevalue = days*86400. + secs;
     }
-  else if ( timeunit == TUNIT_MINUTE ||
-	    timeunit == TUNIT_QUARTER )
+  else if ( timeunit == TUNIT_MINUTE  ||
+	    timeunit == TUNIT_QUARTER ||
+	    timeunit == TUNIT_30MINUTES )
     {
       *timevalue = days*1440. + secs/60.;
     }
@@ -1265,8 +1313,12 @@ void splitTimevalue(double timevalue, int timeunit, int *date, int *time)
       vdate = cdiEncodeDate(year, month, day);
       vtime = cdiEncodeTime(hour, minute, second);
 
-      Warning("Reset wrong date/time to %4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d!",
-	      year, month, day, hour, minute, second);
+      if ( lwarn )
+        {
+          lwarn = FALSE;
+          Warning("Reset wrong date/time to %4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d!",
+                  year, month, day, hour, minute, second);
+        }
     }
 
   *date = vdate;
@@ -1413,6 +1465,13 @@ void ptaxisCopy(taxis_t *dest, taxis_t *source)
   dest->fc_unit     = source->fc_unit;
   dest->fc_period   = source->fc_period;
 
+  dest->climatology = source->climatology;
+  delete_refcount_string(dest->name);
+  delete_refcount_string(dest->longname);
+  dest->name = dup_refcount_string(source->name);
+  dest->longname = dup_refcount_string(source->longname);
+  if (dest->self != CDI_UNDEFID)
+    reshSetStatus(dest->self, &taxisOps, RESH_DESYNC_IN_USE);
   reshUnlock ();
 }
 
@@ -1510,9 +1569,9 @@ taxisGetPackSize(void *p, void *context)
     = serializeGetSize(taxisNint, DATATYPE_INT, context)
     + serializeGetSize(1, DATATYPE_UINT32, context)
     + (taxisptr->name ?
-       serializeGetSize(strlen(taxisptr->name), DATATYPE_TXT, context) : 0)
+       serializeGetSize((int)strlen(taxisptr->name), DATATYPE_TXT, context) : 0)
     + (taxisptr->longname ?
-       serializeGetSize(strlen(taxisptr->longname), DATATYPE_TXT,
+       serializeGetSize((int)strlen(taxisptr->longname), DATATYPE_TXT,
                         context) : 0);
   return packBufferSize;
 }
@@ -1561,8 +1620,8 @@ taxisUnpack(char * unpackBuffer, int unpackBufferSize, int * unpackBufferPos,
 
   if (intBuffer[idx])
     {
-      size_t len = intBuffer[idx];
-      char *name = (char*) xmalloc(len + 1);
+      int len = intBuffer[idx];
+      char *name = new_refcount_string((size_t)len);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       name, len, DATATYPE_TXT, context);
       name[len] = '\0';
@@ -1571,8 +1630,8 @@ taxisUnpack(char * unpackBuffer, int unpackBufferSize, int * unpackBufferPos,
   idx++;
   if (intBuffer[idx])
     {
-      size_t len = intBuffer[idx];
-      char *longname = (char*) xmalloc(len + 1);
+      int len = intBuffer[idx];
+      char *longname = new_refcount_string((size_t)len);
       serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                       longname, len, DATATYPE_TXT, context);
       longname[len] = '\0';

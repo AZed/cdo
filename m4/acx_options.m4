@@ -319,10 +319,10 @@ AC_SUBST([ENABLE_IEG],[$enable_ieg])
 #  Compile with fftw support
 AC_MSG_CHECKING([for FFTW3 support])
 AC_ARG_WITH([fftw3],
-    [AS_HELP_STRING([--without-fftw3],
-      [disable support for fftw3])],
+    [AS_HELP_STRING([--with-fftw3],
+      [enable support for fftw3])],
     [],
-    [with_fftw3=yes])
+    [with_fftw3=no])
 
   AS_IF([test "x$with_fftw3" != xno],
       [AC_CHECK_HEADERS([fftw3.h])

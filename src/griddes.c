@@ -1771,8 +1771,16 @@ int cdoDefineGrid(const char *gridfile)
   struct stat filestat;
   int fileno;
   int isreg = FALSE;
+  int lalloc = FALSE;
+  char *filename;
 
-  fileno = open(gridfile, O_RDONLY);
+  filename = expand_filename(gridfile);
+  if ( filename )
+    lalloc = TRUE;
+  else
+    filename =  (char *) gridfile;
+
+  fileno = open(filename, O_RDONLY);
   if ( fileno >= 0 )
     {
       if ( fstat(fileno, &filestat) == 0 )
@@ -1790,14 +1798,14 @@ int cdoDefineGrid(const char *gridfile)
   else
     {
       if ( read(fileno, buffer, 4) != 4 )
-	SysError("Read grid from %s failed!", gridfile);
+	SysError("Read grid from %s failed!", filename);
 
       close(fileno);
 
       if ( cmpstr(buffer, "CDF", len) == 0 )
 	{
 	  if ( cdoDebug ) cdoPrint("Grid from netCDF file");
-	  gridID = gridFromNCfile(gridfile);
+	  gridID = gridFromNCfile(filename);
 	}
 
       if ( gridID == -1 )
@@ -1805,7 +1813,7 @@ int cdoDefineGrid(const char *gridfile)
 	  if ( cmpstr(buffer+1, "HDF", len) == 0 )
 	    {
 	      if ( cdoDebug ) cdoPrint("Grid from HDF5 file");
-	      gridID = gridFromH5file(gridfile);
+	      gridID = gridFromH5file(filename);
 	    }
 	}
 
@@ -1814,7 +1822,7 @@ int cdoDefineGrid(const char *gridfile)
 	  if ( cmpstr(buffer+1, "HDF", len) == 0 )
 	    {
 	      if ( cdoDebug ) cdoPrint("Grid from netCDF4 file");
-	      gridID = gridFromNCfile(gridfile);
+	      gridID = gridFromNCfile(filename);
 	    }
 	}
 
@@ -1823,7 +1831,7 @@ int cdoDefineGrid(const char *gridfile)
 	  int streamID;
 	  if ( cdoDebug ) cdoPrint("Grid from CDI file");
 	  openLock();
-	  streamID = streamOpenRead(gridfile);
+	  streamID = streamOpenRead(filename);
 	  openUnlock();
 	  if ( streamID >= 0 )
 	    {
@@ -1837,21 +1845,27 @@ int cdoDefineGrid(const char *gridfile)
       if ( gridID == -1 )
 	{
 	  if ( cdoDebug ) cdoPrint("grid from ASCII file");
-	  gfp = fopen(gridfile, "r");
-	  gridID = gridFromFile(gfp, gridfile);
+	  gfp = fopen(filename, "r");
+	  //size_t buffersize = 20*1024*1024;
+	  //char *buffer = (char*) malloc(buffersize);
+	  //setvbuf(gfp, buffer, _IOFBF, buffersize);
+	  gridID = gridFromFile(gfp, filename);
 	  fclose(gfp);
+	  //free(buffer);
 	}
 
       if ( gridID == -1 )
 	{
 	  if ( cdoDebug ) cdoPrint("grid from PINGO file");
-	  gfp = fopen(gridfile, "r");
-	  gridID = gridFromPingo(gfp, gridfile);
+	  gfp = fopen(filename, "r");
+	  gridID = gridFromPingo(gfp, filename);
 	  fclose(gfp);
 	}
 
-      if ( gridID == -1 ) cdoAbort("Invalid grid description file %s!", gridfile);
+      if ( gridID == -1 ) cdoAbort("Invalid grid description file %s!", filename);
     }
+
+  if ( lalloc ) free(filename);
 
   return (gridID);
 }

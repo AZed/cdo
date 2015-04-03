@@ -13,13 +13,13 @@
 #include "error.h"
 #include "file.h"
 #include "binary.h"
+#include "stream_fcommon.h"
 #include "swap.h"
 
 
-#define SINGLE_PRECISION  4
-#define DOUBLE_PRECISION  8
-
-#define SRV_HEADER_LEN    8
+enum {
+  SRV_HEADER_LEN = 8,
+};
 
 
 static int initSrvLib      = 0;
@@ -152,7 +152,8 @@ int srvCheckFiletype(int fileID, int *swap)
   size_t sblocklen = 0;
   size_t data = 0;
   size_t dimx = 0, dimy = 0;
-  int fact = 0, found = 0;
+  size_t fact = 0;
+  int found = 0;
   unsigned char buffer[72], *pbuf;
 
   if ( fileRead(fileID, buffer, 4) != 4 ) return (found);
@@ -235,8 +236,8 @@ int srvDefHeader(srvrec_t *srvp, const int *header)
 
   for ( i = 0; i < SRV_HEADER_LEN; i++ )
     srvp->header[i] = header[i];
-  
-  srvp->datasize = header[4]*header[5];
+
+  srvp->datasize = (size_t)(header[4] * header[5]);
 
   if ( SRV_Debug )
     Message("datasize = %lu", srvp->datasize);
@@ -345,8 +346,8 @@ int srvDefData(srvrec_t *srvp, int prec, const void *data)
 
   header = srvp->header;
 
-  datasize = header[4]*header[5];
-  blocklen = datasize * dprec;
+  datasize = (size_t)(header[4] * header[5]);
+  blocklen = datasize * (size_t)dprec;
 
   srvp->datasize = datasize;
 
@@ -414,9 +415,7 @@ int srvRead(int fileID, srvrec_t *srvp)
   size_t blocklen, blocklen2;
   size_t i;
   char tempheader[64];
-  int hprec, dprec;
   void *buffer;
-  int buffersize;
   int byteswap;
   int status;
 
@@ -437,9 +436,9 @@ int srvRead(int fileID, srvrec_t *srvp)
   if ( SRV_Debug )
     Message("blocklen = %lu", blocklen);
 
-  hprec = blocklen / SRV_HEADER_LEN;
+  size_t hprec = blocklen / SRV_HEADER_LEN;
 
-  srvp->hprec = hprec;
+  srvp->hprec = (int)hprec;
 
   switch ( hprec )
     {
@@ -476,16 +475,16 @@ int srvRead(int fileID, srvrec_t *srvp)
       if ( blocklen2 != 0 ) return (-1);
     }
 
-  srvp->datasize = srvp->header[4]*srvp->header[5];
+  srvp->datasize = (size_t)(srvp->header[4] * srvp->header[5]);
 
   if ( SRV_Debug )
     Message("datasize = %lu", srvp->datasize);
 
   blocklen = binReadF77Block(fileID, byteswap);
 
-  buffersize = srvp->buffersize;
+  size_t buffersize = srvp->buffersize;
 
-  if ( buffersize < (int) blocklen )
+  if ( buffersize < blocklen )
     {
       buffersize = blocklen;
       buffer = srvp->buffer;
@@ -498,9 +497,9 @@ int srvRead(int fileID, srvrec_t *srvp)
 
   datasize = srvp->datasize;
 
-  dprec = blocklen / datasize;
+  size_t dprec = blocklen / datasize;
 
-  srvp->dprec = dprec;
+  srvp->dprec = (int)dprec;
 
   if ( dprec != SINGLE_PRECISION && dprec != DOUBLE_PRECISION )
     {
@@ -522,7 +521,7 @@ int srvRead(int fileID, srvrec_t *srvp)
 }
 
 
-int srvWrite(int fileID, srvrec_t *srvp)
+void srvWrite(int fileID, srvrec_t *srvp)
 {
   size_t datasize;
   size_t blocklen;
@@ -538,7 +537,7 @@ int srvWrite(int fileID, srvrec_t *srvp)
   header = srvp->header;
 
   /* write header record */
-  blocklen = SRV_HEADER_LEN * hprec;
+  blocklen = SRV_HEADER_LEN * (size_t)hprec;
 
   binWriteF77Block(fileID, byteswap, blocklen);
 
@@ -571,8 +570,8 @@ int srvWrite(int fileID, srvrec_t *srvp)
 
   binWriteF77Block(fileID, byteswap, blocklen);
 
-  datasize = header[4]*header[5];
-  blocklen = datasize * dprec;
+  datasize = (size_t)(header[4] * header[5]);
+  blocklen = datasize * (size_t)dprec;
 
   binWriteF77Block(fileID, byteswap, blocklen);
 
@@ -600,8 +599,6 @@ int srvWrite(int fileID, srvrec_t *srvp)
     }
 
   binWriteF77Block(fileID, byteswap, blocklen);
-
-  return (0);
 }
 /*
  * Local Variables:

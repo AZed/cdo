@@ -23,6 +23,9 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the <execinfo.h> header file. */
+#undef HAVE_EXECINFO_H
+
 /* Define to 1 if you have the `getline' function. */
 #undef HAVE_GETLINE
 
@@ -128,11 +131,11 @@
 /* ScalES PPM C core library is available */
 #undef HAVE_PPM_CORE
 
-/* Define if you have POSIX threads libraries and header files. */
-#undef HAVE_PTHREAD
-
 /* Define to 1 if you have the <pthread.h> header file. */
 #undef HAVE_PTHREAD_H
+
+/* Have PTHREAD_PRIO_INHERIT. */
+#undef HAVE_PTHREAD_PRIO_INHERIT
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

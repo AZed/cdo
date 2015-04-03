@@ -19,6 +19,10 @@
 #define _XOPEN_SOURCE 600 /* ftello */
 #endif
 
+#if defined(_OPENMP)
+#  include <omp.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>   /* tolower */
@@ -28,6 +32,18 @@
 #include "cdo_int.h"
 #include "modules.h"
 #include "util.h"
+
+
+int cdo_omp_get_thread_num(void)
+{
+  int threadnum = 0;
+
+#if defined(_OPENMP)
+  threadnum = omp_get_thread_num();
+#endif
+
+  return (threadnum);
+}
 
 
 char *getProgname(char *string)

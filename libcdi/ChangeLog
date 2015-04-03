@@ -1,3 +1,86 @@
+2014-10-23  Uwe Schulzweida
+
+	* Version 1.6.5 released
+	* using CGRIBEX library version 1.6.5
+
+2014-10-21  Uwe Schulzweida
+
+	* vlistDefVarXXXKey: check validity of vlist object [Feature #4720]
+	*  lock CDI internal vlist objects
+
+2014-10-13  Uwe Schulzweida
+
+	* added support for grib_api key typeOfSecondFixedSurface
+
+2014-10-10  Uwe Schulzweida
+
+	* netCDF: added support 1D level variables
+
+2014-10-07  Uwe Schulzweida
+
+	* read netCDF: cache time variable
+
+2014-08-21  Uwe Schulzweida
+
+	* reshGetElem: call show_stackframe() to print a backtrace 
+
+2014-08-20  Uwe Schulzweida
+
+	* added CDI function gribapiLibraryVersion(major_version, minor_version, revision_version) [Feature #5043]
+
+2014-08-15  Uwe Schulzweida
+
+	* gridCompare: check position parameter of unstructured grids only if gridnumber > 0
+
+2014-08-13  Uwe Schulzweida
+
+	* cgribex: use timerange indicator to identify different variables
+	* gribapi: use timerange indicator to identify different variables
+
+2014-08-12  Daniel Reinert
+
+	* listDestroy(): set resHListSize=0 [Bug #5058]
+	* NetCDF: Reading uuidOfVGrid [Bug #5046]
+
+2014-08-04  Nathanael Huebbe
+
+	* NetCDF single precision input
+
+2014-07-31  Uwe Schulzweida
+
+	* netCDF4: added support for xtype NC_STRING
+
+2014-07-25  Uwe Schulzweida
+
+	* vlistInqAtt: return -1 if attnum is out of range
+	* vlistInqAttXXX: return -1 if attname not found
+
+2014-07-24  Uwe Schulzweida
+
+	* gribapiEncode: update additional keys defined with vlistDefVarXXXKey() [Feature #4720]
+
+2014-07-22  Uwe Schulzweida
+
+	* added vlistDefVarProductDefinitionTemplate() to define GRIB2 Product Definition Template Number [Feature #4694]
+
+2014-07-21  Uwe Schulzweida
+
+	* gribapiDefSteptype: changed proDefTempNum to 1/11 for typeOfGeneratingProcess=4
+	* file write: set default to NONBLOCK if available
+
+2014-07-18  Uwe Schulzweida
+
+	* added function streamReadVarF() and streamReadVarSliceF()
+	* streamWriteVarF, streamWriteVarSliceF: added support for GRIB1 (cgribex)
+
+2014-07-17  Uwe Schulzweida
+
+	* grib2: activate jpeg support in combination with masks (missing values)
+
+2014-07-01  Uwe Schulzweida
+
+	* netCDF: skip coordinate variables with more than 2 dimension
+
 2014-06-26  Uwe Schulzweida
 
 	* Version 1.6.4 released

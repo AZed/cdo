@@ -45,9 +45,9 @@ modelRegionCompute(double region[], size_t offset, size_t len,
   for (local_pos = 0; local_pos < len; ++local_pos)
     {
       size_t global_pos = offset + local_pos;
-      int k = global_pos / (nlon * nlat);
-      int j = (global_pos % (nlon * nlat))/ nlon;
-      int i = global_pos % nlon;
+      int k = (int)(global_pos / (size_t)(nlon * nlat));
+      int j = (int)(global_pos % (size_t)(nlon * nlat) / (size_t)nlon);
+      int i = (int)(global_pos % (size_t)nlon);
       region[local_pos]
         = sign_flat(round((cos(2.0 * M_PI * (lons[(i + tsID)%nlon] - lons[0])
                                / (lons[nlon-1] - lons[0]))
@@ -105,26 +105,26 @@ modelRun(struct model_config setup, MPI_Comm comm)
   gridID = gridCreate ( GRID_LONLAT, nlon*nlat );
   gridDefXsize ( gridID, nlon );
   gridDefYsize ( gridID, nlat );
-  lons = xmalloc(nlon * sizeof (lons[0]));
+  lons = xmalloc((size_t)nlon * sizeof (lons[0]));
   for (i = 0; i < nlon; ++i)
     lons[i] = ((double)(i * 360))/nlon;
-  lats = xmalloc(nlat * sizeof (lats[0]));
+  lats = xmalloc((size_t)nlat * sizeof (lats[0]));
   for (i = 0; i < nlat; ++i)
     lats[i] = ((double)(i * 180))/nlat - 90.0;
   gridDefXvals ( gridID, lons );
   gridDefYvals ( gridID, lats );
 
-  levs = xmalloc(setup.max_nlev * sizeof (levs[0]));
+  levs = xmalloc((size_t)setup.max_nlev * sizeof (levs[0]));
   for (i = 0; i < setup.max_nlev; ++i)
     levs[i] = 101300.0
       - 3940.3 * (exp(1.3579 * (double)(i)/(setup.max_nlev - 1)) - 1.0);
 
   vlistID = vlistCreate ();
 
-  varDesc = xmalloc(nVars * sizeof (varDesc[0]));
+  varDesc = xmalloc((size_t)nVars * sizeof (varDesc[0]));
   for (int varIdx = 0; varIdx < nVars; varIdx++ )
     {
-      int varLevs = random()%4;
+      int varLevs = (int)random()%4;
       switch (varLevs)
         {
         case 1:
@@ -149,9 +149,10 @@ modelRun(struct model_config setup, MPI_Comm comm)
         = zaxisCreate(ZAXIS_PRESSURE, varDesc[varIdx].nlev);
       zaxisDefLevels(varDesc[varIdx].zaxisID, levs);
       zaxisIDset:
-      varDesc[varIdx].id = vlistDefVar(vlistID, gridID, varDesc[varIdx].zaxisID,
-                                       TIME_VARIABLE);
-      varDesc[varIdx].size = nlon * nlat * varDesc[varIdx].nlev;
+      varDesc[varIdx].id
+        = vlistDefVar(vlistID, gridID, varDesc[varIdx].zaxisID, TIME_VARIABLE);
+      varDesc[varIdx].size
+        = (size_t)nlon * (size_t)nlat * (size_t)varDesc[varIdx].nlev;
 #ifdef USE_MPI
       {
         struct PPM_extent range
@@ -213,15 +214,15 @@ modelRun(struct model_config setup, MPI_Comm comm)
               int start = varDesc[varID].start;
               int chunk = varDesc[varID].chunkSize;
 #else
-              int chunk = varDesc[varID].size;
+              int chunk = (int)varDesc[varID].size;
               int start = 0;
 #endif
               if (varslice_size < chunk)
                 {
-                  varslice = xrealloc(varslice, chunk * sizeof (var[0]));
-                  varslice_size = chunk;
+                  varslice = xrealloc(varslice, (size_t)chunk * sizeof (var[0]));
+                  varslice_size = (size_t)chunk;
                 }
-              modelRegionCompute(varslice, start, chunk,
+              modelRegionCompute(varslice, (size_t)start, (size_t)chunk,
                                  varDesc[varID].nlev, nlat, nlon,
                                  tsID, lons, lats,
                                  mscale, mrscale);
@@ -276,8 +277,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 uint32_t cksum;
                 int code;
                 cksum = memcrc_finish(&varDesc[i].checksum_state,
-                                      (off_t)varDesc[i].size
-                                      * sizeof (var[0]) * setup.nts);
+                                      (off_t)(varDesc[i].size
+                                              * sizeof (var[0])
+                                              * (size_t)setup.nts));
                 code = vlistInqVarCode(vlistID, varDesc[i].id);
                 if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum,
                             code) < 0)

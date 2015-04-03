@@ -44,7 +44,6 @@ void *Merstat(void *argument)
   int vlistID1, vlistID2;
   int gridID1, gridID2 = -1, lastgrid = -1;
   int wstatus = FALSE;
-  int code = 0, oldcode = 0;
   int nlonmax;
   int index, ngrids;
   int recID, nrecs;
@@ -53,10 +52,9 @@ void *Merstat(void *argument)
   int ndiffgrids;
   int taxisID1, taxisID2;
   int needWeights = FALSE;
-  field_t field1, field2;
-  /* RQ */
   int pn = 0;
-  /* QR */
+  field_t field1, field2;
+  char varname[CDI_MAX_NAME];
 
   cdoInitialize(argument);
 
@@ -67,9 +65,7 @@ void *Merstat(void *argument)
   cdoOperatorAdd("meravg",  func_avg,  0, NULL);
   cdoOperatorAdd("mervar",  func_var,  0, NULL);
   cdoOperatorAdd("merstd",  func_std,  0, NULL);
-  /* RQ */
   cdoOperatorAdd("merpctl", func_pctl, 0, NULL);
-  /* QR */
  
   operatorID = cdoOperatorID();
   operfunc = cdoOperatorF1(operatorID);
@@ -153,25 +149,24 @@ void *Merstat(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  streamReadRecord(streamID1, field1.ptr, &field1.nmiss);
 
-	  field1.grid    = vlistInqVarGrid(vlistID1, varID);
+	  field1.grid = vlistInqVarGrid(vlistID1, varID);
 	  if ( needWeights && field1.grid != lastgrid )
 	    {
 	      lastgrid = field1.grid;
 	      wstatus = gridWeights(field1.grid, field1.weight);
 	    }
-	  code = vlistInqVarCode(vlistID1, varID);
-	  if ( wstatus != 0 && tsID == 0 && code != oldcode )
-	    cdoWarning("Using constant area weights for code %d!", oldcode=code);
-
+	  if ( wstatus != 0 && tsID == 0 && levelID == 0 )
+	    {
+	      vlistInqVarName(vlistID1, varID, varname);
+	      cdoWarning("Using constant grid cell area weights for variable %s!", varname);
+	    }
 	  field1.missval = vlistInqVarMissval(vlistID1, varID);
 	  field2.missval = vlistInqVarMissval(vlistID1, varID);
 
-	  /* RQ */
 	  if ( operfunc == func_pctl )
 	    merpctl(field1, & field2, pn);
 	  else  
 	    merfun(field1, &field2, operfunc);
-	  /* QR */  
 
 	  streamDefRecord(streamID2, varID,  levelID);
 	  streamWriteRecord(streamID2, field2.ptr, field2.nmiss);

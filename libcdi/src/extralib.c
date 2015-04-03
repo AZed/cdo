@@ -13,13 +13,13 @@
 #include "error.h"
 #include "file.h"
 #include "binary.h"
+#include "stream_fcommon.h"
 #include "swap.h"
 
 
-#define  SINGLE_PRECISION    4
-#define  DOUBLE_PRECISION    8
-
-#define  EXT_HEADER_LEN      4
+enum {
+  EXT_HEADER_LEN = 4,
+};
 
 
 static int initExtLib       = 0;
@@ -43,7 +43,7 @@ const char *extLibraryVersion(void)
 }
 
 
-int EXT_Debug = 0;    /* If set to 1, debugging */
+static int EXT_Debug = 0;    /* If set to 1, debugging */
 
 
 void extDebug(int debug)
@@ -55,7 +55,7 @@ void extDebug(int debug)
 }
 
 
-void extLibInit()
+static void extLibInit()
 {
   char *envString;
   char *envName = "EXT_PRECISION";
@@ -147,11 +147,11 @@ void extDelete(void *ext)
 
 int extCheckFiletype(int fileID, int *swap)
 {
-  size_t blocklen = 0;
+  size_t blocklen = 0, fact = 0;
   size_t sblocklen = 0;
   size_t data =  0;
   size_t dimxy = 0;
-  int fact = 0, found = 0;
+  int found = 0;
   unsigned char buffer[40], *pbuf;
 
   if ( fileRead(fileID, buffer, 4) != 4 ) return (found);
@@ -232,7 +232,7 @@ int extDefHeader(void *ext, const int *header)
   for ( i = 0; i < EXT_HEADER_LEN; i++ )
     extp->header[i] = header[i];
 
-  extp->datasize = header[3];
+  extp->datasize = (size_t)header[3];
   if ( extp->number == EXT_COMP ) extp->datasize *= 2;
 
   if ( EXT_Debug ) Message("datasize = %lu", extp->datasize);
@@ -241,9 +241,8 @@ int extDefHeader(void *ext, const int *header)
 }
 
 
-int extInqData(void *ext, int prec, void *data)
+static int extInqData(extrec_t *extp, int prec, void *data)
 {
-  extrec_t *extp = (extrec_t *) ext;
   size_t datasize;
   size_t i;
   int ierr = 0;
@@ -334,9 +333,9 @@ int extDefData(void *ext, int prec, const void *data)
 
   header = extp->header;
 
-  datasize = header[3];
+  datasize = (size_t)header[3];
   if ( extp->number == EXT_COMP ) datasize *= 2;
-  blocklen = datasize * rprec;
+  blocklen = datasize * (size_t)rprec;
 
   extp->datasize = datasize;
 
@@ -404,9 +403,7 @@ int extRead(int fileID, void *ext)
   size_t blocklen, blocklen2;
   size_t i;
   char tempheader[32];
-  int hprec, dprec;
   void *buffer;
-  int buffersize;
   int byteswap;
   int status;
 
@@ -427,9 +424,9 @@ int extRead(int fileID, void *ext)
   if ( EXT_Debug )
     Message("blocklen = %lu", blocklen);
 
-  hprec = blocklen / EXT_HEADER_LEN;
+  size_t hprec = blocklen / EXT_HEADER_LEN;
 
-  extp->prec = hprec;
+  extp->prec = (int)hprec;
 
   switch ( hprec )
     {
@@ -466,15 +463,15 @@ int extRead(int fileID, void *ext)
       if ( blocklen2 != 0 ) return (-1);
     }
 
-  extp->datasize = extp->header[3];
+  extp->datasize = (size_t)extp->header[3];
 
   if ( EXT_Debug ) Message("datasize = %lu", extp->datasize);
 
   blocklen = binReadF77Block(fileID, byteswap);
 
-  buffersize = extp->buffersize;
+  size_t buffersize = (size_t)extp->buffersize;
 
-  if ( buffersize < (int) blocklen )
+  if ( buffersize < blocklen )
     {
       buffersize = blocklen;
       buffer = extp->buffer;
@@ -485,7 +482,7 @@ int extRead(int fileID, void *ext)
   else
     buffer = extp->buffer;
 
-  dprec = blocklen / extp->datasize;
+  size_t dprec = blocklen / extp->datasize;
 
   if ( dprec == hprec )
     {
@@ -536,7 +533,7 @@ int extWrite(int fileID, void *ext)
   header = extp->header;
 
   /* write header record */
-  blocklen = EXT_HEADER_LEN * rprec;
+  blocklen = EXT_HEADER_LEN * (size_t)rprec;
 
   binWriteF77Block(fileID, byteswap, blocklen);
 
@@ -569,9 +566,9 @@ int extWrite(int fileID, void *ext)
 
   binWriteF77Block(fileID, byteswap, blocklen);
 
-  datasize = header[3];
+  datasize = (size_t)header[3];
   if ( number == EXT_COMP ) datasize *= 2;
-  blocklen = datasize * rprec;
+  blocklen = datasize * (size_t)rprec;
 
   binWriteF77Block(fileID, byteswap, blocklen);
 

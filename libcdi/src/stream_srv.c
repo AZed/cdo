@@ -2,7 +2,9 @@
 #  include "config.h"
 #endif
 
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "dmemory.h"
@@ -14,6 +16,8 @@
 #include "varscan.h"
 #include "datetime.h"
 #include "service.h"
+#include "stream_fcommon.h"
+#include "stream_srv.h"
 #include "vlist.h"
 
 
@@ -96,7 +100,7 @@ int srvInqRecord(stream_t *streamptr, int *varID, int *levelID)
 }
 */
 
-int srvReadRecord(stream_t *streamptr, double *data, int *nmiss)
+void srvReadRecord(stream_t *streamptr, double *data, int *nmiss)
 {
   int vlistID, fileID;
   int status;
@@ -119,7 +123,8 @@ int srvReadRecord(stream_t *streamptr, double *data, int *nmiss)
   fileSetPos(fileID, recpos, SEEK_SET);
 
   status = srvRead(fileID, srvp);
-  if ( status != 0 ) return (0);
+  if ( status != 0 )
+    Error("Failed to read record from SRV file");
 
   srvInqHeader(srvp, header);
   srvInqDataDP(srvp, data);
@@ -137,48 +142,19 @@ int srvReadRecord(stream_t *streamptr, double *data, int *nmiss)
 	data[i] = missval;
 	(*nmiss)++;
       }
-
-  return (1);
 }
 
 
-int srvCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
+void srvCopyRecord(stream_t *streamptr2, stream_t *streamptr1)
 {
-  int fileID1, fileID2;
-  int tsID, recID, vrecID;
-  long recsize;
-  off_t recpos;
-  int status = 0;
-  char *buffer;
-
-  fileID1 = streamptr1->fileID;
-  fileID2 = streamptr2->fileID;
-
-  tsID    = streamptr1->curTsID;
-  vrecID  = streamptr1->tsteps[tsID].curRecID;
-  recID   = streamptr1->tsteps[tsID].recIDs[vrecID];
-  recpos  = streamptr1->tsteps[tsID].records[recID].position;
-  recsize = streamptr1->tsteps[tsID].records[recID].size;
-
-  fileSetPos(fileID1, recpos, SEEK_SET);
-
-  buffer = (char *) malloc(recsize);
-
-  fileRead(fileID1, buffer, recsize);
-
-  fileWrite(fileID2, buffer, recsize);
-
-  free(buffer);
-
-  return (status);
+  streamFCopyRecord(streamptr2, streamptr1, "SRV");
 }
 
 
-int srvDefRecord(stream_t *streamptr)
+void srvDefRecord(stream_t *streamptr)
 {
   int gridID;
   int header[8];
-  int status = 0;
   int xsize, ysize;
   int datatype;
   int pdis, pcat, pnum;
@@ -213,30 +189,25 @@ int srvDefRecord(stream_t *streamptr)
   srvp->dprec = srvDefDatatype(datatype);
 
   srvDefHeader(srvp, header);
-
-  return (status);
 }
 
 
-int srvWriteRecord(stream_t *streamptr, const double *data)
+void srvWriteRecord(stream_t *streamptr, const double *data)
 {
-  int status = 0;
   int fileID = streamptr->fileID;
   srvrec_t *srvp = (srvrec_t*) streamptr->record->exsep;
 
   srvDefDataDP(srvp, data);
 
   srvWrite(fileID, srvp);
-
-  return (status);
 }
 
 static
 void srv_add_record(stream_t *streamptr, int param, int level, int xsize, int ysize,
-                    long recsize, off_t position, int prec)
+                    size_t recsize, off_t position, int prec)
 {
   int leveltype;
-  int gridID = UNDEFID;
+  int gridID = CDI_UNDEFID;
   int levelID = 0;
   int tsID, recID, varID;
   int datatype;
@@ -271,10 +242,11 @@ void srv_add_record(stream_t *streamptr, int param, int level, int xsize, int ys
   datatype = srvInqDatatype(prec);
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0, 0, 0,
-	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, TSTEP_INSTANT, 0, 0, -1, NULL, NULL, NULL, NULL);
 
-  (*record).varID   = varID;
-  (*record).levelID = levelID;
+  xassert(varID <= SHRT_MAX && levelID <= SHRT_MAX);
+  (*record).varID   = (short)varID;
+  (*record).levelID = (short)levelID;
 
   streamptr->tsteps[tsID].nallrecs++;
   streamptr->nrecs++;
@@ -324,7 +296,6 @@ void srvScanTimestep1(stream_t *streamptr)
   DateTime datetime, datetime0;
   int tsID;
   int varID;
-  long recsize;
   off_t recpos;
   int nrecords, nrecs, recID;
   int taxisID = -1;
@@ -353,7 +324,7 @@ void srvScanTimestep1(stream_t *streamptr)
 	  streamptr->ntsteps = 1;
 	  break;
 	}
-      recsize = fileGetPos(fileID) - recpos;
+      size_t recsize = (size_t)(fileGetPos(fileID) - recpos);
 
       srvInqHeader(srvp, header);
 
@@ -404,8 +375,8 @@ void srvScanTimestep1(stream_t *streamptr)
 
   taxisID = taxisCreate(TAXIS_ABSOLUTE);
   taxis->type  = TAXIS_ABSOLUTE;
-  taxis->vdate = datetime0.date;
-  taxis->vtime = datetime0.time;
+  taxis->vdate = (int)datetime0.date;
+  taxis->vtime = (int)datetime0.time;
 
   vlistID = streamptr->vlistID;
   vlistDefTaxis(vlistID, taxisID);
@@ -417,10 +388,11 @@ void srvScanTimestep1(stream_t *streamptr)
     {
       streamptr->tsteps[0].recordSize = nrecords;
       streamptr->tsteps[0].records =
-	(record_t *) realloc(streamptr->tsteps[0].records, nrecords*sizeof(record_t));
+	(record_t *)xrealloc(streamptr->tsteps[0].records,
+                             (size_t)nrecords * sizeof(record_t));
     }
 
-  streamptr->tsteps[0].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[0].recIDs = (int *)xmalloc((size_t)nrecords * sizeof (int));
   streamptr->tsteps[0].nrecs = nrecords;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[0].recIDs[recID] = recID;
@@ -458,7 +430,6 @@ int srvScanTimestep2(stream_t *streamptr)
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
   int tsID;
   int varID;
-  long recsize;
   off_t recpos = 0;
   int nrecords, nrecs, recID, rindex;
   int nextstep;
@@ -483,7 +454,7 @@ int srvScanTimestep2(stream_t *streamptr)
   cdi_create_records(streamptr, tsID);
 
   nrecords = streamptr->tsteps[0].nallrecs;
-  streamptr->tsteps[1].recIDs = (int *) malloc(nrecords*sizeof(int));
+  streamptr->tsteps[1].recIDs = (int *)xmalloc((size_t)nrecords * sizeof (int));
   streamptr->tsteps[1].nrecs = 0;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[1].recIDs[recID] = -1;
@@ -506,7 +477,7 @@ int srvScanTimestep2(stream_t *streamptr)
 	  streamptr->ntsteps = 2;
 	  break;
 	}
-      recsize = fileGetPos(fileID) - recpos;
+      size_t recsize = (size_t)(fileGetPos(fileID) - recpos);
 
       srvInqHeader(srvp, header);
 
@@ -624,7 +595,7 @@ int srvInqContents(stream_t *streamptr)
 }
 
 static
-int srvScanTimestep(stream_t *streamptr)
+long srvScanTimestep(stream_t *streamptr)
 {
   int header[8];
   int status;
@@ -633,7 +604,6 @@ int srvScanTimestep(stream_t *streamptr)
   /* int rxsize = 0, rysize = 0; */
   int param = 0;
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
-  long recsize = 0;
   off_t recpos = 0;
   int recID;
   taxis_t *taxis;
@@ -662,7 +632,8 @@ int srvScanTimestep(stream_t *streamptr)
       nrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->tsteps[tsID].nrecs = nrecs;
-      streamptr->tsteps[tsID].recIDs = (int *) malloc(nrecs*sizeof(int));
+      streamptr->tsteps[tsID].recIDs
+        = (int *)xmalloc((size_t)nrecs * sizeof (int));
       for ( recID = 0; recID < nrecs; recID++ )
 	streamptr->tsteps[tsID].recIDs[recID] = streamptr->tsteps[1].recIDs[recID];
 
@@ -679,7 +650,7 @@ int srvScanTimestep(stream_t *streamptr)
 	      streamptr->ntsteps = streamptr->rtsteps + 1;
 	      break;
 	    }
-	  recsize = fileGetPos(fileID) - recpos;
+	  size_t recsize = (size_t)(fileGetPos(fileID) - recpos);
 
 	  srvInqHeader(srvp, header);
 
@@ -754,7 +725,8 @@ int srvScanTimestep(stream_t *streamptr)
 
 int srvInqTimestep(stream_t *streamptr, int tsID)
 {
-  int ntsteps, nrecs;
+  long ntsteps;
+  int nrecs;
 
   if ( tsID == 0 && streamptr->rtsteps == 0 )
     Error("Call to cdiInqContents missing!");
@@ -766,7 +738,7 @@ int srvInqTimestep(stream_t *streamptr, int tsID)
   while ( ( tsID + 1 ) > streamptr->rtsteps && ntsteps == UNDEFID )
     ntsteps = srvScanTimestep(streamptr);
 
-  if ( tsID >= streamptr->ntsteps && streamptr->ntsteps != CDI_UNDEFID )
+  if ( tsID >= streamptr->ntsteps && streamptr->ntsteps != UNDEFID )
     {
       nrecs = 0;
     }

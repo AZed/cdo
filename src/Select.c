@@ -576,9 +576,12 @@ void *Select(void *argument)
   streamCnt = cdoStreamCnt();
   nfiles = streamCnt - 1;
 
+  if ( !cdoVerbose && nfiles > 1 ) progressInit();
+
   tsID2 = 0;
   for ( indf = 0; indf < nfiles; indf++ )
     {
+      if ( !cdoVerbose && nfiles > 1 ) progressStatus(0, 1, (indf+1.)/nfiles);
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf)->args);
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
@@ -778,11 +781,12 @@ void *Select(void *argument)
 	      if ( varID == nvars2 ) ntsteps = 0;
 	    }
 
-	  if ( operatorID == SELECT && npar_timestep == 1 ) ntsteps = 1;
+	  int ntsteps2 = ntsteps;
+	  if ( operatorID == SELECT && npar_timestep == 1 ) ntsteps2 = 1;
 	  
-	  if ( ntsteps == 0 || ntsteps == 1 ) vlistDefNtsteps(vlistID2, ntsteps);
+	  if ( ntsteps2 == 0 || ntsteps2 == 1 ) vlistDefNtsteps(vlistID2, ntsteps2);
 
-	  if ( ntsteps == 0 && nfiles > 1 )
+	  if ( ntsteps2 == 0 && nfiles > 1 )
 	    {	      
 	      for ( varID = 0; varID < nvars2; ++varID )
 		vlistDefVarTsteptype(vlistID2, varID, TSTEP_INSTANT);
