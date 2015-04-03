@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,14 +25,16 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 #define MAX_LINE 256
 #define MAX_VALS 1048576
 
+static
 int ReadCoords(double *xvals, double *yvals, const char *polyfile, FILE *fp)
 {
   double xcoord, ycoord;
@@ -107,10 +109,13 @@ int ReadCoords(double *xvals, double *yvals, const char *polyfile, FILE *fp)
 }
 
 
+void genlonlatbox(double xlon1, double xlon2, double xlat1, double xlat2,
+		  int nlon1, int nlat1, double *xvals1, double *yvals1,
+		  int *lat1, int *lat2, int *lon11, int *lon12, int *lon21, int *lon22);
+
 static
-void genlonlatbox(int gridID1, int *lat1, int *lat2, int *lon11, int *lon12, int *lon21, int *lon22)
+void genlonlatgrid(int gridID1, int *lat1, int *lat2, int *lon11, int *lon12, int *lon21, int *lon22)
 {
-  static char func[] = "genlonlatbox";  
   int nlon1, nlat1;
   double *xvals1, *yvals1;
   double xlon1, xlon2, xlat1, xlat2;
@@ -131,63 +136,26 @@ void genlonlatbox(int gridID1, int *lat1, int *lat2, int *lon11, int *lon12, int
   gridInqXvals(gridID1, xvals1);
   gridInqYvals(gridID1, yvals1);
 
-  xlon2 -= 360 * floor ((xlon2 - xlon1) / 360);
-  if ( IS_EQUAL(xlon1, xlon2) ) xlon2 += 360;
-  xlon2 -= 360 * floor ((xlon1 - xvals1[0]) / 360);
-  xlon1 -= 360 * floor ((xlon1 - xvals1[0]) / 360);
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridID1, units);
+    gridToDegree(units, "grid center lon", nlon1, xvals1);
+    gridInqYunits(gridID1, units);
+    gridToDegree(units, "grid center lat", nlat1, yvals1);
+  }
 
-  for ( *lon21 = 0; *lon21 < nlon1 && xvals1[*lon21] < xlon1; (*lon21)++ );
-  for ( *lon22 = *lon21; *lon22 < nlon1 && xvals1[*lon22] < xlon2; (*lon22)++ );
-
-  if ( *lon22 >= nlon1 ) (*lon22)--;
-
-  xlon1 -= 360;
-  xlon2 -= 360;
-
-  for ( *lon11 = 0; xvals1[*lon11] < xlon1; (*lon11)++ );
-  for ( *lon12 = *lon11; *lon12 < nlon1 && xvals1[*lon12] < xlon2; (*lon12)++ );
-
-  (*lon12)--;
-
-  if ( *lon12 - *lon11 + 1 + *lon22 - *lon21 + 1 <= 0 )
-    cdoAbort("Longitudinal dimension is too small!");
-
-  if ( yvals1[0] > yvals1[nlat1 - 1] )
-    {
-      if ( xlat1 > xlat2 )
-	{
-	  for ( *lat1 = 0; *lat1 < nlat1 && yvals1[*lat1] > xlat1; (*lat1)++ );
-	  for ( *lat2 = nlat1 - 1; *lat2 && yvals1[*lat2] < xlat2; (*lat2)-- );
-	}
-      else
-	{
-	  for ( *lat1 = 0; *lat1 < nlat1 && yvals1[*lat1] > xlat2; (*lat1)++ );
-	  for ( *lat2 = nlat1 - 1; *lat2 && yvals1[*lat2] < xlat1; (*lat2)-- );
-	}
-    }
-  else
-    {
-      if ( xlat1 < xlat2 )
-	{
-	  for ( *lat1 = 0; *lat1 < nlat1 && yvals1[*lat1] < xlat1; (*lat1)++ );
-	  for ( *lat2 = nlat1 - 1; *lat2 && yvals1[*lat2] > xlat2; (*lat2)-- );
-	}
-      else
-	{
-	  for ( *lat1 = 0; *lat1 < nlat1 && yvals1[*lat1] < xlat2; (*lat1)++ );
-	  for ( *lat2 = nlat1 - 1; *lat2 && yvals1[*lat2] > xlat1; (*lat2)-- );
-	}
-    }
-
-  if ( *lat2 - *lat1 + 1 <= 0 )
-    cdoAbort("Latitudinal dimension is too small!");
+  genlonlatbox(xlon1, xlon2, xlat1, xlat2,
+	       nlon1, nlat1, xvals1, yvals1,
+	       lat1, lat2, lon11, lon12, lon21, lon22);
 
   free(xvals1);
   free(yvals1);
 }
 
 
-static void genindexbox(int gridID1, int *lat1, int *lat2, int *lon11, int *lon12, int *lon21, int *lon22)
+static
+void genindexbox(int gridID1, int *lat1, int *lat2, int *lon11, int *lon12, int *lon21, int *lon22)
 {
   int nlon1, nlat1;
   int temp;
@@ -259,8 +227,9 @@ static void genindexbox(int gridID1, int *lat1, int *lat2, int *lon11, int *lon1
 }
 
 
-static void maskbox(int *mask, int gridID,
-		   int lat1, int lat2, int lon11, int lon12, int lon21, int lon22)
+static
+void maskbox(int *mask, int gridID,
+	     int lat1, int lat2, int lon11, int lon12, int lon21, int lon22)
 {
   int nlon, nlat;
   int ilat, ilon;
@@ -275,10 +244,9 @@ static void maskbox(int *mask, int gridID,
 	mask[nlon*ilat + ilon] = 0;
 }
 
-
-static void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, int nofcoords)
+static
+void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, int nofcoords)
 {
-  static char func[] = "maskregion";
   int i, j;
   int nlon, nlat;
   int ilat, ilon;
@@ -296,17 +264,30 @@ static void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, 
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);  
 
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridID, units);
+    gridToDegree(units, "grid center lon", nlon, xvals);
+    gridInqYunits(gridID, units);
+    gridToDegree(units, "grid center lat", nlat, yvals);
+  }
+
   xmin = xvals[0];
-  ymin = yvals[0];
   xmax = xvals[0];
+  ymin = yvals[0];
   ymax = yvals[0];
 
-  for ( i = 0; i < nofcoords; i++)
+  for ( i = 1; i < nlon; i++ )
     {
-      if(xvals[i] < xmin) xmin = xvals[i];
-      if(yvals[i] < ymin) ymin = yvals[i];
-      if(xvals[i] > xmax) xmax = xvals[i];
-      if(yvals[i] > ymax) ymax = yvals[i];
+      if ( xvals[i] < xmin ) xmin = xvals[i];
+      if ( xvals[i] > xmax ) xmax = xvals[i];
+    }
+
+  for ( i = 1; i < nlat; i++ )
+    {
+      if ( yvals[i] < ymin ) ymin = yvals[i];
+      if ( yvals[i] > ymax ) ymax = yvals[i];
     }
 
   for ( ilat = 0; ilat < nlat; ilat++ )
@@ -316,10 +297,9 @@ static void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, 
 	{
           c = 0;
 	  xval = xvals[ilon];
-	  if(!( ( ( xval > xmin ) || ( xval < xmax ) ) || ( (yval > ymin) || (yval < ymax) ) ) ) c = !c;
-	  
-	  
-          if ( c == 0)
+	  if (!( ( ( xval > xmin ) || ( xval < xmax ) ) || ( (yval > ymin) || (yval < ymax) ) ) ) c = !c;
+	  	  
+          if ( c == 0 )
 	    {
 	      for (i = 0, j = nofcoords-1; i < nofcoords; j = i++)
 	    
@@ -335,10 +315,10 @@ static void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, 
 		{
 		  if ( xvals[ilon] > 180 )
 		    {
-                         if ((((ycoords[i]<=yval) && (yval<ycoords[j])) ||
-	                      ((ycoords[j]<=yval) && (yval<ycoords[i]))) &&
-		              ((xval-360) < (xcoords[j] - (xcoords[i])) * (yval - ycoords[i]) / (ycoords[j] - ycoords[i]) +(xcoords[i])))
-			   c = !c;
+		      if ((((ycoords[i]<=yval) && (yval<ycoords[j])) ||
+			   ((ycoords[j]<=yval) && (yval<ycoords[i]))) &&
+			  ((xval-360) < (xcoords[j] - (xcoords[i])) * (yval - ycoords[i]) / (ycoords[j] - ycoords[i]) +(xcoords[i])))
+			c = !c;
 		    }
 		}
 	    }
@@ -363,13 +343,11 @@ static void maskregion(int *mask, int gridID, double *xcoords, double *ycoords, 
       
   free(xvals);
   free(yvals);
-
 }
 
 
 void *Maskbox(void *argument)
 {
-  static char func[] = "Maskbox";
   int MASKLONLATBOX, MASKINDEXBOX, MASKREGION;
   int operatorID;
   int streamID1, streamID2;
@@ -398,10 +376,10 @@ void *Maskbox(void *argument)
   MASKLONLATBOX = cdoOperatorAdd("masklonlatbox", 0, 0, "western and eastern longitude and southern and northern latitude");
   MASKINDEXBOX  = cdoOperatorAdd("maskindexbox",  0, 0, "index of first and last longitude and index of first and last latitude");
   MASKREGION    = cdoOperatorAdd("maskregion",    0, 0, "limiting coordinates of the region");
+
   operatorID = cdoOperatorID();
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -446,7 +424,6 @@ void *Maskbox(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -457,7 +434,7 @@ void *Maskbox(void *argument)
  
   if ( operatorID == MASKLONLATBOX )
     {
-      genlonlatbox(gridID, &lat1, &lat2, &lon11, &lon12, &lon21, &lon22);
+      genlonlatgrid(gridID, &lat1, &lat2, &lon11, &lon12, &lon21, &lon22);
       maskbox(mask, gridID, lat1, lat2, lon11, lon12, lon21, lon22);
     }
   if ( operatorID == MASKINDEXBOX )

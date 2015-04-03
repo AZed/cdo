@@ -1,0 +1,124 @@
+#! /bin/sh
+#
+# default configuration options and compiler flags for different hosts
+#
+if test -z "$1" ; then
+  HOSTNAME=`hostname`
+else
+  HOSTNAME=$1
+fi
+#
+set -x
+#
+case "${HOSTNAME}" in
+# i386-apple-darwin10
+    bailung*)
+	./configure --prefix=$HOME/local \
+                    --enable-maintainer-mode \
+                    --enable-swig \
+                    --enable-python \
+                    --with-jasper=$HOME/local \
+                    --with-grib_api=$HOME/local \
+                    --with-netcdf=$HOME/local \
+                    --with-szlib=$HOME/local \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -Df2cFortran"
+	;;
+    hama*)
+	./configure --prefix=$HOME/local \
+                    --enable-maintainer-mode \
+                    --enable-swig \
+                    --enable-python \
+                    --with-jasper=/opt/local \
+                    --with-grib_api=$HOME/local/gribapi-1.9.8 \
+                    --with-netcdf=/opt/local \
+                    --with-szlib=$HOME/local \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -Df2cFortran"
+	;;
+# ia64-nec-linux
+    ds*)
+	./configure --prefix=$HOME/local \
+                    --with-netcdf=/pool/ia64/netcdf/netcdf-3.6.0-p1 \
+                    --with-szlib=$HOME/local \
+                    CC=icc CFLAGS="-g -O2 -Wall -fno-alias -DMIN_BUF_SIZE=4194304 -Df2cFortran"
+	;;
+# i686-linux
+    etch-ia32 | gata)
+	./configure --prefix=$HOME/local/etch-ia32 \
+                    --enable-maintainer-mode \
+                    --enable-all-static \
+                    --enable-swig \
+                    --enable-python \
+                    --with-jasper=/sw/etch-ia32/jasper-1.900.1 \
+                    --with-grib_api=$HOME/local/etch-ia32/grib_api-1.9.8 \
+	            --with-netcdf=/sw/etch-ia32/netcdf-4.0.1 \
+	            --with-hdf5=/sw/etch-ia32/hdf5-1.8.2 \
+                    --with-zlib=/sw/etch-ia32/zlib-1.2.3 \
+                    --with-szlib=$HOME/local/etch-ia32 \
+	            CC=gcc CFLAGS="-g -O2 -Wall -W -Wfloat-equal -pedantic"
+	;;
+    thingol)
+      ./configure --prefix=`pwd`/build \
+	            --with-netcdf=$HOME/local/libs4cdo-0.0.8 \
+	              --with-hdf5=$HOME/local/libs4cdo-0.0.8 \
+                     --with-szlib=$HOME/local/libs4cdo-0.0.8 \
+                      --with-proj=$HOME/local/libs4cdo-0.0.8 \
+                  --with-grib_api=$HOME/local/libs4cdo-0.0.8 \
+                    --with-jasper=$HOME/local/libs4cdo-0.0.8 \
+                      --with-pic \
+                      CC=gcc CFLAGS="-g -O2 -Wall" LIBS=-lopenjpeg
+	;;
+# sparc-sun-solaris2.9
+    executor | yang | yin)
+	./configure --prefix=$HOME/local/SUN64 \
+                    --with-netcdf=/scratch/small/m214/m214089/local/SunOS64 \
+                    --with-szlib=$HOME/local/solaris10 \
+                    CC=cc CFLAGS="-g -mt -xO3 -xtarget=native -m64"
+	;;
+# sx6-nec-superux12.2
+    cs*)
+	./configure --prefix=$HOME/local \
+         	    --with-netcdf=/pool/netcdf/netcdf-3.6.0-p1 \
+		    CC=c++ \
+                    CFLAGS="-O -Onooverlap,restrict=all -pvctl,fullmsg,noassume,loopcnt=1000000"
+	;;
+    sx6)
+	./configure --host=sx6 --prefix=$HOME/local \
+                    --with-netcdf=/pool/SX-6/netcdf/netcdf-3.6.0-p1 \
+		    CC=sxc++ AR=sxar RANLIB=ls \
+                    CFLAGS="-O -Onooverlap,restrict=all -pvctl,fullmsg,noassume,loopcnt=1000000"
+	;;
+    lxe0*)
+        echo 'Please choose compiler modules! Checkout with "module av"!'
+        ./configure --prefix=$(pwd)/build-SX  --host=sx9-nec-superux \
+              --with-netcdf=/usr/local/pkg-sx9 \
+              --with-grib_api=/usr/local/pkg-sx9/grib_api   CC=sxc++ FC=sxf90 \
+              LD=/SX/opt/crosskit/inst/bin/sxld AR=/SX/opt/crosskit/inst/bin/sxar \
+              RANLIB=echo
+	;;
+# mips-sgi-irix6.5
+    ecgate1)
+	./configure --prefix=$HOME/local \
+ 	            --with-netcdf=/home/ms/spdekplb/hmk/include,/home/ms/spdekplb/hmk/lib64 \
+	            CC=cc CFLAGS="-O -n32"
+	;;
+# 5000-fujitsu-uxpv4.1_ES
+    vpp5)
+	./configure --prefix=$HOME \
+	            CC=vcc CFLAGS="-O -Wv,-m3 -K4"
+	;;
+# powerpc-ibm-aix6.1.0.0
+    blizzard*)
+        CONFIG_SHELL=/bin/bash /bin/bash \
+                    ./configure --prefix=$HOME/local \
+                    --with-netcdf=/sw/aix61/netcdf-4.1.1-rc2 \
+                    --with-hdf5=/sw/aix61/hdf5-1.8.4-patch1-threadsafe \
+                    --with-zlib=/sw/aix53/zlib-1.2.3 \
+                    --with-szlib=/sw/aix53/szip-2.1 \
+                    AR="ar -X 64" LDFLAGS="-brtl" FC=xlf_r CC=xlc_r \
+                    CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -DHAVE_MMAP -Dextname" \
+                    SHELL=/bin/bash
+        ;;
+    *)
+	echo "configuration for hostname $HOSTNAME not found!"
+	;;
+esac

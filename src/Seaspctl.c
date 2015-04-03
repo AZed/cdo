@@ -22,7 +22,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -32,7 +32,6 @@
 
 void *Seaspctl(void *argument)
 {
-  static char func[] = "Seaspctl";
   int gridsize;
   int vdate1 = 0, vtime1 = 0;
   int vdate2 = 0, vtime2 = 0;
@@ -53,7 +52,7 @@ void *Seaspctl(void *argument)
   double missval;
   field_t **vars1 = NULL;
   field_t field;
-  int pn;
+  double pn;
   HISTOGRAM_SET *hset = NULL;
   int season_start;
 
@@ -62,38 +61,34 @@ void *Seaspctl(void *argument)
   cdoOperatorAdd("seaspctl", func_pctl, 0, NULL);
 
   operatorInputArg("percentile number");
-  pn = atoi(operatorArgv()[0]);
+  pn = atof(operatorArgv()[0]);
       
-  if ( pn < 1 || pn > 99 )
-    cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
+  if ( !(pn > 0 && pn < 100) )
+    cdoAbort("Illegal argument: percentile number %g is not in the range 0..100!", pn);
 
   season_start = get_season_start();
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = streamInqVlist(streamID3);
   vlistID4 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_hrd);
-  vlistCompare(vlistID1, vlistID3, func_hrd);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
+  vlistCompare(vlistID1, vlistID3, CMP_ALL);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = vlistInqTaxis(vlistID3);
   /* TODO - check that time axes 2 and 3 are equal */
-  
-  taxisID4 = taxisCreate(TAXIS_ABSOLUTE);
+
+  taxisID4 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID4, taxisID4);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 
@@ -244,21 +239,21 @@ void *Seaspctl(void *argument)
 
       taxisDefVdate(taxisID4, vdate4);
       taxisDefVtime(taxisID4, vtime4);
-      streamDefTimestep(streamID4, otsID++);
+      streamDefTimestep(streamID4, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
 	{
 	  varID   = recVarID[recID];
 	  levelID = recLevelID[recID];
 
-	  if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	    {
-	      streamDefRecord(streamID4, varID, levelID);
-	      streamWriteRecord(streamID4, vars1[varID][levelID].ptr, vars1[varID][levelID].nmiss);
-	    }
+	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	  streamDefRecord(streamID4, varID, levelID);
+	  streamWriteRecord(streamID4, vars1[varID][levelID].ptr, vars1[varID][levelID].nmiss);
 	}
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
   for ( varID = 0; varID < nvars; varID++ )

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,7 @@
       Intgrid    intgridbil      Bilinear grid interpolation
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -31,7 +31,6 @@
 
 int genThinoutGrid(int gridID1, int xinc, int yinc)
 {
-  static char func[] = "genThinoutGrid";
   int ilon, ilat, olon, olat;
   int gridID2, gridtype;
   int gridsize1, nlon1, nlat1;
@@ -90,7 +89,6 @@ int genThinoutGrid(int gridID1, int xinc, int yinc)
 
 int genBoxavgGrid(int gridID1, int xinc, int yinc)
 {
-  static char func[] = "genBoxavgGrid";
   int i, j, i1;
   int gridID2, gridtype;
   int gridsize1, nlon1, nlat1;
@@ -184,7 +182,6 @@ int genBoxavgGrid(int gridID1, int xinc, int yinc)
 
 void boxavg(field_t *field1, field_t *field2, int xinc, int yinc)
 {
-  static char func[] = "boxavg";
   int nlon1, nlat1;
   int nlon2, nlat2;
   int ilat, ilon;
@@ -254,7 +251,6 @@ void boxavg(field_t *field1, field_t *field2, int xinc, int yinc)
 
 void thinout(field_t *field1, field_t *field2, int xinc, int yinc)
 {
-  static char func[] = "thinout";
   int nlon1, nlat1;
   int nlon2, nlat2;
   int ilat, ilon, olat, olon;
@@ -314,7 +310,6 @@ void thinout(field_t *field1, field_t *field2, int xinc, int yinc)
 
 void *Intgrid(void *argument)
 {
-  static char func[] = "Intgrid";
   int INTGRID, INTPOINT, INTERPOLATE, BOXAVG, THINOUT;
   int operatorID;
   int streamID1, streamID2;
@@ -368,7 +363,6 @@ void *Intgrid(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -411,7 +405,6 @@ void *Intgrid(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

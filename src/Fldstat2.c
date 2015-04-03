@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,11 +22,10 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
 
 
 /* routine corr copied from PINGO */
@@ -57,9 +56,9 @@ double corr(double * restrict in0, double * restrict in1,
     }
 
   out = wsum0 ?
-        FDIV((sum01 * wsum0 - sum0 * sum1),
-	     FROOT((sum00 * wsum0 - sum0 * sum0) *
-		   (sum11 * wsum0 - sum1 * sum1))) : missval;
+        DIV((sum01 * wsum0 - sum0 * sum1),
+	     SQRT((sum00 * wsum0 - sum0 * sum0) *
+	          (sum11 * wsum0 - sum1 * sum1))) : missval;
 
   return (out);
 }
@@ -67,7 +66,6 @@ double corr(double * restrict in0, double * restrict in1,
 
 void *Fldstat2(void *argument)
 {
-  static char func[] = "Fldstat2";
   int operatorID;
   int operfunc;
   int streamID1, streamID2, streamID3;
@@ -93,23 +91,20 @@ void *Fldstat2(void *argument)
   cdoOperatorAdd("fldcor", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   if ( operfunc == func_mean || operfunc == func_avg ||
        operfunc == func_var  || operfunc == func_std )
     needWeights = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
-
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
@@ -130,7 +125,6 @@ void *Fldstat2(void *argument)
     vlistChangeGridIndex(vlistID3, index, gridID3);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 

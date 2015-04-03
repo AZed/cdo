@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2007-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2007-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Tinfo      tinfo           Time information
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -60,7 +60,6 @@ void printTunit(int unit)
     fprintf(stdout, "  Units = unknown");
 }
 
-
 static
 void printCalendar(int calendar)
 {
@@ -79,10 +78,39 @@ void printCalendar(int calendar)
 }
 
 
-void getTimeInc(int lperiod, int deltam, int deltay, int *incperiod, int *incunit)
+void getTimeInc(double jdelta, int vdate0, int vdate1, int *incperiod, int *incunit)
 {
+  int year0, month0, day0;
+  int year1, month1, day1;
+  int deltam, deltay;
+  int lperiod;
+  int sign = 1;
+
   *incperiod = 0;
   *incunit   = 0;
+
+  if ( jdelta < 0 )
+    lperiod = (int)(jdelta-0.5);
+  else
+    lperiod = (int)(jdelta+0.5);
+
+  if ( lperiod < 0 )
+    {
+      int tmp;
+      tmp = vdate1;
+      vdate1 = vdate0;
+      vdate0 = tmp;
+      lperiod = -lperiod;
+      sign = -1;
+    }
+
+  // printf("\n%d %d %d\n",lperiod, vdate0, vdate1);
+
+  cdiDecodeDate(vdate0, &year0, &month0, &day0);
+  cdiDecodeDate(vdate1, &year1, &month1, &day1);
+
+  deltay = year1-year0;
+  deltam = deltay*12 + (month1-month0);
 
   if ( lperiod/60 > 0 && lperiod/60 < 60 )
     {
@@ -119,29 +147,23 @@ void getTimeInc(int lperiod, int deltam, int deltay, int *incperiod, int *incuni
       *incperiod = lperiod;
       *incunit = TU_SECONDS;
     }
-}
 
+  *incperiod *= sign;
+}
 
 static
 void printBounds(int taxisID, int calendar)
 {
   int vdate0, vdate1;
   int vtime0, vtime1;
-  int year0, month0, day0;
-  int year1, month1, day1;
-  INT64 lperiod;
   int incperiod = 0, incunit = 0;
   juldate_t juldate1, juldate0;
   double jdelta;
-  int deltam, deltay;
   int i, len;
   char vdatestr[32], vtimestr[32];
 
   taxisInqVdateBounds(taxisID, &vdate0, &vdate1);
   taxisInqVtimeBounds(taxisID, &vtime0, &vtime1);
-
-  cdiDecodeDate(vdate0, &year0, &month0, &day0);
-  cdiDecodeDate(vdate1, &year1, &month1, &day1);
 
   date2str(vdate0, vdatestr, sizeof(vdatestr));
   time2str(vtime0, vtimestr, sizeof(vtimestr));	  
@@ -154,15 +176,11 @@ void printBounds(int taxisID, int calendar)
   juldate0  = juldate_encode(calendar, vdate0, vtime0);
   juldate1  = juldate_encode(calendar, vdate1, vtime1);
   jdelta    = juldate_to_seconds(juldate_sub(juldate1, juldate0));
-  lperiod   = (INT64)(jdelta+0.5);
 
-  deltay = year1-year0;
-  deltam = deltay*12 + (month1-month0);
-
-  getTimeInc(lperiod, deltam, deltay, &incperiod, &incunit);
+  getTimeInc(jdelta, vdate0, vdate1, &incperiod, &incunit);
   
   /* fprintf(stdout, "  %g  %g  %g  %d", jdelta, jdelta/3600, fmod(jdelta,3600), incperiod%3600);*/
-  len = fprintf(stdout, " %3d %s%s", incperiod, tunits[incunit], incperiod>1?"s":"");
+  len = fprintf(stdout, " %3d %s%s", incperiod, tunits[incunit], abs(incperiod)>1?"s":"");
   for ( i = 0; i < 11-len; ++i ) fprintf(stdout, " ");
 }
 
@@ -186,7 +204,7 @@ int fill_gap(int ngaps, int ntsm[MAX_NTSM], int rangetsm[MAX_GAPS][2],
 	{
 	  its = 0;
 	  ndate = vdate0;
-	  printf("fill_gap %d\n", ndate);
+	  //printf("fill_gap %d\n", ndate);
 	  while ( TRUE )
 	    {
 	      cdiDecodeDate(ndate, &year, &month, &day);
@@ -249,7 +267,6 @@ void *Tinfo(void *argument)
   int calendar, unit;
   int incperiod0 = 0, incunit0 = 0;
   int incperiod1 = 0, incunit1 = 0;
-  INT64 lperiod;
   int incperiod = 0, incunit = 0;
   int its = 0, igap;
   int ngaps = 0;
@@ -266,7 +283,6 @@ void *Tinfo(void *argument)
   cdoInitialize(argument);
 
   streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   vlistID = streamInqVlist(streamID);
 
@@ -326,22 +342,16 @@ void *Tinfo(void *argument)
 
 	  if ( tsID )
 	    {
-	      int deltam, deltay;
-
 	      cdiDecodeDate(vdate0, &year0, &month0, &day0);
 
 	      juldate0  = juldate_encode(calendar, vdate0, vtime0);
 	      juldate   = juldate_encode(calendar, vdate, vtime);
 	      jdelta    = juldate_to_seconds(juldate_sub(juldate, juldate0));
-	      lperiod   = (INT64)(jdelta+0.5);
 
-	      deltay = year-year0;
-	      deltam = deltay*12 + (month-month0);
-
-	      getTimeInc(lperiod, deltay, deltam, &incperiod, &incunit);
+	      getTimeInc(jdelta, vdate0, vdate, &incperiod, &incunit);
 
 	      /* fprintf(stdout, "  %g  %g  %g  %d", jdelta, jdelta/3600, fmod(jdelta,3600), incperiod%3600);*/
-	      len = fprintf(stdout, " %3d %s%s", incperiod, tunits[incunit], incperiod>1?"s":"");
+	      len = fprintf(stdout, " %3d %s%s", incperiod, tunits[incunit], abs(incperiod)>1?"s":"");
 	      for ( i = 0; i < 11-len; ++i ) fprintf(stdout, " ");
 	    }
 	  else

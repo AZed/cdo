@@ -1,13 +1,12 @@
 #include <string.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "dmemory.h"
 #include "field.h"
 
 
 field_t **field_allocate(int vlistID, int ptype, int init)
 {
-  static const char *func = "field_allocate";
   int nvars, nlevel;
   int varID, zaxisID, levelID;
   int gridID, gridsize;
@@ -68,7 +67,6 @@ field_t **field_calloc(int vlistID, int ptype)
 
 void field_free(field_t **field, int vlistID)
 {
-  static const char *func = "field_free";
   int nvars, nlevel;
   int varID, levelID;
 

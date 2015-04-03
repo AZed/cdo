@@ -1977,7 +1977,6 @@ int qpassc(double *a, double *b, double *c, double *d, double *trigs,
 /* ====================== */
 void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlon, long nlev, long nfc)
 {
-  static char func[] = "fc2gp";
   long lot, fou, ia, ifac, jump, k, la;
   long lat, lev, lon, nfax, rix, wix;
   double *wfc, *wgp, *wpt;
@@ -2148,7 +2147,6 @@ void fc2gp(double *trig, long *ifax, double *fc, double *gp, long nlat, long nlo
 
 void gp2fc(double *trig, long *ifax, double *gp, double *fc, long nlat, long nlon, long nlev, long nfc)
 {
-  static char func[] = "gp2fc";
   long lot, fou, ia, ifac, jump, k, la;
   long lat, lev, lon, nfax, rix, wix;
   double *wfc, *wgp, *wpt;

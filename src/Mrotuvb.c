@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Mrotuvb     mrotuvb          Backward rotation for MPIOM data
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -155,7 +155,6 @@ static
 void uv_to_p_grid(int nlon, int nlat, double *grid1x, double *grid1y, 
 		  double *grid2x, double *grid2y, double *grid3x, double *grid3y)
 {
-  static char func[] = "uv_to_p_grid";
   int gridsizex;
   int i, j;
   double gx, gy;
@@ -261,7 +260,6 @@ void uv_to_p_grid(int nlon, int nlat, double *grid1x, double *grid1y,
 
 void *Mrotuvb(void *argument)
 {
-  static char func[] = "Mrotuvb";
   int streamID1, streamID2, streamID3;
   int nrecs, nrecs2;
   int tsID, recID, levelID;
@@ -285,10 +283,7 @@ void *Mrotuvb(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
-
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -332,8 +327,26 @@ void *Mrotuvb(void *argument)
   gridInqXvals(gridID1, grid1x);
   gridInqYvals(gridID1, grid1y);
 
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridID1, units);
+    gridToDegree(units, "grid1 center lon", gridsize, grid1x);
+    gridInqYunits(gridID1, units);
+    gridToDegree(units, "grid1 center lat", gridsize, grid1y);
+  }
+
   gridInqXvals(gridID2, grid2x);
   gridInqYvals(gridID2, grid2y);
+
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridID2, units);
+    gridToDegree(units, "grid2 center lon", gridsize, grid2x);
+    gridInqYunits(gridID2, units);
+    gridToDegree(units, "grid2 center lat", gridsize, grid2y);
+  }
 
   uv_to_p_grid(nlon, nlat, grid1x, grid1y, grid2x, grid2y, grid3x, grid3y);
 
@@ -374,7 +387,6 @@ void *Mrotuvb(void *argument)
   if ( cdoVerbose ) vlistPrint(vlistID3);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 

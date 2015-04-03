@@ -440,7 +440,7 @@ void spcut(double *arrayIn, double *arrayOut, int trunc, int *waves)
     {
       for ( m = n; m <= trunc; m++ )
 	{
-	  if ( waves[n] || waves[m] )
+	  if ( waves[m] )
 	    {
 	      *arrayOut++ = *arrayIn++;
 	      *arrayOut++ = *arrayIn++;

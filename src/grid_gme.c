@@ -740,7 +740,6 @@ void glo_coor(double *pxn, double *prlon, double *prlat,
               int kig1s, int kig1e, int kig2s, int kig2e, int knd, 
               int kni2, int kni3)
 {
-  static char func[] = "glo_coor";
   int id1, id2, id3, ioffset, joffset;
 
   double zsgn;
@@ -1324,7 +1323,6 @@ void gme_grid(int gridsize, double *rlon, double *rlat,
 	      double *blon, double *blat, int *imask,
               int ni, int nd, int ni2, int ni3)
 {
-  static char func[] = "gme_grid";
   int im1s, im1e, im2s, im2e;
   int i, j;
   double *xn;

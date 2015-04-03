@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -15,7 +15,7 @@
   GNU General Public License for more details.
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -67,7 +67,6 @@ void *Test2(void *argument)
 
 void *Testdata(void *argument)
 {
-  static char func[] = "Copy";
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs;
   int tsID1, tsID2, recID, varID, levelID;
@@ -87,13 +86,11 @@ void *Testdata(void *argument)
   tsID2 = 0;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   taxisID1 = vlistInqTaxis(vlistID1);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID2 = vlistDuplicate(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);

@@ -1,4 +1,21 @@
-#include "cdi.h"
+/*
+  This file is part of CDO. CDO is a collection of Operators to
+  manipulate and analyse Climate model Data.
+
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  See COPYING file for copying and redistribution conditions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -93,11 +110,9 @@ void init_amsr_averaged(int vlistID, int gridID, int zaxisID, int nvars)
     }
 }
 
-
 static
 void read_amsr(FILE *fp, int vlistID, int nvars, double *data[], int *nmiss)
 {
-  static char func[] = "read_amsr_averaged";
   int varID, i, gridsize;
   unsigned char *amsr_data = NULL;
   double xminval, xscale, missval;
@@ -132,7 +147,6 @@ void read_amsr(FILE *fp, int vlistID, int nvars, double *data[], int *nmiss)
   free(amsr_data);
 }
 
-
 static
 void write_data(int streamID, int nvars, double *data[], int *nmiss)
 {
@@ -144,7 +158,6 @@ void write_data(int streamID, int nvars, double *data[], int *nmiss)
       streamWriteRecord(streamID, data[varID], nmiss[varID]);
     }
 }
-
 
 static
 int getDate(const char *name)
@@ -165,7 +178,6 @@ int getDate(const char *name)
 
 void *Importamsr(void *argument)
 {
-  static char func[] = "Importamsr";
   int streamID;
   int tsID;
   int gridID, zaxisID, taxisID, vlistID;
@@ -192,7 +204,6 @@ void *Importamsr(void *argument)
   if ( vdate <= 999999 ) vdate = vdate*100 + 1;
 
   streamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(1));
 
   /*
     Longitude  is 0.25*xdim-0.125    degrees east

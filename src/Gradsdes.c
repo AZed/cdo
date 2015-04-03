@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 #  include "config.h" /* VERSION */
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -79,7 +79,8 @@ struct gaindx {
 
 /* Byte swap requested number of 4 byte elements */
 
-static void gabswp (void *r, int cnt) {
+static
+void gabswp (void *r, int cnt) {
 int i;
 char *ch1,*ch2,*ch3,*ch4,cc1,cc2;
 
@@ -105,7 +106,8 @@ char *ch1,*ch2,*ch3,*ch4,cc1,cc2;
  *                      Wesley Ebisuzaki
  */
 
-static float ibm2flt(unsigned char *ibm) {
+static
+float ibm2flt(unsigned char *ibm) {
 
 	int positive, power;
 	unsigned int abspower;
@@ -142,8 +144,8 @@ static float ibm2flt(unsigned char *ibm) {
  *
  * doesn't handle subnormal numbers
  */
-
-static int flt2ibm(float x, unsigned char *ibm) {
+static
+int flt2ibm(float x, unsigned char *ibm) {
 
 	int sign, exp, i;
 	double mant;
@@ -218,9 +220,9 @@ static int flt2ibm(float x, unsigned char *ibm) {
 
 #define  PutInt(buf, cnt, ival)   (ival < 0 ? Put4Byte(buf, cnt, 0x7fffffff - ival + 1) : Put4Byte(buf, cnt, ival))
 
-static void dumpmap()
+static
+void dumpmap()
 {
-  static char func[] = "dumpmap";
   unsigned char urec[4];
   unsigned char vermap;
   unsigned char mrec[512];
@@ -366,7 +368,6 @@ static void dumpmap()
 
 void *Gradsdes(void *argument)
 {
-  static char func[] = "Gradsdes";
   int GRADSDES1, GRADSDES2, DUMPMAP;
   int operatorID;
   int streamID = 0;
@@ -386,7 +387,7 @@ void *Gradsdes(void *argument)
   const char *datfile;
   char ctlfile[1024], *pctlfile;
   int len;
-  char varname[256], varlongname[256], varunits[256];
+  char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
   FILE *gdp;
   int yrev = FALSE;
   int zrev = FALSE;
@@ -440,7 +441,6 @@ void *Gradsdes(void *argument)
     }
 
   streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   vlistID = streamInqVlist(streamID);
 

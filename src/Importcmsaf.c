@@ -1,3 +1,20 @@
+/*
+  This file is part of CDO. CDO is a collection of Operators to
+  manipulate and analyse Climate model Data.
+
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  See COPYING file for copying and redistribution conditions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
 #if  defined  (HAVE_CONFIG_H)
 #  include "config.h"
 #endif
@@ -10,7 +27,7 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -119,7 +136,6 @@ void get_grid_info(double c0, double re, int *nrxp, int *nryp,
   *cp   = c;
 }
 
-
 static
 double det_lon_atovs(double r, double r0, double lts, double c, double re)
 {
@@ -131,7 +147,6 @@ double det_lon_atovs(double r, double r0, double lts, double c, double re)
 
   return (xla);
 }
-
 
 static
 double det_lat_atovs(double s, double s0, double lts, double c, double re)
@@ -146,11 +161,9 @@ double det_lat_atovs(double s, double s0, double lts, double c, double re)
   return (phi);
 }
 
-
 static
 int defLonLatGrid(int nx, int ny, double c0, double lts, double re)
 {
-  static char func[] = "defLonLatGrid";
   int gridID;
   int nrx, nry, i;
   double c;
@@ -213,12 +226,10 @@ int defLonLatGrid(int nx, int ny, double c0, double lts, double re)
   return (gridID);
 }
 
-
 static
 int defSinusoidalGrid(int nx, int ny, double xmin, double xmax, double ymin, double ymax, 
 		      double dx, double dy, double p1, double p2, double p3, double p4)
 {
-  static char func[] = "defSinusoidalGrid";
   int gridID;
   int i;
   double *xvals, *yvals;
@@ -250,12 +261,10 @@ int defSinusoidalGrid(int nx, int ny, double xmin, double xmax, double ymin, dou
   return (gridID);
 }
 
-
 static
 int defLaeaGrid(int nx, int ny, double xmin, double xmax, double ymin, double ymax, 
 		double dx, double dy, double a, double lon0, double lat0)
 {
-  static char func[] = "defLaeaGrid";
   int gridID;
   int i;
   double *xvals, *yvals;
@@ -288,7 +297,6 @@ int defLaeaGrid(int nx, int ny, double xmin, double xmax, double ymin, double ym
 
   return (gridID);
 }
-
 
 static
 int scan_pcs_def(char *pcs_def, char proj[128], double *a, double *lon0, double *lat0)
@@ -344,12 +352,10 @@ int scan_pcs_def(char *pcs_def, char proj[128], double *a, double *lon0, double 
   return (nfound);
 }
 
-
 #if  defined  (HAVE_LIBHDF5)
 static
 int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 {
-  static char func[] = "read_geolocation";
   int gridID = -1;
   hid_t grp_id;
   hid_t proj_id, region_id;
@@ -613,12 +619,10 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
 }
 #endif
 
-
 #if  defined  (HAVE_LIBHDF5)
 static
 int read_region(hid_t loc_id, int nx, int ny)
 {
-  //static char func[] = "read_region";
   int gridID = -1;
   hid_t grp_id;
   hid_t region_id;
@@ -757,12 +761,10 @@ int read_region(hid_t loc_id, int nx, int ny)
 }
 #endif
 
-
 #if  defined  (HAVE_LIBHDF5)
 static
 void read_dataset(hid_t loc_id, const char *name, void *opdata)
 {
-  static char func[] = "read_dataset";
   hid_t dset_id, type_id;
   hid_t   dataspace;   
   hsize_t dims_out[9];  /* dataset dimensions           */
@@ -772,7 +774,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
   int iattr;
   float fattr;
   double dattr;
-  char attname[256];
+  char attname[CDI_MAX_NAME];
   H5T_class_t  type_class;
   H5T_class_t atype_class;
   size_t atype_size;
@@ -788,7 +790,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
   int len;
   int dtype = DATATYPE_FLT32;
   char attstring[4096];     /* Buffer to read string attribute back */
-  char varname[256];
+  char varname[CDI_MAX_NAME];
   short *mask = NULL;
   double minval, maxval;
   int nmiss;
@@ -1249,7 +1251,6 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 }
 #endif
 
-
 #if  defined  (HAVE_LIBHDF5)
 static herr_t
 obj_info(hid_t loc_id, const char *name, void *opdata)
@@ -1320,7 +1321,7 @@ static
 void get_global_att(hid_t file_id, const char *obj_path, int vlistID)
 {
   hid_t   attr, atype, atype_mem, obj_id, grp_id = -1;
-  char attname[256];
+  char attname[CDI_MAX_NAME];
   H5T_class_t  type_class;
   int attint;
   double attflt;
@@ -1354,12 +1355,12 @@ void get_global_att(hid_t file_id, const char *obj_path, int vlistID)
       else if ( type_class == H5T_INTEGER )
 	{
 	  H5Aread(attr, H5T_NATIVE_INT, &attint);
-	  vlistDefAttInt(vlistID, CDI_GLOBAL, attname, 1, &attint);
+	  vlistDefAttInt(vlistID, CDI_GLOBAL, attname, DATATYPE_INT32, 1, &attint);
 	} 
       else if ( type_class == H5T_FLOAT )
 	{
 	  H5Aread(attr, H5T_NATIVE_DOUBLE, &attflt);
-	  vlistDefAttFlt(vlistID, CDI_GLOBAL, attname, 1, &attflt);
+	  vlistDefAttFlt(vlistID, CDI_GLOBAL, attname, DATATYPE_FLT64, 1, &attflt);
 	} 
       H5Tclose(atype_mem);
       H5Aclose(attr);
@@ -1371,15 +1372,14 @@ void get_global_att(hid_t file_id, const char *obj_path, int vlistID)
 }
 #endif
 
-
 static
 int get_vdate(int vlistID)
 {
   int vdate = 0;
   int natts;
   int i, len, type;
-  char name[256];
-  char attstr[256];
+  char name[CDI_MAX_NAME];
+  char attstr[CDI_MAX_NAME];
 
   vlistInqNatts(vlistID, CDI_GLOBAL, &natts);
 
@@ -1391,7 +1391,9 @@ int get_vdate(int vlistID)
 	  if ( strcmp(name, "DateAndTime") == 0 ||
 	       strcmp(name, "Date_Time") == 0 )
 	    {
-	      vlistInqAttTxt(vlistID, CDI_GLOBAL, name, 256, attstr);
+	      vlistInqAttTxt(vlistID, CDI_GLOBAL, name, CDI_MAX_NAME, attstr);
+	      if ( len > 8 ) len = 8;
+	      attstr[len] = 0;
 	      vdate = atoi(attstr);
 	      if ( vdate < 999999 ) vdate = vdate*100 + 1;
 	    }
@@ -1400,7 +1402,6 @@ int get_vdate(int vlistID)
 
   return (vdate);
 }
-
 
 static
 void dsets_init(dsets_t *dsets)
@@ -1436,7 +1437,6 @@ void dsets_init(dsets_t *dsets)
 
 void *Importcmsaf(void *argument)
 {
-  static char func[] = "Importcmsaf";
 #if  defined  (HAVE_LIBHDF5)
   int streamID;
   int gridID = -1, zaxisID, taxisID, vlistID;
@@ -1566,7 +1566,7 @@ void *Importcmsaf(void *argument)
       if ( dsets.obj[ivar].nt > 1 )
 	varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
       else
-	varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_CONSTANT);
+	varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
 
       vlistDefVarName(vlistID, varID,  dsets.obj[ivar].name);
       if ( dsets.obj[ivar].description )
@@ -1596,7 +1596,6 @@ void *Importcmsaf(void *argument)
   if ( vdate == 0 ) vdate = 10101;
 
   streamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID, vlistID);
 

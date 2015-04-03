@@ -23,6 +23,7 @@ int readline(FILE *fp, char *line, int len)
 
   while ( (ichar = fgetc(fp)) != EOF )
     {
+      if ( ichar == '\r' ) break;
       if ( ichar == '\n' ) break;
       line[ipos++] = ichar;
       if ( ipos >= len )

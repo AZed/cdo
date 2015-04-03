@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "error.h"
@@ -38,9 +38,9 @@ typedef struct {
   int     vctsize;
   int     type;
   int     size;
-  char    name[128];
-  char    longname[256];
-  char    units[128];
+  char    name[CDI_MAX_NAME];
+  char    longname[CDI_MAX_NAME];
+  char    units[CDI_MAX_NAME];
 }
 zaxis_t;
 
@@ -99,12 +99,11 @@ static int getoptname(char *optname, const char *optstring, int nopt)
 
 int zaxisDefine(zaxis_t zaxis)
 {
-  static char func[] = "zaxisDefine";
   int zaxisID = UNDEFID;
 
-  if ( zaxis.type == -1 ) Error(func, "zaxistype undefined!");
+  if ( zaxis.type == -1 ) Error("zaxistype undefined!");
 
-  if ( zaxis.size == 0 ) Error(func, "zaxis size undefined!");
+  if ( zaxis.size == 0 ) Error("zaxis size undefined!");
 
   zaxisID = zaxisCreate(zaxis.type, zaxis.size);
 
@@ -133,7 +132,7 @@ int zaxisDefine(zaxis_t zaxis)
       if ( zaxis.vctsize && zaxis.vct )
 	zaxisDefVct(zaxisID, zaxis.vctsize, zaxis.vct);
       else
-	Warning(func, "vct undefined!");	    
+	Warning("vct undefined!");	    
     }
 
   return (zaxisID);
@@ -152,7 +151,6 @@ static char *skipSeparator(char *pline)
 
 int zaxisFromFile(FILE *gfp)
 {
-  static char func[] = "zaxisFromFile";
   char line[MAX_LINE_LEN], *pline;
   int zaxisID;
   zaxis_t zaxis;
@@ -193,7 +191,7 @@ int zaxisFromFile(FILE *gfp)
 	  else if ( memcmp(pline, "surface", 7)  == 0 )
 	    zaxis.type = ZAXIS_SURFACE;
 	  else
-	    Warning(func, "Invalid zaxisname : %s", pline);
+	    Warning("Invalid zaxisname : %s", pline);
 	}
       else if ( memcmp(pline, "size", 4)  == 0 )
 	{
@@ -232,7 +230,7 @@ int zaxisFromFile(FILE *gfp)
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
 			{
-			  Warning(func, "Incomplete command: >levels<");
+			  Warning("Incomplete command: >levels<");
 			  break;
 			}
 		      pline = line;
@@ -248,7 +246,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning(func, "size undefined!");
+	      Warning("size undefined!");
 	    }
 	}
       else if ( memcmp(pline, "vct", 3)  == 0 )
@@ -268,7 +266,7 @@ int zaxisFromFile(FILE *gfp)
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
 			{
-			  Warning(func, "Incomplete command: >vct<");
+			  Warning("Incomplete command: >vct<");
 			  break;
 			}
 		      pline = line;
@@ -284,7 +282,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning(func, "vctsize undefined!");
+	      Warning("vctsize undefined!");
 	    }
 	}
       else if ( memcmp(pline, "lbounds", 7)  == 0 )
@@ -304,7 +302,7 @@ int zaxisFromFile(FILE *gfp)
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
 			{
-			  Warning(func, "Incomplete command: >lbounds<");
+			  Warning("Incomplete command: >lbounds<");
 			  break;
 			}
 		      pline = line;
@@ -320,7 +318,7 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning(func, "size undefined!");
+	      Warning("size undefined!");
 	    }
 	}
       else if ( memcmp(pline, "ubounds", 7)  == 0 )
@@ -340,7 +338,7 @@ int zaxisFromFile(FILE *gfp)
 		    {
 		      if ( ! readline(gfp, line, MAX_LINE_LEN) )
 			{
-			  Warning(func, "Incomplete command: >ubounds<");
+			  Warning("Incomplete command: >ubounds<");
 			  break;
 			}
 		      pline = line;
@@ -356,11 +354,11 @@ int zaxisFromFile(FILE *gfp)
 	    }
 	  else
 	    {
-	      Warning(func, "size undefined!");
+	      Warning("size undefined!");
 	    }
 	}
       else
-	Warning(func, "Invalid zaxis command : >%s<", pline);
+	Warning("Invalid zaxis command : >%s<", pline);
     }
 
   zaxisID = zaxisDefine(zaxis);
@@ -371,7 +369,6 @@ int zaxisFromFile(FILE *gfp)
 
 int zaxisFromName(const char *zaxisname)
 {
-  static char func[] = "zaxisFromName";
   const char *pline;
   int zaxisID = UNDEFID;
   zaxis_t zaxis;
@@ -395,7 +392,6 @@ int zaxisFromName(const char *zaxisname)
 
 int cdoDefineZaxis(const char *zaxisfile)
 {
-  static char func[] = "cdoDefineZaxis";
   FILE *zfp;
   int zaxisID = -1;
 
@@ -477,6 +473,7 @@ int ltype2ztype(int ltype)
   else if ( ltype == 105 ) zaxistype = ZAXIS_HEIGHT;
   else if ( ltype == 107 ) zaxistype = ZAXIS_SIGMA;
   else if ( ltype == 109 ) zaxistype = ZAXIS_HYBRID;
+  else if ( ltype == 110 ) zaxistype = ZAXIS_HYBRID_HALF;
   else if ( ltype == 111 ) zaxistype = ZAXIS_DEPTH_BELOW_LAND;
   else if ( ltype == 113 ) zaxistype = ZAXIS_ISENTROPIC;
   else if ( ltype == 160 ) zaxistype = ZAXIS_DEPTH_BELOW_SEA;

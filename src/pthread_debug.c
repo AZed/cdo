@@ -130,23 +130,22 @@ void Pthread_debug(int debug)
 int Pthread_create(const char *caller, pthread_t *th,
 		   pthread_attr_t *attr, void * (*start_routine)(void *), void *arg)
 {
-  static char func[] = "Pthread_create";
   int status;
 
-  if ( PTHREAD_Debug ) Message(caller, "+%s", func);
+  if ( PTHREAD_Debug ) Message("+%s", __func__);
 
   if ( PTHREAD_Debug )
     {
-      Message(caller, "+%s attributes:", func);
+      Message("+%s attributes:", __func__);
       if ( attr )
-	print_pthread_attr(func, attr);
+	print_pthread_attr(__func__, attr);
       else
-	Message(func, "  default attributes");
+	Message("  default attributes");
     }
 
   status = pthread_create(th, attr, start_routine, arg);
 
-  //if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)", func, (long) *th, status);
+  //if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", __func__, (long) *th, status);
 
   return (status);
 }
@@ -154,14 +153,13 @@ int Pthread_create(const char *caller, pthread_t *th,
 
 int Pthread_join(const char *caller, pthread_t th, void **thread_return)
 {
-  static char func[] = "Pthread_join";
   int status;
 
-  //  if ( PTHREAD_Debug ) Message(caller, "+%s (thID = %ld)", func, (void *) th);
+  //  if ( PTHREAD_Debug ) Message("+%s (thID = %ld)", __func__, (void *) th);
 
   status = pthread_join(th, thread_return);
 
-  // if ( PTHREAD_Debug ) Message(caller, "-%s (thID = %ld, status = %d)", func, (void *) th, status);
+  // if ( PTHREAD_Debug ) Message("-%s (thID = %ld, status = %d)", __func__, (void *) th, status);
 
   return (status);
 }
@@ -169,10 +167,9 @@ int Pthread_join(const char *caller, pthread_t th, void **thread_return)
 
 void Pthread_mutex_lock(const char *caller, pthread_mutex_t *mutex)
 {
-  static char func[] = "Pthread_mutex_lock";
   int status;
 
-  if ( PTHREAD_Debug ) Message(caller, "+%s (mutex = %p)", func, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("+%s (mutex = %p)", __func__, (void *) mutex);
 
   status = pthread_mutex_lock(mutex);
   if ( status != 0 )
@@ -180,26 +177,25 @@ void Pthread_mutex_lock(const char *caller, pthread_mutex_t *mutex)
       switch (status)
 	{
 	case EINVAL:
-	  Error(func, "the mutex has not been properly initialized");
+	  Error("The mutex has not been properly initialized!");
 	  break;
 	case EDEADLK:
-	  Error(func, "the mutex is already locked by the calling thread");
+	  Error("The mutex is already locked by the calling thread!");
 	  break;
 	default:
-	  Error(func, "status %d unknown", status, (void *) mutex);
+	  Error("Status %d unknown!", status, (void *) mutex);
 	}
     }
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (mutex = %p)", func, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("-%s (mutex = %p)", __func__, (void *) mutex);
 }
 
 
 void Pthread_mutex_unlock(const char *caller, pthread_mutex_t *mutex)
 {
-  static char func[] = "Pthread_mutex_unlock";
   int status;
 
-  if ( PTHREAD_Debug ) Message(caller, "+%s (mutex = %p)", func, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("+%s (mutex = %p)", __func__, (void *) mutex);
 
   status = pthread_mutex_unlock(mutex);
   if ( status != 0 )
@@ -207,43 +203,39 @@ void Pthread_mutex_unlock(const char *caller, pthread_mutex_t *mutex)
       switch (status)
 	{
 	case EINVAL:
-	  Error(func, "the mutex has not been properly initialized");
+	  Error("The mutex has not been properly initialized!");
 	  break;
 	case EPERM:
-	  Error(func, "the calling thread does not own the mutex");
+	  Error("The calling thread does not own the mutex!");
 	  break;
 	default:
-	  Error(func, "status %d unknown", status);
+	  Error("Status %d unknown!", status);
 	}
     }
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (mutex = %p)", func, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("-%s (mutex = %p)", __func__, (void *) mutex);
 }
 
 
 void Pthread_cond_signal(const char *caller, pthread_cond_t *cond)
 {
-  static char func[] = "Pthread_cond_signal";
-
-  if ( PTHREAD_Debug ) Message(caller, "+%s (cond = %p)", func, (void *) cond);
+  if ( PTHREAD_Debug ) Message("+%s (cond = %p)", __func__, (void *) cond);
 
   pthread_cond_signal(cond);
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (cond = %p)", func, (void *) cond);
+  if ( PTHREAD_Debug ) Message("-%s (cond = %p)", __func__, (void *) cond);
 }
 
 
 void Pthread_cond_wait(const char *caller, pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-  static char func[] = "Pthread_cond_wait";
-
-  if ( PTHREAD_Debug ) Message(caller, "+%s (cond = %p, mutex =  %p)",
-			       func, (void *) cond, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("+%s (cond = %p, mutex =  %p)",
+			       __func__, (void *) cond, (void *) mutex);
 
   pthread_cond_wait(cond, mutex);
 
-  if ( PTHREAD_Debug ) Message(caller, "-%s (cond = %p, mutex = %p)",
-			       func, (void *) cond, (void *) mutex);
+  if ( PTHREAD_Debug ) Message("-%s (cond = %p, mutex = %p)",
+			       __func__, (void *) cond, (void *) mutex);
 }
 
 #endif

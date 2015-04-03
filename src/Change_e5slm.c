@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Change_e5slm      change_e5slm          Change ECHAM5 sea land mask
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -47,10 +47,9 @@ void minmax(int nvals, double *array, double *minval, double *maxval)
 
 void *Change_e5slm(void *argument)
 {
-  static char func[] = "Change_e5slm";
   int streamIDslm, streamID1, streamID2;
   const char *fn_slm;
-  char name[256];
+  char name[CDI_MAX_NAME];
   int nrecs, code;
   int tsID, recID, varID, levelID;
   int gridsize;
@@ -67,13 +66,11 @@ void *Change_e5slm(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   taxisID1 = vlistInqTaxis(vlistID1);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID2 = vlistDuplicate(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
@@ -89,7 +86,6 @@ void *Change_e5slm(void *argument)
 
   /* read SLM */
   streamIDslm = streamOpenRead(fn_slm);
-  if ( streamIDslm < 0 ) cdiError(streamIDslm, "Open failed on %s", fn_slm);
 
   vlistIDslm = streamInqVlist(streamIDslm);
 

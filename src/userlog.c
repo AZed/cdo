@@ -6,9 +6,9 @@
 #include <string.h>
 #include <time.h>
 /* #include <pwd.h> */
-#include <unistd.h>  /* write, close */
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>  /* write, close */
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>  /* qsort */
@@ -454,7 +454,6 @@ void cdologs(int noper)
 void dumplogs(const char *logfilename)
 {
 #if defined (HAVE_LOCK)
-  static const char func[] = "dumplogs";
   int  logfileno;
   int status;
   int date0 = 0, ncdo0, noper0, nhours0;
@@ -533,7 +532,6 @@ void dumplogs(const char *logfilename)
 
 void daylogs(const char *logfilename)
 {
-  static const char func[] = "dumplogs";
   int  logfileno;
   int status;
   int date0 = 0, ncdo0, noper0, nhours0;
@@ -603,7 +601,6 @@ void daylogs(const char *logfilename)
 
 void monlogs(const char *logfilename)
 {
-  static const char func[] = "dumplogs";
   int  logfileno;
   int status;
   int date0 = 0, ncdo0, noper0, nhours0;
@@ -695,7 +692,6 @@ void monlogs(const char *logfilename)
 void cdologo(int noper)
 {
 #if defined (HAVE_LOCK)
-  static char func[] = "cdologo";
 #if defined (LOGPATH)
 #define  XSTRING(x)	#x
 #define  STRING(x)	XSTRING(x)
@@ -917,7 +913,6 @@ int cmplogname(const void *s1, const void *s2)
 void dumplogo(const char *logfilename, int dumptype)
 {
 #if defined (HAVE_LOCK)
-  static const char func[] = "dumplogo";
   int logfileno;
   int status;
   int nocc;

@@ -21,7 +21,7 @@
       Wct     wct          Compute the windchill temperature (degree C)
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -45,7 +45,6 @@ static double windchillTemperature(double t, double ff, double missval)
 
 static void farexpr(field_t *field1, field_t field2, double (*expression)(double, double, double))
 {
-  static char func[] = "farexpr";
   int   i, len;
   const int     grid1    = field1->grid;
   const int     nmiss1   = field1->nmiss;
@@ -59,7 +58,7 @@ static void farexpr(field_t *field1, field_t field2, double (*expression)(double
   len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -83,7 +82,6 @@ static void farexpr(field_t *field1, field_t field2, double (*expression)(double
    
 void *Wct(void *argument)
 {
-  static char func[] = "Wct";
   int streamID1, streamID2, streamID3;
   int gridsize;
   int nrecs, nrecs2, recID;
@@ -99,9 +97,7 @@ void *Wct(void *argument)
   cdoOperatorAdd("wct", 0, 0, NULL);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
@@ -109,7 +105,7 @@ void *Wct(void *argument)
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
 
-  vlistCompare(vlistID1, vlistID2, func_sft);
+  vlistCompare(vlistID1, vlistID2, CMP_DIM);
   
   gridsize = vlistGridsizeMax(vlistID1);
 
@@ -136,7 +132,6 @@ void *Wct(void *argument)
   vlistDefVarUnits(vlistID3, varID3, WCT_UNITS);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 

@@ -1,3 +1,365 @@
+2011-10-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.3
+	* Version 1.5.3 released
+
+2011-10-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Monarith (monadd, monsub, monmul, mondiv): wrong results for 3D variables (bug fix) [report: Chris Fletcher]
+
+2011-10-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * deflate compression with netCDF4 doesn't work (bug fix) [report: Geert Jan van Oldenborgh]
+
+2011-09-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator: muldoy - Multiply with day of year [request: David Gobbett]
+
+2011-09-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eca_cdd, eca_cwd, eca_rr1, eca_sdii: variable parameter [request: Martin Stendel]
+
+2011-09-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridarea: bug fix for coarse grid cells with lons between 350 and 0 degrees [report: Aiko Voigt]
+
+2011-09-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: correct lon bounds if necessary (bug fix) [report: Klaus Keuler]
+
+2011-08-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ifthenelse: uses only the first time step of the first input file (bug fix) [report: Ronny Petrik]
+
+2011-08-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.2
+	* Version 1.5.2 released
+
+2011-08-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ymon<stat>: preserve time axis attributes (big fix) [report: Martin Juckes]
+
+2011-08-12  Cedrick Ansorge  <Cedrick.Ansorge@zmaw.de>
+
+        * eof, eoftime, eofspatial, eof3d - Empirical Orthogonal Functions:bug fix [report: Eileen Dahms and Frank Lunkeit]
+            There was a bug in the calculation of the Frobenius norm, which has only been triggered in some cases
+            when using a low precision. The normalization has been changed thus that the eigenvectors are not weighted
+            and their absolute is 1. The default settings for convergence have been changed to be more conservative:
+            CDO_SVD_MODE=jacobi    MAX_JACOBI_ITER=12     FNORM_PRECISION=1.e-12
+
+2011-08-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgridtype: compress GME grids [request: Jaison Ambadan]
+
+2011-08-11  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * remapeta: Changed minimum pressure level for condensation from 1000Pa to 0Pa [request: Patrick Joeckel]
+                           Use env. REMAPETA_PTOP to set the minimum pressure level for condensation.
+
+2011-08-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* dv2uv: added support for GRIB2 parameter names (d, vo)
+
+2011-08-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* expr: wrong result for expression 'const-var (e.g. 1-var)' (bug fix) [report: Hans-Jürgen Panitz]
+	           This bug was introduced in CDO version 1.5.1
+
+2011-08-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* invertlat: bug fix for CURVILINEAR grids [report: Christine Rademacher]
+	* import_binary: added support for OPTION ZREV (bug fix) [report: Rene Hommel]
+
+2011-08-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* histAddValue: added check for rounding errors
+
+2011-07-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* replace: added support to replace single levels
+	* Vertstat: bug fix for streams with time invariant variables
+
+2011-07-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.1
+	* Version 1.5.1 released
+
+2011-07-11  Ralf Mueller  <ralf.mueller@zmaw.de>
+
+	* Added operator stdatm: standard atmosphere values for T,PS
+	* Added operator intlevel3d: vertical interpolation to/from 3d vertical coordinates
+
+2011-07-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Exprf:  wrong result for missing values != (double) -9.e33 (bug fix) [report: Michael Boettinger]
+
+2011-07-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* detrend: added support for time bounds (bug fix) [report: Andy Aschwanden]
+
+2011-07-01  Cedrick.Ansorge <Cedrick.Ansorge@zmaw.de>
+
+	* Filter: added support for time bounds (bug fix) [report: Andy Aschwanden]
+
+2011-06-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgridtype: convert curvilinear to unstructured grids [request: Steffen Tietsche]
+
+2011-05-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Remap: added env REMAP_THRESHHOLD to set the threshhold for coordinate transformation
+
+2011-05-04  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* import_binary: Added support for 1 and 2 byte integer [code from: Karsten ???]
+
+2011-05-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * bug fix: fldmean and similar operators fail with 1D grid (1 latitude value) [report: Etienne Tourigny]
+
+2011-04-27  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added support for netCDF4 classic format; option -f nc4c
+	* eca*: use the input calendar for the output streams (bug fix) [report: Martin Juckes]
+
+2011-04-04  Uwe Schulzweida  <Uwe.Schulzweda@zmaw.de>
+
+	* intyear: check contents of input files [report: Angelika Heil]
+	* pipeDefTimestep: set EOP if nrecs = 0 (dead lock) [report: Luis Kornnblueh]
+
+2011-03-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eofspatial: integer overflow; wrong result for grid size > 46340 (bug fix) [report: Hans-Jürgen Panitz]
+	* outputkeys: added keys xind, yind [request: Nils Fischer]
+
+2011-03-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.0
+	* Version 1.5.0 released
+
+2011-03-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator chparam -  Change parameter identifier
+
+2011-03-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator setparam - Set parameter identifiers
+	* Added operator splitparam - Split parameter identifiers
+
+2011-03-11  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator selparam - Select parameters by identifier
+	* Added operator delparam - Delete parameters by identifier
+	* sinfo: changed output of table and code number to parameter identifier
+	* info:  changed output of code number to parameter identifier
+	* diff:  changed output of code number to parameter identifier
+
+2011-03-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setgrid: added parameter: dereference
+	* cdo: added option -O to overwrite existing output file [request: Chris Fletscher]
+
+2011-03-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* fldmean: check range of lon/lat bounds [report: Jonas Bhend]
+	* ml2pl: wrong result if input file contains full and half level data (bug fix) [report: Jaison Ambadan]
+
+2011-03-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridToCell(GME): set X/Y units to degrees_east/degrees_north [report: Patrick Brockmann]
+
+2011-03-05  Uwe Schulzweida  <Uwe.Schulzweida@zma  int nvars;
+w.de>
+
+	* expr: added functions abs(), int(), nint(), sqr()
+
+2011-02-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remapbil: fix pole problem with gr15_psi grids [report: Karoline Block]
+
+2011-02-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* renamed function var to expr_var [report: Jed Kaplan]
+
+2011-01-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* splitcode: added support for code numbers > 999
+
+2011-01-21  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * changed grid name GRID_CELL to GRID_UNSTRUCTURED
+
+2011-01-18  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* spcut: only correct results with continuous wave numbers starting at 1 (bug fix)
+
+2011-01-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplib: fix data race in calculation of bin_addr (OpenMP)
+
+2011-01-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* detrend: integer overflow; wrong result for nts > 46340 (bug fix) [report: Torsten Seifert]
+
+2011-01-11  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: does not work as expected (bug fix) [report: Jonathan Schubert]
+
+2011-01-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator delete - Delete fields
+	* sellonlatbox: cellidx was not initialized (bug fix) [report: Jaison Ambadan]
+
+2011-01-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplib: Changed remap weights from 2D to 1D array
+
+2011-01-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.4.7
+	* Version 1.4.7 released
+
+2011-01-05  Frank Kaspar <Frank.Kaspar@dwd.de>
+
+	* import_cmsaf: set max length of date string to 8 (bug fix)
+
+2011-01-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* import_cmsaf: added time information also for time constant fields [request: Frank Kaspar]
+
+2010-12-17  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eofcoeff: set size of eof_name to 6 (bug fix)
+
+2010-12-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* import_binary: check for gauss grids only when flag linear=0
+
+2010-12-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* readline: filter carriage return '\r' [report: Christian Steger]
+
+2010-12-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* setclonlatbox: bug fix for 1x1 grids [report: Angelika Heil]
+
+2010-12-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Settime: bug fix for time independent variables in combination with other operators (pipes)
+
+2010-11-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* mulcoslat: added support for GME grids [request: Jaison-Thomas Ambadan]
+
+2010-11-19  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* select: added paramter *ltype* [request: Jaison-Thomas Ambadan]
+
+2010-11-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator eca_pd - Precipitation days index per time period [request: Barbara Hennemuth]
+
+2010-11-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: fix rounding error of the last lon index [report: Mondher Chekki]
+
+2010-11-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ml2pl: open output stream after all error checks
+
+2010-11-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sethalo: added support for grid units radian
+	* sethalo: correct lower bound of grid bounds for negative halos (bug fix)
+	* fldmean: gives wrong result for grid units radian (bug fix) [report: Pilar Ripodas]
+
+2010-10-21  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Yseasstat: bug fix for datasets with time constant fields [report: Ute Merkel]
+
+2010-10-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added docu for operator dv2ps
+
+2010-10-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Cat: call vlistCompare for all input files
+
+2010-09-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added env. CDO_FILE_SUFFIX to set the file suffix of CDO generated file names
+
+2010-09-27  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Fldstat2: replaced macros FDIV and FSQRT by function calls DIV and SQRT
+	
+2010-09-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New module: Ydayarith (ydayadd, ydaysub, ydaymul, ydaydiv)
+
+2010-09-17  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.4.6
+	* Version 1.4.6 released
+
+2010-09-07 Ralf Mueller <ralf.mueller@zmaw.de>
+
+	* using libtool for linking (rpath)
+	* include libcdi as subproject
+	* eca_gsl: adjust implementation to fit definition by ECA [report: Stefan Fronzek]
+	* eca_gsl: make useable in pipes (bug fix) [report: Stefan Fronzek]
+
+2010-08-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellevel: copy zaxis meta data name and units (bug fix) [report: Don Murray]
+	
+2010-08-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+        * pstreamDefTimestep: removed call to streamSync (very slow on GPFS)
+
+2010-08-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* changed percentile parameter type from integer to float [request: Nikolaus Groll]
+	
+2010-08-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* changed predefined gaussian grid names from t<RES>grid to n<N>
+	
+2010-08-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* added grid mask support
+	
+2010-07-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sellonlatbox: fix rounding error of the last lon index [report: Flore Mounier]
+	
+2010-07-22  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Module Expr: added missing value support [request: Marco van Hulten]
+
+2010-07-13  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gridFromNCfile: check grid_dims
+	* seldate: open output file only when time steps found (bug fix) [report: Hannes Reuter]
+
+2010-07-12  Cedrick Ansorge <Cedrick.Ansorge@zmaw.de>
+
+	* Added module Filter - Time series filtering
+
+2010-07-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.4.5.1 released
+
+2010-07-05 Edi Kirk <E.Kirk@gmx.de>
+
+	* GRIB1 decode: Correct ZeroShiftError of simple packed spherical harmonics
+
+2010-06-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* bug fix for wrong result of SZIP compressed GRIB records with 24 bit 
+	  packing and a compression ratio < 1.05 [report: Aiko Voigt]
+
 2010-06-28  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* Version 1.4.5 released
@@ -6,7 +368,7 @@
 
 	* Added operator setvals - Set list of old values to new values
 
-2010-05-18  Cedrick Ansorge <Cedrick.Ansorge.zmaw.de>
+2010-05-18  Cedrick Ansorge <Cedrick.Ansorge@zmaw.de>
 
 	* Added operator eof - Calculate EOFs in spatial or time space
         * Added operator eoftime - Calculate EOFs in time space
@@ -403,7 +765,7 @@
 	* remapcon: bug fix for NORMALIZE_OPT 'dest' and 'none'
 	* Seltime: changed value of NOPERATORS (bug fix)
 	* Version 1.1.1 released
-	
+
 2008-01-24  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.1.0

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Sinfo      sinfo           Short dataset information
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -31,7 +31,7 @@
 
 void *Sinfo(void *argument)
 {
-  int SINFO, SINFOV, SINFOP;
+  int SINFO, SINFOP, SINFON, SINFOC;
   int operatorID;
   int indf;
   int varID;
@@ -45,9 +45,9 @@ void *Sinfo(void *argument)
   int timeID, taxisID;
   int nbyte, nbyte0;
   int index;
-  char varname[128];
-  char longname[128];
-  char units[128];
+  char varname[CDI_MAX_NAME];
+  char longname[CDI_MAX_NAME];
+  char units[CDI_MAX_NAME];
   char paramstr[32];
   char vdatestr[32], vtimestr[32];
   double level;
@@ -60,30 +60,30 @@ void *Sinfo(void *argument)
   cdoInitialize(argument);
 
   SINFO  = cdoOperatorAdd("sinfo",  0, 0, NULL);
-  SINFOV = cdoOperatorAdd("sinfov", 0, 0, NULL);
   SINFOP = cdoOperatorAdd("sinfop", 0, 0, NULL);
+  SINFON = cdoOperatorAdd("sinfon", 0, 0, NULL);
+  SINFOC = cdoOperatorAdd("sinfoc", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
   for ( indf = 0; indf < cdoStreamCnt(); indf++ )
     {
       streamID = streamOpenRead(cdoStreamName(indf));
-      if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(indf));
 
       vlistID = streamInqVlist(streamID);
 
       printf("   File format: ");
       printFiletype(streamID, vlistID);
 
-      if ( operatorID == SINFOV )
+      if ( operatorID == SINFON )
 	fprintf(stdout,
-		"%6d : Institut Source   Varname     Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
-      else if ( operatorID == SINFOP )
-	fprintf(stdout,
-		"%6d : Institut Source   Param       Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
-      else
+		"%6d : Institut Source   Name        Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+      else if ( operatorID == SINFOC )
 	fprintf(stdout,
 		"%6d : Institut Source  Table Code   Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+      else
+	fprintf(stdout,
+		"%6d : Institut Source   Param       Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
 
       nvars = vlistNvars(vlistID);
 
@@ -97,7 +97,7 @@ void *Sinfo(void *argument)
 
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
-	  if ( operatorID == SINFOV ) vlistInqVarName(vlistID, varID, varname);
+	  if ( operatorID == SINFON ) vlistInqVarName(vlistID, varID, varname);
 
 	  gridsize = gridInqSize(gridID);
 
@@ -115,12 +115,12 @@ void *Sinfo(void *argument)
 	  else
 	    fprintf(stdout, "unknown  ");
 
-	  if ( operatorID == SINFOV )
+	  if ( operatorID == SINFON )
 	    fprintf(stdout, "%-11s ", varname);
-	  else if ( operatorID == SINFOP )
-	    fprintf(stdout, "%-11s ", paramstr);
-	  else
+	  else if ( operatorID == SINFOC )
 	    fprintf(stdout, "%4d %4d   ", tabnum, code);
+	  else
+	    fprintf(stdout, "%-11s ", paramstr);
 
 	  timeID = vlistInqVarTime(vlistID, varID);
 
@@ -147,18 +147,18 @@ void *Sinfo(void *argument)
 
 	  fprintf(stdout, " %-3s", pstr);
 
-	  if ( vlistInqVarZtype(vlistID, varID) == COMPRESS_NONE )
+	  if ( vlistInqVarCompType(vlistID, varID) == COMPRESS_NONE )
 	    fprintf(stdout, " ");
 	  else
 	    fprintf(stdout, "z");
 
 	  fprintf(stdout, "%9d", gridsize);
 
-	  fprintf(stdout, " %3d ", gridID + 1);
+	  fprintf(stdout, " %3d ", vlistGridIndex(vlistID, gridID) + 1);
 
 	  levelsize = zaxisInqSize(zaxisID);
 	  fprintf(stdout, " %6d", levelsize);
-	  fprintf(stdout, " %3d", zaxisID + 1);
+	  fprintf(stdout, " %3d", vlistZaxisIndex(vlistID, zaxisID) + 1);
 
 	  fprintf(stdout, "\n");
 	}
@@ -176,13 +176,13 @@ void *Sinfo(void *argument)
 	  levelsize = zaxisInqSize(zaxisID);
 	  /* zaxisInqLongname(zaxisID, longname); */
 	  zaxisName(zaxistype, longname);
-	  longname[16] = 0;
+	  longname[17] = 0;
 	  zaxisInqUnits(zaxisID, units);
 	  units[12] = 0;
 	  if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
-	    nbyte0    = fprintf(stdout, "  %4d : %-10s  (ltype=%3d) : ", zaxisID+1, longname, ltype);
+	    nbyte0    = fprintf(stdout, "  %4d : %-11s  (ltype=%3d) : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, ltype);
 	  else
-	    nbyte0    = fprintf(stdout, "  %4d : %-16s  %5s : ", zaxisID+1, longname, units);
+	    nbyte0    = fprintf(stdout, "  %4d : %-17s  %5s : ", vlistZaxisIndex(vlistID, zaxisID)+1, longname, units);
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {

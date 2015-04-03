@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,36 +23,28 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
-#include <math.h>
-
-#ifndef  M_PI
-#define  M_PI		3.14159265358979323846	/* pi */
-#endif
-
-#ifndef  DEG2RAD
-#define  DEG2RAD  (M_PI/180.)   /* conversion for deg to rad */
-#endif
 
 void *Arithlat(void *argument)
 {
-  static char func[] = "Arithlat";
   int operatorID;
   int operfunc;
   int streamID1, streamID2;
-  int gridsize, gridtype;
+  int gridtype;
   int gridID, gridID0 = -1;
-  int nlon = 0, nlat = 0, i, j;
   int nrecs, recID;
   int tsID;
   int varID, levelID;
   int vlistID1, vlistID2;
   int taxisID1, taxisID2;
   int nmiss;
+  long gridsize, i;
+  char units[CDI_MAX_NAME];
   double *scale = NULL;
   double *array = NULL;
 
@@ -62,10 +54,9 @@ void *Arithlat(void *argument)
   cdoOperatorAdd("divcoslat", func_div, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -75,7 +66,6 @@ void *Arithlat(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -99,39 +89,69 @@ void *Arithlat(void *argument)
 
 	  if ( gridID != gridID0 )
 	    {
+	      gridID0 = gridID;
+
 	      gridtype = gridInqType(gridID);
-	      if ( gridtype != GRID_LONLAT && gridtype != GRID_GAUSSIAN )
+	      if ( gridtype == GRID_LONLAT      ||
+		   gridtype == GRID_GAUSSIAN    ||
+		   gridtype == GRID_LCC )
 		{
-		  if ( gridInqType(gridID) == GRID_GAUSSIAN_REDUCED )
-		    cdoAbort("Gaussian reduced grid found. Use option -R to convert it to a regular grid!");
+		  gridID = gridToCurvilinear(gridID);
+		}
+	      else if ( gridtype == GRID_CURVILINEAR ||
+			gridtype == GRID_UNSTRUCTURED )
+		{
+		  /* No conversion necessary */
+		}
+	      else if ( gridtype == GRID_GME )
+		{
+		  gridID = gridToUnstructured(gridID);
+		}
+	      else
+		{
+		  if ( gridtype == GRID_GAUSSIAN_REDUCED )
+		    cdoAbort("Unsupported grid type: %s, use CDO option -R to convert reduced to regular grid!",
+			     gridNamePtr(gridtype));
 		  else
-		    cdoAbort("LONLAT or GAUSSIAN grid not found!");
+		    cdoAbort("Unsupported grid type: %s", gridNamePtr(gridtype));
 		}
 
 	      gridsize = gridInqSize(gridID);
-	      nlon = gridInqXsize(gridID);
-	      nlat = gridInqYsize(gridID);
 
-	      scale = (double *) realloc(scale, nlat*sizeof(double));
+	      scale = (double *) realloc(scale, gridsize*sizeof(double));
 	      gridInqYvals(gridID, scale);
 
-	      if ( operfunc == func_mul )
-		for ( j = 0; j < nlat; j++ ) scale[j] = cos(scale[j]*DEG2RAD);
-	      else
-		for ( j = 0; j < nlat; j++ ) scale[j] = 1./cos(scale[j]*DEG2RAD);
+	      /* Convert lat/lon units if required */
+	      
+	      gridInqXunits(gridID, units);
 
-	      if ( cdoVerbose ) for ( j = 0; j < nlat; j++ ) cdoPrint("coslat  %3d  %g", j+1, scale[j]);
-		  
-	      gridID0 = gridID;
+	      if ( memcmp(units, "degree", 6) == 0 )
+		{
+		  for ( i = 0; i < gridsize; ++i ) scale[i] *= DEG2RAD;
+		}
+	      else if ( memcmp(units, "radian", 6) == 0 )
+		{
+		  /* No conversion necessary */
+		}
+	      else
+		{
+		  cdoWarning("Unknown units supplied for grid1 center lat/lon: proceeding assuming radians");
+		}
+
+	      if ( operfunc == func_mul )
+		for ( i = 0; i < gridsize; ++i ) scale[i] = cos(scale[i]);
+	      else
+		for ( i = 0; i < gridsize; ++i ) scale[i] = 1./cos(scale[i]);
+
+	      if ( cdoVerbose ) for ( i = 0; i < 10; ++i ) cdoPrint("coslat  %3d  %g", i+1, scale[i]);
 	    }
 
-	  for ( j = 0; j < nlat; j++ )
-	    for ( i = 0; i < nlon; i++ )
-	      array[i+j*nlon] *= scale[j];
+	  for ( i = 0; i < gridsize; ++i ) array[i] *= scale[i];
 
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, array, nmiss);
 	}
+
       tsID++;
     }
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,11 +20,12 @@
 
       Pressure    pressure_fl          Pressure on full hybrid level
       Pressure    pressure_hl          Pressure on half hybrid level
+      Pressure    deltap               Difference of two half hybrid level
 */
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -34,8 +35,7 @@
 
 void *Pressure(void *argument)
 {
-  static char func[] = "Pressure";
-  int PRESSURE_FL, PRESSURE_HL, DELTAP_FL, DELTAH_FL;
+  int PRESSURE_FL, PRESSURE_HL, DELTAP;
   int operatorID;
   int mode;
   enum {ECHAM_MODE, WMO_MODE};
@@ -51,13 +51,12 @@ void *Pressure(void *argument)
   int ngrids, gridID, zaxisID;
   int nhlev = 0, nhlevf = 0, nhlevh = 0, nlevel;
   int nvct;
-  int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, pvarID;
+  int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, pvarID = -1;
   int code;
-  char varname[128];
+  char varname[CDI_MAX_NAME];
   double *vct = NULL;
-  double *rvct = NULL; /* reduced VCT for LM */
-  double *ps_prog = NULL, *full_press = NULL, *half_press = NULL, *deltap_fl = NULL;
-  double *hyb_press = NULL;
+  double *ps_prog = NULL, *full_press = NULL, *half_press = NULL, *deltap = NULL;
+  double *pout = NULL;
   double *pdata = NULL;
   int taxisID1, taxisID2;
   int lhavevct;
@@ -65,18 +64,16 @@ void *Pressure(void *argument)
   int mono_level;
   int instNum, tableNum;
   int useTable;
-  LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
 
   PRESSURE_FL = cdoOperatorAdd("pressure_fl", 0, 0, NULL);
   PRESSURE_HL = cdoOperatorAdd("pressure_hl", 0, 0, NULL);
-  DELTAP_FL   = cdoOperatorAdd("deltap_fl",   0, 0, NULL);
+  DELTAP      = cdoOperatorAdd("deltap",      0, 0, NULL);
 
   operatorID = cdoOperatorID();
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -141,7 +138,7 @@ void *Pressure(void *argument)
 		  nhlevh   = nhlevf + 1;
 	      
 		  vct = (double *) malloc(nvct*sizeof(double));
-		  memcpy(vct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
+		  zaxisInqVct(zaxisID, vct);
 		}
 	    }
 	  else if ( nlevel == (nvct/2) )
@@ -155,7 +152,7 @@ void *Pressure(void *argument)
 		  nhlevh   = nhlev;
 	      
 		  vct = (double *) malloc(nvct*sizeof(double));
-		  memcpy(vct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
+		  zaxisInqVct(zaxisID, vct);
 		}
 	    }
 	  else if ( nlevel == (nvct - 4 - 1) )
@@ -164,9 +161,12 @@ void *Pressure(void *argument)
 		{
 		  int vctsize;
 		  int voff = 4;
-		  const double *pvct = zaxisInqVctPtr(zaxisID);
+		  double *rvct = NULL;
 
-		  if ( (int)(pvct[0]+0.5) == 100000 && pvct[voff] < pvct[voff+1] )
+		  rvct = (double *) malloc(nvct*sizeof(double));
+		  zaxisInqVct(zaxisID,rvct);
+
+		  if ( (int)(rvct[0]+0.5) == 100000 && rvct[voff] < rvct[voff+1] )
 		    {
 		      lhavevct = TRUE;
 		      zaxisIDh = zaxisID;
@@ -176,8 +176,6 @@ void *Pressure(void *argument)
 
 		      vctsize = 2*nhlevh;
 		      vct = (double *) malloc(vctsize*sizeof(double));
-		      rvct = (double *) malloc(nvct*sizeof(double));
-		      memcpy(rvct, zaxisInqVctPtr(zaxisID), nvct*sizeof(double));
 
 		      /* calculate VCT for LM */
 
@@ -201,6 +199,7 @@ void *Pressure(void *argument)
 			    fprintf(stdout, "%5d %25.17f %25.17f\n", i, vct[i], vct[vctsize/2+i]);
 			}
 		    }
+		  free(rvct);
 		}
 	    }
 	}
@@ -212,14 +211,14 @@ void *Pressure(void *argument)
   if ( zaxisIDh != -1 && ngp > 0 )
     {
       ps_prog    = (double *) malloc(ngp*sizeof(double));
-      deltap_fl  = (double *) malloc(ngp*nhlevf*sizeof(double));
+      deltap     = (double *) malloc(ngp*nhlevf*sizeof(double));
       full_press = (double *) malloc(ngp*nhlevf*sizeof(double));
       half_press = (double *) malloc(ngp*nhlevh*sizeof(double));
     }
   else
     cdoAbort("No data on hybrid model level found!");
 
-  if ( operatorID == PRESSURE_FL || operatorID == DELTAP_FL )
+  if ( operatorID == PRESSURE_FL || operatorID == DELTAP )
     zaxisIDp = zaxisCreate(ZAXIS_HYBRID, nhlevf);
   else
     zaxisIDp = zaxisCreate(ZAXIS_HYBRID_HALF, nhlevh);
@@ -301,6 +300,7 @@ void *Pressure(void *argument)
 	  if      ( strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0 ) code = 129;
 	  else if ( strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0 ) code = 130;
 	  else if ( strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0 ) code = 134;
+	  else if ( strcmp(varname, "ps")    == 0 )                                 code = 134;
 	  else if ( strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0 ) code = 152;
 	  /* else if ( strcmp(varname, "geopoth") == 0 ) code = 156; */
 	}
@@ -322,24 +322,27 @@ void *Pressure(void *argument)
     }
 
   pvarID = lnpsID;
-  /* Log. surface pressure is spectral, use the surface pressure instead */
-  lnpsID = -1;
+  if ( zaxisIDh != -1 && lnpsID != -1 )
+    {
+      gridID = vlistInqVarGrid(vlistID1, lnpsID);
+      if ( gridInqType(gridID) == GRID_SPECTRAL )
+	{
+	  lnpsID = -1;
+	  cdoWarning("Spectral LOG surface pressure not supported - using surface pressure!");
+	}
+    }
+
   if ( zaxisIDh != -1 && lnpsID == -1 )
     {
-      if ( psID != -1 )
-	{
-	  pvarID = psID;
-	  code = vlistInqVarCode(vlistID1, psID);
-	  /* cdoPrint("LOG surface pressure not found - using surface pressure (code %d)!", code); */
-	}
-      else
+      pvarID = psID;
+      if ( psID == -1 )
 	cdoAbort("Surface pressure not found!");
     }
 
-  gridID   = vlistInqVarGrid(vlistID1, pvarID);
+  gridID = vlistInqVarGrid(vlistID1, pvarID);
   if ( gridInqType(gridID) == GRID_SPECTRAL )
     cdoAbort("Surface pressure on spectral representation not supported!");
-    
+
   gridsize = gridInqSize(gridID);
   pdata = (double *) malloc(gridsize*sizeof(double));
 
@@ -357,7 +360,6 @@ void *Pressure(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -407,23 +409,23 @@ void *Pressure(void *argument)
       if ( operatorID == PRESSURE_FL )
 	{
 	  nlevel = nhlevf;
-	  hyb_press = full_press;
+	  pout = full_press;
 	}
-      else if ( operatorID == DELTAP_FL )
+      else if ( operatorID == DELTAP )
 	{
 	  nlevel = nhlevf;
 	  for ( k = 0; k < nhlevf; ++k )
 	    for ( i = 0; i < ngp; ++i )
 	      {
-		deltap_fl[k*ngp+i] = half_press[(k+1)*ngp+i] - half_press[k*ngp+i];
+		deltap[k*ngp+i] = half_press[(k+1)*ngp+i] - half_press[k*ngp+i];
 	      }
 
-	  hyb_press = deltap_fl;
+	  pout = deltap;
 	}
       else
 	{
 	  nlevel = nhlevh;
-	  hyb_press = half_press;
+	  pout = half_press;
 	}
 	  
       varID = 0;
@@ -431,7 +433,7 @@ void *Pressure(void *argument)
 	{
 	  streamDefRecord(streamID2, varID, levelID);
 	  offset = levelID*gridsize;
-	  streamWriteRecord(streamID2, hyb_press+offset, 0);
+	  streamWriteRecord(streamID2, pout+offset, 0);
 	}
 
       tsID++;
@@ -442,13 +444,10 @@ void *Pressure(void *argument)
 
   if ( pdata      ) free(pdata);
   if ( ps_prog    ) free(ps_prog);
-  if ( deltap_fl  ) free(deltap_fl);
+  if ( deltap     ) free(deltap);
   if ( full_press ) free(full_press);
   if ( half_press ) free(half_press);
   if ( vct        ) free(vct);
-  if ( rvct       ) free(rvct);
-
-  listDelete(flist);
 
   cdoFinish();
 

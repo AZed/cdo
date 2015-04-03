@@ -26,7 +26,7 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -34,7 +34,6 @@
 
 void *Timcount(void *argument)
 {
-  static char func[] = "Timcount";
   int operatorID;
   int cmplen;
   char indate1[DATE_LEN+1], indate2[DATE_LEN+1];
@@ -65,10 +64,9 @@ void *Timcount(void *argument)
 
   operatorID = cdoOperatorID();
 
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -77,14 +75,13 @@ void *Timcount(void *argument)
   for ( varID = 0; varID < nvars; varID++ )
       vlistDefVarUnits(vlistID2, varID, "No.");
 
-  if ( cdoOperatorIntval(operatorID) == 16 ) vlistDefNtsteps(vlistID2, 1);
+  if ( cdoOperatorF2(operatorID) == 16 ) vlistDefNtsteps(vlistID2, 1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisCreate(TAXIS_ABSOLUTE);
+  taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -167,21 +164,21 @@ void *Timcount(void *argument)
 
       taxisDefVdate(taxisID2, vdate0);
       taxisDefVtime(taxisID2, vtime0);
-      streamDefTimestep(streamID2, otsID++);
+      streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
 	{
 	  varID   = recVarID[recID];
 	  levelID = recLevelID[recID];
 
-	  if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	    {
-	      streamDefRecord(streamID2, varID, levelID);
-	      streamWriteRecord(streamID2, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);
-	    }
+	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	  streamDefRecord(streamID2, varID, levelID);
+	  streamWriteRecord(streamID2, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);
 	}
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
   for ( varID = 0; varID < nvars; varID++ )

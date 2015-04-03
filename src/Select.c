@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,13 +21,12 @@
       Select      select         Select fields
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "error.h"
 #include "util.h"
-#include "functs.h"
 #include "list.h"
 #include "namelist.h"
 
@@ -124,7 +123,6 @@ typedef struct
 static
 void pml_init(pml_t *pml, const char *name)
 {
-  static char func[] = "pml_init";
   pml->size = 0;
   pml->dis  = 1;
   pml->name = strdup(name);
@@ -133,7 +131,6 @@ void pml_init(pml_t *pml, const char *name)
 
 pml_t *pmlNew(const char *name)
 {
-  static char func[] = "pmlNew";
   pml_t *pml;
 
   pml = (pml_t *) malloc(sizeof(pml_t));
@@ -180,7 +177,6 @@ void pmlPrint(pml_t *pml)
 
 int pmlAdd(pml_t *pml, const char *name, int type, int dis, void *ptr, size_t size)
 {
-  static char func[] = "pmlAdd";
   pml_entry_t *pml_entry;
   int entry = 0;
 
@@ -233,7 +229,6 @@ int pmlNum(pml_t *pml, const char *name)
 
 int pml_add_entry(pml_entry_t *entry, char *arg)
 {
-  static char func[] = "pml_add_entry";
   int status = 0;
 
   if ( entry->type == PML_INT )
@@ -287,7 +282,6 @@ void pmlProcess(pml_entry_t *entry, int argc, char **argv)
 
 int pmlRead(pml_t *pml, int argc, char **argv)
 {
-  static char func[] = "pmlRead";
   pml_entry_t *entry = NULL;
   pml_entry_t *pentry[MAX_PML_ENTRY];
   int params[MAX_PML_ENTRY];
@@ -442,8 +436,7 @@ void par_check_word_flag(int npar, char **parlist, int *flaglist, const char *tx
 
 void *Select(void *argument)
 {
-  const char func[] = "Select";
-  int SELECT;
+  int SELECT, DELETE;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int tsID1, tsID2, nrecs;
@@ -454,11 +447,12 @@ void *Select(void *argument)
   int iparam;
   int nsel;
   char paramstr[32];
-  char varname[256];
-  char stdname[256];
+  char varname[CDI_MAX_NAME];
+  char stdname[CDI_MAX_NAME];
   char **argnames = NULL;
   int vlistID0 = -1, vlistID1 = -1, vlistID2 = -1;
   int i;
+  int result = FALSE;
   int lcopy = FALSE;
   int gridsize;
   int nmiss;
@@ -470,11 +464,13 @@ void *Select(void *argument)
   int *vars = NULL;
   pml_t *pml;
   PML_DEF_INT(code,    1024, "Code number");
+  PML_DEF_INT(ltype,   1024, "Level type");
   PML_DEF_FLT(level,   1024, "Level");
   PML_DEF_WORD(name,   1024, "Variable name");
   PML_DEF_WORD(param,  1024, "Parameter");
 
   PML_INIT_INT(code);
+  PML_INIT_INT(ltype);
   PML_INIT_FLT(level);
   PML_INIT_WORD(name);
   PML_INIT_WORD(param);
@@ -482,6 +478,7 @@ void *Select(void *argument)
   cdoInitialize(argument);
 
   SELECT  = cdoOperatorAdd("select", 0, 0, "parameter list");
+  DELETE  = cdoOperatorAdd("delete", 0, 0, "parameter list");
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -499,6 +496,7 @@ void *Select(void *argument)
   pml = pmlNew("SELECT");
 
   PML_ADD_INT(pml, code);
+  PML_ADD_INT(pml, ltype);
   PML_ADD_FLT(pml, level);
   PML_ADD_WORD(pml, name);
   PML_ADD_WORD(pml, param);
@@ -508,6 +506,7 @@ void *Select(void *argument)
   if ( cdoVerbose ) pmlPrint(pml);
 
   PML_NUM(pml, code);
+  PML_NUM(pml, ltype);
   PML_NUM(pml, level);
   PML_NUM(pml, name);
   PML_NUM(pml, param);
@@ -524,7 +523,6 @@ void *Select(void *argument)
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(indf));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID1 = vlistInqTaxis(vlistID1);
@@ -533,11 +531,27 @@ void *Select(void *argument)
 	{
 	  vlistClearFlag(vlistID1);
 	  nvars = vlistNvars(vlistID1);
-	  vars = (int *) malloc(nvars*sizeof(int));
+	  vars  = (int *) malloc(nvars*sizeof(int));
+
+	  if ( operatorID == DELETE )
+	    {
+	      result = FALSE;
+	      for ( varID = 0; varID < nvars; varID++ )
+		{
+		  zaxisID = vlistInqVarZaxis(vlistID1, varID);
+		  nlevs   = zaxisInqSize(zaxisID);
+		  for ( levID = 0; levID < nlevs; levID++ )
+		    vlistDefFlag(vlistID1, varID, levID, TRUE);
+		}
+	    }
+	  else
+	    {
+	      result = TRUE;
+	    }
 
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      iparam   = vlistInqVarParam(vlistID1, varID);
+	      iparam  = vlistInqVarParam(vlistID1, varID);
 	      code    = vlistInqVarCode(vlistID1, varID);
 	      vlistInqVarName(vlistID1, varID, varname);
 	      vlistInqVarStdname(vlistID1, varID, stdname);
@@ -547,11 +561,23 @@ void *Select(void *argument)
 	      name  = varname;
 	      param = paramstr;
 
+	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
+	      ltype   = zaxis2ltype(zaxisID);
+
 	      vars[varID] = FALSE;
 	      
-	      if ( npar_code  && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
-	      if ( npar_name  && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
-	      if ( npar_param && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+	      if ( npar_ltype )
+		{
+		  if ( npar_code  && PAR_CHECK_INT(ltype) && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
+		  if ( npar_name  && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
+		  if ( npar_param && PAR_CHECK_INT(ltype) && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		}
+	      else
+		{
+		  if ( npar_code  && PAR_CHECK_INT(code) )   vars[varID] = TRUE;
+		  if ( npar_name  && PAR_CHECK_WORD(name) )  vars[varID] = TRUE;
+		  if ( npar_param && PAR_CHECK_WORD(param) ) vars[varID] = TRUE;
+		}
 	    }
 
 	  for ( varID = 0; varID < nvars; varID++ )
@@ -567,18 +593,18 @@ void *Select(void *argument)
 		      
 		      if ( nlevs == 1 && IS_EQUAL(level, 0) )
 			{
-			  vlistDefFlag(vlistID1, varID, levID, TRUE);
+			  vlistDefFlag(vlistID1, varID, levID, result);
 			}
 		      else
 			{
 			  if ( npar_level )
 			    {
 			      if ( PAR_CHECK_FLT(level) )
-				vlistDefFlag(vlistID1, varID, levID, TRUE);
+				vlistDefFlag(vlistID1, varID, levID, result);
 			    }
 			  else
 			    {
-			      vlistDefFlag(vlistID1, varID, levID, TRUE);
+			      vlistDefFlag(vlistID1, varID, levID, result);
 			    }
 			}
 		    }
@@ -586,6 +612,7 @@ void *Select(void *argument)
 	    }
 
 	  PAR_CHECK_INT_FLAG(code);
+	  PAR_CHECK_INT_FLAG(ltype);
 	  PAR_CHECK_FLT_FLAG(level);
 	  PAR_CHECK_WORD_FLAG(name);
 	  PAR_CHECK_WORD_FLAG(param);
@@ -597,7 +624,7 @@ void *Select(void *argument)
 	      nlevs   = zaxisInqSize(zaxisID);
 
 	      for ( levID = 0; levID < nlevs; levID++ )
-		if ( vlistInqFlag(vlistID1, varID, levID) == TRUE ) break;
+		if ( vlistInqFlag(vlistID1, varID, levID) == result ) break;
 	      
 	      if ( levID < nlevs ) npar++;
 	    }
@@ -614,8 +641,7 @@ void *Select(void *argument)
 	      zaxisID = vlistInqVarZaxis(vlistID1, varID);
 	      nlevs   = zaxisInqSize(zaxisID);
 	      for ( levID = 0; levID < nlevs; levID++ )
-		if ( vlistInqFlag(vlistID1, varID, levID) == TRUE )
-		  vlistDefFlag(vlistID0, varID, levID, TRUE);
+		vlistDefFlag(vlistID0, varID, levID, vlistInqFlag(vlistID1, varID, levID));
 	    }
 
 	  // if ( cdoVerbose ) vlistPrint(vlistID0);
@@ -629,6 +655,15 @@ void *Select(void *argument)
 	  vlistDefTaxis(vlistID2, taxisID2);
 
 	  ntsteps = vlistNtsteps(vlistID1);
+
+	  if ( ntsteps == 1 )
+	    {
+	      for ( varID = 0; varID < nvars; ++varID )
+		if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
+	      
+	      if ( varID == nvars ) ntsteps = 0;
+	    }
+
 	  if ( ntsteps == 0 && nfiles > 1 )
 	    {	      
 	      for ( varID = 0; varID < nvars; ++varID )
@@ -636,7 +671,6 @@ void *Select(void *argument)
 	    }
 
 	  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
 
 	  streamDefVlist(streamID2, vlistID2);
 
@@ -649,8 +683,7 @@ void *Select(void *argument)
 	}
       else
 	{
-	  vlistCompare(vlistID0, vlistID1, func_sft);
-	  /* vlistCompare(vlistID1, vlistID2, func_hrd); */
+	  vlistCompare(vlistID0, vlistID1, CMP_ALL);
 	}
 
       tsID1 = 0;

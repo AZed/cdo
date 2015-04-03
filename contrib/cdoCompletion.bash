@@ -1,18 +1,20 @@
 complete -W "
+-M \
+-O \
+-P \
+-Q \
+-R \
+-S \
+-V \
 -a \
 -b \
 -f \
 -g \
 -h \
--M \
 -m \
--Q \
--R \
 -r \
--S \
 -s \
 -t \
--V \
 -v \
 -z \
 abs -abs \
@@ -24,6 +26,7 @@ aexprf -aexprf \
 asin -asin \
 atan -atan \
 atan2 -atan2 \
+bandpass -bandpass \
 cat -cat \
 chcode -chcode \
 chlevel -chlevel \
@@ -31,6 +34,7 @@ chlevelc -chlevelc \
 chlevelv -chlevelv \
 chltype -chltype \
 chname -chname \
+chparam -chparam \
 chtabnum -chtabnum \
 consecsum -consecsum \
 consects -consects \
@@ -50,8 +54,10 @@ delname -delname \
 delparam -delparam \
 detrend -detrend \
 diff -diff \
+diff2 -diff2 \
+diffc -diffc \
+diffn -diffn \
 diffp -diffp \
-diffv -diffv \
 div -div \
 divc -divc \
 divdpm -divdpm \
@@ -73,6 +79,7 @@ eca_hd -eca_hd \
 eca_hwdi -eca_hwdi \
 eca_hwfi -eca_hwfi \
 eca_id -eca_id \
+eca_pd -eca_pd \
 eca_r10mm -eca_r10mm \
 eca_r20mm -eca_r20mm \
 eca_r75p -eca_r75p \
@@ -97,15 +104,21 @@ eca_tx10p -eca_tx10p \
 eca_tx90p -eca_tx90p \
 enlarge -enlarge \
 ensavg -ensavg \
+ensbrs -ensbrs \
+enscrps -enscrps \
 ensmax -ensmax \
 ensmean -ensmean \
 ensmin -ensmin \
 enspctl -enspctl \
+ensrkhist_space -ensrkhist_space \
+ensrkhist_time -ensrkhist_time \
+ensroc -ensroc \
 ensstd -ensstd \
 enssum -enssum \
 ensvar -ensvar \
 eof -eof \
 eofcoeff -eofcoeff \
+eofcoeff3d -eofcoeff3d \
 eofspatial -eofspatial \
 eoftime -eoftime \
 eq -eq \
@@ -148,9 +161,13 @@ gridboxsum -gridboxsum \
 gridboxvar -gridboxvar \
 griddes -griddes \
 griddes2 -griddes2 \
+griddx -griddx \
+griddy -griddy \
+gridmask -gridmask \
 gridweights -gridweights \
 gt -gt \
 gtc -gtc \
+highpass -highpass \
 histcount -histcount \
 histfreq -histfreq \
 histmean -histmean \
@@ -174,14 +191,17 @@ import_binary -import_binary \
 import_cmsaf -import_cmsaf \
 import_grads -import_grads \
 info -info \
+infoc -infoc \
+infon -infon \
 infop -infop \
-infov -infov \
 input -input \
 inputext -inputext \
 inputsrv -inputsrv \
 int -int \
 intlevel -intlevel \
+intlevel3d -intlevel3d \
 intlevelx -intlevelx \
+intlevelx3d -intlevelx3d \
 intntime -intntime \
 inttime -inttime \
 intyear -intyear \
@@ -196,9 +216,11 @@ le -le \
 lec -lec \
 ln -ln \
 log10 -log10 \
+lowpass -lowpass \
 lt -lt \
 ltc -ltc \
 map -map \
+mask -mask \
 maskindexbox -maskindexbox \
 masklonlatbox -masklonlatbox \
 maskregion -maskregion \
@@ -237,6 +259,7 @@ monsum -monsum \
 monvar -monvar \
 mul -mul \
 mulc -mulc \
+muldoy -muldoy \
 muldpm -muldpm \
 muldpy -muldpy \
 ncode -ncode \
@@ -255,8 +278,8 @@ outputext -outputext \
 outputf -outputf \
 outputfld -outputfld \
 outputint -outputint \
-outputkey -outputkey \
 outputsrv -outputsrv \
+outputtab -outputtab \
 outputts -outputts \
 outputxyz -outputxyz \
 pardes -pardes \
@@ -331,6 +354,8 @@ setgatt -setgatt \
 setgatts -setgatts \
 setgrid -setgrid \
 setgridarea -setgridarea \
+setgridmask -setgridmask \
+setgridnumber -setgridnumber \
 setgridtype -setgridtype \
 sethalo -sethalo \
 setlevel -setlevel \
@@ -339,6 +364,7 @@ setmisstoc -setmisstoc \
 setmissval -setmissval \
 setmon -setmon \
 setname -setname \
+setparam -setparam \
 setpartab -setpartab \
 setpartabv -setpartabv \
 setreftime -setreftime \
@@ -368,8 +394,9 @@ showtimestamp -showtimestamp \
 showyear -showyear \
 sin -sin \
 sinfo -sinfo \
+sinfoc -sinfoc \
+sinfon -sinfon \
 sinfop -sinfop \
-sinfov -sinfov \
 smooth9 -smooth9 \
 sp2gp -sp2gp \
 sp2gpl -sp2gpl \
@@ -382,6 +409,7 @@ splithour -splithour \
 splitlevel -splitlevel \
 splitmon -splitmon \
 splitname -splitname \
+splitparam -splitparam \
 splitrec -splitrec \
 splitseas -splitseas \
 splitsel -splitsel \
@@ -390,13 +418,16 @@ splityear -splityear \
 splitzaxis -splitzaxis \
 sqr -sqr \
 sqrt -sqrt \
+stdatm -stdatm \
 strbre -strbre \
 strgal -strgal \
 strwin -strwin \
 sub -sub \
 subc -subc \
 subtrend -subtrend \
+szip -szip \
 tan -tan \
+temp -temp \
 timavg -timavg \
 timcor -timcor \
 timmax -timmax \
@@ -418,6 +449,7 @@ timvar -timvar \
 topo -topo \
 tpnhalo -tpnhalo \
 trend -trend \
+unsetgridmask -unsetgridmask \
 uv2dv -uv2dv \
 uv2dvl -uv2dvl \
 vct -vct \
@@ -431,12 +463,16 @@ vertsum -vertsum \
 vertvar -vertvar \
 vlist -vlist \
 wct -wct \
+ydayadd -ydayadd \
 ydayavg -ydayavg \
+ydaydiv -ydaydiv \
 ydaymax -ydaymax \
 ydaymean -ydaymean \
 ydaymin -ydaymin \
+ydaymul -ydaymul \
 ydaypctl -ydaypctl \
 ydaystd -ydaystd \
+ydaysub -ydaysub \
 ydaysum -ydaysum \
 ydayvar -ydayvar \
 ydrunavg -ydrunavg \

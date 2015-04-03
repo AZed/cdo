@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -22,11 +22,12 @@
         Timstat3        meandiff2test
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "statistic.h"
+
 
 #define  NIN     2
 #define  NOUT    1
@@ -35,10 +36,10 @@
 
 void *Timstat3(void *argument)
 {
-  static char func[] = "Timstat3";
   int VARQUOT2TEST, MEANDIFF2TEST;
   int operatorID;
-  int *streamID, streamID3;
+  int streamID[NIN], streamID3;
+  int vlistID[NIN], vlistID2 = -1, vlistID3 = -1;
   int gridsize;
   int vdate = 0, vtime = 0;
   int nrecs, nrecs3, nvars, nlevs ;
@@ -47,17 +48,16 @@ void *Timstat3(void *argument)
   int varID, recID, levelID, gridID;
   int nmiss3;
   int *recVarID, *recLevelID;
-  int *vlistID, vlistID2 = -1, vlistID3 = -1;
   int taxisID1, taxisID3;
   double rconst, risk;
   double fnvals0, fnvals1;
   double missval, missval1, missval2;
   double fractil_1, fractil_2, statistic;
-  field_t **fwork[NFWORK];
   double temp0, temp1, temp2, temp3;
   int ***iwork[NIWORK];
-  field_t *in, *out;
-  int *reached_eof;
+  field_t **fwork[NFWORK];
+  field_t in[NIN], out[NOUT];
+  int reached_eof[NIN];
   int n_in = NIN;
 
 
@@ -82,19 +82,15 @@ void *Timstat3(void *argument)
 	cdoAbort("Risk must be greater than 0 and lower than 1!");
     }
 
-  streamID = (int *) malloc(NIN*sizeof(int));
-  vlistID  = (int *) malloc(NIN*sizeof(int));
-
   for ( is = 0; is < NIN; ++is )
     {
       streamID[is] = streamOpenRead(cdoStreamName(is));
-      if ( streamID[is] < 0 ) cdiError(streamID[is], "Open failed on %s", cdoStreamName(is));
 
       vlistID[is] = streamInqVlist(streamID[is]);
       if ( is > 0 )
 	{
 	  vlistID2 = streamInqVlist(streamID[is]);
-	  vlistCompare(vlistID[0], vlistID2, func_sft);
+	  vlistCompare(vlistID[0], vlistID2, CMP_ALL);
 	}
     }
 
@@ -111,18 +107,14 @@ void *Timstat3(void *argument)
  
   vlistDefTaxis(vlistID3, taxisID3);
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 
-  reached_eof = (int *) malloc(NIN*sizeof(int));
-  memset(reached_eof, 0, NIN*sizeof(int));
+  for ( i = 0; i < NIN; ++i ) reached_eof[i] = 0;
 
-  in = (field_t *) malloc(NIN*sizeof(field_t));
   for ( i = 0; i < NIN; ++i )
     in[i].ptr = (double *) malloc(gridsize*sizeof(double));
   				 
-  out = (field_t *) malloc(NOUT*sizeof(field_t));
   for ( i = 0; i < NOUT; ++i )
     out[i].ptr = (double *) malloc(gridsize*sizeof(double));
   				 
@@ -250,7 +242,7 @@ void *Timstat3(void *argument)
 	      else
 		beta_distr_constants((fnvals0 - 1) / 2,
 				     (fnvals1 - 1) / 2, 1 - risk,
-				     &fractil_1, &fractil_2, func);
+				     &fractil_1, &fractil_2, __func__);
 	      out[0].ptr[i] = DBL_IS_EQUAL(statistic, missval1) ? missval1 : 
 	       	              statistic <= fractil_1 || statistic >= fractil_2 ? 1 : 0;
 	    }
@@ -283,7 +275,7 @@ void *Timstat3(void *argument)
 	      if ( !DBL_IS_EQUAL(temp0, missval1) && temp0 < 0 ) /* This is possible because */
 		temp0 = 0;	                                 /* of rounding errors       */
 
-	      stddev_estimator = ROOT(DIV(temp0, deg_of_freedom));
+	      stddev_estimator = SQRT(DIV(temp0, deg_of_freedom));
 	      mean_estimator = -rconst;
 	      for ( j = 0; j < n_in; j++ )
 		{
@@ -301,11 +293,11 @@ void *Timstat3(void *argument)
 					     var_factor[j]), fnvals));
 		}
 
-	      norm = ROOT(temp1);
+	      norm = SQRT(temp1);
 	      
 	      temp2 = DIV(DIV(mean_estimator, norm), stddev_estimator);
 	      fractil = deg_of_freedom < 1 ? missval1 :
-		student_t_inv (deg_of_freedom, 1 - risk/2, func);
+		student_t_inv (deg_of_freedom, 1 - risk/2, __func__);
 
 	      out[0].ptr[i] = DBL_IS_EQUAL(temp2, missval1)|| DBL_IS_EQUAL(fractil, missval1) ? 
 		              missval1 : fabs(temp2) >= fractil;
@@ -343,14 +335,8 @@ void *Timstat3(void *argument)
   for ( is = 0; is < NIN; ++is )
     streamClose(streamID[is]);
 
-  free(streamID);
-  free(vlistID);
-  free(reached_eof);
-
   for ( i = 0; i < NIN; ++i ) free(in[i].ptr);
-  free(in);
   for ( i = 0; i < NOUT; ++i ) free(out[i].ptr);
-  free(out);
 
   free(recVarID);
   free(recLevelID);

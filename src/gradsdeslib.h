@@ -164,5 +164,6 @@ char *gafndt (char *, struct dt *, struct dt *, gadouble *,
 gaint cmpwrd (char *ch1, char *ch2);
 char *intprs (char *ch, int *val);
 void gabswp (void *r, gaint cnt);
+void gabswp2 (void *r, gaint cnt);
 
 #endif  /* _GRADSDESLIB_H */

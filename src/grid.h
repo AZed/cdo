@@ -1,10 +1,15 @@
 #ifndef _GRID_H
 #define _GRID_H
 
+#define  deg2rad  (M_PI/180.)   /* conversion for deg to rad */
+#define  rad2deg  (180./M_PI)   /* conversion for rad to deg */
+
+
+int referenceToGrid(int gridID);
 void gridToDegree(const char *units, const char *string, int gridsize, double *array);
 int gridToZonal(int gridID);
 int gridToMeridional(int gridID);
-int gridToCell(int gridID);
+int gridToUnstructured(int gridID);
 int gridToCurvilinear(int gridID);
 int gridToRegular(int gridID);
 void field2regular(int gridID1, int gridID2, double missval, double *array, int nmiss);
@@ -55,12 +60,12 @@ typedef struct {
   double    stdlon;   // Longitude parallel to y-axis (-180->180E)
   double    truelat1; // First true latitude (all projections)
   double    truelat2; // Second true lat (LC only)
-  double    hemi;     // 1 for NH, -1 for SH
   double    cone;     // Cone factor for LC projections
   double    polei;    // Computed i-location of pole point
   double    polej;    // Computed j-location of pole point
   double    rsw;      // Computed radius to SW corner
   double    rebydx;   // Earth radius divided by dx
+  int       hemi;     // 1 for NH, -1 for SH
   int       init;     // Flag to indicate if this struct is ready for use
 } proj_info_t;
 
@@ -74,4 +79,5 @@ void ijll_lc(double i, double j, proj_info_t proj, double *lat, double *lon);
 int W3FB12(double xi, double xj, double alat1, double elon1, double dx,
 	   double elonv, double alatan, double *alat, double *elon);
 */
+
 #endif  /* _GRID_H */

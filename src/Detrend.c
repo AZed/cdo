@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 #  include <omp.h>
 #endif
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -35,24 +35,27 @@
 
 
 static
-void detrend(int nts, double missval1, double *array1, double *array2)
+void detrend(long nts, double missval1, double *array1, double *array2)
 {
-  int j;
-  int n;
+  long n;
+  long j;
+  double zj;
   double sumj, sumjj;
   double sumx, sumjx;
   double work1, work2;
   double missval2 = missval1;
 
   sumx = sumjx = 0;
-  sumj = sumjj = n = 0;
+  sumj = sumjj = 0;
+  n = 0;
   for ( j = 0; j < nts; j++ )
     if ( !DBL_IS_EQUAL(array1[j], missval1) )
       {
+        zj = j;
 	sumx  += array1[j];
-	sumjx += j * array1[j];
-	sumj  += j;
-	sumjj += j * j;
+	sumjx += zj * array1[j];
+	sumj  += zj;
+	sumjj += zj * zj;
 	n++;
       }
 
@@ -62,13 +65,35 @@ void detrend(int nts, double missval1, double *array1, double *array2)
 
   for ( j = 0; j < nts; j++ )
     array2[j] = SUB(array1[j], ADD(work2, MUL(j, work1)));
+}
 
+
+void taxisInqDTinfo(int taxisID, dtinfo_t *dtinfo)
+{
+  dtinfo->v.date = taxisInqVdate(taxisID);
+  dtinfo->v.time = taxisInqVtime(taxisID);
+  if ( taxisHasBounds(taxisID) )
+    {
+      taxisInqVdateBounds(taxisID, &(dtinfo->b[0].date), &(dtinfo->b[1].date));
+      taxisInqVtimeBounds(taxisID, &(dtinfo->b[0].time), &(dtinfo->b[1].time));
+    }
+}
+
+
+void taxisDefDTinfo(int taxisID, dtinfo_t dtinfo)
+{
+  taxisDefVdate(taxisID, dtinfo.v.date);
+  taxisDefVtime(taxisID, dtinfo.v.time);
+  if ( taxisHasBounds(taxisID) )
+    {
+      taxisDefVdateBounds(taxisID, dtinfo.b[0].date, dtinfo.b[1].date);
+      taxisDefVtimeBounds(taxisID, dtinfo.b[0].time, dtinfo.b[1].time);
+    }
 }
 
 
 void *Detrend(void *argument)
 {
-  static char func[] = "Detrend";
   int ompthID;
   int gridsize;
   int nrecs;
@@ -81,9 +106,9 @@ void *Detrend(void *argument)
   int vlistID1, vlistID2, taxisID1, taxisID2;
   int nmiss;
   int nvars, nlevel;
-  int *vdate = NULL, *vtime = NULL;
   double missval;
   field_t ***vars = NULL;
+  dtinfo_t *dtinfo = NULL;
   typedef struct
   {
     double *array1;
@@ -94,7 +119,6 @@ void *Detrend(void *argument)
   cdoInitialize(argument);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -104,7 +128,6 @@ void *Detrend(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -116,13 +139,11 @@ void *Detrend(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vdate = (int *) realloc(vdate, nalloc*sizeof(int));
-	  vtime = (int *) realloc(vtime, nalloc*sizeof(int));
-	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
+	  dtinfo = (dtinfo_t *) realloc(dtinfo, nalloc*sizeof(dtinfo_t));
+	  vars   = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
-      vdate[tsID] = taxisInqVdate(taxisID1);
-      vtime[tsID] = taxisInqVtime(taxisID1);
+      taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
 
       vars[tsID] = (field_t **) malloc(nvars*sizeof(field_t *));
 
@@ -202,8 +223,7 @@ void *Detrend(void *argument)
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {
-      taxisDefVdate(taxisID2, vdate[tsID]);
-      taxisDefVtime(taxisID2, vtime[tsID]);
+      taxisDefDTinfo(taxisID2, dtinfo[tsID]);
       streamDefTimestep(streamID2, tsID);
 
       for ( varID = 0; varID < nvars; varID++ )
@@ -225,8 +245,7 @@ void *Detrend(void *argument)
     }
 
   if ( vars  ) free(vars);
-  if ( vdate ) free(vdate);
-  if ( vtime ) free(vtime);
+  if ( dtinfo ) free(dtinfo);
 
   streamClose(streamID2);
   streamClose(streamID1);

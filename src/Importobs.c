@@ -1,9 +1,27 @@
+/*
+  This file is part of CDO. CDO is a collection of Operators to
+  manipulate and analyse Climate model Data.
+
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  See COPYING file for copying and redistribution conditions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
+#include "grid.h"
 
 
 #define  MAX_VARS   6
@@ -27,7 +45,6 @@ void init_vars(int vlistID, int gridID, int zaxisID, int nvars)
     }
 }
 
-
 static
 void init_data(int vlistID, int nvars, double *data[])
 {
@@ -45,7 +62,6 @@ void init_data(int vlistID, int nvars, double *data[])
 	}
     } 
 }
-
 
 static
 void write_data(int streamID, int vlistID, int nvars, double *data[])
@@ -71,7 +87,6 @@ void write_data(int streamID, int vlistID, int nvars, double *data[])
     }
 }
 
-
 static
 int getDate(const char *name)
 {
@@ -92,7 +107,6 @@ int getDate(const char *name)
 
 void *Importobs(void *argument)
 {
-  static char func[] = "Importobs";
   int operatorID;
   char line[MAX_LINE_LEN];
   int streamID;
@@ -139,6 +153,15 @@ void *Importobs(void *argument)
   gridInqXvals(gridID, xvals);
   gridInqYvals(gridID, yvals);
 
+  /* Convert lat/lon units if required */
+  {
+    char units[CDI_MAX_NAME];
+    gridInqXunits(gridID, units);
+    gridToDegree(units, "grid center lon", gridsize, xvals);
+    gridInqYunits(gridID, units);
+    gridToDegree(units, "grid center lat", gridsize, yvals);
+  }
+
   fp = fopen(cdoStreamName(0), "r");
   if ( fp == NULL ) { perror(cdoStreamName(0)); exit(EXIT_FAILURE); }
 
@@ -146,7 +169,6 @@ void *Importobs(void *argument)
   if ( vdate <= 999999 ) vdate = vdate*100 + 1;
 
   streamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(1));
 
   zaxisID = zaxisCreate(ZAXIS_SURFACE, 1);
 

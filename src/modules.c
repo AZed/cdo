@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "operator_help.h"
 #include "modules.h"
@@ -57,15 +57,22 @@ void *Condc(void *argument);
 void *Consecstat(void *argument);
 void *Copy(void *argument);
 void *Deltime(void *argument);
+void *Derivepar(void *argument);
 void *Detrend(void *argument);
 void *Diff(void *argument);
+void *Duplicate(void *argument);
 void *Echam5ini(void *argument);
 void *Enlarge(void *argument);
 void *Enlargegrid(void *argument);
 void *Ensstat(void *argument);
+void *Ensstat3(void *argument);
+void *Ensval(void *argument);
 void *Eofcoeff(void *argument);
+void *Eofcoeff3d(void *argument);
 void *EOFs(void *argument);
+void *EOF3d(void *argument);
 void *Expr(void *argument);
+void *FC(void *argument);
 void *Filedes(void *argument);
 void *Fillmiss(void *argument);
 void *Filter(void *argument);
@@ -80,6 +87,7 @@ void *Gridboxstat(void *argument);
 void *Gridcell(void *argument);
 void *Harmonic(void *argument);
 void *Histogram(void *argument);
+void *IFS2ICON(void *argument);
 void *Importamsr(void *argument);
 void *Importbinary(void *argument);
 void *Importcmsaf(void *argument);
@@ -89,11 +97,13 @@ void *Input(void *argument);
 void *Intgrid(void *argument);
 void *Intgridtraj(void *argument);
 void *Intlevel(void *argument);
+void *Intlevel3d(void *argument);
 void *Inttime(void *argument);
 void *Intntime(void *argument);
 void *Intyear(void *argument);
 void *Invert(void *argument);
 void *Invertlev(void *argument);
+void *Isosurface(void *argument);
 void *Log(void *argument);
 void *Maskbox(void *argument);
 void *Mastrfu(void *argument);
@@ -182,6 +192,7 @@ void *Wind(void *argument);
 void *Writegrid(void *argument);
 void *Writerandom(void *argument);
 void *Yhourstat(void *argument);
+void *Ydayarith(void *argument);
 void *Ydaypctl(void *argument);
 void *Ydaystat(void *argument);
 void *Ydrunpctl(void *argument);
@@ -215,8 +226,7 @@ void *EcaTx90p(void *argument);
 void *EcaCdd(void *argument);
 void *EcaCwd(void *argument);
 void *EcaRr1(void *argument);
-void *EcaR10mm(void *argument);
-void *EcaR20mm(void *argument);
+void *EcaPd(void *argument);
 void *EcaR75p(void *argument);
 void *EcaR75ptot(void *argument);
 void *EcaR90p(void *argument);
@@ -241,11 +251,11 @@ void *Wct(void *argument);
 
 #define  ArithOperators         {"add",  "sub",  "mul",  "div", "min", "max", "atan2"}
 #define  ArithcOperators        {"addc", "subc", "mulc", "divc"}
-#define  ArithdaysOperators     {"muldpm", "divdpm", "muldpy", "divdpy"}
+#define  ArithdaysOperators     {"muldpm", "divdpm", "muldpy", "divdpy", "muldoy"}
 #define  ArithlatOperators      {"mulcoslat", "divcoslat"}
 #define  CatOperators           {"cat"}
 #define  CDItestOperators       {"ncopy"}
-#define  ChangeOperators        {"chcode", "chtabnum", "chname", "chlevel", "chlevelc", "chlevelv", "chltype"}
+#define  ChangeOperators        {"chcode", "chtabnum", "chparam", "chname", "chlevel", "chlevelc", "chlevelv", "chltype"}
 #define  Change_e5slmOperators  {"change_e5slm", "change_e5lsm", "change_e5mask"}
 #define  CloudlayerOperators    {"cloudlayer"}
 #define  CommandOperators       {"command", "com", "cmd"}
@@ -256,18 +266,25 @@ void *Wct(void *argument);
 #define  Cond2Operators         {"ifthenelse"}
 #define  CondcOperators         {"ifthenc", "ifnotthenc"}
 #define  ConsecstatOperators    {"consects", "consecsum"}
-#define  CopyOperators          {"copy", "selall"}
+#define  CopyOperators          {"copy", "selall", "szip"}
 #define  DeltimeOperators       {"delday", "del29feb"}
+#define  DeriveparOperators     {"geopotheight"}
 #define  DetrendOperators       {"detrend"}
-#define  DiffOperators          {"diff", "diffp", "diffv", "sdiff"}
+#define  DiffOperators          {"diff", "diff2", "diffp", "diffn", "diffc", "sdiff"}
+#define  DuplicateOperators     {"duplicate"}
 #define  Echam5iniOperators     {"import_e5ml", "import_e5res", \
                                  "export_e5ml", "export_e5res"}
 #define  EnlargeOperators       {"enlarge"}
 #define  EnlargegridOperators   {"enlargegrid"}
 #define  EnsstatOperators       {"ensmin", "ensmax", "enssum", "ensmean", "ensavg", "ensvar", "ensstd", "enspctl"}
+#define  Ensstat3Operators      {"ensrkhist_space","ensrkhist_time","ensroc"}
+#define  EnsvalOperators        {"enscrps","ensbrs"}
 #define  EofcoeffOperators      {"eofcoeff"}
+#define  Eofcoeff3dOperators    {"eofcoeff3d"}
 #define  EOFsOperators          {"eof", "eofspatial", "eoftime"}
+#define  EOF3dOperators         {"eof3d","eof3dspatial","eof3dtime"}
 #define  ExprOperators          {"expr", "exprf", "aexpr", "aexprf"}
+#define  FCOperators            {"fc2sp", "sp2fc", "fc2gp", "gp2fc"}
 #define  FiledesOperators       {"filedes", "griddes", "griddes2", "zaxisdes", "vct", "vct2", "pardes", \
                                  "vlist", "partab", "partab2"}
 #define  FillmissOperators      {"fillmiss"}
@@ -281,24 +298,27 @@ void *Wct(void *argument);
 #define  GradsdesOperators      {"gradsdes1", "gradsdes2", "dumpmap"}
 #define  GridboxstatOperators   {"gridboxmin", "gridboxmax", "gridboxsum", "gridboxmean", "gridboxavg", \
                                  "gridboxvar", "gridboxstd"}
-#define  GridcellOperators      {"gridarea", "gridweights"}
+#define  GridcellOperators      {"gridarea", "gridweights", "gridmask", "griddx", "griddy"}
 #define  HarmonicOperators      {"harmonic"}
 #define  HistogramOperators     {"histcount", "histsum", "histmean", "histfreq"}
+#define  IFS2ICONOperators      {"ifs2icon"}
 #define  ImportamsrOperators    {"import_amsr"}
 #define  ImportbinaryOperators  {"import_binary", "import_grads"}
 #define  ImportcmsafOperators   {"import_cmsaf"}
 #define  ImportobsOperators     {"import_obs"}
-#define  InfoOperators          {"info", "infov", "infop", "map"}
+#define  InfoOperators          {"info", "infop", "infon", "infoc", "map"}
 #define  InputOperators         {"input", "inputsrv", "inputext"}
-#define  IntgridOperators       {"intgridbil", "intpoint", "interpolate", "intarea", "boxavg", "thinout"}
+#define  IntgridOperators       {"intgridbil", "intpoint", "interpolate", "boxavg", "thinout"}
 #define  IntgridtrajOperators   {"intgridtraj"}
 #define  IntlevelOperators      {"intlevel", "intlevelx"}
+#define  Intlevel3dOperators    {"intlevel3d", "intlevelx3d"}
 #define  InttimeOperators       {"inttime"}
 #define  IntntimeOperators      {"intntime"}
 #define  IntyearOperators       {"intyear"}
 #define  InvertOperators        {"invertlat", "invertlon", "invertlatdes", "invertlondes", \
                                  "invertlatdata", "invertlondata"}
 #define  InvertlevOperators     {"invertlev"}
+#define  IsosurfaceOperators    {"isosurface"}
 #define  LogOperators           {"dumplogs", "daylogs", "monlogs", "dumplogo", \
                                  "snamelogo", "scalllogo", "smemlogo", "stimelogo", "sperclogo"}
 #define  MaskboxOperators       {"masklonlatbox", "maskindexbox"}
@@ -316,10 +336,10 @@ void *Wct(void *argument);
 #define  NinfoOperators         {"nyear", "nmon", "ndate", "ntime", "ncode", "npar", "nlevel"}
 #define  NmltestOperators       {"nmltest"}
 #define  OutputOperators        {"output", "outputint", "outputsrv", "outputext", "outputf", "outputts", \
-                                 "outputfld", "outputarr", "outputxyz", "outputkey"}
+                                 "outputfld", "outputarr", "outputxyz", "outputtab"}
 #define  OutputgmtOperators     {"gridverify", "outputcenter", "outputcenter2", "outputcentercpt", "outputbounds", \
-                                 "outputboundscpt", "outputvector", "outputtri"}
-#define  PressureOperators      {"pressure_fl", "pressure_hl", "deltap_fl"}
+                                 "outputboundscpt", "outputvector", "outputtri", "outputvrml"}
+#define  PressureOperators      {"pressure_fl", "pressure_hl", "deltap"}
 #define  PinfoOperators         {"pinfo", "pinfov"}
 #define  RegresOperators        {"regres"}
 #define  RemapOperators         {"remap"}
@@ -335,17 +355,17 @@ void *Wct(void *argument);
 #define  SeaspctlOperators      {"seaspctl"}
 #define  SeasstatOperators      {"seasmin",  "seasmax",  "seassum",  "seasmean",  "seasavg",  "seasvar",  "seasstd"}
 #define  SelboxOperators        {"sellonlatbox", "selindexbox"}
-#define  SelectOperators        {"select"}
+#define  SelectOperators        {"select", "delete"}
 #define  SelvarOperators        {"selparam", "selcode", "selname", "selstdname", "sellevel", "sellevidx", "selgrid", \
                                  "selzaxis", "seltabnum", "delparam", "delcode", "delname", "selltype"}
 #define  SeloperatorOperators   {"seloperator"}
 #define  SelrecOperators        {"selrec"}
 #define  SeltimeOperators       {"seltimestep", "selyear", "selseas", "selmon", "selday", "selhour", "seldate", \
                                  "seltime", "selsmon"}
-#define  SetOperators           {"setpartab", "setpartabv", "setcode", "setname", "setlevel", "setltype", "settabnum"}
+#define  SetOperators           {"setpartab", "setpartabv", "setcode", "setparam", "setname", "setlevel", "setltype", "settabnum"}
 #define  SetboxOperators        {"setclonlatbox", "setcindexbox"}
 #define  SetgattOperators       {"setgatt", "setgatts"}
-#define  SetgridOperators       {"setgrid", "setgridtype", "setgridarea"}
+#define  SetgridOperators       {"setgrid", "setgridtype", "setgridarea", "setgridmask", "unsetgridmask", "setgridnumber"}
 #define  SethaloOperators       {"sethalo", "tpnhalo"}
 #define  SetmissOperators       {"setmissval", "setctomiss", "setmisstoc", "setrtomiss", "setvrange"}
 #define  SetrcanameOperators    {"setrcaname"}
@@ -355,14 +375,14 @@ void *Wct(void *argument);
 #define  ScatterOperators       {"scatter"}
 #define  ShowinfoOperators      {"showyear", "showmon", "showdate", "showtime", "showtimestamp", "showcode", \
                                  "showparam", "showname", "showstdname", "showlevel", "showltype", "showformat"}
-#define  SinfoOperators         {"sinfo", "sinfov", "sinfop"}
+#define  SinfoOperators         {"sinfo", "sinfop", "sinfon", "sinfoc"}
 #define  Smooth9Operators       {"smooth9"}
 #define  SortOperators          {"sortcode", "sortname", "sortlevel"}
 #define  SorttimestampOperators {"sorttimestamp", "sorttaxis"}
 #define  SpecinfoOperators      {"specinfo"}
 #define  SpectralOperators      {"gp2sp", "gp2spl", "sp2gp", "sp2gpl", "sp2sp", "spcut"}
 #define  SpectrumOperators      {"spectrum"}
-#define  SplitOperators         {"splitcode", "splitname", "splitlevel", "splitgrid", "splitzaxis", "splittabnum"}
+#define  SplitOperators         {"splitcode", "splitparam", "splitname", "splitlevel", "splitgrid", "splitzaxis", "splittabnum"}
 #define  SplitrecOperators      {"splitrec"}
 #define  SplitselOperators      {"splitsel"}
 #define  SplittimeOperators     {"splithour", "splitday", "splitmon", "splitseas"}
@@ -401,7 +421,7 @@ void *Wct(void *argument);
 #define  TrmsOperators          {"trms"}
 #define  TstepcountOperators    {"tstepcount"}
 #define  VardupOperators        {"pardup", "parmul"}
-#define  VargenOperators        {"random", "const", "topo", "for"}
+#define  VargenOperators        {"random", "const", "for", "topo", "temp", "mask", "stdatm"}
 #define  VarrmsOperators        {"varrms"}
 #define  VertintOperators       {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", \
                                  "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
@@ -411,6 +431,7 @@ void *Wct(void *argument);
 #define  WritegridOperators     {"writegrid"}
 #define  WriterandomOperators   {"writerandom"}
 #define  YhourstatOperators     {"yhourmin", "yhourmax", "yhoursum", "yhourmean", "yhouravg", "yhourvar", "yhourstd"}
+#define  YdayarithOperators     {"ydayadd", "ydaysub", "ydaymul", "ydaydiv"}
 #define  YdaypctlOperators      {"ydaypctl"}
 #define  YdaystatOperators      {"ydaymin", "ydaymax", "ydaysum", "ydaymean", "ydayavg", "ydayvar", "ydaystd"}
 #define  YdrunpctlOperators     {"ydrunpctl"}
@@ -445,8 +466,7 @@ void *Wct(void *argument);
 #define  EcaCddOperators        {"eca_cdd"}
 #define  EcaCwdOperators        {"eca_cwd"}
 #define  EcaRr1Operators        {"eca_rr1"}
-#define  EcaR10mmOperators      {"eca_r10mm"}
-#define  EcaR20mmOperators      {"eca_r20mm"}
+#define  EcaPdOperators         {"eca_pd", "eca_r10mm", "eca_r20mm"}
 #define  EcaR75pOperators       {"eca_r75p"}
 #define  EcaR75ptotOperators    {"eca_r75ptot"}
 #define  EcaR90pOperators       {"eca_r90p"}
@@ -472,6 +492,7 @@ void *Wct(void *argument);
 
 static modules_t Modules[] =
 {
+  /* stream out -1 means usage of obase */
   /*
     function        help function      operator names          number     num streams
                                                                type       in  out
@@ -495,18 +516,25 @@ static modules_t Modules[] =
   { Consecstat,     ConsecstatHelp,    ConsecstatOperators,    CDI_REAL,  1,  1 },
   { Copy,           CopyHelp,          CopyOperators,          CDI_REAL, -1,  1 },
   { Deltime,        NULL,              DeltimeOperators,       CDI_REAL,  1,  1 },
+  { Derivepar,      NULL,              DeriveparOperators,     CDI_REAL,  1,  1 },
   { Detrend,        DetrendHelp,       DetrendOperators,       CDI_REAL,  1,  1 },
   { Diff,           DiffHelp,          DiffOperators,          CDI_REAL,  2,  0 },
+  { Duplicate,      NULL,              DuplicateOperators,     CDI_REAL,  1,  1 },
   { Echam5ini,      NULL,              Echam5iniOperators,     CDI_REAL,  1,  1 },
   { Enlarge,        EnlargeHelp,       EnlargeOperators,       CDI_REAL,  1,  1 },
   { Enlargegrid,    NULL,              EnlargegridOperators,   CDI_REAL,  1,  1 },
   { Ensstat,        EnsstatHelp,       EnsstatOperators,       CDI_REAL, -1,  1 },
-  { Eofcoeff,       EofcoeffHelp,      EofcoeffOperators,      CDI_REAL,  2,  1 },
+  { Ensstat3,       Ensstat2Help,      Ensstat3Operators,      CDI_REAL, -1,  1 },
+  { Ensval,         EnsvalHelp,        EnsvalOperators,        CDI_REAL, -1,  1 },
+  { Eofcoeff,       EofcoeffHelp,      EofcoeffOperators,      CDI_REAL,  2, -1 },
+  { Eofcoeff3d,     EofcoeffHelp,      Eofcoeff3dOperators,    CDI_REAL,  2, -1 },
   { EOFs,           EOFsHelp,          EOFsOperators,          CDI_REAL,  1,  2 },
+  { EOF3d,          NULL,              EOF3dOperators,         CDI_REAL,  1,  2 },
   { Expr,           ExprHelp,          ExprOperators,          CDI_REAL,  1,  1 },
+  { FC,             NULL,              FCOperators,            CDI_REAL,  1,  1 },
   { Filedes,        FiledesHelp,       FiledesOperators,       CDI_BOTH,  1,  0 },
   { Fillmiss,       NULL,              FillmissOperators,      CDI_REAL,  1,  1 },
-  { Filter,         NULL,              FilterOperators,        CDI_REAL,  1,  1 },
+  { Filter,         FilterHelp,        FilterOperators,        CDI_REAL,  1,  1 },
   { Fldrms,         NULL,              FldrmsOperators,        CDI_REAL,  2,  1 },
   { Fldstat,        FldstatHelp,       FldstatOperators,       CDI_REAL,  1,  1 },
   { Fldstat2,       FldcorHelp,        Fldstat2Operators,      CDI_REAL,  2,  1 },
@@ -518,6 +546,7 @@ static modules_t Modules[] =
   { Gridcell,       GridcellHelp,      GridcellOperators,      CDI_REAL,  1,  1 },
   { Harmonic,       NULL,              HarmonicOperators,      CDI_REAL,  1,  1 },
   { Histogram,      HistogramHelp,     HistogramOperators,     CDI_REAL,  1,  1 },
+  { IFS2ICON,       NULL,              IFS2ICONOperators,      CDI_REAL,  1,  1 },
   { Importamsr,     ImportamsrHelp,    ImportamsrOperators,    CDI_REAL,  1,  1 },
   { Importbinary,   ImportbinaryHelp,  ImportbinaryOperators,  CDI_REAL,  1,  1 },
   { Importcmsaf,    ImportcmsafHelp,   ImportcmsafOperators,   CDI_REAL,  1,  1 },
@@ -527,11 +556,13 @@ static modules_t Modules[] =
   { Intgrid,        NULL,              IntgridOperators,       CDI_REAL,  1,  1 },
   { Intgridtraj,    NULL,              IntgridtrajOperators,   CDI_REAL,  1,  1 },
   { Intlevel,       IntlevelHelp,      IntlevelOperators,      CDI_REAL,  1,  1 },
+  { Intlevel3d,     Intlevel3dHelp,    Intlevel3dOperators,    CDI_REAL,  2,  1 },
   { Inttime,        InttimeHelp,       InttimeOperators,       CDI_REAL,  1,  1 },
   { Intntime,       InttimeHelp,       IntntimeOperators,      CDI_REAL,  1,  1 },
-  { Intyear,        IntyearHelp,       IntyearOperators,       CDI_REAL,  2,  1 },
+  { Intyear,        IntyearHelp,       IntyearOperators,       CDI_REAL,  2, -1 },
   { Invert,         InvertHelp,        InvertOperators,        CDI_REAL,  1,  1 },
   { Invertlev,      InvertlevHelp,     InvertlevOperators,     CDI_REAL,  1,  1 },
+  { Isosurface,     NULL,              IsosurfaceOperators,    CDI_REAL,  1,  1 },
   { Log,            NULL,              LogOperators,           CDI_REAL,  1,  0 },
   { Maskbox,        MaskboxHelp,       MaskboxOperators,       CDI_REAL,  1,  1 },
   { Maskbox,        MaskregionHelp,    MaskregionOperators,    CDI_REAL,  1,  1 },
@@ -563,21 +594,21 @@ static modules_t Modules[] =
   { Seascount,      NULL,              SeascountOperators,     CDI_REAL,  1,  1 },
   { Seaspctl,       SeaspctlHelp,      SeaspctlOperators,      CDI_REAL,  3,  1 },
   { Seasstat,       SeasstatHelp,      SeasstatOperators,      CDI_REAL,  1,  1 },
-  { Selbox,         SelboxHelp,        SelboxOperators,        CDI_REAL,  1,  1 },
+  { Selbox,         SelboxHelp,        SelboxOperators,        CDI_BOTH,  1,  1 },
   { Select,         NULL,              SelectOperators,        CDI_BOTH, -1,  1 },
   { Selvar,         SelvarHelp,        SelvarOperators,        CDI_BOTH,  1,  1 },
   { Selrec,         SelvarHelp,        SelrecOperators,        CDI_BOTH,  1,  1 },
   { Seloperator,    NULL,              SeloperatorOperators,   CDI_REAL,  1,  1 },
   { Seltime,        SeltimeHelp,       SeltimeOperators,       CDI_BOTH,  1,  1 },
-  { Set,            SetHelp,           SetOperators,           CDI_REAL,  1,  1 },
+  { Set,            SetHelp,           SetOperators,           CDI_BOTH,  1,  1 },
   { Setbox,         SetboxHelp,        SetboxOperators,        CDI_REAL,  1,  1 },
-  { Setgatt,        SetgattHelp,       SetgattOperators,       CDI_REAL,  1,  1 },
-  { Setgrid,        SetgridHelp,       SetgridOperators,       CDI_REAL,  1,  1 },
+  { Setgatt,        SetgattHelp,       SetgattOperators,       CDI_BOTH,  1,  1 },
+  { Setgrid,        SetgridHelp,       SetgridOperators,       CDI_BOTH,  1,  1 },
   { Sethalo,        SethaloHelp,       SethaloOperators,       CDI_REAL,  1,  1 },
   { Setrcaname,     NULL,              SetrcanameOperators,    CDI_REAL,  1,  1 },
   { Setmiss,        SetmissHelp,       SetmissOperators,       CDI_REAL,  1,  1 },
-  { Settime,        SettimeHelp,       SettimeOperators,       CDI_REAL,  1,  1 },
-  { Setzaxis,       SetzaxisHelp,      SetzaxisOperators,      CDI_REAL,  1,  1 },
+  { Settime,        SettimeHelp,       SettimeOperators,       CDI_BOTH,  1,  1 },
+  { Setzaxis,       SetzaxisHelp,      SetzaxisOperators,      CDI_BOTH,  1,  1 },
   { Scatter,        NULL,              ScatterOperators,       CDI_REAL,  1,  1 },
   { Showinfo,       ShowinfoHelp,      ShowinfoOperators,      CDI_BOTH,  1,  0 },
   { Sinfo,          SinfoHelp,         SinfoOperators,         CDI_BOTH, -1,  0 },
@@ -587,11 +618,11 @@ static modules_t Modules[] =
   { Specinfo,       NULL,              SpecinfoOperators,      CDI_REAL,  0,  0 },
   { Spectral,       SpectralHelp,      SpectralOperators,      CDI_REAL,  1,  1 },
   { Spectrum,       NULL,              SpectrumOperators,      CDI_REAL,  1,  1 },
-  { Split,          SplitHelp,         SplitOperators,         CDI_BOTH,  1,  1 },
-  { Splitrec,       SplitHelp,         SplitrecOperators,      CDI_BOTH,  1,  1 },
-  { Splitsel,       SplitselHelp,      SplitselOperators,      CDI_BOTH,  1,  1 },
-  { Splittime,      SplittimeHelp,     SplittimeOperators,     CDI_BOTH,  1,  1 },
-  { Splityear,      SplittimeHelp,     SplityearOperators,     CDI_BOTH,  1,  1 },
+  { Split,          SplitHelp,         SplitOperators,         CDI_BOTH,  1, -1 },
+  { Splitrec,       SplitHelp,         SplitrecOperators,      CDI_BOTH,  1, -1 },
+  { Splitsel,       SplitselHelp,      SplitselOperators,      CDI_BOTH,  1, -1 },
+  { Splittime,      SplittimeHelp,     SplittimeOperators,     CDI_BOTH,  1, -1 },
+  { Splityear,      SplittimeHelp,     SplityearOperators,     CDI_BOTH,  1, -1 },
   { Subtrend,       SubtrendHelp,      SubtrendOperators,      CDI_REAL,  3,  1 },
   { Template1,      NULL,              Template1Operators,     CDI_REAL,  1,  1 },
   { Template2,      NULL,              Template2Operators,     CDI_REAL,  1,  1 },
@@ -635,6 +666,7 @@ static modules_t Modules[] =
   { Writegrid,      NULL,              WritegridOperators,     CDI_REAL,  1,  1 },  /* no cdi output */
   { Writerandom,    NULL,              WriterandomOperators,   CDI_REAL,  1,  1 },
   { Yhourstat,      YhourstatHelp,     YhourstatOperators,     CDI_REAL,  1,  1 },
+  { Ydayarith,      YdayarithHelp,     YdayarithOperators,     CDI_REAL,  2,  1 },
   { Ydaypctl,       YdaypctlHelp,      YdaypctlOperators,      CDI_REAL,  3,  1 },
   { Ydaystat,       YdaystatHelp,      YdaystatOperators,      CDI_REAL,  1,  1 },
   { Ydrunpctl,      YdrunpctlHelp,     YdrunpctlOperators,     CDI_REAL,  3,  1 },
@@ -667,8 +699,7 @@ static modules_t Modules[] =
   { EcaCdd,         EcaCddHelp,        EcaCddOperators,        CDI_REAL,  1,  1 },
   { EcaCwd,         EcaCwdHelp,        EcaCwdOperators,        CDI_REAL,  1,  1 },
   { EcaRr1,         EcaRr1Help,        EcaRr1Operators,        CDI_REAL,  1,  1 },
-  { EcaR10mm,       EcaR10mmHelp,      EcaR10mmOperators,      CDI_REAL,  1,  1 },
-  { EcaR20mm,       EcaR20mmHelp,      EcaR20mmOperators,      CDI_REAL,  1,  1 },
+  { EcaPd,          EcaPdHelp,         EcaPdOperators,         CDI_REAL,  1,  1 },
   { EcaR75p,        EcaR75pHelp,       EcaR75pOperators,       CDI_REAL,  2,  1 },
   { EcaR75ptot,     EcaR75ptotHelp,    EcaR75ptotOperators,    CDI_REAL,  2,  1 },
   { EcaR90p,        EcaR90pHelp,       EcaR90pOperators,       CDI_REAL,  2,  1 },
@@ -694,11 +725,14 @@ static int NumModules = sizeof(Modules) / sizeof(Modules[0]);
 static char *opalias[][2] =
 {
   {"anomaly",             "ymonsub"    },
+  {"deltap_fl",           "deltap"     },
+  {"diffv",               "diffn"      },
   {"ggstat",              "info"       },
   {"ggstats",             "sinfo"      },
   {"globavg",             "fldavg"     },
   {"gradsdes",            "gradsdes2"  },
   {"infos",               "sinfo"      },
+  {"infov",               "infon"      },
   {"intgrid",             "intgridbil" },
   {"log",                 "ln"         },
   {"lmean",               "ymonmean"   },
@@ -709,6 +743,7 @@ static char *opalias[][2] =
   {"chvar",               "chname"     },
   {"ncode",               "npar"       },
   {"nvar",                "npar"       },
+  {"outputkey",           "outputtab"  },
   {"vardes",              "pardes"     },
   {"delvar",              "delname"    },
   {"vardup",              "pardup"     },
@@ -721,6 +756,7 @@ static char *opalias[][2] =
   {"selzaxisname",        "selzaxis"   },
   {"selvar",              "selname"    },
   {"setvar",              "setname"    },
+  {"sinfov",              "sinfon"     },
   {"sortvar",             "sortname"   },
   {"splitvar",            "splitname"  },
   {"sort",                "timsort"    },
@@ -728,6 +764,8 @@ static char *opalias[][2] =
   {"eca_r1mm",            "eca_rr1"    },
   {"fpressure",           "pressure_fl"},
   {"hpressure",           "pressure_hl"},
+  {"ensrkhistspace",      "ensrkhist_space"},
+  {"ensrkhisttime",       "ensrkhist_time"}
 };
 
 static int nopalias = sizeof(opalias) / (2*sizeof(opalias[0][0]));
@@ -784,7 +822,6 @@ char *operatorAlias(char *operatorName)
 static
 int operatorInqModID(char *operatorName)
 {
-  static char func[] = "operatorInqModID";
   int i, j, modID = -1;
 
   if ( operatorName )
@@ -819,7 +856,7 @@ int operatorInqModID(char *operatorName)
 	{
 	  fclose(fp);
 	  fprintf(stderr, "Use commandline option -h for help.");
-	  Error(func, "operator missing! %s is a file on disk!", operatorName);
+	  Error("operator missing! %s is a file on disk!", operatorName);
 	}
       fprintf(stderr, "Operator >%s< not found!\n", operatorName);
       fprintf(stderr, "Similar operators are:\n");
@@ -855,7 +892,7 @@ int operatorInqModID(char *operatorName)
 
   if ( modID != -1 )
     if ( ! Modules[modID].func )
-      Error(func, "Module for operator >%s< not installed!", operatorName);
+      Error("Module for operator >%s< not installed!", operatorName);
 
   return (modID);
 }
@@ -923,7 +960,7 @@ void operatorPrintAll(void)
   nbyte = fprintf(stderr, "   ");
   for ( i = 0; i < nop; i++ )
     {
-      if ( nbyte > 65 )
+      if ( nbyte > 75 )
 	{
 	  fprintf(stdout, "\n");
 	  nbyte = fprintf(stderr, "   ");

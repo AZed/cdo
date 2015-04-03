@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -33,7 +33,6 @@
 
 void *Intyear(void *argument)
 {
-  static char func[] = "Intyear";
   int streamID1, streamID2;
   int nrecs;
   int i, iy;
@@ -41,13 +40,12 @@ void *Intyear(void *argument)
   int gridsize;
   int vlistID1, vlistID2, vlistID3;
   int taxisID1, taxisID2, taxisID3;
-  int nrecs1, nrecs2;
   int vtime, vdate1, vdate2, vdate3, year1, year2;
   int nmiss1, nmiss2, nmiss3;
   int *iyears, nyears = 0, *streamIDs = NULL;
   int nchars;
   char filesuffix[32];
-  char filename[1024];
+  char filename[8192];
   double fac1, fac2;
   double missval1, missval2;
   double *array1, *array2, *array3;
@@ -64,19 +62,13 @@ void *Intyear(void *argument)
   streamIDs = (int *) malloc(nyears*sizeof(int));
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
-
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = vlistDuplicate(vlistID1);
 
-  nrecs1 = vlistNrecs(vlistID1);
-  nrecs2 = vlistNrecs(vlistID2);
-
-  if ( nrecs1 != nrecs2 ) cdoAbort("Number of variables in both inputfiles must be the same!");
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   gridsize = vlistGridsizeMax(vlistID1);
   array1 = (double *) malloc(gridsize*sizeof(double));
@@ -97,13 +89,7 @@ void *Intyear(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   for ( iy = 0; iy < nyears; iy++ )
     {
@@ -112,7 +98,6 @@ void *Intyear(void *argument)
 	sprintf(filename+nchars+4, "%s", filesuffix);
       /*	  printf("filename %s\n", filename); */
       streamIDs[iy] = streamOpenWrite(filename, cdoFiletype());
-      if ( streamIDs[iy] < 0 ) cdiError(streamIDs[iy], "Open failed on %s", filename);
 
       streamDefVlist(streamIDs[iy], vlistID3);
     }
@@ -122,8 +107,8 @@ void *Intyear(void *argument)
     {
       nrecs = streamInqTimestep(streamID1, tsID);
       if ( nrecs == 0 ) break;
-      nrecs2 = streamInqTimestep(streamID2, tsID);
-      if ( nrecs2 == 0 ) cdoAbort("Not enough timesteps in second inputfile!");
+      nrecs = streamInqTimestep(streamID2, tsID);
+      if ( nrecs == 0 ) cdoAbort("Too few timesteps in second inputfile!");
 
       vtime  = taxisInqVtime(taxisID1);
       vdate1 = taxisInqVdate(taxisID1);

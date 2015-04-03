@@ -18,7 +18,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "grid.h"
@@ -38,7 +38,6 @@
 
 void eca1(const ECA_REQUEST_1 *request)
 {
-  static const char func[] = "eca1";
   const int operatorID = cdoOperatorID();
   
   int cmplen;
@@ -60,7 +59,7 @@ void eca1(const ECA_REQUEST_1 *request)
   field_t *var12 = NULL, *samp1 = NULL, *samp2 = NULL, *var13 = NULL, *var21 = NULL, *var23 = NULL, *var;
   field_t field1, field2;
   
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID = streamOpenRead(cdoStreamName(0));
   if ( istreamID < 0 ) cdiError(istreamID, "Open failed on %s", cdoStreamName(0));
@@ -91,12 +90,13 @@ void eca1(const ECA_REQUEST_1 *request)
         vlistDefVarUnits(ovlistID, varID, request->var2.units);
     }
     
-  if ( cdoOperatorIntval(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
+  if ( cdoOperatorF2(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
 
   itaxisID = vlistInqTaxis(ivlistID);
   otaxisID = taxisCreate(TAXIS_RELATIVE);
   taxisDefTunit(otaxisID, TUNIT_MINUTE);
-  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  //  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  taxisDefCalendar(otaxisID, taxisInqCalendar(itaxisID));
   taxisDefRdate(otaxisID, 19550101);
   taxisDefRtime(otaxisID, 0);
   vlistDefTaxis(ovlistID, otaxisID);
@@ -204,23 +204,16 @@ void eca1(const ECA_REQUEST_1 *request)
                     {
                       var12[levelID].ptr[i] = missval;
                       samp1[levelID].ptr[i] = missval;
-                      if ( IS_SET(samp2[levelID].ptr) )
-                        samp2[levelID].ptr[i] = 0.0;
-                      if ( IS_SET(request->var1.f3) ) 
-                        var13[levelID].ptr[i] = missval;
-                      if ( IS_SET(request->var2.h2) )
-                        var21[levelID].ptr[i] = missval;
-                      if ( IS_SET(request->var2.h3) )
-                        var23[levelID].ptr[i] = missval;
+                      if ( IS_SET(samp2[levelID].ptr) ) samp2[levelID].ptr[i] = 0.0;
+                      if ( IS_SET(request->var1.f3) ) var13[levelID].ptr[i] = missval;
+                      if ( IS_SET(request->var2.h2) ) var21[levelID].ptr[i] = missval;
+                      if ( IS_SET(request->var2.h3) ) var23[levelID].ptr[i] = missval;
                     }
                   var12[levelID].nmiss = gridsize;
                   samp1[levelID].nmiss = gridsize;
-                  if ( IS_SET(request->var1.f3) )
-                    var13[levelID].nmiss = gridsize;
-                  if ( IS_SET(request->var2.h2) )
-                    var21[levelID].nmiss = gridsize; 
-                  if ( IS_SET(request->var2.h3) )
-                    var23[levelID].nmiss = gridsize; 
+                  if ( IS_SET(request->var1.f3) ) var13[levelID].nmiss = gridsize;
+                  if ( IS_SET(request->var2.h2) ) var21[levelID].nmiss = gridsize; 
+                  if ( IS_SET(request->var2.h3) ) var23[levelID].nmiss = gridsize; 
                 }
 
               streamReadRecord(istreamID, field1.ptr, &field1.nmiss);
@@ -318,42 +311,42 @@ void eca1(const ECA_REQUEST_1 *request)
 
       taxisDefVdate(otaxisID, ovdate);
       taxisDefVtime(otaxisID, ovtime);
-      streamDefTimestep(ostreamID, otsID++);
+      streamDefTimestep(ostreamID, otsID);
 
-      if ( otsID == 1 || vlistInqVarTime(ivlistID, FIRST_VAR_ID) == TIME_VARIABLE )
-        {
-          varID = 0;
-          for ( levelID = 0; levelID < nlevels; levelID++ )
-            {
-              if ( IS_SET(request->var1.f3) )
-                var = &var13[levelID];
-              else 
-                var = &var12[levelID];
+      if ( otsID && vlistInqVarTime(ivlistID, FIRST_VAR_ID) == TIME_CONSTANT ) continue;
+
+      varID = 0;
+      for ( levelID = 0; levelID < nlevels; levelID++ )
+	{
+	  if ( IS_SET(request->var1.f3) )
+	    var = &var13[levelID];
+	  else 
+	    var = &var12[levelID];
               
-              farsel(var, samp1[levelID]);
+	  farsel(var, samp1[levelID]);
                
-              streamDefRecord(ostreamID, varID, levelID);
-              streamWriteRecord(ostreamID, var->ptr, var->nmiss);
-            }
-          if ( IS_SET(request->var2.h2) || IS_SET(request->var2.h3) )
-            {
-              varID = 1;
-              for ( levelID = 0; levelID < nlevels; levelID++ )
-                {
-                  if ( IS_SET(request->var2.h3) )
-                    var = &var23[levelID];
-                  else 
-                    var = &var21[levelID];
+	  streamDefRecord(ostreamID, varID, levelID);
+	  streamWriteRecord(ostreamID, var->ptr, var->nmiss);
+	}
+      if ( IS_SET(request->var2.h2) || IS_SET(request->var2.h3) )
+	{
+	  varID = 1;
+	  for ( levelID = 0; levelID < nlevels; levelID++ )
+	    {
+	      if ( IS_SET(request->var2.h3) )
+		var = &var23[levelID];
+	      else 
+		var = &var21[levelID];
                   
-                  farsel(var, samp1[levelID]);
+	      farsel(var, samp1[levelID]);
                   
-                  streamDefRecord(ostreamID, varID, levelID);
-                  streamWriteRecord(ostreamID, var->ptr, var->nmiss);
-               }
-            }
+	      streamDefRecord(ostreamID, varID, levelID);
+	      streamWriteRecord(ostreamID, var->ptr, var->nmiss);
+	    }
         }
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -398,7 +391,6 @@ void eca1(const ECA_REQUEST_1 *request)
 
 void eca2(const ECA_REQUEST_2 *request)
 {
-  static const char func[] = "eca2";
   const int operatorID = cdoOperatorID();
   
   int cmplen;
@@ -420,7 +412,7 @@ void eca2(const ECA_REQUEST_2 *request)
   field_t *var14 = NULL, *samp1 = NULL, *samp2 = NULL, *samp3 = NULL, *total = NULL, *var15 = NULL, *var22 = NULL, *var;
   field_t field1, field2;
   
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
   if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
@@ -431,8 +423,7 @@ void eca2(const ECA_REQUEST_2 *request)
   ivlistID2 = streamInqVlist(istreamID2);
   ovlistID  = vlistCreate();
   
-  vlistCompare(ivlistID1, ivlistID2, func_hrd);
-  vlistCompare(ivlistID1, ivlistID2, func_sft);
+  vlistCompare(ivlistID1, ivlistID2, CMP_ALL);
   
   gridID  = vlistInqVarGrid(ivlistID1, FIRST_VAR_ID);
   zaxisID = vlistInqVarZaxis(ivlistID1, FIRST_VAR_ID);
@@ -457,13 +448,14 @@ void eca2(const ECA_REQUEST_2 *request)
         vlistDefVarUnits(ovlistID, varID, request->var2.units);
     }
 
-  if ( cdoOperatorIntval(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
+  if ( cdoOperatorF2(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
 
   itaxisID1 = vlistInqTaxis(ivlistID1);
   itaxisID2 = vlistInqTaxis(ivlistID2);
   otaxisID = taxisCreate(TAXIS_RELATIVE);
   taxisDefTunit(otaxisID, TUNIT_MINUTE);
-  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  //  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  taxisDefCalendar(otaxisID, taxisInqCalendar(itaxisID1));
   taxisDefRdate(otaxisID, 19550101);
   taxisDefRtime(otaxisID, 0);
   vlistDefTaxis(ovlistID, otaxisID);
@@ -694,41 +686,41 @@ void eca2(const ECA_REQUEST_2 *request)
 
       taxisDefVdate(otaxisID, ovdate);
       taxisDefVtime(otaxisID, ovtime);
-      streamDefTimestep(ostreamID, otsID++);
+      streamDefTimestep(ostreamID, otsID);
 
-      if ( otsID == 1 || vlistInqVarTime(ivlistID1, FIRST_VAR_ID) == TIME_VARIABLE )
-        {
-          varID = 0;
-          for ( levelID = 0; levelID < nlevels; levelID++ )
-            {
-              if ( IS_SET(request->var1.f5) )
-                var = &var15[levelID];
-              else 
-                var = &var14[levelID];
+      if ( otsID && vlistInqVarTime(ivlistID1, FIRST_VAR_ID) == TIME_CONSTANT ) continue;
+
+      varID = 0;
+      for ( levelID = 0; levelID < nlevels; levelID++ )
+	{
+	  if ( IS_SET(request->var1.f5) )
+	    var = &var15[levelID];
+	  else 
+	    var = &var14[levelID];
               
-              farsel(var, samp1[levelID]);
-              farsel(var, samp2[levelID]);
+	  farsel(var, samp1[levelID]);
+	  farsel(var, samp2[levelID]);
               
-              streamDefRecord(ostreamID, varID, levelID);
-              streamWriteRecord(ostreamID, var->ptr, var->nmiss);
-            }
-          if ( IS_SET(request->var2.h2) )
-            {
-              varID = 1;
-              for ( levelID = 0; levelID < nlevels; levelID++ )
-                {
-                  var = &var22[levelID];
+	  streamDefRecord(ostreamID, varID, levelID);
+	  streamWriteRecord(ostreamID, var->ptr, var->nmiss);
+	}
+      if ( IS_SET(request->var2.h2) )
+	{
+	  varID = 1;
+	  for ( levelID = 0; levelID < nlevels; levelID++ )
+	    {
+	      var = &var22[levelID];
+              
+	      farsel(var, samp1[levelID]);
+	      farsel(var, samp2[levelID]);
                   
-                  farsel(var, samp1[levelID]);
-                  farsel(var, samp2[levelID]);
-                  
-                  streamDefRecord(ostreamID, varID, levelID);
-                  streamWriteRecord(ostreamID, var->ptr, var->nmiss);
-               }
-            }
+	      streamDefRecord(ostreamID, varID, levelID);
+	      streamWriteRecord(ostreamID, var->ptr, var->nmiss);
+	    }
         }
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -776,9 +768,8 @@ void eca2(const ECA_REQUEST_2 *request)
 
 void eca3(const ECA_REQUEST_3 *request)
 {
-  static const char func[] = "eca3";
   const int operatorID = cdoOperatorID();
-  
+
   int cmplen;
   char indate1[DATE_LEN+1], indate2[DATE_LEN+1];
   int gridsize;
@@ -799,7 +790,7 @@ void eca3(const ECA_REQUEST_3 *request)
   field_t *var1 = NULL, *var2 = NULL;
   field_t field1, field2;
   
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
   if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
@@ -810,8 +801,7 @@ void eca3(const ECA_REQUEST_3 *request)
   ivlistID2 = streamInqVlist(istreamID2);
   ovlistID  = vlistCreate();
   
-  vlistCompare(ivlistID1, ivlistID2, func_hrd);
-  vlistCompare(ivlistID1, ivlistID2, func_sft);
+  vlistCompare(ivlistID1, ivlistID2, CMP_ALL);
   
   gridID  = vlistInqVarGrid(ivlistID1, FIRST_VAR_ID);
   zaxisID = vlistInqVarZaxis(ivlistID1, FIRST_VAR_ID);
@@ -824,13 +814,14 @@ void eca3(const ECA_REQUEST_3 *request)
   if ( IS_SET(request->units) ) 
     vlistDefVarUnits(ovlistID, varID, request->units);
 
-  if ( cdoOperatorIntval(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
+  if ( cdoOperatorF2(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
 
   itaxisID1 = vlistInqTaxis(ivlistID1);
   itaxisID2 = vlistInqTaxis(ivlistID2);
   otaxisID = taxisCreate(TAXIS_RELATIVE);
   taxisDefTunit(otaxisID, TUNIT_MINUTE);
-  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  //  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  taxisDefCalendar(otaxisID, taxisInqCalendar(itaxisID1));
   taxisDefRdate(otaxisID, 19550101);
   taxisDefRtime(otaxisID, 0);
   vlistDefTaxis(ovlistID, otaxisID);
@@ -941,19 +932,19 @@ void eca3(const ECA_REQUEST_3 *request)
 
       taxisDefVdate(otaxisID, ovdate);
       taxisDefVtime(otaxisID, ovtime);
-      streamDefTimestep(ostreamID, otsID++);
+      streamDefTimestep(ostreamID, otsID);
 
-      if ( otsID == 1 || vlistInqVarTime(ivlistID1, FIRST_VAR_ID) == TIME_VARIABLE )
-        {
-          varID = 0;
-          for ( levelID = 0; levelID < nlevels; levelID++ )
-            {
-              streamDefRecord(ostreamID, varID, levelID);
-              streamWriteRecord(ostreamID, var1[levelID].ptr, var1[levelID].nmiss);
-            }
-        }
+      if ( otsID && vlistInqVarTime(ivlistID1, FIRST_VAR_ID) == TIME_CONSTANT ) continue;
+
+      varID = 0;
+      for ( levelID = 0; levelID < nlevels; levelID++ )
+	{
+	  streamDefRecord(ostreamID, varID, levelID);
+	  streamWriteRecord(ostreamID, var1[levelID].ptr, var1[levelID].nmiss);
+	}
 
       if ( nrecs == 0 ) break;
+      otsID++;
     }
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -978,9 +969,8 @@ void eca3(const ECA_REQUEST_3 *request)
 
 void eca4(const ECA_REQUEST_4 *request)
 {
-  static const char func[] = "eca4";
   const int operatorID = cdoOperatorID();
-  
+
   int cmplen;
   char indate1[DATE_LEN+1], indate2[DATE_LEN+1];
   int gridsize, gridtype;
@@ -1002,10 +992,11 @@ void eca4(const ECA_REQUEST_4 *request)
   field_t *startCount          , *endCount;
   field_t *startDateWithHist[2], *endDateWithHist[2];
   field_t *gslDuration, *gslFirstDay;
-  field_t fieldGt              , fieldLt             , mask;
-  int reinitializedCounts = FALSE;
-  
-  cmplen = DATE_LEN - cdoOperatorIntval(operatorID);
+  field_t fieldGt, fieldLt, mask;
+  int resetAtJan = FALSE, resetAtJul = FALSE;
+  int isFirstYear = TRUE;
+
+  cmplen = DATE_LEN - cdoOperatorF2(operatorID);
 
   istreamID1 = streamOpenRead(cdoStreamName(0));
   if ( istreamID1 < 0 ) cdiError(istreamID1, "Open failed on %s", cdoStreamName(0));
@@ -1038,12 +1029,13 @@ void eca4(const ECA_REQUEST_4 *request)
   if ( IS_SET(request->units2) ) 
     vlistDefVarUnits(ovlistID, ovarID2, request->units2);
 
-  if ( cdoOperatorIntval(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
+  if ( cdoOperatorF2(operatorID) == 16 ) vlistDefNtsteps(ovlistID, 1);
 
   itaxisID = vlistInqTaxis(ivlistID1);
   otaxisID = taxisCreate(TAXIS_RELATIVE);
   taxisDefTunit(otaxisID, TUNIT_MINUTE);
-  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  //  taxisDefCalendar(otaxisID, CALENDAR_PROLEPTIC);
+  taxisDefCalendar(otaxisID, taxisInqCalendar(itaxisID));
   taxisDefRdate(otaxisID, 19550101);
   taxisDefRtime(otaxisID, 0);
   vlistDefTaxis(ovlistID, otaxisID);
@@ -1058,10 +1050,10 @@ void eca4(const ECA_REQUEST_4 *request)
   recLevelID  = (int *) malloc(nrecords*sizeof(int));
 
   gridtype = gridInqType(gridID);
-  if ( gridtype != GRID_CELL && gridtype != GRID_CURVILINEAR ) 
+  if ( gridtype != GRID_UNSTRUCTURED && gridtype != GRID_CURVILINEAR ) 
     {
       if ( gridtype == GRID_GME )
-        gridID = gridToCell(gridID);
+        gridID = gridToUnstructured(gridID);
       else
         gridID = gridToCurvilinear(gridID);
     }
@@ -1098,21 +1090,25 @@ void eca4(const ECA_REQUEST_4 *request)
   for ( levelID = 0; levelID < nlevels; levelID++ )
   {
     startCount[levelID].grid     = gridID;
+    startCount[levelID].size     = gridsize;
     startCount[levelID].nmiss    = 0;
     startCount[levelID].missval  = missval;
     startCount[levelID].ptr      = (double *) malloc(gridsize*sizeof(double));
 
     endCount[levelID].grid       = gridID;
+    endCount[levelID].size       = gridsize;
     endCount[levelID].nmiss      = 0;
     endCount[levelID].missval    = missval;
     endCount[levelID].ptr        = (double *) malloc(gridsize*sizeof(double));
 
     gslDuration[levelID].grid    = gridID;
+    gslDuration[levelID].size    = gridsize;
     gslDuration[levelID].nmiss   = 0;
     gslDuration[levelID].missval = missval;
     gslDuration[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
     gslFirstDay[levelID].grid    = gridID;
+    gslFirstDay[levelID].size    = gridsize;
     gslFirstDay[levelID].nmiss   = 0;
     gslFirstDay[levelID].missval = missval;
     gslFirstDay[levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
@@ -1120,17 +1116,19 @@ void eca4(const ECA_REQUEST_4 *request)
     for ( int h = 0; h < 2; h++ )
     {
       startDateWithHist[h][levelID].grid    = gridID;
+      startDateWithHist[h][levelID].size    = gridsize;
       startDateWithHist[h][levelID].nmiss   = 0;
       startDateWithHist[h][levelID].missval = missval;
       startDateWithHist[h][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
 
       endDateWithHist[h][levelID].grid      = gridID;
+      endDateWithHist[h][levelID].size      = gridsize;
       endDateWithHist[h][levelID].nmiss     = 0;
       endDateWithHist[h][levelID].missval   = missval;
       endDateWithHist[h][levelID].ptr       = (double *) malloc(gridsize*sizeof(double));
     }
   }
-  
+
   itsID   = 0;
   otsID   = 0;
 
@@ -1156,11 +1154,12 @@ void eca4(const ECA_REQUEST_4 *request)
           month = (ivdate % 10000) / 100;
           if ( month < 1 || month > 12 ) cdoAbort("month %d out of range!", month);
 
-	  if ( nsets == 0 ) SET_DATE(indate2, ivdate, ivtime);
-	  SET_DATE(indate1, ivdate, ivtime);
+          if ( nsets == 0 ) SET_DATE(indate2, ivdate, ivtime);
+          SET_DATE(indate1, ivdate, ivtime);
 
-	  if ( DATE_IS_NEQ(indate1, indate2, cmplen) ) {
-            reinitializedCounts = FALSE;
+          if ( DATE_IS_NEQ(indate1, indate2, cmplen) ) {
+            resetAtJan = FALSE;
+            resetAtJul = FALSE;
             break;
           }
 
@@ -1174,76 +1173,137 @@ void eca4(const ECA_REQUEST_4 *request)
                   recLevelID[recID] = levelID;
                 }
               if ( varID != FIRST_VAR_ID ) continue;
-              
+
               if ( nsets == 0 )
                 {
                   for ( i = 0; i < gridsize; i++ )
                     {
-                      startCount[levelID].ptr[i]           = missval;
-                      endCount[levelID].ptr[i]             = missval;
                       gslDuration[levelID].ptr[i]          = missval;
                       gslFirstDay[levelID].ptr[i]          = missval;
                       /* reinitialize the current year */
                       startDateWithHist[0][levelID].ptr[i] = missval;
                       endDateWithHist[0][levelID].ptr[i]   = missval;
                     }
-                  startCount[levelID].nmiss           = gridsize;
-                  endCount[levelID].nmiss             = gridsize;
                   gslDuration[levelID].nmiss          = missval;
                   gslFirstDay[levelID].nmiss          = missval;
                   /* reinitialize the current year */
                   startDateWithHist[0][levelID].nmiss = gridsize;
                   endDateWithHist[0][levelID].nmiss   = gridsize;
                 }
+              /* init the history ONCE */
+              if ( 0 == itsID )
+                {
+                  for ( i = 0; i < gridsize; i++ )
+                    {
+                      startDateWithHist[1][levelID].ptr[i] = missval;
+                      endDateWithHist[1][levelID].ptr[i]   = missval;
+                    }
+                  startDateWithHist[1][levelID].nmiss = gridsize;
+                  endDateWithHist[1][levelID].nmiss   = gridsize;
+                }
 
               streamReadRecord(istreamID1, fieldGt.ptr, &fieldGt.nmiss);
-              streamReadRecord(istreamID1, fieldLt.ptr, &fieldLt.nmiss);
+              memcpy(fieldLt.ptr, fieldGt.ptr, gridsize*sizeof(double));
+              fieldLt.nmiss = fieldGt.nmiss;
               fieldGt.grid    = startCount[levelID].grid;
               fieldGt.missval = startCount[levelID].missval;
               fieldLt.grid    = startCount[levelID].grid;
               fieldLt.missval = startCount[levelID].missval;
-              
-              /* Reinitialize the *Count-variables once at the begining of the
-               * second half of the year */
-              if ( month >= 7 && !reinitializedCounts )
-                {
-                  for ( i = 0; i < gridsize; i++ )
-                    {
-                      startCount[levelID].ptr[i]           = missval;
-                      endCount[levelID].ptr[i]             = missval;
-                    }
-                  startCount[levelID].nmiss           = gridsize;
-                  endCount[levelID].nmiss             = gridsize;
 
-                  reinitializedCounts = TRUE;
+              /* Reinitialization of (start|end)Count variables has to be done
+               * different for norther and southern hemisphere */
+              if ( 1 == month && !resetAtJan )
+              {
+                /* reset northern startCount */
+                for ( i = 0; i < gridsize; i++ )
+                  {
+                    if ( yvals[i] >= 0.0 )
+                      if ( !DBL_IS_EQUAL(startCount[levelID].ptr[i], missval) )
+                      {
+                        startCount[levelID].ptr[i] = missval;
+                        startCount[levelID].nmiss++;
+                      }
+                  }
+                /* reset southern endCount */
+                for ( i = 0; i < gridsize; i++ )
+                  {
+                    if ( yvals[i] < 0.0 )
+                      if ( !DBL_IS_EQUAL(endCount[levelID].ptr[i], missval) )
+                        {
+                          endCount[levelID].ptr[i] = missval;
+                          endCount[levelID].nmiss++;
+                        }
+                  }
+
+                resetAtJan = TRUE;
+              }
+              if ( 7 == month && !resetAtJul )
+              {
+#if defined (_OPENMP)
+#pragma omp sections
+#endif
+                {
+#if defined (_OPENMP)
+#pragma omp section
+#endif
+                  {
+                    /* reset northern endCount  */
+                    for ( i = 0; i < gridsize; i++ )
+                      {
+                        if ( yvals[i] >= 0.0 )
+                          {
+                            if ( !DBL_IS_EQUAL(endCount[levelID].ptr[i], missval) )
+                              {
+                                endCount[levelID].ptr[i] = missval;
+                                endCount[levelID].nmiss++;
+                              }
+                          }
+                      }
+                  }
+#if defined (_OPENMP)
+#pragma omp section
+#endif
+                  {
+                    /* reset southern startCount */
+                    for ( i = 0; i < gridsize; i++ )
+                    {
+                      if ( yvals[i] < 0.0 )
+                      {
+                        if ( !DBL_IS_EQUAL(startCount[levelID].ptr[i], missval) )
+                          {
+                            startCount[levelID].ptr[i] = missval;
+                            startCount[levelID].nmiss++;
+                          }
+                      }
+                    }
+                  }
                 }
+                resetAtJul = TRUE;
+              }
 
               /* count the day with temperature larger/smaller than the given limit */
 #if defined (_OPENMP)
 #pragma omp sections
 #endif
               {
-                //printf("Total Number of Thread:%d\n", omp_get_num_threads());
 #if defined (_OPENMP)
 #pragma omp section
 #endif
                 {
-                  //printf("ThreadNum: %d ",omp_get_thread_num());
-                  farsel(&fieldGt, mask);
-                  request->s1(&fieldGt, request->s1arg);
+                  farsel(&fieldGt             , mask);
+                  request->s1(&fieldGt        , request->s1arg);
                   farnum2(&startCount[levelID], fieldGt);
                 }
 #if defined (_OPENMP)
 #pragma omp section
 #endif
                 {
-                  //printf("ThreadNum: %d\n",omp_get_thread_num());
-                  farsel(&fieldLt, mask);
-                  request->s2(&fieldLt, request->s1arg);
-                  farnum2(&endCount[levelID]  , fieldLt);
+                  farsel(&fieldLt           , mask);
+                  request->s2(&fieldLt      , request->s1arg);
+                  farnum2(&endCount[levelID], fieldLt);
                 }
-              } 
-              
+              }
+
               if ( month < 7 )
                 {
                   for ( i = 0; i < gridsize; i++ )
@@ -1251,7 +1311,18 @@ void eca4(const ECA_REQUEST_4 *request)
                     /* start with south */
                     if ( yvals[i] < 0 )
                     {
-                      if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) && 
+                      /* south: periods can also start in the first half of the
+                       * year, but this date has already gone into the history */
+                      if ( DBL_IS_EQUAL(startDateWithHist[1][levelID].ptr[i], missval) &&
+                           IS_EQUAL(startCount[levelID].ptr[i], request->consecutiveDays) )
+                      {
+                        startDateWithHist[1][levelID].ptr[i] = ivdate;
+                        /* reset the endCount, because we are only interessted
+                         * in the end of the eriod, if a start was found */
+                        endCount[levelID].ptr[i]           = missval;
+                        endDateWithHist[0][levelID].ptr[i] = missval;
+                      }
+                      if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) &&
                           IS_EQUAL(endCount[levelID].ptr[i], request->consecutiveDays) )
                       {
                         endDateWithHist[0][levelID].ptr[i] = ivdate;
@@ -1269,23 +1340,43 @@ void eca4(const ECA_REQUEST_4 *request)
               else
                 {
                   for ( i = 0; i < gridsize; i++ )
+                  {
                     if ( yvals[i] < 0 )
                     {
-                      if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) && 
-                           IS_EQUAL(startCount[levelID].ptr[i], request->consecutiveDays) ) 
+                      if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) &&
+                           IS_EQUAL(startCount[levelID].ptr[i], request->consecutiveDays) )
                       {
                         startDateWithHist[0][levelID].ptr[i] = ivdate;
                       }
                     }
                     else
                     {
+                      /* north: periods can also start in the second half of the year */
+                      if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) &&
+                           IS_EQUAL(startCount[levelID].ptr[i], request->consecutiveDays) )
+                      {
+                        startDateWithHist[0][levelID].ptr[i] = ivdate;
+                        /* reset the endCount, because we are only interessted
+                         * in the end of the eriod, if a start was found */
+                        endCount[levelID].ptr[i]           = missval;
+                        endDateWithHist[0][levelID].ptr[i] = missval;
+                      }
                       if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) && 
                           IS_EQUAL(endCount[levelID].ptr[i], request->consecutiveDays) )
                       {
                         endDateWithHist[0][levelID].ptr[i] = ivdate;
                       }
                     }
+                  }
                 }
+              /* update nmiss for saving data in GRIB */
+              fldunm(&startCount[levelID]);
+              fldunm(  &endCount[levelID]);
+              fldunm(&startDateWithHist[1][levelID]);
+              fldunm(&startDateWithHist[0][levelID]);
+              fldunm(  &endDateWithHist[1][levelID]);
+              fldunm(  &endDateWithHist[0][levelID]);
+
             }
 
           ovdate = ivdate;
@@ -1296,23 +1387,54 @@ void eca4(const ECA_REQUEST_4 *request)
 
       if ( nrecs == 0 && nsets == 0 ) break;
 
-      adjustEndDate(nlevels, gridsize, yvals, missval, ovdate, startDateWithHist, endDateWithHist);
+      adjustEndDate(nlevels, gridsize, yvals, missval, ovdate,
+                    startDateWithHist, endDateWithHist);
+
+      /*  compute and write GSL for the previous year
+       *  AND
+       *  write the current start/end dates into the history
+       *
+       *  this is the default action if more than a year is available */
       if (yearcnt != 0)
         {
           computeGsl(nlevels, gridsize, yvals, missval,
-                    startDateWithHist,  endDateWithHist, 
-                    gslDuration, gslFirstDay,
-                    FALSE);
+                     startDateWithHist, endDateWithHist,
+                     gslDuration, gslFirstDay,
+                     FALSE);
 
           /* values of the privous year */
-          writeGslStream(ostreamID, otaxisID, otsID, 
-                        ovarID1, ovarID2,ivlistID1,
-                        FIRST_VAR_ID,
-                        gslDuration, gslFirstDay,
-                        cdiEncodeDate(ovdate/10000 - 1, 12, 31), ovtime,  nlevels); otsID++;
+          {writeGslStream(ostreamID, otaxisID, otsID,
+                          ovarID1, ovarID2,ivlistID1,
+                          FIRST_VAR_ID,
+                          gslDuration, gslFirstDay,
+                          cdiEncodeDate(ovdate/10000 - 1, 12, 31), ovtime,  nlevels); otsID++;}
         }
+
+      /*  if there is a previous year */
       if (ovdate != ivdate)
-        {
+      {
+        /*  if the first year of data was processed, the history has to
+         *  be checked befor it get's updated. This is necessary, if a
+         *  growing period on the southern hemisphere was found. Otherwise,
+         *  it would get overwritten. */
+        if ( isFirstYear )
+          {
+            /*  Check for non missing values, i.e. is there any data for the
+             *  previous year? */
+            if ( fldhvs(startDateWithHist[1], nlevels) )
+              {
+                computeGsl(nlevels, gridsize, yvals, missval,
+                          startDateWithHist, endDateWithHist,
+                          gslDuration, gslFirstDay,
+                          FALSE);
+                {writeGslStream(ostreamID, otaxisID, otsID,
+                                ovarID1, ovarID2,ivlistID1,
+                                FIRST_VAR_ID,
+                                gslDuration, gslFirstDay,
+                                cdiEncodeDate(ovdate/10000 - 1,12,31), ovtime, nlevels); otsID++;}
+              }
+            isFirstYear = FALSE;
+          }
 #if defined (_OPENMP)
 #pragma omp sections
 #endif
@@ -1323,23 +1445,19 @@ void eca4(const ECA_REQUEST_4 *request)
 #endif
             updateHist(endDateWithHist,   nlevels, gridsize, yvals, TRUE);
           }
-	  /*
-#if defined (_OPENMP)
-#pragma omp end sections
-#endif
-	  */
         }
-      else
+      else /* process the current year, this only happens, if the last timestep
+              is reached OR if data for only one year is present */
         {
           computeGsl(nlevels, gridsize, yvals, missval,
-                    startDateWithHist,  endDateWithHist, 
-                    gslDuration, gslFirstDay,
-                    TRUE);
-          {writeGslStream(ostreamID, otaxisID, otsID, 
-			  ovarID1, ovarID2,ivlistID1,
-			  FIRST_VAR_ID,
-			  gslDuration, gslFirstDay,
-			  ovdate, ovtime, nlevels); otsID++;}
+                     startDateWithHist, endDateWithHist,
+                     gslDuration, gslFirstDay,
+                     TRUE);
+          {writeGslStream(ostreamID, otaxisID, otsID,
+                          ovarID1, ovarID2,ivlistID1,
+                          FIRST_VAR_ID,
+                          gslDuration, gslFirstDay,
+                          ovdate, ovtime, nlevels); otsID++;}
         }
       yearcnt++;
 
@@ -1357,7 +1475,7 @@ void eca4(const ECA_REQUEST_4 *request)
           free(startDateWithHist[h][levelID].ptr);
           free(endDateWithHist[h][levelID].ptr);
         }
-    }  
+    }
   for (int h = 0; h < 2; h++)
     {
       free(startDateWithHist[h]);
@@ -1367,7 +1485,7 @@ void eca4(const ECA_REQUEST_4 *request)
   free(endCount);
   free(gslDuration);
   free(gslFirstDay);
-  
+
   if ( IS_SET(fieldGt.ptr) ) free(fieldGt.ptr);
   if ( IS_SET(fieldLt.ptr) ) free(fieldLt.ptr);
 

@@ -37,7 +37,9 @@ def getOperators
     puts "Operators could not get listed by running the CDO binary (#{$opts[:bin]})"
     puts "Create operator list by scanning the documentation..."
     Dir.glob('../doc/tex/mod/*').map {|mod|
-      File.open(mod).readlines.grep(/Operators/).map {|line| line.chomp.split('=')[-1].split(' ')}
+      File.open(mod).readlines.grep(/Operators/).map {|line| 
+        line.chomp.split('=')[-1].split(' ')
+      }
     }.flatten
   else
     help[help.index("Operators:")+1].split

@@ -157,7 +157,6 @@ void cptInit(CPT *cpt)
 
 int cptRead(FILE *fp, CPT *cpt)
 {
-  static char func[] = "cptRead";
   int ncolors;
   int status = 0;
   /* Opens and reads a color palette file in RGB, HSV, or CMYK of arbitrary length */
@@ -189,7 +188,7 @@ int cptRead(FILE *fp, CPT *cpt)
 	    color_model = CMYK;
 	  else
 	    {
-	      fprintf (stderr, "%s: unrecognized COLOR_MODEL\n", func);
+	      fprintf (stderr, "%s: unrecognized COLOR_MODEL\n", __func__);
 	      return (READERR);
 	    }
 	}
@@ -217,7 +216,7 @@ int cptRead(FILE *fp, CPT *cpt)
 	cpt->bfn[id].skip = FALSE;
 	if ((nread = sscanf (&line[2], "%s %s %s %s", T1, T2, T3, T4)) < 1) error = TRUE;
 	if (T1[0] == 'p' || T1[0] == 'P') {	/* Gave a pattern */
-	  fprintf (stderr, "%s: CPT Pattern fill (%s) unsupported!\n", func, T1);
+	  fprintf (stderr, "%s: CPT Pattern fill (%s) unsupported!\n", __func__, T1);
 	  return (READERR);
 	}
 	else {	/* Shades, RGB, HSV, or CMYK */
@@ -273,7 +272,7 @@ int cptRead(FILE *fp, CPT *cpt)
       cpt->lut[n].skip = FALSE;
       if (T1[0] == '-') {				/* Skip this slice */
 	if (nread != 4) {
-	  fprintf (stderr, "%s: z-slice to skip not in [z0 - z1 -] format!\n", func);
+	  fprintf (stderr, "%s: z-slice to skip not in [z0 - z1 -] format!\n", __func__);
 	  return (READERR);
 	}
 	cpt->lut[n].z_high = atof (T2);
@@ -281,7 +280,7 @@ int cptRead(FILE *fp, CPT *cpt)
 	for (i = 0; i < 3; i++) cpt->lut[n].rgb_low[i] = cpt->lut[n].rgb_high[i] = 255;	/* If you must, use page color */
       }
       else if (T1[0] == 'p' || T1[0] == 'P') {	/* Gave pattern fill */
-	fprintf (stderr, "%s: CPT Pattern fill (%s) unsupported!\n", func, T1);
+	fprintf (stderr, "%s: CPT Pattern fill (%s) unsupported!\n", __func__, T1);
 	return (READERR);
       }
       else {							/* Shades, RGB, HSV, or CMYK */
@@ -308,7 +307,7 @@ int cptRead(FILE *fp, CPT *cpt)
 		
 	dz = cpt->lut[n].z_high - cpt->lut[n].z_low;
 	if ( !(fabs(dz) > 0) ) {
-	  fprintf (stderr, "%s: Z-slice with dz = 0\n", func);
+	  fprintf (stderr, "%s: Z-slice with dz = 0\n", __func__);
 	  return (READERR);
 	}
 	cpt->lut[n].i_dz = 1.0 / dz;
@@ -330,13 +329,13 @@ int cptRead(FILE *fp, CPT *cpt)
 
   if ( error )
     {
-      fprintf (stderr, "%s: Decoding error\n", func);
+      fprintf (stderr, "%s: Decoding error\n", __func__);
       return (READERR);
     }
 
   if ( n == 0 )
     {
-      fprintf (stderr, "%s: CPT file has no z-slices!\n", func);
+      fprintf (stderr, "%s: CPT file has no z-slices!\n", __func__);
       return (READERR);
     }
 		
@@ -350,7 +349,7 @@ int cptRead(FILE *fp, CPT *cpt)
   annot += cpt->lut[i].annot;
   if ( gap )
     {
-      fprintf (stderr, "%s: Color palette table has gaps - aborts!\n", func);
+      fprintf (stderr, "%s: Color palette table has gaps - aborts!\n", __func__);
       return (READERR);
     }
 

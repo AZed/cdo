@@ -21,12 +21,10 @@
       Ydrunpctl    ydrunpctl         Multi-year daily running percentiles
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
-#include "field.h"
 #include "percentiles.h"
 
 
@@ -35,7 +33,6 @@
 
 void *Ydrunpctl(void *argument)
 {
-  static char func[] = "Ydrunpctl";
   int gridsize;
   int varID;
   int recID;
@@ -61,7 +58,7 @@ void *Ydrunpctl(void *argument)
   int nsets[NDAY];
   int year, month, day, dayoy;
   field_t field;
-  int pn;
+  double pn;
   HISTOGRAM_SET *hsets[NDAY];
     
   cdoInitialize(argument);
@@ -69,11 +66,11 @@ void *Ydrunpctl(void *argument)
 
   operatorInputArg("percentile number, number of timesteps");
   operatorCheckArgc(2);
-  pn     = atoi(operatorArgv()[0]);
+  pn     = atof(operatorArgv()[0]);
   ndates = atoi(operatorArgv()[1]);
 
-  if ( pn < 1 || pn > 99 )
-    cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
+  if ( !(pn > 0 && pn < 100) )
+    cdoAbort("Illegal argument: percentile number %g is not in the range 0..100!", pn);
   
   for ( dayoy = 0; dayoy < NDAY; dayoy++ )
     {
@@ -83,19 +80,16 @@ void *Ydrunpctl(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
   streamID3 = streamOpenRead(cdoStreamName(2));
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = streamInqVlist(streamID2);
   vlistID3 = streamInqVlist(streamID3);
   vlistID4 = vlistDuplicate(vlistID1);
 
-  vlistCompare(vlistID1, vlistID2, func_hrd);
-  vlistCompare(vlistID1, vlistID3, func_hrd);
+  vlistCompare(vlistID1, vlistID2, CMP_ALL);
+  vlistCompare(vlistID1, vlistID3, CMP_ALL);
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
@@ -109,7 +103,6 @@ void *Ydrunpctl(void *argument)
   dpy      = calendar_dpy(calendar);
 
   streamID4 = streamOpenWrite(cdoStreamName(3), cdoFiletype());
-  if ( streamID4 < 0 ) cdiError(streamID4, "Open failed on %s", cdoStreamName(3));
 
   streamDefVlist(streamID4, vlistID4);
 
@@ -274,7 +267,7 @@ void *Ydrunpctl(void *argument)
 	  nlevels = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      
 	  for ( levelID = 0; levelID < nlevels; levelID++ )
-	    for ( inp = 0; inp < ndates; inp ++ )
+	    for ( inp = 0; inp < ndates; inp++ )
 	      hsetAddVarLevelValues(hsets[dayoy], varID, levelID, &vars1[inp][varID][levelID]);
 	}
         
@@ -325,20 +318,21 @@ void *Ydrunpctl(void *argument)
 
 	taxisDefVdate(taxisID4, vdates1[dayoy]);
 	taxisDefVtime(taxisID4, vtimes1[dayoy]);
-	streamDefTimestep(streamID4, otsID++);
+	streamDefTimestep(streamID4, otsID);
 
 	for ( recID = 0; recID < nrecords; recID++ )
 	  {
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	      {
-		streamDefRecord(streamID4, varID, levelID);
-		streamWriteRecord(streamID4, vars2[dayoy][varID][levelID].ptr,
-		  vars2[dayoy][varID][levelID].nmiss);
-	      }
+	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	    streamDefRecord(streamID4, varID, levelID);
+	    streamWriteRecord(streamID4, vars2[dayoy][varID][levelID].ptr,
+			      vars2[dayoy][varID][levelID].nmiss);
 	  }
+
+	otsID++;
       }
   
   for ( its = 0; its < ndates; its++ )

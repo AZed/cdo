@@ -1,11 +1,27 @@
+/*
+  This file is part of CDO. CDO is a collection of Operators to
+  manipulate and analyse Climate model Data.
+
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  See COPYING file for copying and redistribution conditions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 2 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+*/
+
 #if  defined  (HAVE_CONFIG_H)
 #  include "config.h"
 #endif
 
-
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -46,26 +62,23 @@ void get_dim_vals(dsets_t *pfi, double *vals, int dimlen, int dim)
   
 }
 
-
 static
-void rev_yvals(double *yvals, int ny)
+void rev_vals(double *vals, int n)
 {
   int i;
   double dum;
 
-  for ( i = 0; i < ny/2; ++i )
+  for ( i = 0; i < n/2; ++i )
     {
-      dum = yvals[i];
-      yvals[i] = yvals[ny-1-i];
-      yvals[ny-1-i] = dum;
+      dum = vals[i];
+      vals[i] = vals[n-1-i];
+      vals[n-1-i] = dum;
     }
 }
-
 
 static
 int y_is_gauss(double *gridyvals, int ysize)
 {
-  static char func[] = "y_is_gauss";
   int lgauss = FALSE;
   int i;
 
@@ -101,15 +114,13 @@ int y_is_gauss(double *gridyvals, int ysize)
   return (lgauss);
 }
 
-
 static
 int define_grid(dsets_t *pfi)
 {
-  static char func[] = "define_grid";
   int gridID, gridtype;
   int nx, ny;
   double *xvals, *yvals;
-  int lgauss;
+  int lgauss = FALSE;
 
   nx = pfi->dnum[0];
   ny = pfi->dnum[1];
@@ -120,9 +131,9 @@ int define_grid(dsets_t *pfi)
   get_dim_vals(pfi, xvals, nx, 0);
   get_dim_vals(pfi, yvals, ny, 1);
 
-  if ( pfi->yrflg ) rev_yvals(yvals, ny);
+  if ( pfi->yrflg ) rev_vals(yvals, ny);
 
-  lgauss = y_is_gauss(yvals, ny);
+  if ( pfi->linear[1] == 0 ) lgauss = y_is_gauss(yvals, ny);
 
   if ( lgauss ) gridtype = GRID_GAUSSIAN;
   else          gridtype = GRID_LONLAT;
@@ -140,11 +151,9 @@ int define_grid(dsets_t *pfi)
   return (gridID);
 }
 
-
 static
 int define_level(dsets_t *pfi, int nlev)
 {
-  static char func[] = "define_level";
   int zaxisID = -1;
   int nz;
 
@@ -163,6 +172,7 @@ int define_level(dsets_t *pfi, int nlev)
       else
 	{
 	  if ( nlev > 0 && nlev < nz ) nz = nlev;
+	  if ( pfi->zrflg ) rev_vals(zvals, nz);
 	  zaxisID = zaxisCreate(ZAXIS_GENERIC, nz);
 	}
       zaxisDefLevels(zaxisID, zvals);
@@ -178,22 +188,21 @@ int define_level(dsets_t *pfi, int nlev)
       zaxisDefLevels(zaxisID, &level);
     }
 
-  
   return (zaxisID);
 }
 
 
 void *Importbinary(void *argument)
 {
-  static char func[] = "Importbinary";
   int streamID;
   int gridID = -1, zaxisID, zaxisIDsfc, taxisID, vlistID;
   int i;
-  int nmiss, n_nan;
+  int nmiss = 0, n_nan;
   int ivar;
   int varID = -1, levelID, tsID;
   int gridsize;
   int  status;
+  int datatype;
   dsets_t pfi;
   int vdate, vtime;
   int tcur, told,fnum;
@@ -207,12 +216,13 @@ void *Importbinary(void *argument)
   char *rec = NULL;
   struct gavar *pvar;
   struct dt dtim, dtimi;
+  double missval;
   double fmin, fmax;
-  float *farray;
   double *array;
   double sfclevel = 0;
   int *recVarID, *recLevelID;
   int *var_zaxisID;
+  int *var_dfrm = NULL;
   char vdatestr[32], vtimestr[32];	  
 
   cdoInitialize(argument);
@@ -244,6 +254,7 @@ void *Importbinary(void *argument)
   var_zaxisID = (int *) malloc(nvars*sizeof(int));
   recVarID    = (int *) malloc(nrecs*sizeof(int));
   recLevelID  = (int *) malloc(nrecs*sizeof(int));
+  var_dfrm    = (int *) malloc(nrecs*sizeof(int));
 
   recID = 0;
   for ( ivar = 0; ivar < nvars; ++ivar )
@@ -295,14 +306,36 @@ void *Importbinary(void *argument)
 	  }
 	vlistDefVarLongname(vlistID, varID, longname);
       }
-      vlistDefVarDatatype(vlistID, varID, DATATYPE_FLT32);
-      vlistDefVarMissval(vlistID, varID, pfi.undef);
+
+      missval  = pfi.undef;
+      datatype = DATATYPE_FLT32;
+
+      if      ( pvar->dfrm ==  1 ) {
+	datatype = DATATYPE_UINT8;
+	if ( missval < 0 || missval > 255 ) missval = 255;
+      }
+      else if ( pvar->dfrm ==  2 )  {
+	datatype = DATATYPE_UINT16;
+	if ( missval < 0 || missval > 65535 ) missval = 65535;
+      }
+      else if ( pvar->dfrm == -2 )  {
+	datatype = DATATYPE_INT16;
+	if ( missval < -32768 || missval > 32767 ) missval = -32768;
+      }
+      else if ( pvar->dfrm ==  4 )  {
+	datatype = DATATYPE_INT32;
+	if ( missval < -2147483648 || missval > 2147483647 ) missval = -2147483646;
+      }
+
+      vlistDefVarDatatype(vlistID, varID, datatype);
+      vlistDefVarMissval(vlistID, varID, missval);
 
       for ( levelID = 0; levelID < nlevels; ++levelID )
 	{
 	  if ( recID >= nrecs ) cdoAbort("Internal problem with number of records!");
 	  recVarID[recID]   = varID;
 	  recLevelID[recID] = levelID;
+          var_dfrm[recID]   = pvar->dfrm;
 	  recID++;
 	}
 
@@ -316,7 +349,6 @@ void *Importbinary(void *argument)
   vlistDefTaxis(vlistID, taxisID);
 
   streamID = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID, vlistID);
 
@@ -405,6 +437,9 @@ void *Importbinary(void *argument)
 	}
       }
       if (pfi.tmplat) gree(ch,"312");
+
+      /* file header */
+      if (pfi.fhdr > 0) fseeko(pfi.infile, pfi.fhdr, SEEK_SET);
        
       /* Get file size */
       /*
@@ -433,18 +468,51 @@ void *Importbinary(void *argument)
 
 	  for ( recID = 0; recID < nrecs; ++recID )
 	    {
+	      /* record size depends on data type */
+	      if (var_dfrm[recID] == 1) {
+		recsize = pfi.gsiz;
+	      }
+	      else if ((var_dfrm[recID] == 2) || (var_dfrm[recID] == -2)) {
+		recsize = pfi.gsiz*2;
+	      }
+	      else {
+		recsize = pfi.gsiz*4;
+	      }
 	      rc = fread (rec, 1, recsize, pfi.infile);
 	      if ( rc < recsize ) cdoAbort("I/O error reading record!");
 
-	      if ( pfi.bswap ) gabswp(rec+recoffset, gridsize);
-	      farray = (float *) (rec+recoffset);
+	      /* convert */
+	      if (var_dfrm[recID] == 1) {
+		unsigned char *carray = (void*)(rec + recoffset);
+		for (i = 0; i < gridsize; ++i) array[i] = (double) carray[i];
+	      }
+	      else if (var_dfrm[recID] == 2) {
+		unsigned short *sarray = (void*)(rec + recoffset);
+	        if (pfi.bswap) gabswp2(sarray, gridsize);
+		for (i = 0; i < gridsize; ++i) array[i] = (double) sarray[i];
+	      }
+	      else if (var_dfrm[recID] == -2) {
+		short *sarray = (void*)(rec + recoffset);
+	        if (pfi.bswap) gabswp2(sarray, gridsize);
+		for (i = 0; i < gridsize; ++i) array[i] = (double) sarray[i];
+	      }
+	      else if (var_dfrm[recID] == 4) {
+		int *iarray = (void*)(rec + recoffset);
+	        if (pfi.bswap) gabswp(iarray, gridsize);
+		for (i = 0; i < gridsize; ++i) array[i] = (double) iarray[i];
+	      }
+	      else {
+		float *farray = (float *) (rec + recoffset);
+		if (pfi.bswap) gabswp(farray, gridsize);
+	        for ( i = 0; i < gridsize; ++i ) array[i] = (double) farray[i];
+	      }
+
 	      fmin =  1.e99;
 	      fmax = -1.e99;
 	      nmiss = 0;
 	      n_nan = 0;
 	      for ( i = 0; i < gridsize; ++i )
 		{
-		  array[i] = (double) farray[i];
 		  if ( array[i] > pfi.ulow && array[i] < pfi.uhi )
 		    {
 		      array[i] = pfi.undef;
@@ -455,7 +523,6 @@ void *Importbinary(void *argument)
 		      array[i] = pfi.undef;
 		      nmiss++;
 		      n_nan++;
-		      /* printf("Nan at %d\n", i); */
 		    }
 		  else
 		    {
@@ -463,10 +530,9 @@ void *Importbinary(void *argument)
 		      if ( array[i] > fmax ) fmax = array[i];
 		    }
 		}
-	      /*
 	      if ( cdoVerbose )
-		printf("%d %d %g %g %d %d %d\n", tsID, recID, fmin, fmax, recoffset, nmiss, n_nan);
-	      */
+		printf("%3d %4d %3d %6d %6d %12.5g %12.5g\n", tsID, recID, recoffset, nmiss, n_nan, fmin, fmax);
+
 	      varID   = recVarID[recID];
 	      levelID = recLevelID[recID];
 	      streamDefRecord(streamID,  varID,  levelID);
@@ -490,10 +556,12 @@ void *Importbinary(void *argument)
   taxisDestroy(taxisID);
 
   free(array);
+  free(rec);
 
   if ( var_zaxisID ) free(var_zaxisID);
   if ( recVarID    ) free(recVarID);
   if ( recLevelID  ) free(recLevelID);
+  if ( var_dfrm    ) free(var_dfrm);
 
   cdoFinish();
 

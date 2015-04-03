@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 
 #include <ctype.h>  /* isdigit */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -70,12 +70,11 @@ int get_tunits(const char *unit, int *incperiod, int *incunit, int *tunit)
 
 void *Settime(void *argument)
 {
-  static char func[] = "Settime";
   int SETYEAR, SETMON, SETDAY, SETDATE, SETTIME, SETTUNITS;
   int SETTAXIS, SETREFTIME, SETCALENDAR, SHIFTTIME;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
-  int nrecs, newval = 0, ntsteps;
+  int nrecs, newval = 0, ntsteps, nvars;
   int tsID1, recID, varID, levelID;
   int vlistID1, vlistID2;
   int vdate, vtime;
@@ -96,16 +95,16 @@ void *Settime(void *argument)
 
   cdoInitialize(argument);
 
-  SETYEAR     = cdoOperatorAdd("setyear",     0, 0, "year");
-  SETMON      = cdoOperatorAdd("setmon",      0, 0, "month");
-  SETDAY      = cdoOperatorAdd("setday",      0, 0, "day");
-  SETDATE     = cdoOperatorAdd("setdate",     0, 0, "date (format YYYY-MM-DD)");
-  SETTIME     = cdoOperatorAdd("settime",     0, 0, "time (format hh:mm:ss)");
-  SETTUNITS   = cdoOperatorAdd("settunits",   0, 0, "time units (seconds, minutes, hours, days, months, years)");
-  SETTAXIS    = cdoOperatorAdd("settaxis",    0, 0, "date,time<,increment> (format YYYY-MM-DD,hh:mm:ss)");
-  SETREFTIME  = cdoOperatorAdd("setreftime",  0, 0, "date,time<,units> (format YYYY-MM-DD,hh:mm:ss)");
-  SETCALENDAR = cdoOperatorAdd("setcalendar", 0, 0, "calendar (standard, proleptic, 360days, 365days, 366days)");
-  SHIFTTIME   = cdoOperatorAdd("shifttime",   0, 0, "shift value");
+  SETYEAR     = cdoOperatorAdd("setyear",     0,  0, "year");
+  SETMON      = cdoOperatorAdd("setmon",      0,  0, "month");
+  SETDAY      = cdoOperatorAdd("setday",      0,  0, "day");
+  SETDATE     = cdoOperatorAdd("setdate",     0,  0, "date (format: YYYY-MM-DD)");
+  SETTIME     = cdoOperatorAdd("settime",     0,  0, "time (format: hh:mm:ss)");
+  SETTUNITS   = cdoOperatorAdd("settunits",   0,  0, "time units (seconds, minutes, hours, days, months, years)");
+  SETTAXIS    = cdoOperatorAdd("settaxis",    0,  0, "date,time<,increment> (format YYYY-MM-DD,hh:mm:ss)");
+  SETREFTIME  = cdoOperatorAdd("setreftime",  0,  0, "date,time<,units> (format YYYY-MM-DD,hh:mm:ss)");
+  SETCALENDAR = cdoOperatorAdd("setcalendar", 0,  0, "calendar (standard, proleptic, 360days, 365days, 366days)");
+  SHIFTTIME   = cdoOperatorAdd("shifttime",   0,  0, "shift value");
 
   operatorID = cdoOperatorID();
 
@@ -113,7 +112,7 @@ void *Settime(void *argument)
 
   if ( operatorID == SETTAXIS || operatorID == SETREFTIME )
     {
-      if ( operatorArgc() < 2 ) cdoAbort("Not enough arguments!");
+      if ( operatorArgc() < 2 ) cdoAbort("Too few arguments!");
 
       datestr = operatorArgv()[0];
       timestr = operatorArgv()[1];
@@ -151,7 +150,7 @@ void *Settime(void *argument)
     }
   else if ( operatorID == SETDATE )
     {
-      if ( operatorArgc() < 1 ) cdoAbort("Not enough arguments!");
+      if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
       datestr = operatorArgv()[0];
       if ( strchr(datestr, '-') )
 	{
@@ -165,7 +164,7 @@ void *Settime(void *argument)
     }
   else if ( operatorID == SETTIME )
     {
-      if ( operatorArgc() < 1 ) cdoAbort("Not enough arguments!");
+      if ( operatorArgc() < 1 ) cdoAbort("Too few arguments!");
       timestr = operatorArgv()[0];
 
       if ( strchr(timestr, ':') )
@@ -207,7 +206,7 @@ void *Settime(void *argument)
       else if ( memcmp(cname, "360days",   len) == 0 ) { newcalendar = CALENDAR_360DAYS;}
       else if ( memcmp(cname, "365days",   len) == 0 ) { newcalendar = CALENDAR_365DAYS;}
       else if ( memcmp(cname, "366days",   len) == 0 ) { newcalendar = CALENDAR_366DAYS;}
-      else cdoAbort("calendar >%s< unsupported", cname);
+      else cdoAbort("Calendar >%s< unsupported!", cname);
     }
   else
     {
@@ -215,7 +214,6 @@ void *Settime(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -223,11 +221,18 @@ void *Settime(void *argument)
   taxisID1 = vlistInqTaxis(vlistID1);
   taxis_has_bounds = taxisHasBounds(taxisID1);
   ntsteps  = vlistNtsteps(vlistID1);
+  nvars    = vlistNvars(vlistID1);
+
+  if ( ntsteps == 1 )
+    {
+      for ( varID = 0; varID < nvars; ++varID )
+	if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
+
+      if ( varID == nvars ) ntsteps = 0;
+    }
 
   if ( ntsteps == 0 )
     {
-      int nvars = vlistNvars(vlistID1);
-
       for ( varID = 0; varID < nvars; ++varID )
 	vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
     }
@@ -269,7 +274,6 @@ void *Settime(void *argument)
   else if ( operatorID == SETCALENDAR )
     {
       copy_timestep = TRUE;
-
       /*
       if ( ((char *)argument)[0] == '-' )
 	cdoAbort("This operator does not work with pipes!");
@@ -313,11 +317,11 @@ void *Settime(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
-  gridsize = vlistGridsizeMax(vlistID2);
+  gridsize = vlistGridsizeMax(vlistID1);
+  if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
   array = (double *) malloc(gridsize*sizeof(double));
 
   tsID1 = 0;
@@ -390,7 +394,9 @@ void *Settime(void *argument)
 
 	  if ( operatorID == SETYEAR ) year  = newval;
 	  if ( operatorID == SETMON  ) month = newval;
+	  if ( operatorID == SETMON && (month < 0 || month > 16) ) cdoAbort("parameter month=%d out of range!", month);
 	  if ( operatorID == SETDAY  ) day   = newval;
+	  if ( operatorID == SETDAY && (day < 0 || day > 31) ) cdoAbort("parameter day=%d %d out of range!", day);
       
 	  vdate = cdiEncodeDate(year, month, day);
 
@@ -426,11 +432,12 @@ void *Settime(void *argument)
 	  streamReadRecord(streamID1, array, &nmiss);
 	  streamWriteRecord(streamID2, array, nmiss);
 	}
+      
       tsID1++;
     }
 
-  streamClose(streamID1);
   streamClose(streamID2);
+  streamClose(streamID1);
 
   if ( array ) free(array);
 

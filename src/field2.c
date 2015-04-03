@@ -17,7 +17,7 @@
 
 #include "cdo.h"
 #include "cdo_int.h"
-#include "cdi.h"
+#include <cdi.h>
 
 
 void farfun(field_t *field1, field_t field2, int function)
@@ -38,7 +38,6 @@ void farfun(field_t *field1, field_t field2, int function)
 
 void faradd(field_t *field1, field_t field2)
 {
-  static char func[] = "faradd";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -53,7 +52,7 @@ void faradd(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -79,7 +78,6 @@ void faradd(field_t *field1, field_t field2)
 
 void farsum(field_t *field1, field_t field2)
 {
-  static char func[] = "farsum";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -94,7 +92,7 @@ void farsum(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -129,7 +127,6 @@ void farsum(field_t *field1, field_t field2)
  */
 void farsumtr(field_t *occur, field_t field, double refval)
 {
-  static char func[] = "farsumtr";
   long   i, len;
   double omissval = occur->missval;
   double  *oarray = occur->ptr;
@@ -138,7 +135,7 @@ void farsumtr(field_t *occur, field_t field, double refval)
 
   len    = gridInqSize(occur->grid);
   if ( len != gridInqSize(field.grid) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( occur->nmiss > 0 || field.nmiss > 0 )
     {
@@ -176,7 +173,6 @@ void farsumtr(field_t *occur, field_t field, double refval)
 
 void farsumq(field_t *field1, field_t field2)
 {
-  static char func[] = "farsumq";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -191,7 +187,7 @@ void farsumq(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -218,7 +214,6 @@ void farsumq(field_t *field1, field_t field2)
 
 void farsub(field_t *field1, field_t field2)
 {
-  static char func[] = "farsub";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -232,7 +227,7 @@ void farsub(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -253,7 +248,6 @@ void farsub(field_t *field1, field_t field2)
 
 void farmul(field_t *field1, field_t field2)
 {
-  static char func[] = "farmul";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -267,7 +261,7 @@ void farmul(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -288,7 +282,6 @@ void farmul(field_t *field1, field_t field2)
 
 void fardiv(field_t *field1, field_t field2)
 {
-  static char func[] = "fardiv";
   long   i, len;
   int    grid1    = field1->grid;
   double missval1 = field1->missval;
@@ -300,7 +293,7 @@ void fardiv(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   for ( i = 0; i < len; i++ ) 
     array1[i] = DIV(array1[i], array2[i]);
@@ -313,7 +306,6 @@ void fardiv(field_t *field1, field_t field2)
 
 void faratan2(field_t *field1, field_t field2)
 {
-  static char func[] = "fardiv";
   long   i, len;
   int    grid1    = field1->grid;
   double missval1 = field1->missval;
@@ -325,7 +317,7 @@ void faratan2(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   for ( i = 0; i < len; i++ ) 
     array1[i] = DBL_IS_EQUAL(array1[i],missval1) || DBL_IS_EQUAL(array2[i],missval2) ? missval1 : atan2(array1[i], array2[i]);
@@ -338,7 +330,6 @@ void faratan2(field_t *field1, field_t field2)
 
 void farmin(field_t *field1, field_t field2)
 {
-  static char func[] = "farmin";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -352,7 +343,7 @@ void farmin(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -377,7 +368,6 @@ void farmin(field_t *field1, field_t field2)
 
 void farmax(field_t *field1, field_t field2)
 {
-  static char func[] = "farmax";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -391,7 +381,7 @@ void farmax(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -416,7 +406,6 @@ void farmax(field_t *field1, field_t field2)
 
 void farvar(field_t *field1, field_t field2, field_t field3)
 {
-  static char func[] = "farvar";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -431,7 +420,7 @@ void farvar(field_t *field1, field_t field2, field_t field3)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -465,7 +454,6 @@ void farvar(field_t *field1, field_t field2, field_t field3)
 
 void farstd(field_t *field1, field_t field2, field_t field3)
 {
-  static char func[] = "farstd";
   long   i, len;
   int    grid1    = field1->grid;
   double missval1 = field1->missval;
@@ -475,7 +463,7 @@ void farstd(field_t *field1, field_t field2, field_t field3)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   farvar(field1, field2, field3);
 
@@ -495,7 +483,6 @@ void farstd(field_t *field1, field_t field2, field_t field3)
 
 void farcvar(field_t *field1, field_t field2, double rconst1)
 {
-  static char func[] = "farcvar";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -509,7 +496,7 @@ void farcvar(field_t *field1, field_t field2, double rconst1)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -543,7 +530,6 @@ void farcvar(field_t *field1, field_t field2, double rconst1)
 
 void farcstd(field_t *field1, field_t field2, double rconst1)
 {
-  static char func[] = "farcstd";
   long   i, len;
   int    grid1    = field1->grid;
   double missval1 = field1->missval;
@@ -553,7 +539,7 @@ void farcstd(field_t *field1, field_t field2, double rconst1)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   farcvar(field1, field2, rconst1);
 
@@ -573,7 +559,6 @@ void farcstd(field_t *field1, field_t field2, double rconst1)
 
 void farmoq(field_t *field1, field_t field2)
 {
-  static char func[] = "farmoq";
   long   i, len;
   int    grid1    = field1->grid;
   double missval1 = field1->missval;
@@ -586,7 +571,7 @@ void farmoq(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss2 > 0 )
     {
@@ -624,7 +609,6 @@ void farmoq(field_t *field1, field_t field2)
  */  
 void farcount(field_t *field1, field_t field2)
 {
-  static char func[] = "farcount";
   long   i, len;
   int    grid1    = field1->grid;
   int    nmiss1   = field1->nmiss;
@@ -639,7 +623,7 @@ void farcount(field_t *field1, field_t field2)
   len    = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {

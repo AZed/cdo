@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -85,11 +85,11 @@ char *strdup(const char *s);
 
 
 #ifndef  M_PI
-#define  M_PI		3.14159265358979323846	/* pi */
+#define  M_PI        3.14159265358979323846  /* pi */
 #endif
 
 #ifndef  M_LN10
-#define  M_LN10		2.30258509299404568402	/* log_e 10 */
+#define  M_LN10      2.30258509299404568402  /* log_e 10 */
 #endif
 
 
@@ -124,6 +124,8 @@ int zaxis2ltype(int zaxisID);
 int ztype2ltype(int zaxistype);
 int ltype2ztype(int ltype);
 
+
+int nfc2nlat(int nfc, int ntr);
 int nlat2ntr(int nlat);
 int nlat2ntr_linear(int nlat);
 int ntr2nlat(int ntr);
@@ -139,6 +141,11 @@ typedef struct {
   int   time;
 } datetime_t;
 
+typedef struct
+{
+  datetime_t v;
+  datetime_t b[2];
+} dtinfo_t;
 
 typedef struct {
   int   julday;
@@ -153,6 +160,8 @@ juldate_t juldate_add_seconds(int seconds, juldate_t juldate);
 double    juldate_to_seconds(juldate_t juldate);
 
 void    datetime_avg(int dpy, int ndates, datetime_t *datetime);
+void    taxisInqDTinfo(int taxisID, dtinfo_t *dtinfo);
+void    taxisDefDTinfo(int taxisID, dtinfo_t dtinfo);
 
 int     days_per_month(int calendar, int year, int month);
 int     days_per_year(int calendar, int year);
@@ -168,8 +177,10 @@ void    cdologo(int noper);
 void    nospec(int vlistID);
 void    gridWrite(FILE *fp, int gridID);
 
+void openLock(void);
+void openUnlock(void);
+
 int  cdf_openread(const char *filename);
-int pcdf_openread(const char *filename);
 
 void printFiletype(int streamID, int vlistID);
 

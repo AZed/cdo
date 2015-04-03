@@ -64,19 +64,21 @@ typedef struct nodeTypeTag {
   } u;
 } nodeType;
 
+#define MAX_VARS 1024
 
 typedef struct{ /* prs_sct */
   int    vlistID1, vlistID2;
   int    nvars1, nvars2;
-  int    nmiss[1024];
-  int    varID[1024];
-  int    var_needed[1024];
-  char   *var[1024];
+  int    nmiss[MAX_VARS];
+  int    varID[MAX_VARS];
+  int    var_needed[MAX_VARS];
+  char   *var[MAX_VARS];
   int    init;
   int    debug;
   int    gridID2;
   int    zaxisID2;
   int    timeID2;
+  double missval2;
   double **vardata1, **vardata2;
 } parse_parm_t;
 

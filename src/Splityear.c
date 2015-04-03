@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
      Splittime  splityear       Split years
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -31,7 +31,6 @@
 
 void *Splityear(void *argument)
 {
-  static char func[] = "Splityear";
   int nchars;
   int streamID1, streamID2 = -1;
   int varID;
@@ -39,7 +38,7 @@ void *Splityear(void *argument)
   int tsID, tsID2, recID, levelID;
   int vlistID1, vlistID2;
   char filesuffix[32];
-  char filename[1024];
+  char filename[8192];
   int vdate;
   int day;
   int year1, year2;
@@ -59,7 +58,6 @@ void *Splityear(void *argument)
   memset(cyear, 0, MAX_YEARS*sizeof(int));
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -68,13 +66,7 @@ void *Splityear(void *argument)
   nchars = strlen(filename);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   if ( ! lcopy )
     {
@@ -121,7 +113,6 @@ void *Splityear(void *argument)
 	  if ( cdoVerbose ) cdoPrint("create file %s", filename);
 
 	  streamID2 = streamOpenWrite(filename, cdoFiletype());
-	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", filename);
 
 	  streamDefVlist(streamID2, vlistID2);
 	}

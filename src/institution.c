@@ -20,7 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "error.h"
@@ -31,9 +31,9 @@
 
 int cdoDefaultInstID = UNDEFID;
 
+static
 int readInstitution(const char *instfile)
 {
-  static char func[] = "readInstitution";
   int instID = UNDEFID;
   char line[1024], *pline;
   int lnr = 0;
@@ -72,7 +72,7 @@ int readInstitution(const char *instfile)
       if ( nvar == 2 && maxvar == 4 )
 	{
 	  if ( ! isdigit((int) pline[0]) )
-	    Error(func, "wrong format in line %d. Missing subcenter!", lnr);
+	    Error("wrong format in line %d. Missing subcenter!", lnr);
 
 	  subcenter = atoi(pline);
 	}
@@ -97,9 +97,9 @@ int readInstitution(const char *instfile)
   return (instID);
 }
 
+
 void defineInstitution(char *instarg)
 {
-  static char func[] = "defineInstitution";
   char *instname;
   int instID;
 
@@ -111,7 +111,7 @@ void defineInstitution(char *instarg)
     instID = institutInq(0, 0, instname, NULL);
 
   if ( instID == UNDEFID )
-    Error(func, "institution <%s> not found", instname);
+    Error("institution <%s> not found", instname);
 
   cdoDefaultInstID = instID;
 }

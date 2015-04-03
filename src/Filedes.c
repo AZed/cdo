@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
       Filedes    vct             Vertical coordinate table
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -106,7 +106,6 @@ void *Filedes(void *argument)
   operatorID = cdoOperatorID();
 
   streamID = streamOpenRead(cdoStreamName(0));
-  if ( streamID < 0 ) cdiError(streamID, "Open failed on %s", cdoStreamName(0));
 
   vlistID = streamInqVlist(streamID);
 
@@ -180,7 +179,7 @@ void *Filedes(void *argument)
   else if ( operatorID == PARDES )
     {
       int varID, code;
-      char varname[128], varlongname[128], varunits[128];
+      char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -205,7 +204,7 @@ void *Filedes(void *argument)
     {
       int varID, code, tabnum, tableID, prec;
       char pstr[4];
-      char varname[128], varlongname[128], varstdname[128], varunits[128];
+      char varname[CDI_MAX_NAME], varlongname[CDI_MAX_NAME], varstdname[CDI_MAX_NAME], varunits[CDI_MAX_NAME];
       int natts;
       
       if (  operatorID == PARTAB2 )
@@ -287,6 +286,9 @@ void *Filedes(void *argument)
 	  break;
 	case FILETYPE_NC4:
 	  printf("  netCDF4 data\n");
+	  break;
+	case FILETYPE_NC4C:
+	  printf("  netCDF4 classic data\n");
 	  break;
 	case FILETYPE_SRV:
 	  printf("  SERVICE data\n");

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -18,13 +18,13 @@
 /*
    This module contains the following operators:
 
-      Selvar     selparam        Select parameter (format: code.tabnum  or  pnum.cat.dis)
-      Selvar     delparam        Delete parameter (format: code.tabnum  or  pnum.cat.dis)
-      Selvar     selcode         Select codes
-      Selvar     delcode         Delete codes
-      Selvar     selname         Select variables
-      Selvar     delname         Delete variables
-      Selvar     selstdname      Select variables by CF standard name
+      Selvar     selparam        Select parameters by identifier (format: code.tabnum  or  pnum.cat.dis)
+      Selvar     delparam        Delete parameters by identifier (format: code.tabnum  or  pnum.cat.dis)
+      Selvar     selcode         Select parameters by code number
+      Selvar     delcode         Delete parameters by code number
+      Selvar     selname         Select parameters by name
+      Selvar     delname         Delete parameters by name
+      Selvar     selstdname      Select parameters by CF standard name
       Selvar     sellevel        Select levels
       Selvar     sellevidx       Select levels by index
       Selvar     selgrid         Select grids
@@ -35,19 +35,17 @@
 
 #include <ctype.h>  /* isdigit */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
 #include "error.h"
 #include "util.h"
-#include "functs.h"
 #include "list.h"
 
 
 void *Selvar(void *argument)
 {
-  const char func[] = "Selvar";
   int SELPARAM, SELCODE, SELNAME, SELLEVEL, SELLEVIDX, SELGRID, SELZAXIS, SELLTYPE; 
   int SELTABNUM, DELPARAM, DELCODE, DELNAME, SELSTDNAME;
   int operatorID;
@@ -63,10 +61,10 @@ void *Selvar(void *argument)
   int *selfound = NULL;
   double *fltarr = NULL;
   char paramstr[32];
-  char varname[256];
-  char stdname[256];
-  char gridname[256];
-  char zaxisname[256];
+  char varname[CDI_MAX_NAME];
+  char stdname[CDI_MAX_NAME];
+  char gridname[CDI_MAX_NAME];
+  char zaxisname[CDI_MAX_NAME];
   char **argnames = NULL;
   int vlistID1 = -1, vlistID2 = -1;
   int isel;
@@ -84,7 +82,7 @@ void *Selvar(void *argument)
 
   cdoInitialize(argument);
 
-  SELPARAM     = cdoOperatorAdd("selparam",     0, 0, "parameter");
+  SELPARAM     = cdoOperatorAdd("selparam",     0, 0, "parameters");
   SELCODE      = cdoOperatorAdd("selcode",      0, 0, "code numbers");
   SELNAME      = cdoOperatorAdd("selname",      0, 0, "variable names");
   SELSTDNAME   = cdoOperatorAdd("selstdname",   0, 0, "standard names");
@@ -161,7 +159,6 @@ void *Selvar(void *argument)
     cdoAbort("missing code argument!");
   */
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -399,7 +396,6 @@ void *Selvar(void *argument)
   nrecs = vlistNrecs(vlistID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2008 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 #include <ctype.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -340,6 +340,36 @@ void *Specinfo(void *argument)
       nout1  = TRUE;
       nout2  = TRUE;
     }
+  else if ( arg[0] == 'N' && arg[1] == 'L' && arg[2] == 'O' && arg[3] == 'N' )
+    {
+      parg = &arg[4];
+      if ( *parg == '=' ) parg++;
+      if ( ! isdigit((int) *parg) ) cdoAbort("Wrong parameter: %s", arg);
+      nlon1  = atoi(parg);
+      nlon2  = nlon1;
+      nlat1  = nlon1 / 2;
+      nlat2  = nlon2 / 2;
+      nlon1  = nlat2nlon(nlat1);
+      nlon2  = nlat2nlon(nlat2);
+      nlat1  = nlon1 / 2;
+      nlat2  = nlon2 / 2;
+      ntr1   = (nlat1*2-1)/3;
+      ntr2   = (nlat2*2-1)/2;
+      ngp1   = nlon1*nlat1;
+      ngp2   = nlon2*nlat2;
+
+      nsp1   = NTR2NSP(ntr1);
+      nsp2   = NTR2NSP(ntr2);
+
+      lookup_ni(nsp1, &nrootg1, &ni1);
+      lookup_rl(nsp1, &nrooti1, &nlevel1);
+
+      lookup_ni(nsp2, &nrootg2, &ni2);
+      lookup_rl(nsp2, &nrooti2, &nlevel2);
+
+      nout1  = TRUE;
+      nout2  = TRUE;
+    }
   else if ( arg[0] == 'N' && arg[1] == 'L' && arg[2] == 'A' && arg[3] == 'T' )
     {
       parg = &arg[4];
@@ -368,15 +398,13 @@ void *Specinfo(void *argument)
       nout1  = TRUE;
       nout2  = TRUE;
     }
-  else if ( arg[0] == 'N' && arg[1] == 'L' && arg[2] == 'O' && arg[3] == 'N' )
+  else if ( arg[0] == 'N' )
     {
-      parg = &arg[4];
+      parg = &arg[1];
       if ( *parg == '=' ) parg++;
       if ( ! isdigit((int) *parg) ) cdoAbort("Wrong parameter: %s", arg);
-      nlon1  = atoi(parg);
-      nlon2  = nlon1;
-      nlat1  = nlon1 / 2;
-      nlat2  = nlon2 / 2;
+      nlat1  = 2*atoi(parg);
+      nlat2  = nlat1;
       nlon1  = nlat2nlon(nlat1);
       nlon2  = nlat2nlon(nlat2);
       nlat1  = nlon1 / 2;

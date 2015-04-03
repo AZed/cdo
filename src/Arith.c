@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
       Arith      atan2           Arc tangent of two fields
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -35,7 +35,6 @@
 
 void *Arith(void *argument)
 {
-  static char func[] = "Arith";
   int operatorID;
   int operfunc;
   enum {FILL_NONE, FILL_TS, FILL_REC, FILL_RECTS, FILL_FILE};
@@ -64,12 +63,10 @@ void *Arith(void *argument)
   cdoOperatorAdd("atan2", func_atan2, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamIDx1 = streamID1;
   streamIDx2 = streamID2;
@@ -81,16 +78,20 @@ void *Arith(void *argument)
   vlistIDx1 = vlistID1;
   vlistIDx2 = vlistID2;
 
+  if ( cdoVerbose ) vlistPrint(vlistID1);
+
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisIDx1 = taxisID1;
 
   ntsteps1 = vlistNtsteps(vlistID1);
   ntsteps2 = vlistNtsteps(vlistID2);
+  if ( ntsteps1 == 0 ) ntsteps1 = 1;
+  if ( ntsteps2 == 0 ) ntsteps2 = 1;
 
   if ( vlistNrecs(vlistID1) != 1 && vlistNrecs(vlistID2) == 1 )
     {
-      if ( ntsteps1 != 1 && ntsteps1 != 0 && (ntsteps2 == 1 || ntsteps2 == 0) )
+      if ( ntsteps1 != 1 && ntsteps2 == 1 )
 	{
 	  filltype = FILL_REC;
 	  cdoPrint("Filling up stream2 >%s< by copying the first record.", cdoStreamName(1));
@@ -103,7 +104,7 @@ void *Arith(void *argument)
     }
   else if ( vlistNrecs(vlistID1) == 1 && vlistNrecs(vlistID2) != 1 )
     {
-      if ( (ntsteps1 == 1 || ntsteps1 == 0) && ntsteps2 != 1 && ntsteps2 != 0 )
+      if ( ntsteps1 == 1 && ntsteps2 != 1 )
 	{
 	  filltype = FILL_REC;
 	  cdoPrint("Filling up stream1 >%s< by copying the first record.", cdoStreamName(0));
@@ -123,7 +124,7 @@ void *Arith(void *argument)
     }
 
   if ( filltype == FILL_NONE )
-    vlistCompare(vlistID1, vlistID2, func_sft);
+    vlistCompare(vlistID1, vlistID2, CMP_ALL);
 
   gridsize = vlistGridsizeMax(vlistIDx1);
 
@@ -139,12 +140,12 @@ void *Arith(void *argument)
 
   if ( filltype == FILL_NONE )
     {
-      if ( ntsteps1 != 1 && ntsteps1 != 0 && (ntsteps2 == 1 || ntsteps2 == 0) )
+      if ( ntsteps1 != 1 && ntsteps2 == 1 )
 	{
 	  filltype = FILL_TS;
 	  cdoPrint("Filling up stream2 >%s< by copying the first timestep.", cdoStreamName(1));
 	}
-      else if ( (ntsteps1 == 1 || ntsteps1 == 0) && ntsteps2 != 1 && ntsteps2 != 0 )
+      else if ( ntsteps1 == 1 && ntsteps2 != 1 )
 	{
 	  filltype = FILL_TS;
 	  cdoPrint("Filling up stream1 >%s< by copying the first timestep.", cdoStreamName(0));
@@ -184,7 +185,6 @@ void *Arith(void *argument)
   vlistDefTaxis(vlistID3, taxisID3);
 
   streamID3 = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-  if ( streamID3 < 0 ) cdiError(streamID3, "Open failed on %s", cdoStreamName(2));
 
   streamDefVlist(streamID3, vlistID3);
 
@@ -208,13 +208,12 @@ void *Arith(void *argument)
 		  tsID2 = 0;
 		  streamClose(streamID2);
 		  streamID2 = streamOpenRead(cdoStreamName(1));
-		  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 		  streamIDx2 = streamID2;
 
 		  vlistID2 = streamInqVlist(streamID2);
 		  vlistIDx2 = vlistID2;
 
-		  vlistCompare(vlistID1, vlistID2, func_sft);
+		  vlistCompare(vlistID1, vlistID2, CMP_DIM);
 
 		  nrecs2 = streamInqTimestep(streamIDx2, tsID2);
 		  if ( nrecs2 == 0 )

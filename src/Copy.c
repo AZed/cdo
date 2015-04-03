@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Copy       copy            Copy datasets
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "par_io.h"
@@ -31,8 +31,7 @@ void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 void *Copy(void *argument)
 {
-  static char func[] = "Copy";
-  int COPY, SELALL;
+  int COPY, SELALL, SZIP;
   int operatorID;
   int streamID1, streamID2 = CDI_UNDEFID;
   int nrecs;
@@ -43,7 +42,7 @@ void *Copy(void *argument)
   int nmiss;
   int streamCnt, nfiles, indf;
   int taxisID1, taxisID2 = CDI_UNDEFID;
-  int ntsteps;
+  int ntsteps, nvars;
   double *array = NULL;
   par_io_t parIO;
 
@@ -51,10 +50,17 @@ void *Copy(void *argument)
 
   COPY    = cdoOperatorAdd("copy",   0, 0, NULL);
   SELALL  = cdoOperatorAdd("selall", 0, 0, NULL);
+  SZIP    = cdoOperatorAdd("szip",   0, 0, NULL);
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   operatorID = cdoOperatorID();
+
+  if ( operatorID == SZIP )
+    {
+      cdoCompType  = COMPRESS_SZIP;
+      cdoCompLevel = 0;
+    }
 
   streamCnt = cdoStreamCnt();
   nfiles = streamCnt - 1;
@@ -65,7 +71,6 @@ void *Copy(void *argument)
       if ( cdoVerbose ) cdoPrint("Process file: %s", cdoStreamName(indf));
 
       streamID1 = streamOpenRead(cdoStreamName(indf));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(indf));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID1 = vlistInqTaxis(vlistID1);
@@ -73,17 +78,24 @@ void *Copy(void *argument)
       if ( indf == 0 )
 	{
 	  streamID2 = streamOpenWrite(cdoStreamName(nfiles), cdoFiletype());
-	  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(nfiles));
 
 	  vlistID2 = vlistDuplicate(vlistID1);
 	  taxisID2 = taxisDuplicate(taxisID1);
 	  vlistDefTaxis(vlistID2, taxisID2);
 
 	  ntsteps = vlistNtsteps(vlistID1);
-	  if ( ntsteps == 0 && nfiles > 1 )
+	  nvars   = vlistNvars(vlistID1);
+
+	  if ( ntsteps == 1 )
 	    {
-	      int nvars = vlistNvars(vlistID1);
+	      for ( varID = 0; varID < nvars; ++varID )
+		if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
 	      
+	      if ( varID == nvars ) ntsteps = 0;
+	    }
+
+	  if ( ntsteps == 0 && nfiles > 1 )
+	    {	      
 	      for ( varID = 0; varID < nvars; ++varID )
 		vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
 	    }
@@ -101,8 +113,7 @@ void *Copy(void *argument)
 	}
       else
 	{
-	  vlistCompare(vlistID1, vlistID2, func_sft);
-	  /* vlistCompare(vlistID1, vlistID2, func_hrd); */
+	  vlistCompare(vlistID1, vlistID2, CMP_ALL);
 	}
 
       tsID1 = 0;
@@ -114,7 +125,7 @@ void *Copy(void *argument)
 	       
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    { 
-	      if ( lcopy && operatorID == SELALL )
+	      if ( lcopy && (operatorID == SELALL || operatorID == SZIP) )
 		{
 		  streamInqRecord(streamID1, &varID, &levelID);
 		  streamDefRecord(streamID2,  varID,  levelID);

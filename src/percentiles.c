@@ -19,18 +19,18 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "nth_element.h"
 #include "percentiles.h"
 
-#define NBINS_DEFAULT 101
-#define NBINS_MINIMUM 11
+#define NBINS_DEFAULT   101
+#define NBINS_MINIMUM    11
 
 #define DBL_CAPACITY(n) ((int)(((n) * sizeof(int)) / sizeof(double)))
-#define DBL_PTR(p) ((double *) (p))
-#define INT_PTR(p) ((int *) (p))
+#define DBL_PTR(p)      ((double *) (p))
+#define INT_PTR(p)      ((int *) (p))
 
 
 static int histGetEnvNBins()
@@ -48,9 +48,9 @@ static void histDefBounds(HISTOGRAM *hist, double a, double b)
   assert( hist != NULL );
   assert( hist->nbins > 0 );
   
-  hist->min = MIN(a, b);
-  hist->max = MAX(a, b);
-  hist->step = (hist->max - hist->min) / hist->nbins;
+  hist->min   = MIN(a, b);
+  hist->max   = MAX(a, b);
+  hist->step  = (hist->max - hist->min) / hist->nbins;
   hist->nsamp = 0;
 
   for ( i = 0; i < hist->nbins; i++ )
@@ -71,7 +71,6 @@ static void histBinValue(HISTOGRAM *hist, double value)
 
 static void histBin(HISTOGRAM *hist)
 {
-  static const char func[] = "histBin";
   int i;
   double *values;
   
@@ -94,6 +93,10 @@ static int histAddValue(HISTOGRAM *hist, double value)
 {
   assert( hist != NULL );
   assert( hist->nbins > 0 );
+
+  /* 2011-08-01 Uwe Schulzweida: added check for rounding errors */
+  if ( value < hist->min && (hist->min-value) < 1e5 ) value = hist->min;
+  if ( value > hist->max && (value-hist->max) < 1e5 ) value = hist->max;
 
   if ( IS_EQUAL(hist->min, hist->max) )
     return 0;
@@ -121,7 +124,7 @@ static int histAddValue(HISTOGRAM *hist, double value)
 }
 
 
-static double histGetPercentile(const HISTOGRAM *hist, int p)
+static double histGetPercentile(const HISTOGRAM *hist, double p)
 {
   double s, t;
   int i = 0, count = 0;
@@ -129,8 +132,8 @@ static double histGetPercentile(const HISTOGRAM *hist, int p)
   assert( hist != NULL );
   assert( hist->nsamp > 0 );
   assert( hist->nbins > 0 );
-  assert( p > 0 );
-  assert( p < 100 );
+  assert( p >= 0 );
+  assert( p <= 100 );
   
   s = hist->nsamp * (p / 100.0);
   
@@ -155,7 +158,6 @@ static double histGetPercentile(const HISTOGRAM *hist, int p)
 
 HISTOGRAM_SET *hsetCreate(int nvars)
 {
-  static const char func[] = "hsetCreate";
   int varID;
   HISTOGRAM_SET *hset;
   
@@ -163,19 +165,19 @@ HISTOGRAM_SET *hsetCreate(int nvars)
   
   hset = (HISTOGRAM_SET *) malloc(sizeof(HISTOGRAM_SET));
   if ( hset == NULL )
-    cdoAbort("Not enough memory (%s)", func);
+    cdoAbort("Not enough memory (%s)", __func__);
     
-  hset->nvars = nvars;
+  hset->nvars   = nvars;
   hset->nlevels = (int *) malloc(nvars * sizeof(int));
-  hset->grids = (int *) malloc(nvars * sizeof(int));
+  hset->grids   = (int *) malloc(nvars * sizeof(int));
   hset->histograms = (HISTOGRAM ***) malloc(nvars * sizeof(HISTOGRAM **));
   if ( hset->histograms == NULL )
-    cdoAbort("Not enough memory (%s)", func);
+    cdoAbort("Not enough memory (%s)", __func__);
   
   for ( varID = 0; varID < nvars; varID++ )
     {
-      hset->nlevels[varID] = 0;
-      hset->grids[varID] = 0;
+      hset->nlevels[varID]    = 0;
+      hset->grids[varID]      = 0;
       hset->histograms[varID] = NULL;
     }
   
@@ -185,7 +187,6 @@ HISTOGRAM_SET *hsetCreate(int nvars)
 
 void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
 {
-  static const char func[] = "hsetCreateVarLevels";
   int nvars, nhists, nbins, levelID, histID;
   HISTOGRAM *hists;
   
@@ -200,7 +201,7 @@ void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
   assert( nvars > 0 );
   
   if ( varID < 0 || varID >= nvars )
-    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, func);
+    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, __func__);
     
   nhists = gridInqSize(grid);
   
@@ -211,13 +212,13 @@ void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
 
   hset->histograms[varID] = (HISTOGRAM **) malloc(nlevels * sizeof(HISTOGRAM *));
   if ( hset->histograms[varID] == NULL )
-    cdoAbort("Not enough memory (%s)", func);
+    cdoAbort("Not enough memory (%s)", __func__);
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
     {
       hists = hset->histograms[varID][levelID] = (HISTOGRAM *) malloc(nhists * sizeof(HISTOGRAM));
       if ( hists == NULL )
-        cdoAbort("Not enough memory (%s)", func);
+        cdoAbort("Not enough memory (%s)", __func__);
         
       for ( histID = 0; histID < nhists; histID++ )
         {
@@ -229,7 +230,7 @@ void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
 
           hists[histID].ptr = malloc(nbins * sizeof(int));
           if ( hists[histID].ptr == NULL )
-            cdoAbort("Not enough memory (%s)", func);
+            cdoAbort("Not enough memory (%s)", __func__);
         }
     }
 }
@@ -237,7 +238,6 @@ void hsetCreateVarLevels(HISTOGRAM_SET *hset, int varID, int nlevels, int grid)
 
 void hsetDestroy(HISTOGRAM_SET *hset)
 {
-  static const char func[] = "hsetDestroy";
   int varID, levelID, histID, nhists;
   
   if ( hset != NULL )
@@ -266,7 +266,6 @@ void hsetDestroy(HISTOGRAM_SET *hset)
 
 void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *field1, const field_t *field2)
 {
-  static const char func[] = "hsetDefVarLevelBounds";
   const double *array1 = field1->ptr;
   const double *array2 = field2->ptr;
   
@@ -285,19 +284,19 @@ void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const fi
   assert( nvars > 0 );
   
   if ( varID < 0 || varID >= nvars )
-    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, func);
+    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, __func__);
 
   nlevels = hset->nlevels[varID];
   
   assert( nlevels > 0 );
   
   if ( levelID < 0 || levelID >= nlevels )
-    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, func);
+    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, __func__);
 
   grid = hset->grids[varID];
   
   if ( grid != field1->grid || grid != field2->grid )
-    cdoAbort("Grids are different", func);
+    cdoAbort("Grids are different", __func__);
   
   hists  = hset->histograms[varID][levelID];
   
@@ -322,7 +321,6 @@ void hsetDefVarLevelBounds(HISTOGRAM_SET *hset, int varID, int levelID, const fi
 
 void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const field_t *field)
 {
-  static const char func[] = "hsetAddVarLevelValues";
   const double *array = field->ptr;
   int i, grid, nvars, nlevels, nhists, nign = 0;
   HISTOGRAM *hists;
@@ -336,18 +334,18 @@ void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const fi
   assert( nvars > 0 );
   
   if ( varID < 0 || varID >= nvars )
-    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, func);
+    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, __func__);
 
   nlevels = hset->nlevels[varID];
   
   assert( nlevels > 0);
   
   if ( levelID < 0 || levelID >= nlevels )
-    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, func);
+    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, __func__);
     
   grid = hset->grids[varID];
   if ( grid != field->grid )
-    cdoAbort("Grids are different", func);
+    cdoAbort("Grids are different", __func__);
 
   hists  = hset->histograms[varID][levelID];
   
@@ -370,13 +368,12 @@ void hsetAddVarLevelValues(HISTOGRAM_SET *hset, int varID, int levelID, const fi
     }
     
   if ( nign )  
-    cdoWarning("%d out of %d grid values are out of bounds and have been ignored (%s)", nign, nhists, func);
+    cdoWarning("%d out of %d grid values are out of bounds and have been ignored (%s)", nign, nhists, __func__);
 }
 
 
-void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, int p)
+void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int varID, int levelID, double p)
 {
-  static const char func[] = "hsetGetVarLevelPercentiles";
   double *array = field->ptr;
   int i, nvars, nlevels, nhists, grid;
   HISTOGRAM *hists;
@@ -390,19 +387,19 @@ void hsetGetVarLevelPercentiles(field_t *field, const HISTOGRAM_SET *hset, int v
   assert( nvars > 0 );
     
   if ( varID < 0 || varID >= nvars )
-    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, func);
+    cdoAbort("Illegal argument: varID %d is undefined (%s)", varID, __func__);
 
   nlevels = hset->nlevels[varID];
 
   assert( nlevels > 0 );
   
   if ( levelID < 0 || levelID >= nlevels )
-    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, func);
+    cdoAbort("Illegal argument: levelID %d is undefined (%s)", levelID, __func__);
 
   grid = hset->grids[varID];
   
   if ( grid != field->grid )
-    cdoAbort("Grids are different (%s)", func);
+    cdoAbort("Grids are different (%s)", __func__);
 
   hists  = hset->histograms[varID][levelID];
 

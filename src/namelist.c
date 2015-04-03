@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2009 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -62,7 +62,7 @@ struct PGMSTAT
 struct PGMSTAT pgmstat;
 
 
-static void namelist_init(NAMELIST *namelist, const char *name)
+static void namelist_init(namelist_t *namelist, const char *name)
 {
   namelist->size = 0;
   namelist->dis  = 1;
@@ -70,11 +70,11 @@ static void namelist_init(NAMELIST *namelist, const char *name)
 }
 
 
-NAMELIST *namelistNew(const char *name)
+namelist_t *namelistNew(const char *name)
 {
-  NAMELIST *namelist;
+  namelist_t *namelist;
 
-  namelist = (NAMELIST *) malloc(sizeof(NAMELIST));
+  namelist = (namelist_t *) malloc(sizeof(namelist_t));
 
   namelist_init(namelist, name);
 
@@ -82,7 +82,7 @@ NAMELIST *namelistNew(const char *name)
 }
 
 
-void namelistDelete(NAMELIST *nml)
+void namelistDelete(namelist_t *nml)
 {
   int i, iocc;
 
@@ -110,7 +110,7 @@ void namelistDelete(NAMELIST *nml)
 }
 
 
-void namelistClear(NAMELIST *nml)
+void namelistReset(namelist_t *nml)
 {
   int i, iocc;
 
@@ -136,9 +136,9 @@ void namelistClear(NAMELIST *nml)
 }
 
 
-void namelistPrint(NAMELIST *nml)
+void namelistPrint(namelist_t *nml)
 {
-  NML_ENTRY *entry;
+  nml_entry_t *entry;
   int i, j, nout;
 
   if ( nml == NULL ) return;
@@ -179,9 +179,9 @@ void namelistPrint(NAMELIST *nml)
 }
 
 
-int namelistAdd(NAMELIST *nml, const char *name, int type, int dis, void *ptr, size_t size)
+int namelistAdd(namelist_t *nml, const char *name, int type, int dis, void *ptr, size_t size)
 {
-  NML_ENTRY *nml_entry;
+  nml_entry_t *nml_entry;
   int entry = 0;
 
   if ( nml->size >= MAX_NML_ENTRY )
@@ -190,7 +190,7 @@ int namelistAdd(NAMELIST *nml, const char *name, int type, int dis, void *ptr, s
       return (-1);
     }
 
-  nml_entry = (NML_ENTRY *) malloc(sizeof(NML_ENTRY));
+  nml_entry = (nml_entry_t *) malloc(sizeof(nml_entry_t));
 
   nml_entry->name = strdup(name);
   nml_entry->type = type;
@@ -206,9 +206,9 @@ int namelistAdd(NAMELIST *nml, const char *name, int type, int dis, void *ptr, s
 }
 
 
-int namelistNum(NAMELIST *nml, const char *name)
+int namelistNum(namelist_t *nml, const char *name)
 {
-  NML_ENTRY *entry;
+  nml_entry_t *entry;
   int i, nocc = 0;
 
   if ( nml == NULL ) return (nocc);
@@ -230,7 +230,7 @@ int namelistNum(NAMELIST *nml, const char *name)
 }
 
 
-static void getnite(FILE *nmlfp, NAMELIST *nml)
+static void getnite(FILE *nmlfp, namelist_t *nml)
 {
   int nst, i, j;
   int linelen;
@@ -325,7 +325,7 @@ static void getnite(FILE *nmlfp, NAMELIST *nml)
 }
 
 
-static void rdnlsgl(NAMELIST *nml, void *var, int ntyp, int nlen, int *nocc)
+static void rdnlsgl(namelist_t *nml, void *var, int ntyp, int nlen, int *nocc)
 {
   if ( nml->line.nptype == NML_NUMBER )
     {
@@ -397,7 +397,7 @@ static void rdnlsgl(NAMELIST *nml, void *var, int ntyp, int nlen, int *nocc)
 }
 
 
-static void nml_print_entry(NML_ENTRY *entry, int ife)
+static void nml_print_entry(nml_entry_t *entry, int ife)
 {
   int nout, j;
 
@@ -430,7 +430,7 @@ static void nml_print_entry(NML_ENTRY *entry, int ife)
 }
 
 
-static void nml_print(NAMELIST *nml, int ife)
+static void nml_print(namelist_t *nml, int ife)
 {
   int i;
 
@@ -440,7 +440,7 @@ static void nml_print(NAMELIST *nml, int ife)
 
 #define  MAX_WORD_LEN  256
 
-void namelistRead(FILE *nmlfp, NAMELIST *nml)
+void namelistRead(FILE *nmlfp, namelist_t *nml)
 {
   /*
     cn  name

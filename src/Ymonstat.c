@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,18 +28,31 @@
 */
 
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "field.h"
 
 
 #define  NMONTH     17
 
+/*
+static
+int cmpint(const void *s1, const void *s2)
+{
+  int cmp = 0;
+  int *x = (int *) s1;
+  int *y = (int *) s2;
+
+  if      ( *x < *y ) cmp = -1;
+  else if ( *x > *y ) cmp =  1;
+
+  return (cmp);
+}
+*/
+
 void *Ymonstat(void *argument)
 {
-  static char func[] = "Ymonstat";
   int operatorID;
   int operfunc;
   int gridsize;
@@ -77,7 +90,7 @@ void *Ymonstat(void *argument)
   cdoOperatorAdd("ymonstd",  func_std,  0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
 
   for ( month = 0; month < NMONTH; month++ )
     {
@@ -88,17 +101,15 @@ void *Ymonstat(void *argument)
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
 
   taxisID1 = vlistInqTaxis(vlistID1);
-  taxisID2 = taxisCreate(TAXIS_ABSOLUTE);
+  taxisID2 = taxisDuplicate(taxisID1);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -126,6 +137,7 @@ void *Ymonstat(void *argument)
 
       vdates[month] = vdate;
       vtimes[month] = vtime;
+      // mon[month] = vdate;
 
       if ( vars1[month] == NULL )
 	{
@@ -172,8 +184,11 @@ void *Ymonstat(void *argument)
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
 
-	  recVarID[recID]   = varID;
-	  recLevelID[recID] = levelID;
+	  if ( tsID == 0 )
+	    {
+	      recVarID[recID]   = varID;
+	      recLevelID[recID] = levelID;
+	    }
 
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 
@@ -241,10 +256,29 @@ void *Ymonstat(void *argument)
       tsID++;
     }
 
+  /* sort output time steps */
+  /*
+  nmon = 0;
+  for ( month = 0; month < NMONTH; month++ )
+    {
+      if ( nsets[month] == 0 )
+	for ( i = month+1; i < NMONTH; i++ ) mon[i-1] = mon[i];
+      else
+	nmon++;
+    }
+
+  qsort(mon, nmon, sizeof(int), cmpint);
+	      
+  for ( i = 0; i < nmon; i++ )
+    {
+      cdiDecodeDate(mon[i], &year, &month, &day);
+      mon[i] = month;
+    }
+  */
   for ( i = 0; i < nmon; i++ )
     {
       month = mon[i];
-      if ( nsets[month] == 0 ) cdoAbort("Internal problem, nsets[%d] not set!", month);
+      if ( nsets[month] == 0 ) cdoAbort("Internal problem, nsets[%d] not defined!", month);
 
       if ( operfunc == func_mean || operfunc == func_avg )
 	for ( varID = 0; varID < nvars; varID++ )
@@ -286,20 +320,21 @@ void *Ymonstat(void *argument)
 
       taxisDefVdate(taxisID2, vdates[month]);
       taxisDefVtime(taxisID2, vtimes[month]);
-      streamDefTimestep(streamID2, otsID++);
+      streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
 	{
 	  varID    = recVarID[recID];
 	  levelID  = recLevelID[recID];
 	  
-	  if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-	    {
-	      streamDefRecord(streamID2, varID, levelID);
-	      streamWriteRecord(streamID2, vars1[month][varID][levelID].ptr,
-				vars1[month][varID][levelID].nmiss);
-	    }
+	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	  streamDefRecord(streamID2, varID, levelID);
+	  streamWriteRecord(streamID2, vars1[month][varID][levelID].ptr,
+			    vars1[month][varID][levelID].nmiss);
 	}
+
+      otsID++;
     }
 
   for ( month = 0; month < NMONTH; month++ )

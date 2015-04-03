@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -54,6 +54,7 @@ extern int cdoDefaultInstID;
 extern int cdoCheckDatarange;
 
 extern int cdoSilentMode;
+extern int cdoOverwriteMode;
 extern int cdoRegulargrid;
 extern int cdoBenchmark;
 extern int cdoTimer;
@@ -63,12 +64,11 @@ extern int cdoCompress;
 extern int cdoInteractive;
 extern int cdoParIO;
 
-extern int cdoZtype;
-extern int cdoZlevel;
+extern int cdoCompType;
+extern int cdoCompLevel;
 
 extern int cdoExpMode;
 
-extern int cdoDisableFilesuffix;
 extern int cdoDiag;
 
 void    cdiError(int cdiErrno, const char *fmt, ...);
@@ -95,8 +95,8 @@ int     cdoStreamNumber(void);
 int     cdoStreamCnt(void);
 int     cdoOperatorAdd(const char *name, int func, int intval, const char *enter);
 int     cdoOperatorID(void);
-int     cdoOperatorFunc(int operID);
-int     cdoOperatorIntval(int operID);
+int     cdoOperatorF1(int operID);
+int     cdoOperatorF2(int operID);
 const char *cdoOperatorName(int operID);
 const char *cdoOperatorEnter(int operID);
 
@@ -109,7 +109,7 @@ int     cdoDefineGrid(const char *gridfile);
 int     cdoDefineZaxis(const char *zaxisfile);
 
 int     vlistIsSzipped(int vlistID);
-void    vlistCompare(int vlistID1, int vlistID2, int function);
+void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID);
 
 int  gridWeights(int gridID, double *weights);
 int  gridGenArea(int gridID, double *area);

@@ -416,14 +416,10 @@ void hetaeta_sc(int ltq, int lpsmod, long ij, long ngp, long nlev1, long nlev2, 
   if ( ltq )
     {
       for ( k = 0; k < nlev2; ++k )
-	{
-	  pf2[k] = af2[k] + bf2[k]* ps2[ij];
-	}
+	pf2[k] = af2[k] + bf2[k]* ps2[ij];
 
       for ( k = 0; k < nlev2; ++k )
-	{
-	  zq2[k] = rh2[k]*epsilon*esat(zt2[k])/pf2[k];
-	}
+	zq2[k] = rh2[k]*epsilon*esat(zt2[k])/pf2[k];
     }
 
 #if defined (OUTPUT)
@@ -471,7 +467,6 @@ void hetaeta(int ltq, int ngp, const int *imiss,
 	     double *restrict tscor, double *restrict pscor,
 	     double *restrict secor)
 {
-  static char func[] = "hetaeta";
   double epsm1i;
   long jblt;
   long k, iv, ij;

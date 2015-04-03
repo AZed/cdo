@@ -17,9 +17,10 @@
 
 #include <assert.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
+#include "pstream.h"
 #include "ecautil.h"
 
 
@@ -146,7 +147,6 @@ unsigned long day_of_year(int date)
  */  
 static void count(field_t *field1, const field_t *field2, double mode)
 {
-  static const char func[] = "count";
   int   i, len;
   const int     grid1    = field1->grid;
   const int     nmiss1   = field1->nmiss;
@@ -159,7 +159,7 @@ static void count(field_t *field1, const field_t *field2, double mode)
   len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 )
     {
@@ -231,7 +231,6 @@ static void count(field_t *field1, const field_t *field2, double mode)
  */  
 static void selcomp(field_t *field1, const field_t *field2, int (*compare)(double, double))
 {
-  static const char func[] = "selcomp";
   int   i, len;
   const int     grid1    = field1->grid;
   const int     nmiss1   = field1->nmiss;
@@ -245,7 +244,7 @@ static void selcomp(field_t *field1, const field_t *field2, int (*compare)(doubl
   len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss1 > 0 || nmiss2 > 0 )
     {
@@ -371,7 +370,6 @@ void farnum3(field_t *field1, field_t field2, double n)
 
 void farsel(field_t *field1, field_t field2)
 {
-  static const char func[] = "farsel";
   int   i, len;
   const int     grid1    = field1->grid;
   const double  missval1 = field1->missval;
@@ -384,7 +382,7 @@ void farsel(field_t *field1, field_t field2)
   len = gridInqSize(grid1);
 
   if ( len != gridInqSize(grid2) )
-    cdoAbort("Fields have different gridsize (%s)", func);
+    cdoAbort("Fields have different gridsize (%s)", __func__);
 
   if ( nmiss2 > 0 )
     {
@@ -478,7 +476,7 @@ void farselgtc(field_t *field, double c)
 void updateHist(field_t *field[2], int nlevels, int gridsize, double *yvals, int onlyNorth)
 {
   int levelID,i;
-  
+
   for ( levelID = 0; levelID < nlevels; levelID++ )
     for ( i = 0; i < gridsize; i++ )
       if ( onlyNorth )
@@ -491,50 +489,49 @@ void updateHist(field_t *field[2], int nlevels, int gridsize, double *yvals, int
 }
 
 void adjustEndDate(int nlevels, int gridsize, double *yvals, double missval, int ovdate,
-                field_t *startDateWithHist[2], field_t *endDateWithHist[2]) 
+                field_t *startDateWithHist[2], field_t *endDateWithHist[2])
 {
   int levelID, i, ovdateSouth;
-  
+
   ovdateSouth = MIN(cdiEncodeDate(ovdate/10000,6,30),ovdate);
 
   for ( levelID = 0; levelID < nlevels; levelID++ )
+  {
+    for ( i = 0; i < gridsize; i++ )
     {
-      for ( i = 0; i < gridsize; i++ )
-        {
-          /* dictinct between northern and southern sphere */
-          /* start with north */
-          if ( yvals[i] >= 0 )
-	    {
-	      if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) ) {
-		endDateWithHist[0][levelID].ptr[i] = missval;
-		continue;
-	      }
-	    
-	      if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) ) {
-		endDateWithHist[0][levelID].ptr[i] = ovdate;
-	      }
-	    }
-          else
-	    {
-	      if ( DBL_IS_EQUAL(startDateWithHist[1][levelID].ptr[i], missval) ) {
-		endDateWithHist[0][levelID].ptr[i] = missval;
-		continue;
-	      }
-	      if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) ) {
-		endDateWithHist[0][levelID].ptr[i] = ovdateSouth; 
-	      }
-	    }
+      /* start with southern sphere */
+      if ( yvals[i] < 0 )
+      {
+        if ( DBL_IS_EQUAL(startDateWithHist[1][levelID].ptr[i], missval) ) {
+          endDateWithHist[0][levelID].ptr[i] = missval;
+          continue;
         }
+        if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) ) {
+          endDateWithHist[0][levelID].ptr[i] = ovdateSouth;
+        }
+      }
+      else
+      {
+        if ( DBL_IS_EQUAL(startDateWithHist[0][levelID].ptr[i], missval) ) {
+          endDateWithHist[0][levelID].ptr[i] = missval;
+          continue;
+        }
+
+        if ( DBL_IS_EQUAL(endDateWithHist[0][levelID].ptr[i], missval) ) {
+          endDateWithHist[0][levelID].ptr[i] = ovdate;
+        }
+      }
     }
+  }
 }
 
 void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
                 field_t *startDateWithHist[2], field_t *endDateWithHist[2],
-                field_t *gslDuration, field_t *gslFirstDay, 
-                int useCurrentYear) 
+                field_t *gslDuration, field_t *gslFirstDay,
+                int useCurrentYear)
 {
-  int levelID, i; 
-  double firstDay, duration; 
+  int levelID, i;
+  double firstDay, duration;
 
   if ( !useCurrentYear )
     {
@@ -542,16 +539,16 @@ void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
         {
           for ( i = 0; i < gridsize; i++ )
             {
-              /* start with northern sphere */
-              if ( yvals[i] >= 0 )
+              /* start with southern sphere */
+              if ( yvals[i] < 0.0 )
                 {
-                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[1][levelID].ptr[i]) - 
+                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[1][levelID].ptr[i]));
                   firstDay = (double) day_of_year((int) startDateWithHist[1][levelID].ptr[i]);
                 }
               else
                 {
-                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) - 
+                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[1][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[1][levelID].ptr[i]));
                   firstDay = (double) day_of_year((int) startDateWithHist[1][levelID].ptr[i]);
                 }
@@ -567,19 +564,20 @@ void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
         {
           for ( i = 0; i < gridsize; i++ )
             {
-              if ( yvals[i] >= 0 )
+              /* start with southern sphere */
+              if ( yvals[i] < 0.0 )
                 {
-                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) - 
+                  gslDuration[levelID].ptr[i] = missval;
+                  gslFirstDay[levelID].ptr[i] = missval;
+                }
+              else
+                {
+                  duration = (double) (date_to_julday(CALENDAR_PROLEPTIC, (int)   endDateWithHist[0][levelID].ptr[i]) -
                                        date_to_julday(CALENDAR_PROLEPTIC, (int) startDateWithHist[0][levelID].ptr[i]));
                   firstDay = (double) day_of_year((int) startDateWithHist[0][levelID].ptr[i]);
 
                   gslDuration[levelID].ptr[i] = duration;
                   gslFirstDay[levelID].ptr[i] = firstDay;
-                }
-              else
-                {
-                  gslDuration[levelID].ptr[i] = missval;
-                  gslFirstDay[levelID].ptr[i] = missval;
                 }
             }
         }
@@ -600,7 +598,7 @@ void computeGsl(int nlevels, int gridsize, double *yvals, double missval,
     }
 }
 
-void writeGslStream(int ostreamID, int otaxisID, int otsID, 
+void writeGslStream(int ostreamID, int otaxisID, int otsID,
                     int ovarID1, int ovarID2, int ivlistID1,
                     int first_var_id,
                     field_t *gslDuration, field_t *gslFirstDay,
@@ -610,19 +608,16 @@ void writeGslStream(int ostreamID, int otaxisID, int otsID,
 
   taxisDefVdate(otaxisID, vdate);
   taxisDefVtime(otaxisID, vtime);
-  streamDefTimestep(ostreamID, otsID++);
+  streamDefTimestep(ostreamID, otsID);
 
-  if ( otsID == 1 || vlistInqVarTime(ivlistID1, first_var_id) == TIME_VARIABLE )
+  for ( levelID = 0; levelID < nlevels; levelID++ )
     {
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-        {
-          streamDefRecord(ostreamID, ovarID1, levelID);
-          streamWriteRecord(ostreamID, gslDuration[levelID].ptr, gslDuration[levelID].nmiss);
-        }
-      for ( levelID = 0; levelID < nlevels; levelID++ )
-        {
-          streamDefRecord(  ostreamID, ovarID2, levelID);
-          streamWriteRecord(ostreamID, gslFirstDay[levelID].ptr, gslFirstDay[levelID].nmiss);
-        }
+      streamDefRecord(ostreamID, ovarID1, levelID);
+      streamWriteRecord(ostreamID, gslDuration[levelID].ptr, gslDuration[levelID].nmiss);
+    }
+  for ( levelID = 0; levelID < nlevels; levelID++ )
+    {
+      streamDefRecord(  ostreamID, ovarID2, levelID);
+      streamWriteRecord(ostreamID, gslFirstDay[levelID].ptr, gslFirstDay[levelID].nmiss);
     }
 }

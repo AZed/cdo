@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
       Exprf      aexprf          Append evaluated expressions from script file
 */
 /*
-Operatoren: +, -, *, \
+Operatoren: +, -, *, \, ^
 Functions: sqrt, exp, log, log10, sin, cos, tan, asin, acos, atan
 Functions: min, max, avg, std, var
 Constansts: M_PI, M_E
@@ -34,7 +34,7 @@ Constansts: M_PI, M_E
 #include <sys/stat.h>  /* stat */
 #include <unistd.h>    /* stat */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -43,7 +43,6 @@ Constansts: M_PI, M_E
 
 void *Expr(void *argument)
 {
-  static char func[] = "Expr";
   int EXPR, EXPRF, AEXPR, AEXPRF;
   int operatorID;
   char *exprs = NULL;
@@ -122,7 +121,6 @@ void *Expr(void *argument)
 
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
 
@@ -136,8 +134,8 @@ void *Expr(void *argument)
   parse_arg.init = 1;
   parse_arg.vlistID1 = vlistID1;
   parse_arg.vlistID2 = vlistID2;
-  parse_arg.nvars1 = 0;
-  parse_arg.debug  = 0;
+  parse_arg.nvars1   = 0;
+  parse_arg.debug    = 0;
   parse_arg.gridID2  = -1;
   parse_arg.zaxisID2 = -1;
   parse_arg.timeID2  = -1;
@@ -150,8 +148,7 @@ void *Expr(void *argument)
   parse_arg.init = 0;
 
   nvars2 = vlistNvars(vlistID2);
-
-  if ( nvars2 == 0 ) cdoAbort("No variable in output!");
+  if ( nvars2 == 0 ) cdoAbort("No output variable found!");
 
   if ( cdoVerbose ) vlistPrint(vlistID2);
 
@@ -164,7 +161,6 @@ void *Expr(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -175,7 +171,7 @@ void *Expr(void *argument)
     {
       gridID  = vlistInqVarGrid(vlistID1, varID);
       zaxisID = vlistInqVarZaxis(vlistID1, varID);
-      /*     parse_arg.missval = vlistInqVarMissval(vlistID1, varID); */
+      /* parse_arg.missval[varID] = vlistInqVarMissval(vlistID1, varID); */
 
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(zaxisID);
@@ -205,6 +201,8 @@ void *Expr(void *argument)
 
       streamDefTimestep(streamID2, tsID);
 	       
+      for ( varID = 0; varID < nvars; varID++ ) parse_arg.nmiss[varID] = 0;
+
       for ( recID = 0; recID < nrecs; recID++ )
 	{
 	  streamInqRecord(streamID1, &varID, &levelID);
@@ -215,11 +213,14 @@ void *Expr(void *argument)
 	      offset   = gridsize*levelID;
 	      single1  = parse_arg.vardata1[varID] + offset;
 	      streamReadRecord(streamID1, single1, &nmiss);
+	      parse_arg.nmiss[varID] += nmiss;
+	      /*
 	      if ( nmiss && lwarn )
 		{
 		  cdoWarning("Missing values unsupported for this operator!");
 		  lwarn = FALSE;
 		}
+	      */
 	    }
 	}
 
@@ -244,23 +245,16 @@ void *Expr(void *argument)
 
 	  gridsize = gridInqSize(gridID);
 	  nlevel   = zaxisInqSize(zaxisID);
-	  /* nmiss    = parse_arg.nmiss; */
-	  /* if ( nmiss ) fprintf(stdout, "out nmiss = %d\n", nmiss); */
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
+	      long i;
 	      offset   = gridsize*levelID;
 	      single2  = parse_arg.vardata2[varID] + offset;
+
 	      nmiss = 0;
-	      if ( missval < -1.e30 || missval > 1.e30 )
-		{
-		  int i;
-		  for ( i = 0; i < gridsize; i++ )
-		    if ( single2[i] < -1.e30 || single2[i] > 1.e30 )
-		      {
-			single2[i] = missval;
-			nmiss++;
-		      }
-		}
+	      for ( i = 0; i < gridsize; i++ )
+		if ( DBL_IS_EQUAL(single2[i], missval) ) nmiss++;
+
 	      streamDefRecord(streamID2, varID, levelID);
 	      streamWriteRecord(streamID2, single2, nmiss);
 	    }

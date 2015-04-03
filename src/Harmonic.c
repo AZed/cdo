@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
       Harmonic   harmonic        Harmonic
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -29,7 +29,6 @@
 
 void *Harmonic(void *argument)
 {
-  static char func[] = "Harmonic";
   int gridsize;
   int nrecs;
   int varID, levelID, recID;
@@ -46,7 +45,7 @@ void *Harmonic(void *argument)
   int vdate = 0, vtime = 0;
   int n_out, nout, n;
   char filesuffix[32];
-  char filename[1024];
+  char filename[8192];
   double missval;
   double sine, cosine;
   double *array;
@@ -68,7 +67,6 @@ void *Harmonic(void *argument)
 	     "2 times the number of requested harmonics (=%d)!", n_out);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -78,13 +76,7 @@ void *Harmonic(void *argument)
   vlistDefTaxis(vlistID2, taxisID2);
 
   filesuffix[0] = 0;
-  if ( cdoDisableFilesuffix == FALSE )
-    {
-      strcat(filesuffix, streamFilesuffix(cdoDefaultFileType));
-      if ( cdoDefaultFileType == FILETYPE_GRB )
-	if ( vlistIsSzipped(vlistID1) || cdoZtype == COMPRESS_SZIP )
-	  strcat(filesuffix, ".sz");
-    }
+  cdoGenFileSuffix(filesuffix, sizeof(filesuffix), cdoDefaultFileType, vlistID1);
 
   streamIDs = (int*) malloc(n_out*sizeof(int));
 
@@ -98,7 +90,6 @@ void *Harmonic(void *argument)
 	sprintf(filename+nchars+1, "%s", filesuffix);
 
       streamID2 = streamOpenWrite(filename, cdoFiletype());
-      if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
       streamIDs[j] = streamID2;
 

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 
 #include <time.h>
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -63,20 +63,18 @@ typedef struct {
   char   *atxtentry[1024];
 } ATTS;
 
-
-static void iniatts(ATTS *atts)
+static
+void iniatts(ATTS *atts)
 {
   atts->naint = 0;
   atts->naflt = 0;
   atts->natxt = 0;
 }
 
-
-static void inivar(VAR *var, int gridtype, int zaxistype, int code, const char *name,
+static
+void inivar(VAR *var, int gridtype, int zaxistype, int code, const char *name,
 	       const char *longname, const char *units)
-{
-  static char func[] = "inivar_ml";
-  
+{  
   var->gridtype  = gridtype;
   var->zaxistype = zaxistype;
   var->code      = code;
@@ -88,11 +86,9 @@ static void inivar(VAR *var, int gridtype, int zaxistype, int code, const char *
   if ( units )    var->units     = strdup(units);
 }
 
-
-static void inivars_ml(VAR **vars)
+static
+void inivars_ml(VAR **vars)
 {
-  static char func[] = "inivars_ml";
-
   *vars = (VAR *) malloc((nvars_ml+1)*sizeof(VAR));
 
   inivar(&(*vars)[0], GRID_GAUSSIAN, ZAXIS_HYBRID,  133, "Q",   "specific humidity", "kg/kg");
@@ -103,9 +99,9 @@ static void inivars_ml(VAR **vars)
   inivar(&(*vars)[4], GRID_SPECTRAL, ZAXIS_SURFACE, 152, "LSP", "log surface pressure", "");
 }
 
-
 #if  defined  (HAVE_LIBNETCDF)
-static void nce(int istat)
+static
+void nce(int istat)
 {
   /*
     This routine provides a simple interface to netCDF error message routine.
@@ -115,10 +111,9 @@ static void nce(int istat)
 }
 #endif
 
-
-static int import_e5ml(const char *filename, VAR **vars)
+static
+int import_e5ml(const char *filename, VAR **vars)
 {
-  static char func[] = "import_e5ml";
   int nvars = 0;
 #if  defined  (HAVE_LIBNETCDF)
   int nc_dim_id, nc_var_id;
@@ -135,7 +130,7 @@ static int import_e5ml(const char *filename, VAR **vars)
 
   /* open file and check file type */
   /* nce(nc_open(filename, NC_NOWRITE, &nc_file_id)); */
-  nc_file_id = pcdf_openread(filename);
+  nc_file_id = cdf_openread(filename);
 
   nce(nc_get_att_text(nc_file_id, NC_GLOBAL, "file_type", filetype));
   nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "file_type", &attlen));
@@ -277,10 +272,9 @@ static int import_e5ml(const char *filename, VAR **vars)
   return (nvars);
 }
 
-
-static void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtime, int ntr)
+static
+void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, int vtime, int ntr)
 {
-  static char func[] = "export_e5ml";
 #if  defined  (HAVE_LIBNETCDF)
   int nc_var_id;
   size_t nvals;
@@ -612,11 +606,10 @@ static void export_e5ml(const char *filename, VAR *vars, int nvars, int vdate, i
 #endif
 }
 
-
 #if  defined  (HAVE_LIBNETCDF)
-static void read_gg3d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxisID)
+static
+void read_gg3d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxisID)
 {
-  static char func[] = "read_gg3d";
   int nlev, nlat, nlon, gridsize, i;
   int gridtype, zaxistype;
   int nc_var_id;
@@ -652,9 +645,9 @@ static void read_gg3d(int nc_file_id, const char *name, VAR *var, int gridID, in
 #endif
 
 #if  defined  (HAVE_LIBNETCDF)
-static void read_fc4d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxisID, int nhgl, int nmp1)
+static
+void read_fc4d(int nc_file_id, const char *name, VAR *var, int gridID, int zaxisID, int nhgl, int nmp1)
 {
-  static char func[] = "read_fc4d";
   int nlev, nfc, i;
   int gridtype, zaxistype;
   int nc_var_id;
@@ -668,7 +661,7 @@ static void read_fc4d(int nc_file_id, const char *name, VAR *var, int gridID, in
   nfc  = gridInqSize(gridID);
   nlev = zaxisInqSize(zaxisID);
 
-  if ( nfc != nhgl*nmp1*2 ) cdoAbort("%s: inconsistent dimension length!", func);
+  if ( nfc != nhgl*nmp1*2 ) cdoAbort("%s: inconsistent dimension length!", __func__);
 
   var->gridID    = gridID;
   var->zaxisID   = zaxisID;
@@ -688,10 +681,9 @@ static void read_fc4d(int nc_file_id, const char *name, VAR *var, int gridID, in
 }
 #endif
 
-
-static int import_e5res(const char *filename, VAR **vars, ATTS *atts)
+static
+int import_e5res(const char *filename, VAR **vars, ATTS *atts)
 {
-  static char func[] = "import_e5res";
   int nvars = 0;
 #if  defined  (HAVE_LIBNETCDF)
   int nc_var_id;
@@ -708,7 +700,7 @@ static int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   int nvdims, nvatts;
   int dimidsp[9];
   int max_vars = 4096;
-  char name[256];
+  char name[CDI_MAX_NAME];
   int lon_dimid, lat_dimid, nhgl_dimid, nlevp1_dimid, spc_dimid, nvclev_dimid;
   int complex_dimid, nmp1_dimid, belowsurface_dimid, lev_dimid, ilev_dimid;
   int /* surface_dimid, height2m_dimid, height10m_dimid,*/ n2_dimid;
@@ -720,12 +712,12 @@ static int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   double attflt;
   size_t attlen, dimlen;
   nc_type xtype;
-  char attname[256];
+  char attname[CDI_MAX_NAME];
   const int attstringlen = 8192; char attstring[8192];
 
   /* open file and check file type */
   /* nce(nc_open(filename, NC_NOWRITE, &nc_file_id)); */
-  nc_file_id = pcdf_openread(filename);
+  nc_file_id = cdf_openread(filename);
 
   nce(nc_get_att_text(nc_file_id, NC_GLOBAL, "file_type", filetype));
   nce(nc_inq_attlen(nc_file_id, NC_GLOBAL, "file_type", &attlen));
@@ -1083,10 +1075,9 @@ static int import_e5res(const char *filename, VAR **vars, ATTS *atts)
   return (nvars);
 }
 
-
-static void export_e5res(const char *filename, VAR *vars, int nvars)
+static
+void export_e5res(const char *filename, VAR *vars, int nvars)
 {
-  static char func[] = "export_e5res";
 #if  defined  (HAVE_LIBNETCDF)
   int nc_var_id;
   int varid;
@@ -1430,7 +1421,6 @@ static void export_e5res(const char *filename, VAR *vars, int nvars)
 
 void *Echam5ini(void *argument)
 {
-  static char func[] = "Echam5ini";
   int operatorID;
   int operfunc;
   int IMPORT_E5ML, IMPORT_E5RES;
@@ -1452,7 +1442,10 @@ void *Echam5ini(void *argument)
   EXPORT_E5RES = cdoOperatorAdd("export_e5res", func_write, 0, NULL);
 
   operatorID = cdoOperatorID();
-  operfunc = cdoOperatorFunc(operatorID);
+  operfunc = cdoOperatorF1(operatorID);
+
+  if ( operatorID == EXPORT_E5ML && processSelf() != 0 )
+    cdoAbort("This operator can't be linked with other operators!");
 
   if ( operfunc == func_read )
     {
@@ -1500,7 +1493,6 @@ void *Echam5ini(void *argument)
 	cdoDefaultFileType = FILETYPE_NC;
 
       streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-      if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
       streamDefVlist(streamID2, vlistID2);
 
@@ -1527,12 +1519,11 @@ void *Echam5ini(void *argument)
     {
       VAR *vars = NULL;
       int code, gridID, zaxisID, gridtype, zaxistype, gridsize, nlev;
-      char name[256], longname[256], units[256];
+      char name[CDI_MAX_NAME], longname[CDI_MAX_NAME], units[CDI_MAX_NAME];
       int taxisID, vdate, vtime;
       int ntr = 0;
 
       streamID1 = streamOpenRead(cdoStreamName(0));
-      if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
       vlistID1 = streamInqVlist(streamID1);
       taxisID = vlistInqTaxis(vlistID1);

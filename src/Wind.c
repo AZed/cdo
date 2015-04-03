@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,7 @@
                                  velocity potential and stream function
 */
 
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
@@ -34,7 +34,6 @@
 
 void *Wind(void *argument)
 {
-  static char func[] = "Wind";
   int UV2DV, UV2DVL, DV2UV, DV2UVL, DV2PS;
   int operatorID;
   int streamID1, streamID2;
@@ -50,12 +49,13 @@ void *Wind(void *argument)
   int lcopy = FALSE;
   int taxisID1, taxisID2;
   int nlon, nlat, ntr = -1;
-  int code;
+  int code, param;
+  int pnum, pcat, pdis;
   int varID1 = -1, varID2 = -1;
   int offset;
   SPTRANS *sptrans = NULL;
   DVTRANS *dvtrans = NULL;
-  char varname[128];
+  char varname[CDI_MAX_NAME];
   double *array1 = NULL;
   double *ivar1 = NULL, *ivar2 = NULL, *ovar1 = NULL, *ovar2 = NULL;
 
@@ -72,7 +72,6 @@ void *Wind(void *argument)
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -85,10 +84,12 @@ void *Wind(void *argument)
   nvars = vlistNvars(vlistID2);
   for ( varID = 0; varID < nvars; varID++ )
     {
+      param = vlistInqVarParam(vlistID2, varID);
+      cdiDecodeParam(param, &pnum, &pcat, &pdis);
+      code = pnum;
       if ( operatorID == UV2DV || operatorID == UV2DVL )
 	{
 	  /* search for u and v wind */
-	  code = vlistInqVarCode(vlistID1, varID);
 	  if ( code <= 0 )
 	    {
 	      vlistInqVarName(vlistID1, varID, varname);
@@ -104,8 +105,15 @@ void *Wind(void *argument)
       else if ( operatorID == DV2UV || operatorID == DV2UVL || operatorID == DV2PS )
 	{
 	  /* search for divergence and vorticity */
-	  code = vlistInqVarCode(vlistID1, varID);
-	  if ( code <= 0 )
+	  if ( pdis != 255 ) // GRIB2
+	    {
+	      vlistInqVarName(vlistID1, varID, varname);
+	      strtolower(varname);
+
+	      if      ( strcmp(varname, "d")  == 0 ) code = 155;
+	      else if ( strcmp(varname, "vo") == 0 ) code = 138;
+	    }
+	  else if ( code <= 0 )
 	    {
 	      vlistInqVarName(vlistID1, varID, varname);
 	      strtolower(varname);
@@ -118,7 +126,7 @@ void *Wind(void *argument)
 	  else if ( code == 138 ) varID2 = varID;
 	}
       else
-	cdoAbort("unexpected operatorID %d", operatorID);
+	cdoAbort("Unexpected operatorID %d", operatorID);
     }
 
   ngrids = vlistNgrids(vlistID1);
@@ -188,8 +196,8 @@ void *Wind(void *argument)
 
 	  vlistChangeVarGrid(vlistID2, varID1, gridID2);
 	  vlistChangeVarGrid(vlistID2, varID2, gridID2);
-	  vlistDefVarCode(vlistID2, varID1, 155);
-	  vlistDefVarCode(vlistID2, varID2, 138);
+	  vlistDefVarParam(vlistID2, varID1, cdiEncodeParam(155, 128, 255));
+	  vlistDefVarParam(vlistID2, varID2, cdiEncodeParam(138, 128, 255));
 	  vlistDefVarName(vlistID2, varID1, "sd");
 	  vlistDefVarName(vlistID2, varID2, "svo");
 	  vlistDefVarLongname(vlistID2, varID1, "divergence");
@@ -245,8 +253,8 @@ void *Wind(void *argument)
 
 	  vlistChangeVarGrid(vlistID2, varID1, gridID2);
 	  vlistChangeVarGrid(vlistID2, varID2, gridID2);
-	  vlistDefVarCode(vlistID2, varID1, 131);
-	  vlistDefVarCode(vlistID2, varID2, 132);
+	  vlistDefVarParam(vlistID2, varID1, cdiEncodeParam(131, 128, 255));
+	  vlistDefVarParam(vlistID2, varID2, cdiEncodeParam(132, 128, 255));
 	  vlistDefVarName(vlistID2, varID1, "u");
 	  vlistDefVarName(vlistID2, varID2, "v");
 	  vlistDefVarLongname(vlistID2, varID1, "u-velocity");
@@ -277,8 +285,8 @@ void *Wind(void *argument)
 	  if ( gridID1 != vlistInqVarGrid(vlistID1, varID1) )
 	    cdoAbort("Divergence and vorticity must have the same grid represention!");
 
-	  vlistDefVarCode(vlistID2, varID1, 149);
-	  vlistDefVarCode(vlistID2, varID2, 148);
+	  vlistDefVarParam(vlistID2, varID1, cdiEncodeParam(149, 128, 255));
+	  vlistDefVarParam(vlistID2, varID2, cdiEncodeParam(148, 128, 255));
 	  vlistDefVarName(vlistID2, varID1, "velopot");
 	  vlistDefVarName(vlistID2, varID2, "stream");
 	  vlistDefVarLongname(vlistID2, varID1, "velocity potential");
@@ -292,7 +300,6 @@ void *Wind(void *argument)
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 

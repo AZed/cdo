@@ -21,21 +21,15 @@
       Runpctl    runpctl         Running percentiles
 */
 
-#include <stdio.h>
-#include <math.h>
-
-#include "cdi.h"
+#include <cdi.h>
 #include "cdo.h"
 #include "cdo_int.h"
 #include "pstream.h"
-#include "functs.h"
-#include "field.h"
 #include "nth_element.h"
 
 
 void *Runpctl(void *argument)
 {
-  static char func[] = "Runpctl";
   int gridsize;
   int varID;
   int recID;
@@ -71,7 +65,6 @@ void *Runpctl(void *argument)
     cdoAbort("Illegal argument: percentile number %d is not in the range 1..99!", pn);
 
   streamID1 = streamOpenRead(cdoStreamName(0));
-  if ( streamID1 < 0 ) cdiError(streamID1, "Open failed on %s", cdoStreamName(0));
 
   vlistID1 = streamInqVlist(streamID1);
   vlistID2 = vlistDuplicate(vlistID1);
@@ -84,7 +77,6 @@ void *Runpctl(void *argument)
   dpy      = calendar_dpy(calendar);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-  if ( streamID2 < 0 ) cdiError(streamID2, "Open failed on %s", cdoStreamName(1));
 
   streamDefVlist(streamID2, vlistID2);
 
@@ -186,19 +178,20 @@ void *Runpctl(void *argument)
 
       taxisDefVdate(taxisID2, datetime[ndates].date);
       taxisDefVtime(taxisID2, datetime[ndates].time);
-      streamDefTimestep(streamID2, otsID++);
+      streamDefTimestep(streamID2, otsID);
 
       for ( recID = 0; recID < nrecords; recID++ )
         {
           varID    = recVarID[recID];
           levelID  = recLevelID[recID];
 
-          if ( otsID == 1 || vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE )
-            {
-              streamDefRecord(streamID2, varID, levelID);
-              streamWriteRecord(streamID2, vars1[0][varID][levelID].ptr, vars1[0][varID][levelID].nmiss);
-            }
+	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+
+	  streamDefRecord(streamID2, varID, levelID);
+	  streamWriteRecord(streamID2, vars1[0][varID][levelID].ptr, vars1[0][varID][levelID].nmiss);
         }
+
+      otsID++;
 
       datetime[ndates] = datetime[0];
       vars1[ndates] = vars1[0];
