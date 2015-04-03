@@ -2,8 +2,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -16,8 +14,6 @@
 #include "pio_comm.h"
 #include "pio_impl.h"
 #include "pio_util.h"
-
-extern char * command2charP[6];
 
 extern long initial_buffersize;
 
@@ -54,7 +50,7 @@ static aFiledataM *initAFiledataMPINONB ( const char *filename, size_t bs )
   int iret;
   MPI_Comm commNode = commInqCommNode ();
 
-  of = xmalloc(sizeof (*of) + strlen(filename) + 1);
+  of = (aFiledataM*) xmalloc(sizeof (*of) + strlen(filename) + 1);
 
   strcpy(of->name, filename);
   of->size = bs;
@@ -83,7 +79,8 @@ static aFiledataM *initAFiledataMPINONB ( const char *filename, size_t bs )
 
 /***************************************************************/
 
-int destroyAFiledataMPINONB ( void *v )
+static int
+destroyAFiledataMPINONB(void *v)
 {
   int iret = 0;
   aFiledataM *of;
@@ -131,7 +128,8 @@ compareNamesMPINONB(void *v1, void *v2)
 
 /***************************************************************/
 
-void writeMPINONB(aFiledataM *of)
+static void
+writeMPINONB(aFiledataM *of)
 {
   int amount;
   MPI_Status status;
@@ -338,7 +336,6 @@ initMPINONB(void (*postCommSetupActions)(void))
     xabort ( "listSetNew did not succeed" );   
 }
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

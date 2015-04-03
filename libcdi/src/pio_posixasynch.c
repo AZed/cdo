@@ -7,7 +7,6 @@
 #endif
 
 
-#ifdef USE_MPI
 #ifndef _SX
 
 #include <aio.h>
@@ -68,7 +67,7 @@ initBFiledataPA(char *filename, size_t bs, int nc)
   xdebug ( "filename=%s, buffersize=%zu, ncollectors=%d, nPrefetchStreams=%d",
            filename, bs, nc, nPrefStreams );
 
-  bfd = xmalloc( sizeof (*bfd) + strlen(filename) + 1);
+  bfd = (bFiledataPA*) xmalloc( sizeof (*bfd) + strlen(filename) + 1);
   strcpy(bfd->name, filename);
 
   if (( bfd->handle = open ( bfd->name, O_CREAT | O_WRONLY, 0666 )) == -1 )
@@ -76,7 +75,7 @@ initBFiledataPA(char *filename, size_t bs, int nc)
 
   dbuffer_init(&(bfd->fb), (size_t)(nPrefStreams * bs));
 
-  bfd->ctrlBlks = xcalloc(nPrefStreams, sizeof (bfd->ctrlBlks[0]));
+  bfd->ctrlBlks = (struct aiocb *) xcalloc(nPrefStreams, sizeof (bfd->ctrlBlks[0]));
 
   for ( i = 0; i < nPrefStreams; i++ )
     {
@@ -260,7 +259,7 @@ void pioWriterAIO(void)
   xdebug ( "nProcsCollNode=%d on this node", nProcsCollNode );
  
   bibBFiledataPA = listSetNew(destroyBFiledataPA, compareNamesBPA);
-  sentFinalize = xmalloc ( nProcsCollNode * sizeof ( sentFinalize ));
+  sentFinalize = (bool*) xmalloc ( nProcsCollNode * sizeof ( sentFinalize ));
   
   for ( ;; )
     {   
@@ -410,10 +409,7 @@ void pioWriterAIO(void)
 
 /***************************************************************/
 
-/***************************************************************/
 
-
-#endif
 #endif
 /*
  * Local Variables:

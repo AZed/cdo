@@ -39,7 +39,7 @@ void farfun(field_t *field1, field_t field2, const int function)
 }
 
 static
-void arradd(const size_t n, double * const restrict a, const double * const restrict b)
+void arradd(const size_t n, double * restrict a, const double * restrict b)
 {
   size_t i;
  

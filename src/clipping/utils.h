@@ -39,6 +39,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdlib.h>
+
+#ifdef __WITHOUT_ISO_C_BINDING
+#include "cfortran.h"
+#endif
+
 /**
  * gives a unique index for a given pointer
  * @param[in] pointer
@@ -69,25 +75,36 @@ void free_pointer_unique_lookup();
  */
 void abort_message ( char * text, char * file, int line );
 
+#ifdef __WITHOUT_ISO_C_BINDING
+     FCALLSCSUB3 ( yac_abort_message, YAC_ABORT_MESSAGE, yac_abort_message, STRING, STRING, PINT )
+#endif
+
 /** \example test_quicksort.c
  * This contains an example of how to use quicksort_index.
  */
 
 void quicksort_index ( int * a, int n, int * idx);
 
-/* --------------------------------------------------------------------
+/** \example test_mergesort.c
+ *
+ * Natural Merge sort *
+ *
+ */
+void yac_mergesort(void* base, size_t num, size_t size,
+                   int (*compar)(const void*,const void*));
 
-   Hash function
-
-   This algorithm (k=33) was first reported by dan bernstein many
-   years ago in comp.lang.c. another version of this algorithm (now
-   favored by bernstein) uses xor: hash(i) = hash(i - 1) * 33 ^
-   str[i]; the magic of number 33 (why it works better than many other
-   constants, prime or not) has never been adequately explained.
-
-   Source: http://www.cse.yorku.ca/~oz/hash.html 
-
-   --------------------------------------------------------------------- */
+/**
+ *
+ * Hash function
+ *
+ * This algorithm (k=33) was first reported by dan bernstein many
+ * years ago in comp.lang.c. another version of this algorithm (now
+ * favored by bernstein) uses xor: hash(i) = hash(i - 1) * 33 ^
+ * str[i]; the magic of number 33 (why it works better than many other
+ * constants, prime or not) has never been adequately explained.
+ *
+ * Source: http://www.cse.yorku.ca/~oz/hash.html 
+ */
 
 unsigned int hash(const char *str);
 

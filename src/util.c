@@ -15,6 +15,10 @@
   GNU General Public License for more details.
 */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600 /* ftello */
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>   /* tolower */
@@ -52,7 +56,7 @@ char *getOperator(const char *argument)
     {
       len = 1 + strlen(argument);
 
-      operatorArg = malloc(len);
+      operatorArg = (char*) malloc(len);
 
       memcpy(operatorArg, argument, len);
     }
@@ -79,7 +83,7 @@ char *getOperatorName(const char *operatorArg)
       else
 	len = strlen(operatorArg);
 
-      operatorName = malloc(len+1);
+      operatorName = (char*) malloc(len+1);
 
       memcpy(operatorName, operatorArg, len);
       operatorName[len] = '\0';
@@ -94,10 +98,10 @@ argument_t *file_argument_new(const char *filename)
 {
   argument_t *argument;
 
-  argument = calloc(1, sizeof(argument_t));
+  argument = (argument_t*) calloc(1, sizeof(argument_t));
 
   argument->argc = 1;
-  argument->argv = calloc(1, sizeof(char *));
+  argument->argv = (char **) calloc(1, sizeof(char *));
   argument->argv[0] = (char *) filename;
   argument->args = (char *) filename;
 
@@ -123,16 +127,16 @@ argument_t *argument_new(size_t argc, size_t len)
 {
   argument_t *argument;
 
-  argument = calloc(1, sizeof(argument_t));
+  argument = (argument_t*) calloc(1, sizeof(argument_t));
 
   if ( argc > 0 )
     {
       argument->argc = argc;
-      argument->argv = calloc(argc, sizeof(char *));
+      argument->argv = (char **) calloc(argc, sizeof(char *));
     }
 
   if ( len > 0 )
-    argument->args = calloc(len, sizeof(char));
+    argument->args = (char*) calloc(len, sizeof(char));
 
   return (argument);
 }
@@ -144,7 +148,8 @@ void argument_free(argument_t *argument)
     {
       if ( argument->argc )
 	{
-	  for ( int i = 0; i < argument->argc; ++i )
+	  int argc =  argument->argc;
+	  for ( int i = 0; i < argc; ++i )
 	    {
 	      if ( argument->argv[i] )
 		{
@@ -195,7 +200,7 @@ char *getFileArg(char *argument)
 	{
 	  parg = blankpos + 1;
 	  len = strlen(parg);
-	  fileArg = malloc(len+1);
+	  fileArg = (char*) malloc(len+1);
 	  strcpy(fileArg, parg);
 	}
     }
@@ -257,7 +262,7 @@ int get_season_start(void)
 }
 
 
-void get_season_name(const char *seas_name[4])
+void get_season_name(const char *seas_name[])
 {
   long i;
 
@@ -311,18 +316,6 @@ int userFileOverwrite(const char *filename)
   return (status);
 }
 
-int stdin_is_tty  = 0;
-int stdout_is_tty = 0;
-
-void init_is_tty(void)
-{
-  struct stat statbuf;
-  fstat(0, &statbuf);
-  if ( S_ISCHR(statbuf.st_mode) ) stdin_is_tty = 1;  
-  fstat(1, &statbuf);
-  if ( S_ISCHR(statbuf.st_mode) ) stdout_is_tty = 1;  
-}
-
 
 int ps_lhead = FALSE;
 int ps_nch   = 0;
@@ -341,7 +334,6 @@ void progressStatus(double offset, double refval, double curval)
   int ival;
 
   if ( cdoSilentMode ) return;
-
   if ( !stdout_is_tty ) return;
 
   offset = offset < 0 ? 0: offset;

@@ -7,18 +7,19 @@
 
 #include <stdbool.h>
 
-#ifdef USE_MPI
-#include "mpi.h"
+#include <mpi.h>
 
-typedef enum 
+enum IO_Server_command
 {
   IO_Open_file,
   IO_Close_file,
   IO_Get_fp,
   IO_Set_fp,
   IO_Send_buffer,
-  IO_Finalize
-} IO_Server_command;
+  IO_Finalize,
+  tagKey = 8,                   /* should be power of 2, must be
+                                 * larger than IO_Finalize */
+};
 
 struct dBuffer
 {
@@ -39,8 +40,20 @@ struct fileOpTag
 };
 
 /* pio.c */
-int encodeFileOpTag(int fileID, int command);
-struct fileOpTag decodeFileOpTag(int);
+static inline int
+encodeFileOpTag(int fileID, int command)
+{
+  return fileID * tagKey + command;
+}
+
+static inline struct fileOpTag
+decodeFileOpTag(int tag)
+{
+  struct fileOpTag rtag = { .id = tag / tagKey,
+                            .command = tag % tagKey };
+  return rtag;
+}
+
 
 /* pio_dbuffer.c */
 int       dbuffer_init ( struct dBuffer **, size_t );
@@ -93,7 +106,6 @@ void      finalizePOSIXFPGUARDSENDRECV ( void );
 /* pio_posixnonb.c */
 void pioWriterStdIO(void);
 
-#endif
 #endif
 /*
  * Local Variables:

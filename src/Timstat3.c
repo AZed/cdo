@@ -100,8 +100,9 @@ void *Timstat3(void *argument)
   nvars = vlistNvars(vlistID[0]);
   nrecs = vlistNrecs(vlistID[0]);
   nrecs3 = nrecs;
-  recVarID   = malloc(nrecs*sizeof(int));
-  recLevelID = malloc(nrecs*sizeof(int));
+  recVarID   = (int*) malloc(nrecs*sizeof(int));
+  recLevelID = (int*) malloc(nrecs*sizeof(int));
+
   taxisID1 = vlistInqTaxis(vlistID[0]);
   taxisID3 = taxisDuplicate(taxisID1);
  
@@ -115,19 +116,19 @@ void *Timstat3(void *argument)
   for ( i = 0; i < NIN; ++i )
     {
       field_init(&in[i]);
-      in[i].ptr = malloc(gridsize*sizeof(double));
+      in[i].ptr = (double*) malloc(gridsize*sizeof(double));
     }
 				 
   for ( i = 0; i < NOUT; ++i )
     {
       field_init(&out[i]);
-      out[i].ptr = malloc(gridsize*sizeof(double));
+      out[i].ptr = (double*) malloc(gridsize*sizeof(double));
     }
 				 
   for ( iw = 0; iw < NFWORK; ++iw )
-    fwork[iw] = malloc(nvars*sizeof(field_t *));
+    fwork[iw] = (field_t **) malloc(nvars*sizeof(field_t *));
   for ( iw = 0; iw < NIWORK; ++iw )
-    iwork[iw] = malloc(nvars*sizeof(int **));
+    iwork[iw] = (int ***) malloc(nvars*sizeof(int **));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -138,9 +139,9 @@ void *Timstat3(void *argument)
       missval2 = vlistInqVarMissval(vlistID[1], varID); 
 
       for ( iw = 0; iw < NFWORK; ++iw )
-	fwork[iw][varID] = malloc(nlevs*sizeof(field_t));
+	fwork[iw][varID] = (field_t*) malloc(nlevs*sizeof(field_t));
       for ( iw = 0; iw < NIWORK; ++iw )
-	iwork[iw][varID] = malloc(nlevs*sizeof(int *));  
+	iwork[iw][varID] = (int **) malloc(nlevs*sizeof(int *));  
 
       for ( levelID = 0; levelID < nlevs; ++levelID )
 	{
@@ -150,13 +151,13 @@ void *Timstat3(void *argument)
 	      fwork[iw][varID][levelID].grid    = gridID;
 	      fwork[iw][varID][levelID].nmiss   = 0;
 	      fwork[iw][varID][levelID].missval = missval;
-	      fwork[iw][varID][levelID].ptr     = malloc(gridsize*sizeof(double));
+	      fwork[iw][varID][levelID].ptr     = (double*) malloc(gridsize*sizeof(double));
 	      memset(fwork[iw][varID][levelID].ptr, 0, gridsize*sizeof(double));
 	    }
 
 	  for ( iw = 0; iw < NIWORK; ++iw )
 	    {
-	      iwork[iw][varID][levelID] = malloc(gridsize*sizeof(int));
+	      iwork[iw][varID][levelID] = (int*) malloc(gridsize*sizeof(int));
 	      memset(iwork[iw][varID][levelID], 0, gridsize*sizeof(int));
 	    }
 	}

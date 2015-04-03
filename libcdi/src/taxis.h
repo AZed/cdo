@@ -10,40 +10,45 @@ typedef struct {
   /* Time format    hhmmss */
   int     self;
   int     used;
-  int     type;           /* time type             */
-  int     vdate;          /* verification date     */
-  int     vtime;          /* verification time     */
-  int     rdate;          /* reference date        */
-  int     rtime;          /* reference time        */
+  int     type;           // time type
+  int     vdate;          // verification date
+  int     vtime;          // verification time
+  int     rdate;          // reference date
+  int     rtime;          // reference time
+  int     fdate;          // forecast reference date
+  int     ftime;          // forecast reference time
   int     calendar;
-  int     unit;           /* time unit             */
+  int     unit;           // time unit
   int     numavg;
   int     climatology;
   int     has_bounds;
-  int     vdate_lb;       /* lower bounds of vdate */
-  int     vtime_lb;       /* lower bounds of vtime */
-  int     vdate_ub;       /* upper bounds of vdate */
-  int     vtime_ub;       /* upper bounds of vtime */
-  char   *name;
-  char   *longname;
+  int     vdate_lb;       // lower bounds of vdate
+  int     vtime_lb;       // lower bounds of vtime
+  int     vdate_ub;       // upper bounds of vdate
+  int     vtime_ub;       // upper bounds of vtime
+  int     fc_unit;        // forecast time unit
+  double  fc_period;      // forecast time period
+  char*   name;
+  char*   longname;
 }
 taxis_t;
 
-void    ptaxisInit(taxis_t *taxis);
-void    ptaxisCopy(taxis_t *dest, taxis_t *source);
-taxis_t  *taxisPtr(int taxisID);
-void    cdiDecodeTimeval(double timevalue, taxis_t *taxis, int *date, int *time);
-double  cdiEncodeTimeval(int date, int time, taxis_t *taxis);
-void    timeval2vtime(double timevalue, taxis_t *taxis, int *vdate, int *vtime);
-double  vtime2timeval(int vdate, int vtime, taxis_t *taxis);
+void     ptaxisInit(taxis_t* taxis);
+void     ptaxisCopy(taxis_t* dest, taxis_t* source);
+taxis_t* taxisPtr(int taxisID);
+void     cdiSetForecastPeriod(double timevalue, taxis_t *taxis);
+void     cdiDecodeTimeval(double timevalue, taxis_t* taxis, int* date, int* time);
+double   cdiEncodeTimeval(int date, int time, taxis_t* taxis);
+void     timeval2vtime(double timevalue, taxis_t* taxis, int* vdate, int* vtime);
+double   vtime2timeval(int vdate, int vtime, taxis_t *taxis);
 
 #if !defined (SX)
-extern resOps taxisOps;
+extern const resOps taxisOps;
 #endif
 
 int
-taxisUnpack(char * unpackBuffer, int unpackBufferSize, int * unpackBufferPos,
-            int nspTarget, void *context, int checkForSameID);
+taxisUnpack(char *unpackBuffer, int unpackBufferSize, int *unpackBufferPos,
+            int originNamespace, void *context, int checkForSameID);
 
 #endif  /* _TAXIS_H */
 /*

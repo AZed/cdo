@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   instID  = institutDef( 252, 0, NULL, NULL );
 
   vlistID = vlistCreate();
-  varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+  varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
   
   vlistDefVarEnsemble( vlistID, varID, 1, 2, 3);
   

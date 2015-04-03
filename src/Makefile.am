@@ -183,10 +183,12 @@ cdo_SOURCES += Adisit.c        \
                cdo_int.h       \
                cdo_pthread.c   \
                cdo_vlist.c     \
+               cdo_getopt.c    \
+               cdo_getopt.h    \
                color.c         \
                color.h         \
                commandline.c   \
-               const.h       \
+               const.h         \
                counter.h       \
                dmemory.h       \
                dtypes.h        \
@@ -270,7 +272,15 @@ cdo_SOURCES += Adisit.c        \
                remaplib.c      \
                remapsort.c     \
                remap_scrip_io.c \
+               remap_search_reg2d.c \
                remap_search_latbins.c \
+               remap_store_link.c \
+               remap_store_link.h \
+               remap_conserv.c \
+               remap_conserv_scrip.c \
+               remap_distwgt_scrip.c \
+               remap_bicubic_scrip.c \
+               remap_bilinear_scrip.c \
                stdnametable.c  \
                stdnametable.h  \
                specspace.c     \
@@ -278,6 +288,8 @@ cdo_SOURCES += Adisit.c        \
                statistic.c     \
                statistic.h     \
                table.c         \
+               text.c          \
+               text.h          \
                timebase.h      \
                timer.c         \
                userlog.c       \
@@ -338,9 +350,9 @@ if ENABLE_ALL_STATIC
 cdotest_LDFLAGS  += -all-static
 endif
 
-cdo-userlog.o: userlog.c config.h
-	$(COMPILE) -DLOGPATH=${exec_prefix}/log -c -o cdo-userlog.o `test -f 'userlog.c' || echo '$(srcdir)/'`userlog.c
-cdo_static-userlog.o: userlog.c config.h
-	$(COMPILE) -DLOGPATH=${exec_prefix}/log -c -o cdo_static-userlog.o `test -f 'userlog.c' || echo '$(srcdir)/'`userlog.c
+#cdo-userlog.o: userlog.c config.h
+#	$(COMPILE) -DLOGPATH=${exec_prefix}/log -c -o cdo-userlog.o `test -f 'userlog.c' || echo '$(srcdir)/'`userlog.c
+#cdo_static-userlog.o: userlog.c config.h
+#	$(COMPILE) -DLOGPATH=${exec_prefix}/log -c -o cdo_static-userlog.o `test -f 'userlog.c' || echo '$(srcdir)/'`userlog.c
 #
 CLEANFILES  = `ls *~ 2> /dev/null`

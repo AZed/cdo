@@ -32,7 +32,7 @@ static int srvDefaultDprec = 0;
  */
 
 #undef  LIBVERSION
-#define LIBVERSION      1.3.1
+#define LIBVERSION      1.3.2
 #define XSTRING(x)	#x
 #define STRING(x)	XSTRING(x)
 static const char srv_libvers[] = STRING(LIBVERSION) " of "__DATE__" "__TIME__;
@@ -94,12 +94,14 @@ void srvLibInit()
 		  default:
 		    Message("Invalid digit in %s: %s", envName, envString);
 		  }
-		break;		
+		break;
 	      }
 	    default:
-	      Message("Invalid character in %s: %s", envName, envString);
-	      break;
-	    }
+              {
+                Message("Invalid character in %s: %s", envName, envString);
+                break;
+              }
+            }
 	  pos += 2;
 	}
     }
@@ -275,7 +277,7 @@ int srvInqData(srvrec_t *srvp, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT32));
-	  }	
+	  }
 	break;
       }
     case DOUBLE_PRECISION:
@@ -292,7 +294,7 @@ int srvInqData(srvrec_t *srvp, int prec, void *data)
 	else
 	  {
 	    Error("not implemented for %d byte float", sizeof(FLT64));
-	  }	
+	  }
 	break;
     default:
       {
@@ -338,7 +340,7 @@ int srvDefData(srvrec_t *srvp, int prec, const void *data)
   else                   hprec = srvp->hprec;
 
   if ( ! hprec ) hprec = dprec;
-  
+
   srvp->hprec = hprec;
 
   header = srvp->header;
@@ -461,7 +463,7 @@ int srvRead(int fileID, srvrec_t *srvp)
       }
     default:
       {
-	Error("unexpected header precision %d", hprec);
+	Error("Unexpected header precision %d", hprec);
         break;
       }
     }
@@ -470,8 +472,8 @@ int srvRead(int fileID, srvrec_t *srvp)
 
   if ( blocklen2 != blocklen )
     {
-      Warning("header blocklen differ!");
-      return (-1);
+      Warning("Header blocklen differ (blocklen1=%d; blocklen2=%d)!", blocklen, blocklen2);
+      if ( blocklen2 != 0 ) return (-1);
     }
 
   srvp->datasize = srvp->header[4]*srvp->header[5];
@@ -502,7 +504,7 @@ int srvRead(int fileID, srvrec_t *srvp)
 
   if ( dprec != SINGLE_PRECISION && dprec != DOUBLE_PRECISION )
     {
-      Warning("unexpected data precision %d", dprec);
+      Warning("Unexpected data precision %d", dprec);
       return (-1);
     }
 
@@ -512,8 +514,8 @@ int srvRead(int fileID, srvrec_t *srvp)
 
   if ( blocklen2 != blocklen )
     {
-      Warning("data blocklen differ!");
-      return (-1);
+      Warning("Data blocklen differ (blocklen1=%d; blocklen2=%d)!", blocklen, blocklen2);
+      if ( blocklen2 != 0 ) return (-1);
     }
 
   return (0);
@@ -566,7 +568,7 @@ int srvWrite(int fileID, srvrec_t *srvp)
         break;
       }
     }
-  
+
   binWriteF77Block(fileID, byteswap, blocklen);
 
   datasize = header[4]*header[5];

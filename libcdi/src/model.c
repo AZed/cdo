@@ -29,7 +29,6 @@ model_t;
 
 
 static int  MODEL_Debug = 0;   /* If set to 1, debugging */
-static int * modelInitializedNsp;
 
 static void modelInit(void);
 
@@ -42,8 +41,13 @@ static void   modelPackP    ( void * modelptr, void * buff, int size,
                               int *position, void *context);
 static int    modelTxCode   ( void );
 
-resOps modelOps = { modelCompareP, modelDestroyP, modelPrintP
-                    , modelGetSizeP, modelPackP, modelTxCode
+static const resOps modelOps = {
+  modelCompareP,
+  modelDestroyP,
+  modelPrintP,
+  modelGetSizeP,
+  modelPackP,
+  modelTxCode
 };
 
 static
@@ -56,27 +60,33 @@ void modelDefaultValue ( model_t *modelptr )
   modelptr->name        = NULL;
 }
 
-static
-model_t *modelNewEntry ( void )
+static model_t *
+modelNewEntry(cdiResH resH, int instID, int modelgribID, const char *name)
 {
   model_t *modelptr;
 
   modelptr = (model_t *) xmalloc(sizeof(model_t));
   modelDefaultValue ( modelptr );
-  modelptr->self = reshPut (( void * ) modelptr, &modelOps );
+  if (resH == CDI_UNDEFID)
+    modelptr->self = reshPut(modelptr, &modelOps);
+  else
+    {
+      modelptr->self = resH;
+      reshReplace(resH, modelptr, &modelOps);
+    }
   modelptr->used = 1;
+  modelptr->instID = instID;
+  modelptr->modelgribID = modelgribID;
+  if ( name && *name ) modelptr->name = strdupx(name);
 
   return (modelptr);
 }
 
-
-int modelDef(int instID, int modelgribID, const char *name);
-
-static
 void modelDefaultEntries ( void )
 {
   int instID, i;
-  cdiResH resH[10];
+  enum { nDefModels = 10 };
+  cdiResH resH[nDefModels];
 
   instID  = institutInq(  0,   0, "ECMWF", NULL);
   /* (void)    modelDef(instID, 131, "ERA15"); */
@@ -102,42 +112,21 @@ void modelDefaultEntries ( void )
 
   instID  = institutInq(  0,   1, "NCEP", NULL);
   resH[9] = modelDef(instID,  80, "T62L28MRF");
-  
-  for ( i = 0; i < 10 ; i++ )
-    reshSetStatus(resH[i], &modelOps, SUSPENDED);
-}
 
-static
-void modelFinalize ( void )
-{
-  free (   modelInitializedNsp );
+  for ( i = 0; i < nDefModels ; i++ )
+    reshSetStatus(resH[i], &modelOps, RESH_PRE_ASSIGNED);
 }
 
 static
 void modelInit(void)
 {
   static int modelInitialized = 0;
-  int nsp, nspc;
-  char *env;
 
-  nspc = namespaceGetNumber ();
-  
-  if ( !modelInitialized )
-    {
-      modelInitialized = 1;
-      modelInitializedNsp = xcalloc ( 1, nspc * sizeof ( int ));
-      atexit ( modelFinalize );
-      env = getenv("MODEL_DEBUG");
-      if ( env ) MODEL_Debug = atoi(env);  
-    }
+  if (modelInitialized) return;
 
-  nsp = namespaceGetActive ();
-  
-  if ( modelInitializedNsp[nsp] ) return;
-  
-  modelInitializedNsp[nsp] = 1;
-  
-  modelDefaultEntries ();
+  modelInitialized = 1;
+  char *env = getenv("MODEL_DEBUG");
+  if ( env ) MODEL_Debug = atoi(env);
 }
 
 int modelSize ( void )
@@ -154,8 +143,8 @@ struct modelLoc
 static enum cdiApplyRet
 findModelByID(int resID, void *res, void *data)
 {
-  model_t *modelptr = res;
-  struct modelLoc *ret = data;
+  model_t *modelptr = (model_t*) res;
+  struct modelLoc *ret = (struct modelLoc*) data;
   int instID = ret->instID, modelgribID = ret->modelgribID;
   if (modelptr->used
       && modelptr->instID == instID
@@ -171,8 +160,8 @@ findModelByID(int resID, void *res, void *data)
 static enum cdiApplyRet
 findModelByName(int resID, void *res, void *data)
 {
-  model_t *modelptr = res;
-  struct modelLoc *ret = data;
+  model_t *modelptr = (model_t*) res;
+  struct modelLoc *ret = (struct modelLoc*) data;
   int instID = ret->instID, modelgribID = ret->modelgribID;
   const char *name = ret->name;
   if (modelptr->used
@@ -213,11 +202,7 @@ int modelDef(int instID, int modelgribID, const char *name)
 
   modelInit ();
 
-  modelptr = modelNewEntry();
-
-  modelptr->instID      = instID;
-  modelptr->modelgribID = modelgribID;
-  if ( name && *name ) modelptr->name = strdupx(name);
+  modelptr = modelNewEntry(CDI_UNDEFID, instID, modelgribID, name);
 
   return modelptr->self;
 }
@@ -270,12 +255,16 @@ int  modelCompareP ( void * modelptr1, void * modelptr2 )
 
 void modelDestroyP ( void * modelptr )
 {
+  model_t *mp = (model_t*) modelptr;
+  if (mp->name)
+    free(mp->name);
+  free(mp);
 }
 
 
 void modelPrintP   ( void * modelptr, FILE * fp )
 {
-  model_t * mp = ( model_t * ) modelptr;
+  model_t *mp = (model_t*) modelptr;
 
   if ( !mp ) return;
 
@@ -303,7 +292,7 @@ enum {
 
 static int modelGetSizeP(void * modelptr, void *context)
 {
-  model_t *p = modelptr;
+  model_t *p = (model_t*) modelptr;
   int txsize = serializeGetSize(model_nints, DATATYPE_INT, context)
     + serializeGetSize(p->name?strlen(p->name) + 1:0, DATATYPE_TXT, context);
   return txsize;
@@ -312,7 +301,7 @@ static int modelGetSizeP(void * modelptr, void *context)
 
 static void modelPackP(void * modelptr, void * buf, int size, int *position, void *context)
 {
-  model_t *p = modelptr;
+  model_t *p = (model_t*) modelptr;
   int tempbuf[model_nints];
   tempbuf[0] = p->self;
   tempbuf[1] = p->instID;
@@ -324,25 +313,30 @@ static void modelPackP(void * modelptr, void * buf, int size, int *position, voi
 }
 
 int
-modelUnpack(void *buf, int size, int *position, int nspTarget, void *context)
+modelUnpack(void *buf, int size, int *position, int originNamespace, void *context,
+            int force_id)
 {
   int tempbuf[model_nints];
-  int modelID;
   char *name;
   serializeUnpack(buf, size, position, tempbuf, model_nints, DATATYPE_INT, context);
   if (tempbuf[3] != 0)
     {
-      name = xmalloc(tempbuf[3]);
+      name = (char*) xmalloc(tempbuf[3]);
       serializeUnpack(buf, size, position, name, tempbuf[3], DATATYPE_TXT, context);
     }
   else
     {
       name = "";
     }
-  modelID = modelDef( namespaceAdaptKey ( tempbuf[1], nspTarget ), tempbuf[2], name);
-  // FIXME: this should work, once all types are transferred
-  //assert(modelID == tempbuf[0]);
-  return modelID;
+  int targetID = namespaceAdaptKey(tempbuf[0], originNamespace);
+  model_t *mp = modelNewEntry(force_id?targetID:CDI_UNDEFID,
+                              namespaceAdaptKey(tempbuf[1], originNamespace),
+                              tempbuf[2], name);
+  if (tempbuf[3] != 0)
+    free(name);
+  xassert(!force_id
+          || (mp->self == namespaceAdaptKey(tempbuf[0], originNamespace)));
+  return mp->self;
 }
 
 /*

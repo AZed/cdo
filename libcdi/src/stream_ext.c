@@ -78,11 +78,10 @@ int extInqRecord(stream_t *streamptr, int *varID, int *levelID)
   int zaxisID = -1;
   int header[4];
   int vlistID;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   vlistID = streamptr->vlistID;
   fileID  = streamptr->fileID;
-  extp    = streamptr->record->extp;
 
   *varID   = -1;
   *levelID = -1;
@@ -117,7 +116,7 @@ int extReadRecord(stream_t *streamptr, double *data, int *nmiss)
   int varID, gridID;
   int i, size;
   double missval;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   vlistID = streamptr->vlistID;
   fileID  = streamptr->fileID;
@@ -126,7 +125,6 @@ int extReadRecord(stream_t *streamptr, double *data, int *nmiss)
   recID   = streamptr->tsteps[tsID].recIDs[vrecID];
   recpos  = streamptr->tsteps[tsID].records[recID].position;
   varID   = streamptr->tsteps[tsID].records[recID].varID;
-  extp    = streamptr->record->extp;
 
   fileSetPos(fileID, recpos, SEEK_SET);
 
@@ -204,10 +202,9 @@ int extDefRecord(stream_t *streamptr)
   int header[4];
   int status = 0;
   int pdis, pcat, pnum;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   gridID   = streamptr->record->gridID;
-  extp     = streamptr->record->extp;
 
   cdiDecodeParam(streamptr->record->param, &pnum, &pcat, &pdis);
   header[0] = streamptr->record->date;
@@ -225,12 +222,9 @@ int extDefRecord(stream_t *streamptr)
 
 int extWriteRecord(stream_t *streamptr, const double *data)
 {
-  int fileID;
   int status = 0;
-  extrec_t *extp;
-
-  fileID = streamptr->fileID;
-  extp   = streamptr->record->extp;
+  int fileID = streamptr->fileID;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   extDefDataDP(extp, data);
 
@@ -276,7 +270,7 @@ void extAddRecord(stream_t *streamptr, int param, int level, int xysize,
   leveltype = ZAXIS_GENERIC;
 
   varAddRecord(recID, param, gridID, leveltype, 0, level, 0, 0, 0,
-	       extInqDatatype(prec, number), &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL);
+	       extInqDatatype(prec, number), &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -335,11 +329,10 @@ void extScanTimestep1(stream_t *streamptr)
   taxis_t *taxis;
   int vlistID;
   extcompvar_t compVar, compVar0;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   streamptr->curTsID = 0;
 
-  extp  = streamptr->record->extp;
   tsID  = tstepsNewEntry(streamptr);
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -469,13 +462,12 @@ int extScanTimestep2(stream_t *streamptr)
   taxis_t *taxis;
   int vlistID;
   extcompvar_t compVar, compVar0;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   streamptr->curTsID = 1;
 
   fileID  = streamptr->fileID;
   vlistID = streamptr->vlistID;
-  extp    = streamptr->record->extp;
 
   tsID = streamptr->rtsteps;
   if ( tsID != 1 )
@@ -645,7 +637,7 @@ int extScanTimestep(stream_t *streamptr)
   taxis_t *taxis;
   int rindex, nrecs = 0;
   extcompvar_t compVar, compVar0;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   if ( CDI_Debug )
     {
@@ -658,7 +650,6 @@ int extScanTimestep(stream_t *streamptr)
   if ( streamptr->rtsteps == 0 )
     Error("Internal problem! Missing contents.");
 
-  extp  = streamptr->record->extp;
   tsID  = streamptr->rtsteps;
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -796,9 +787,8 @@ void extReadVarDP(stream_t *streamptr, int varID, double *data, int *nmiss)
   int recID;
   int i;
   double missval;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
-  extp     = streamptr->record->extp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   nlevs    = streamptr->vars[varID].nlevs;
@@ -855,9 +845,8 @@ void extReadVarSliceDP(stream_t *streamptr, int varID, int levID, double *data, 
   int recID;
   int i;
   double missval;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
-  extp     = streamptr->record->extp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   nlevs    = streamptr->vars[varID].nlevs;
@@ -913,11 +902,10 @@ void extWriteVarDP(stream_t *streamptr, int varID, const double *data)
   int tsID;
   int vlistID;
   int pdis, pcat, pnum;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
   if ( CDI_Debug ) Message("streamID = %d  varID = %d", streamptr->self, varID);
 
-  extp     = streamptr->record->extp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   tsID     = streamptr->curTsID;
@@ -959,9 +947,8 @@ void extWriteVarSliceDP(stream_t *streamptr, int varID, int levID, const double 
   int tsID;
   int vlistID;
   int pdis, pcat, pnum;
-  extrec_t *extp;
+  extrec_t *extp = (extrec_t*) streamptr->record->exsep;
 
-  extp     = streamptr->record->extp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   tsID     = streamptr->curTsID;

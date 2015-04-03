@@ -5,13 +5,9 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <mpi.h>
 
-void IOServer(void (*postCommSetupActions)(void));
-
-#endif
+void cdiPioServer(void (*postCommSetupActions)(void));
 
 #endif
 /*

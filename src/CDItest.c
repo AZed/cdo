@@ -49,9 +49,13 @@ void *CDItest(void *argument)
 
   NCOPY = cdoOperatorAdd("ncopy",   0, 0, NULL);
 
+  UNUSED(NCOPY);
+
   //  if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
   operatorID = cdoOperatorID();
+
+  UNUSED(operatorID);
 
   //  operatorInputArg("Number of copies");
   if ( operatorArgc() == 1 ) max_copy = atoi(operatorArgv()[0]);
@@ -75,7 +79,7 @@ void *CDItest(void *argument)
       streamDefVlist(streamID2, vlistID2);
 
       gridsize = vlistGridsizeMax(vlistID1);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
 
       tsID1 = 0;
       tsID2 = 0;

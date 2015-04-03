@@ -12,6 +12,18 @@ set -x
 #
 case "${HOSTNAME}" in
 # i386-apple-darwin10
+    icc)
+	./configure --prefix=$HOME/local \
+                    --enable-maintainer-mode \
+                    --enable-iso-c-interface \
+                    --enable-swig \
+                    --enable-python \
+                    --with-jasper=/opt/local \
+                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
+                    --with-netcdf=$HOME/local \
+                    --with-szlib=$HOME/local \
+	            CC=icc CFLAGS="-g -D_REENTRANT -Wall -O3 -march=native -Df2cFortran -fp-model source"
+	;;
     bailung*)
 	./configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
@@ -132,7 +144,7 @@ case "${HOSTNAME}" in
                     --with-szlib=/sw/aix61/szip-2.1-threadsafe \
                     AR="ar -X 64" LDFLAGS="-brtl" FC=xlf2003_r CC=xlc_r \
                     CFLAGS="-g -O3 -qhot -q64 -qarch=auto -qtune=auto -qlistfmt=html=transforms -DHAVE_MMAP -Dextname" \
-                    FCFLAGS="-qsuffix=cpp=f90" \
+                    FCFLAGS="-qsuffix=cpp=f90 -qextname" \
                     SHELL=/bin/bash
         ;;
     *)

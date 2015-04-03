@@ -204,13 +204,13 @@ int gridDefine(griddes_t grid)
 
 	if ( (grid.def_xfirst || grid.def_xlast || grid.def_xinc) && grid.xvals == NULL )
 	  {
-	    grid.xvals = malloc(grid.xsize*sizeof(double));
+	    grid.xvals = (double*) malloc(grid.xsize*sizeof(double));
 	    gridGenXvals(grid.xsize, grid.xfirst, grid.xlast, grid.xinc, grid.xvals);
 
 	    if ( grid.genBounds && grid.xbounds == NULL && grid.xsize > 1 )
 	      {
 		grid.nvertex = 2;
-		grid.xbounds = malloc(grid.xsize*grid.nvertex*sizeof(double));
+		grid.xbounds = (double*) malloc(grid.xsize*grid.nvertex*sizeof(double));
 		for ( i = 0; i < (int) grid.xsize-1; i++ )
 		  {
 		    grid.xbounds[2*i+1]   = 0.5*(grid.xvals[i] + grid.xvals[i+1]);
@@ -224,13 +224,13 @@ int gridDefine(griddes_t grid)
 	if ( (grid.def_yfirst || grid.def_ylast || grid.def_yinc) && grid.yvals == NULL )
 	  {
 	    if ( ! grid.def_ylast ) grid.ylast = grid.yfirst;
-	    grid.yvals = malloc(grid.ysize*sizeof(double));
+	    grid.yvals = (double*) malloc(grid.ysize*sizeof(double));
 	    gridGenYvals(grid.type, grid.ysize, grid.yfirst, grid.ylast, grid.yinc, grid.yvals);
 
 	    if ( grid.genBounds && grid.ybounds == NULL && grid.ysize > 1 )
 	      {
 		grid.nvertex = 2;
-		grid.ybounds = malloc(grid.ysize*grid.nvertex*sizeof(double));
+		grid.ybounds = (double*) malloc(grid.ysize*grid.nvertex*sizeof(double));
 		for ( i = 0; i < (int) grid.ysize-1; i++ )
 		  {
 		    grid.ybounds[2*i+1]   = 0.5*(grid.yvals[i] + grid.yvals[i+1]);
@@ -281,6 +281,7 @@ int gridDefine(griddes_t grid)
 	  {
 	    gridDefXpole(gridID, grid.xpole);
 	    gridDefYpole(gridID, grid.ypole);
+	    gridDefAngle(gridID, grid.angle);
 	  }
 
 	if ( grid.mask )
@@ -416,14 +417,14 @@ int gridDefine(griddes_t grid)
 
 	if ( grid.def_xfirst && grid.def_xinc && grid.xvals == NULL )
 	  {
-	    grid.xvals = malloc(grid.xsize*sizeof(double));
+	    grid.xvals = (double*) malloc(grid.xsize*sizeof(double));
 	    for ( i = 0; i < grid.xsize; ++i )
 	      grid.xvals[i] = grid.xfirst + i*grid.xinc;
 	  }
 
 	if ( grid.def_yfirst && grid.def_yinc && grid.yvals == NULL )
 	  {
-	    grid.yvals = malloc(grid.ysize*sizeof(double));
+	    grid.yvals = (double*) malloc(grid.ysize*sizeof(double));
 	    for ( i = 0; i < grid.ysize; ++i )
 	      grid.yvals[i] = grid.yfirst + i*grid.yinc;
 	  }
@@ -595,7 +596,7 @@ double *readfield(griddes_t *grid, int record, char *format, char *filename)
   if ( format == NULL )   Error("format undefined!");
   if ( filename == NULL ) Error("file name undefined!");
 
-  vals = malloc(grid->size*sizeof(double));
+  vals = (double*) malloc(grid->size*sizeof(double));
 
   if ( strcmp(format, "extra") == 0 )
     {
@@ -630,7 +631,7 @@ double *readfield4(griddes_t *grid, int record, char *format, char *filename)
   if ( format == NULL )   Error("format undefined!");
   if ( filename == NULL ) Error("file name undefined!");
 
-  vals  = malloc(4*grid->size*sizeof(double));
+  vals  = (double*) malloc(4*grid->size*sizeof(double));
 
   if ( strcmp(format, "extra") == 0 )
     {
@@ -930,10 +931,6 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  else
 	    cdoAbort("Invalid projection : %s (grid description file: %s)", pline, dname);
 	}
-      else if ( cmpstr(pline, "a", len)  == 0 )
-	{
-	  grid.a = readflt(dname, "a", skipSeparator(pline + len));
-	}
       else if ( cmpstr(pline, "lon_0", len)  == 0 )
 	{
 	  grid.lon_0 = readflt(dname, "lon_0", skipSeparator(pline + len));
@@ -974,14 +971,23 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  grid.ypole = readflt(dname, "latpole", skipSeparator(pline + len));
 	  grid.isRotated = TRUE;
 	}
+      else if ( cmpstr(pline, "angle", len)  == 0 )
+	{
+	  grid.angle = readflt(dname, "angle", skipSeparator(pline + len));
+	  grid.isRotated = TRUE;
+	}
+      else if ( cmpstr(pline, "a", len)  == 0 )
+	{
+	  grid.a = readflt(dname, "a", skipSeparator(pline + len));
+	}
       else if ( cmpstr(pline, "gridlatlon", len)  == 0 )
 	{
 	  int i;
 	  double flat = 0, flon = 0;
 	  if ( grid.size == 0 ) grid.size = grid.xsize * grid.ysize;
 	  
-	  grid.xvals = malloc(grid.size*sizeof(double));
-	  grid.yvals = malloc(grid.size*sizeof(double));
+	  grid.xvals = (double*) malloc(grid.size*sizeof(double));
+	  grid.yvals = (double*) malloc(grid.size*sizeof(double));
 	  for ( i = 0; i < (int) grid.size; i++ )
 	    {
 	      if ( ! readline(gfp, line, MAX_LINE_LEN) )
@@ -1004,7 +1010,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	    {
 	      long count = 0;
 	      pline = skipSeparator(pline + len);
-	      grid.mask = malloc(size*sizeof(int));
+	      grid.mask = (int*) malloc(size*sizeof(int));
 
 	      for ( i = 0; i < size; i++ )
 		{
@@ -1046,7 +1052,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  if ( size > 0 )
 	    {
 	      pline = skipSeparator(pline + len);
-	      grid.xvals = malloc(size*sizeof(double));
+	      grid.xvals = (double*) malloc(size*sizeof(double));
 
 	      for ( i = 0; i < size; i++ )
 		{
@@ -1081,7 +1087,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  if ( size > 0 )
 	    {
 	      pline = skipSeparator(pline + len);
-	      grid.yvals = malloc(size*sizeof(double));
+	      grid.yvals = (double*) malloc(size*sizeof(double));
 
 	      for ( i = 0; i < size; i++ )
 		{
@@ -1121,7 +1127,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  if ( size > 0 && grid.nvertex > 0 )
 	    {	  
 	      pline = skipSeparator(pline + len);
-	      grid.xbounds = malloc(size*grid.nvertex*sizeof(double));
+	      grid.xbounds = (double*) malloc(size*grid.nvertex*sizeof(double));
 
 	      for ( i = 0; i < (int) (size*grid.nvertex); i++ )
 		{
@@ -1164,7 +1170,7 @@ int gridFromFile(FILE *gfp, const char *dname)
 	  if ( size > 0 && grid.nvertex > 0 )
 	    {	  
 	      pline = skipSeparator(pline + len);
-	      grid.ybounds = malloc(size*grid.nvertex*sizeof(double));
+	      grid.ybounds = (double*) malloc(size*grid.nvertex*sizeof(double));
 
 	      for ( i = 0; i < (int) (size*grid.nvertex); i++ )
 		{
@@ -1284,8 +1290,8 @@ int gridFromPingo(FILE *gfp, const char *dname)
       grid.xsize = nlon;
       grid.ysize = nlat;
 
-      grid.xvals = malloc(grid.xsize*sizeof(double));
-      grid.yvals = malloc(grid.ysize*sizeof(double));
+      grid.xvals = (double*) malloc(grid.xsize*sizeof(double));
+      grid.yvals = (double*) malloc(grid.ysize*sizeof(double));
 
       if ( ! input_ival(gfp, &nlon) ) return (gridID);
       if ( nlon == 2 )
@@ -1353,8 +1359,8 @@ int gridFromPingo(FILE *gfp, const char *dname)
       if ( nlat > 2 ) /* check if gaussian */
 	{
 	  double *yvals, *yw;
-	  yvals = malloc(grid.ysize*sizeof(double));
-	  yw    = malloc(grid.ysize*sizeof(double));
+	  yvals = (double*) malloc(grid.ysize*sizeof(double));
+	  yw    = (double*) malloc(grid.ysize*sizeof(double));
 	  gaussaw(yvals, yw, grid.ysize);
 	  free(yw);
 	  for ( i = 0; i < (int) grid.ysize; i++ )
@@ -1415,11 +1421,11 @@ int ntr2nlat(int ntr)
 {
   int nlat, nlat2;
 
-  nlat = NINT((ntr*3.+1.)/2.);
+  nlat = lround((ntr*3.+1.)/2.);
   if ( (nlat % 2) > 0 )
     {
       nlat  = nlat + 1;
-      nlat2 = NINT(((ntr+1)*3.+1.)/2.);
+      nlat2 = lround(((ntr+1)*3.+1.)/2.);
       /*
       if ( nlat == nlat2 )
 	Error("Computation of latitudes failed for truncation %d", ntr);
@@ -1434,11 +1440,11 @@ int ntr2nlat_linear(int ntr)
 {
   int nlat, nlat2;
 
-  nlat = NINT((ntr*2.+1.)/2.);
+  nlat = lround((ntr*2.+1.)/2.);
   if ( (nlat % 2) > 0 )
     {
       nlat  = nlat + 1;
-      nlat2 = NINT(((ntr+1)*2.+1.)/2.);
+      nlat2 = lround(((ntr+1)*2.+1.)/2.);
       /*
       if ( nlat == nlat2 )
 	Error("Computation of latitudes failed for truncation %d", ntr);
@@ -1511,8 +1517,8 @@ void gen_grid_lonlat(griddes_t *grid, const char *pline, double inc, double lon1
   grid->xsize = nlon;
   grid->ysize = nlat;
 
-  grid->xvals = malloc(grid->xsize*sizeof(double));
-  grid->yvals = malloc(grid->ysize*sizeof(double));
+  grid->xvals = (double*) malloc(grid->xsize*sizeof(double));
+  grid->yvals = (double*) malloc(grid->ysize*sizeof(double));
 
   for ( i = 0; i < nlon; ++i ) grid->xvals[i] = lon1 + inc/2 + i*inc;
   for ( i = 0; i < nlat; ++i ) grid->yvals[i] = lat1 + inc/2 + i*inc;
@@ -1611,8 +1617,8 @@ int gridFromName(const char *gridname)
 	  grid.type = GRID_LONLAT;
 	  grid.xsize = 1;
 	  grid.ysize = 1;
-	  grid.xvals = malloc(sizeof(double));
-	  grid.yvals = malloc(sizeof(double));
+	  grid.xvals = (double*) malloc(sizeof(double));
+	  grid.yvals = (double*) malloc(sizeof(double));
 	  grid.xvals[0] = atof(pline);
 	  while ( isdigit((int) *pline) || ispunct((int) *pline) || *pline == '-' ) pline++;
 	  if ( *pline == '_' ) pline++;

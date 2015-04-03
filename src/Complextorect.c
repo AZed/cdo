@@ -74,9 +74,9 @@ void *Complextorect(void *argument)
   streamDefVlist(streamID3, vlistID3);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = malloc(2*gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
-  array3 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(2*gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
+  array3 = (double*) malloc(gridsize*sizeof(double));
       
   tsID  = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

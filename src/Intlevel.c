@@ -231,7 +231,7 @@ void *Intlevel(void *argument)
   if ( i == nzaxis ) cdoAbort("No processable variable found!");
 
   nlev1 = nlevel;
-  lev1  = malloc((nlev1+2)*sizeof(double));
+  lev1  = (double*) malloc((nlev1+2)*sizeof(double));
   zaxisInqLevels(zaxisID1, lev1+1);
 
   lup = FALSE;
@@ -273,10 +273,10 @@ void *Intlevel(void *argument)
 
   if ( cdoVerbose ) for ( i = 0; i < nlev1+2; ++i ) printf("lev1 %d: %g\n", i, lev1[i]);
 
-  lev_idx1 = malloc(nlev2*sizeof(int));
-  lev_idx2 = malloc(nlev2*sizeof(int));
-  lev_wgt1 = malloc(nlev2*sizeof(double));
-  lev_wgt2 = malloc(nlev2*sizeof(double));
+  lev_idx1 = (int*) malloc(nlev2*sizeof(int));
+  lev_idx2 = (int*) malloc(nlev2*sizeof(int));
+  lev_wgt1 = (double*) malloc(nlev2*sizeof(double));
+  lev_wgt2 = (double*) malloc(nlev2*sizeof(double));
 
   gen_weights(expol, nlev1+2, lev1, nlev2, lev2, lev_idx1, lev_idx2, lev_wgt1, lev_wgt2);
 
@@ -307,11 +307,11 @@ void *Intlevel(void *argument)
 
   nvars = vlistNvars(vlistID1);
 
-  vars      = malloc(nvars*sizeof(int));
-  vardata1  = malloc(nvars*sizeof(double*));
-  vardata2  = malloc(nvars*sizeof(double*));
-  varnmiss  = malloc(nvars*sizeof(int*));
-  varinterp = malloc(nvars*sizeof(int));
+  vars      = (int*) malloc(nvars*sizeof(int));
+  vardata1  = (double**) malloc(nvars*sizeof(double*));
+  vardata2  = (double**) malloc(nvars*sizeof(double*));
+  varnmiss  = (int**) malloc(nvars*sizeof(int*));
+  varinterp = (int*) malloc(nvars*sizeof(int));
 
   maxlev   = nlev1 > nlev2 ? nlev1 : nlev2;
 
@@ -322,20 +322,20 @@ void *Intlevel(void *argument)
       gridsize = gridInqSize(gridID);
       nlevel   = zaxisInqSize(zaxisID);
 
-      vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
+      vardata1[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
 
       if ( zaxisID == zaxisID1 )
 	{
 	  varinterp[varID] = TRUE;
-	  vardata2[varID]  = malloc(gridsize*nlev2*sizeof(double));
-	  varnmiss[varID]  = malloc(maxlev*sizeof(int));
+	  vardata2[varID]  = (double*) malloc(gridsize*nlev2*sizeof(double));
+	  varnmiss[varID]  = (int*) malloc(maxlev*sizeof(int));
 	  memset(varnmiss[varID], 0, maxlev*sizeof(int));
 	}
       else
 	{
 	  varinterp[varID] = FALSE;
 	  vardata2[varID]  = vardata1[varID];
-	  varnmiss[varID]  = malloc(nlevel*sizeof(int));
+	  varnmiss[varID]  = (int*) malloc(nlevel*sizeof(int));
 	}
     }
 

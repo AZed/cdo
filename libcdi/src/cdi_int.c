@@ -39,13 +39,14 @@ int cdiIgnoreAttCoordinates = FALSE;
 int cdiIgnoreValidRange     = FALSE;
 int cdiSkipRecords          = 0;
 int cdiInventoryMode        = 1;
+size_t CDI_netcdf_hdr_pad   = 0UL;
 
 char *cdiPartabPath   = NULL;
 int   cdiPartabIntern = 1;
 
 double cdiDefaultMissval = -9.E33;
 
-char *Filetypes[] = {
+const char Filetypes[][9] = {
   "UNKNOWN",
   "GRIB",
   "GRIB2",
@@ -67,6 +68,7 @@ int CDI_Debug   = 0;    /* If set to 1, debugging           */
 
 static int  STREAM_Debug = 0;   /* If set to 1, debugging */
 
+int cdiGribApiDebug     = 0;
 int cdiDefaultLeveltype = -1;
 static int cdiDataUnreduced = 0;
 static int cdiSortName = 0;
@@ -80,10 +82,13 @@ static int    streamGetPackSize ( void * streamptr, void *context);
 static void   streamPack        ( void * streamptr, void * buff, int size, int * position, void *context );
 static int    streamTxCode      ( void );
 
-resOps streamOps = { streamCompareP, streamDestroyP, streamPrintP,
-                     streamGetPackSize,
-		     streamPack,
-                     streamTxCode
+const resOps streamOps = {
+  streamCompareP,
+  streamDestroyP,
+  streamPrintP,
+  streamGetPackSize,
+  streamPack,
+  streamTxCode
 };
 
 long cdiGetenvInt(char *envName)
@@ -178,6 +183,12 @@ void cdiInitialize(void)
       gribSetConst(1); // 1: Don't pack constant fields on regular grids
 #endif
 
+      value = cdiGetenvInt("CDI_DEBUG");
+      if ( value >= 0 ) CDI_Debug = (int) value;
+
+      value = cdiGetenvInt("CDI_GRIBAPI_DEBUG");
+      if ( value >= 0 ) cdiGribApiDebug = (int) value;
+
       value = cdiGetenvInt("CDI_REGULARGRID");
       if ( value >= 0 ) cdiDataUnreduced = (int) value;
 
@@ -189,6 +200,9 @@ void cdiInitialize(void)
 
       value = cdiGetenvInt("CDI_LEVELTYPE");
       if ( value >= 0 ) cdiDefaultLeveltype = (int) value;
+
+      value = cdiGetenvInt("CDI_NETCDF_HDR_PAD");
+      if ( value >= 0 ) CDI_netcdf_hdr_pad = (size_t) value;
 
       envString = getenv("CDI_MISSVAL");
       if ( envString ) cdiDefaultMissval = atof(envString);
@@ -218,7 +232,7 @@ void cdiInitialize(void)
 	  cdiSkipRecords = cdiSkipRecords > 0 ? cdiSkipRecords : 0;
 	}
 
-      envString = getenv("GRIB_INVENTORY_MODE");
+      envString = getenv("CDI_INVENTORY_MODE");
       if ( envString )
 	{
 	  if ( strncmp(envString, "time", 4) == 0 )
@@ -264,9 +278,9 @@ void cdiInitialize(void)
 }
 
 
-char *strfiletype(int filetype)
+const char *strfiletype(int filetype)
 {
-  char *name;
+  const char *name;
   int size = (int) (sizeof(Filetypes)/sizeof(char *));
 
   if ( filetype > 0 && filetype < size )
@@ -388,26 +402,13 @@ int streamSize(void)
 
 void cdiDefGlobal(const char *string, int val)
 {
-  if ( strcmp(string, "REGULARGRID") == 0 )
-    {
-      cdiDataUnreduced = val;
-    }
-  else if ( strcmp(string, "SORTNAME") == 0 )
-    {
-      cdiSortName = val;
-    }
-  else if ( strcmp(string, "HAVE_MISSVAL") == 0 )
-    {
-      cdiHaveMissval = val;
-    }
-  else if ( strcmp(string, "NC_CHUNKSIZEHINT") == 0 )
-    {
-      cdiNcChunksizehint = val;
-    }
-  else
-    {
-      Warning("Unsupported global key: %s", string);
-    }
+  if      ( strcmp(string, "REGULARGRID")      == 0 ) cdiDataUnreduced = val;
+  else if ( strcmp(string, "GRIBAPI_DEBUG")    == 0 ) cdiGribApiDebug = val;
+  else if ( strcmp(string, "SORTNAME")         == 0 ) cdiSortName = val;
+  else if ( strcmp(string, "HAVE_MISSVAL")     == 0 ) cdiHaveMissval = val;
+  else if ( strcmp(string, "NC_CHUNKSIZEHINT") == 0 ) cdiNcChunksizehint = val;
+  else if ( strcmp(string, "NETCDF_HDR_PAD")   == 0 ) CDI_netcdf_hdr_pad = (size_t) val;
+  else Warning("Unsupported global key: %s", string);
 }
 
 
@@ -601,10 +602,10 @@ void streamPrintP   ( void * streamptr, FILE * fp )
 
   fprintf ( fp, "#\n");
   fprintf ( fp, "# streamID %d\n", sp->self);
-  fprintf ( fp, "#\n"); 
+  fprintf ( fp, "#\n");
   fprintf ( fp, "self          = %d\n", sp->self );
   fprintf ( fp, "accesstype    = %d\n", sp->accesstype );
-  fprintf ( fp, "accessmode    = %d\n", sp->accessmode ); 
+  fprintf ( fp, "accessmode    = %d\n", sp->accessmode );
   fprintf ( fp, "filetype      = %d\n", sp->filetype );
   fprintf ( fp, "byteorder     = %d\n", sp->byteorder );
   fprintf ( fp, "fileID        = %d\n", sp->fileID );
@@ -626,7 +627,7 @@ void streamPrintP   ( void * streamptr, FILE * fp )
   fprintf ( fp, "//  tsteps_t   *tsteps;\n" );
   fprintf ( fp, "tstepsTableSize= %d\n", sp->tstepsTableSize );
   fprintf ( fp, "tstepsNextID  = %d\n", sp->tstepsNextID );
-  fprintf ( fp, "//BaseTime  basetime;\n" );
+  fprintf ( fp, "//basetime_t  basetime;\n" );
   fprintf ( fp, "ncmode        = %d\n", sp->ncmode );
   fprintf ( fp, "vlistID       = %d\n", sp->vlistID );
   fprintf ( fp, "//  int       xdimID[MAX_GRIDS_PS];\n" );
@@ -751,7 +752,7 @@ streamPack(void * streamptr, void * packBuffer, int packBufferSize,
 
 struct streamAssoc
 streamUnpack(char * unpackBuffer, int unpackBufferSize,
-             int * unpackBufferPos, int nspTarget, void *context)
+             int * unpackBufferPos, int originNamespace, void *context)
 {
   int intBuffer[streamNint], streamID;
   uint32_t d;
@@ -772,7 +773,7 @@ streamUnpack(char * unpackBuffer, int unpackBufferSize,
   xassert(d == cdiCheckSum(DATATYPE_TXT, intBuffer[2], filename));
   streamID = streamOpenWrite ( filename, intBuffer[1] );
   xassert ( streamID >= 0 &&
-            namespaceAdaptKey ( intBuffer[0], nspTarget ) == streamID );
+            namespaceAdaptKey ( intBuffer[0], originNamespace ) == streamID );
   streamDefByteorder(streamID, intBuffer[5]);
   streamDefCompType(streamID, intBuffer[6]);
   streamDefCompLevel(streamID, intBuffer[7]);

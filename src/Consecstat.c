@@ -119,14 +119,14 @@ static void selEndOfPeriod(field_t *periods, field_t history, field_t current, i
     if ( DBL_IS_EQUAL(parray[i], pmissval) ) periods->nmiss++;
 }
 
-void *Consecstat (void *argument)
+void *Consecstat(void *argument)
 {
   int operatorID;
-  int i;
   int istreamID, itaxisID, ivlistID, itsID;
   int ostreamID, otaxisID, ovlistID, otsID;
   int vdate = 0, vtime = 0;
   int histvdate = 0, histvtime = 0;
+  int i;
   int recID, nrecs;
   int varID, nvars;
   int levelID, nlevels; 
@@ -152,7 +152,7 @@ void *Consecstat (void *argument)
   vlistDefTaxis(ovlistID, otaxisID);
 
   field_init(&field);
-  field.ptr = malloc(vlistGridsizeMax(ovlistID)*sizeof(double));
+  field.ptr = (double*) malloc(vlistGridsizeMax(ovlistID)*sizeof(double));
 
   nvars     = vlistNvars(ivlistID);
   vars      = field_calloc(ivlistID, FIELD_PTR);

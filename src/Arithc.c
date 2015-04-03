@@ -36,7 +36,7 @@ int *fill_vars(int vlistID)
 {
   int varID;
   int nvars = vlistNvars(vlistID);
-  int *vars = malloc(nvars*sizeof(int));
+  int *vars = (int*) malloc(nvars*sizeof(int));
 
   if ( cdoNumVarnames )
     {
@@ -117,7 +117,7 @@ void *Arithc(void *argument)
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field);
-  field.ptr    = malloc(gridsize*sizeof(double));
+  field.ptr    = (double*) malloc(gridsize*sizeof(double));
   field.weight = NULL;
 
   tsID = 0;

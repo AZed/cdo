@@ -162,8 +162,8 @@ void uv_to_p_grid(int nlon, int nlat, double *grid1x, double *grid1y,
   double *gxhelp, *gyhelp;
 
   gridsizex = (nlon+2)*nlat;
-  gxhelp  = malloc(gridsizex*sizeof(double));
-  gyhelp  = malloc(gridsizex*sizeof(double));
+  gxhelp  = (double*) malloc(gridsizex*sizeof(double));
+  gyhelp  = (double*) malloc(gridsizex*sizeof(double));
 
   /* load to a help field */
   for ( j = 0; j < nlat; j++ )
@@ -323,12 +323,12 @@ void *Mrotuvb(void *argument)
   nlon    = gridInqXsize(gridID1);
   nlat    = gridInqYsize(gridID1);
 
-  grid1x  = malloc(gridsize*sizeof(double));
-  grid1y  = malloc(gridsize*sizeof(double));
-  grid2x  = malloc(gridsize*sizeof(double));
-  grid2y  = malloc(gridsize*sizeof(double));
-  grid3x  = malloc(gridsize*sizeof(double));
-  grid3y  = malloc(gridsize*sizeof(double));
+  grid1x  = (double*) malloc(gridsize*sizeof(double));
+  grid1y  = (double*) malloc(gridsize*sizeof(double));
+  grid2x  = (double*) malloc(gridsize*sizeof(double));
+  grid2y  = (double*) malloc(gridsize*sizeof(double));
+  grid3x  = (double*) malloc(gridsize*sizeof(double));
+  grid3y  = (double*) malloc(gridsize*sizeof(double));
 
   gridInqXvals(gridID1, grid1x);
   gridInqYvals(gridID1, grid1y);
@@ -407,16 +407,16 @@ void *Mrotuvb(void *argument)
   missval1 = vlistInqVarMissval(vlistID1, 0);
   missval2 = vlistInqVarMissval(vlistID2, 0);
 
-  ufield  = malloc(gridsize*sizeof(double));
-  vfield  = malloc(gridsize*sizeof(double));
-  urfield = malloc(gridsize*sizeof(double));
-  vrfield = malloc(gridsize*sizeof(double));
+  ufield  = (double*) malloc(gridsize*sizeof(double));
+  vfield  = (double*) malloc(gridsize*sizeof(double));
+  urfield = (double*) malloc(gridsize*sizeof(double));
+  vrfield = (double*) malloc(gridsize*sizeof(double));
 
   if ( gpint )
     {
       int gridsizex = (nlon+2)*nlat;
-      uhelp   = malloc(gridsizex*sizeof(double));
-      vhelp   = malloc(gridsizex*sizeof(double));
+      uhelp   = (double*) malloc(gridsizex*sizeof(double));
+      vhelp   = (double*) malloc(gridsizex*sizeof(double));
     }
 
   tsID = 0;

@@ -1,4 +1,6 @@
 set cdoCmpl = (\
+- \
+- \
 L \
 M \
 O \
@@ -60,10 +62,10 @@ complextorect \
 consecsum \
 consects \
 const \
-contour \
 conv_cmor_table \
 copy \
 cos \
+coshill \
 covar0 \
 covar0r \
 dayavg \
@@ -89,7 +91,6 @@ deltap_fl \
 delvar \
 detrend \
 diff \
-diff2 \
 diffc \
 diffn \
 diffp \
@@ -207,21 +208,20 @@ genbic \
 genbil \
 gencon \
 gencon2 \
-gencons \
 gendis \
 gengrid \
 genlaf \
 gennn \
+genycon \
 geopotheight \
 ggstat \
 ggstats \
+gheight \
 globavg \
 gp2fc \
 gp2sp \
 gp2spl \
 gradsdes \
-graph \
-grfill \
 gridarea \
 gridboxavg \
 gridboxmax \
@@ -424,7 +424,6 @@ remapbil \
 remapcon \
 remapcon1 \
 remapcon2 \
-remapcons \
 remapdis \
 remapdis1 \
 remapeta \
@@ -433,6 +432,7 @@ remapeta_z \
 remaplaf \
 remapnn \
 remapsum \
+remapycon \
 replace \
 retocomplex \
 rhopot \
@@ -534,7 +534,6 @@ setvar \
 setvrange \
 setyear \
 setzaxis \
-shaded \
 shifttime \
 showcode \
 showdate \
@@ -596,7 +595,6 @@ ssopar \
 stdatm \
 stimelogo \
 strbre \
-stream \
 strgal \
 strwin \
 studentt \
@@ -654,7 +652,6 @@ varquot2test \
 varrms \
 vct \
 vct2 \
-vector \
 vertavg \
 vertmax \
 vertmean \

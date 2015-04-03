@@ -41,11 +41,11 @@ void genGrids(int gridID1, int *gridIDs, int nxvals, int nyvals, int nxblocks, i
   nx = gridInqXsize(gridID1);
   ny = gridInqYsize(gridID1);
 
-  xvals = malloc(nx*sizeof(double));
-  yvals = malloc(ny*sizeof(double));
+  xvals = (double*) malloc(nx*sizeof(double));
+  yvals = (double*) malloc(ny*sizeof(double));
 
-  xlsize = malloc(nxblocks*sizeof(int));
-  ylsize = malloc(nyblocks*sizeof(int));
+  xlsize = (int*) malloc(nxblocks*sizeof(int));
+  ylsize = (int*) malloc(nyblocks*sizeof(int));
 
   gridInqXvals(gridID1, xvals);
   gridInqYvals(gridID1, yvals);
@@ -65,7 +65,7 @@ void genGrids(int gridID1, int *gridIDs, int nxvals, int nyvals, int nxblocks, i
 	offset = iy*nyvals*nx + ix*nxvals;
 
 	gridsize2 = xlsize[ix]*ylsize[iy];
-	gridindex[index] = malloc(gridsize2*sizeof(int));
+	gridindex[index] = (int*) malloc(gridsize2*sizeof(int));
 
 	gridsize2 = 0;
         // printf("iy %d, ix %d offset %d\n", iy, ix,  offset);
@@ -207,19 +207,19 @@ void *Scatter(void *argument)
   nsplit = nxblocks*nyblocks;
   if ( nsplit > MAX_BLOCKS ) cdoAbort("Too many blocks (max = %d)!", MAX_BLOCKS);
 
-  array1 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
 
-  vlistIDs  = malloc(nsplit*sizeof(int));
-  streamIDs = malloc(nsplit*sizeof(int));
+  vlistIDs  = (int*) malloc(nsplit*sizeof(int));
+  streamIDs = (int*) malloc(nsplit*sizeof(int));
 
-  grids = malloc(ngrids*sizeof(sgrid_t));
+  grids = (sgrid_t*) malloc(ngrids*sizeof(sgrid_t));
   for ( i = 0; i < ngrids; i++ )
     {  
       gridID1 = vlistGrid(vlistID1, i);
       grids[i].gridID    = vlistGrid(vlistID1, i);
-      grids[i].gridIDs   = malloc(nsplit*sizeof(int));
-      grids[i].gridsize  = malloc(nsplit*sizeof(int));
-      grids[i].gridindex = malloc(nsplit*sizeof(int*));
+      grids[i].gridIDs   = (int*) malloc(nsplit*sizeof(int));
+      grids[i].gridsize  = (int*) malloc(nsplit*sizeof(int));
+      grids[i].gridindex = (int**) malloc(nsplit*sizeof(int*));
 
       for ( index = 0; index < nsplit; index++ ) grids[i].gridindex[index] = NULL;
     }
@@ -246,7 +246,7 @@ void *Scatter(void *argument)
   for ( index = 0; index < nsplit; index++ )
     if ( grids[0].gridsize[index] > gridsize2max ) gridsize2max = grids[0].gridsize[index];
 
-  array2 = malloc(gridsize2max*sizeof(double));
+  array2 = (double*) malloc(gridsize2max*sizeof(double));
 
   strcpy(filename, cdoStreamName(1)->args);
   nchars = strlen(filename);

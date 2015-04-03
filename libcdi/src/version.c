@@ -11,17 +11,15 @@
 #else
 #  error "VERSION undefined"
 #endif
-
+/*
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
 char *cdiLibraryVersion(void);
-
 #if defined(__cplusplus)
 }
 #endif
-
+*/
 char *cdiLibraryVersion(void)
 {
   return (cdi_libvers);

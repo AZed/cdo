@@ -222,6 +222,7 @@ void *Tinfo(void *argument)
   int vdate_first = 0, vtime_first = 0;
   int vdate0 = 0, vtime0 = 0;
   int vdate = 0, vtime = 0;
+  int fdate = 0, ftime = 0;
   int nrecs, ntsteps;
   int tsID = 0, ntimeout;
   int taxisID;
@@ -230,6 +231,7 @@ void *Tinfo(void *argument)
   int year0, month0, day0;
   int year, month, day;
   int calendar, unit;
+  int lforecast = FALSE;
   int incperiod0 = 0, incunit0 = 0;
   int incperiod = 0, incunit = 0;
   int its = 0, igap;
@@ -264,7 +266,7 @@ void *Tinfo(void *argument)
 
       if ( taxisID != CDI_UNDEFID )
 	{
-	  if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
+	  if ( taxisInqType(taxisID) != TAXIS_ABSOLUTE )
 	    {
 	      vdate = taxisInqRdate(taxisID);
 	      vtime = taxisInqRtime(taxisID);
@@ -284,15 +286,41 @@ void *Tinfo(void *argument)
 		fprintf(stdout, "  Bounds = true");
 
 	      fprintf(stdout, "\n");
+
+	      if ( taxisInqType(taxisID) == TAXIS_FORECAST )
+		{
+		  fdate = taxisInqFdate(taxisID);
+		  ftime = taxisInqFtime(taxisID);
+	      
+		  date2str(fdate, vdatestr, sizeof(vdatestr));
+		  time2str(ftime, vtimestr, sizeof(vtimestr));
+
+		  fprintf(stdout, "     Forecast RefTime = %s %s", vdatestr, vtimestr);
+		      
+		  unit = taxisInqForecastTunit(taxisID);
+		  if ( unit != CDI_UNDEFID )  fprintf(stdout, "  Units = %s", tunit2str(unit));
+
+		  fprintf(stdout, "\n");
+
+		  lforecast = TRUE;
+		}
 	    }
 	}
 
       calendar = taxisInqCalendar(taxisID);
 
+      fprintf(stdout, "\n");
+      fprintf(stdout, "         Verification Time              ");
+      if ( lforecast ) fprintf(stdout, " Forecast Reference Time     ");
       if ( taxisHasBounds(taxisID) )
-	fprintf(stdout, "\nTimestep YYYY-MM-DD hh:mm:ss   Increment YYYY-MM-DD hh:mm:ss  YYYY-MM-DD hh:mm:ss  Difference\n");
-      else
-	fprintf(stdout, "\nTimestep YYYY-MM-DD hh:mm:ss   Increment\n");
+	fprintf(stdout, " lower bound          upper bound");
+      fprintf(stdout, "\n");
+
+      fprintf(stdout, "Timestep YYYY-MM-DD hh:mm:ss   Increment");
+      if ( lforecast ) fprintf(stdout, " YYYY-MM-DD hh:mm:ss   Period");
+      if ( taxisHasBounds(taxisID) )
+	fprintf(stdout, " YYYY-MM-DD hh:mm:ss  YYYY-MM-DD hh:mm:ss  Difference");
+      fprintf(stdout, "\n");
 
       tsID = 0;
       while ( (nrecs = streamInqTimestep(streamID, tsID)) )
@@ -326,6 +354,20 @@ void *Tinfo(void *argument)
 	      vdate_first = vdate;
 	      vtime_first = vtime;
 	      fprintf(stdout, "   --------");
+	    }
+
+	  if ( lforecast )
+	    {
+	      fdate = taxisInqFdate(taxisID);
+	      ftime = taxisInqFtime(taxisID);
+	      
+	      date2str(fdate, vdatestr, sizeof(vdatestr));
+	      time2str(ftime, vtimestr, sizeof(vtimestr));
+
+	      fprintf(stdout, " %s %s", vdatestr, vtimestr);
+
+	      double fc_period = taxisInqForecastPeriod(taxisID);
+	      fprintf(stdout, " %7g", fc_period);
 	    }
 
 	  if ( taxisHasBounds(taxisID) ) printBounds(taxisID, calendar);

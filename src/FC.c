@@ -230,7 +230,7 @@ void *FC(void *argument)
   // printf("nfc %d, ntr %d, nlat %d, nlon %d\n", nfc, ntr, nlat, nlon);
 
   nvars = vlistNvars(vlistID2);
-  vars  = malloc(nvars*sizeof(int));
+  vars  = (int*) malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( gridID1 == vlistInqVarGrid(vlistID1, varID) )
@@ -246,12 +246,12 @@ void *FC(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
 
   if ( gridID2 != -1 )
     {
       gridsize = gridInqSize(gridID2);
-      array2 = malloc(gridsize*sizeof(double));
+      array2 = (double*) malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

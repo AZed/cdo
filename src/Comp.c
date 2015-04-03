@@ -112,9 +112,9 @@ void *Comp(void *argument)
 
   gridsize = vlistGridsizeMax(vlistIDx1);
 
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
-  array3 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
+  array3 = (double*) malloc(gridsize*sizeof(double));
 
   arrayx1 = array1;
   arrayx2 = array2;
@@ -143,12 +143,12 @@ void *Comp(void *argument)
       if ( filltype == FILL_TS )
 	{
 	  nvars  = vlistNvars(vlistIDx2);
-	  vardata  = malloc(nvars*sizeof(double *));
+	  vardata  = (double **) malloc(nvars*sizeof(double *));
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
 	      gridsize = gridInqSize(vlistInqVarGrid(vlistIDx2, varID));
 	      nlev     = zaxisInqSize(vlistInqVarZaxis(vlistIDx2, varID));
-	      vardata[varID]  = malloc(nlev*gridsize*sizeof(double));
+	      vardata[varID]  = (double*) malloc(nlev*gridsize*sizeof(double));
 	    }
 	}
     }

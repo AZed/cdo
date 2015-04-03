@@ -135,7 +135,7 @@ void *Isosurface(void *argument)
   if ( i == nzaxis ) cdoAbort("No processable variable found!");
 
   nlev1 = nlevel;
-  lev1  = malloc((nlev1)*sizeof(double));
+  lev1  = (double*) malloc((nlev1)*sizeof(double));
   zaxisInqLevels(zaxisID1, lev1);
 
   zaxisIDsfc = zaxisCreate(ZAXIS_SURFACE, 1);
@@ -150,13 +150,13 @@ void *Isosurface(void *argument)
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field);
-  field.ptr = malloc(gridsize*sizeof(double));
+  field.ptr = (double*) malloc(gridsize*sizeof(double));
 
   nvars = vlistNvars(vlistID1);
 
-  liso  =     malloc(nvars*sizeof(int));
-  vars  =     malloc(nvars*sizeof(int));
-  vars1 = malloc(nvars*sizeof(field_t));
+  liso  = (int*)     malloc(nvars*sizeof(int));
+  vars  = (int*)     malloc(nvars*sizeof(int));
+  vars1 = (field_t*) malloc(nvars*sizeof(field_t));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -176,7 +176,7 @@ void *Isosurface(void *argument)
       vars1[varID].zaxis   = zaxisID;
       vars1[varID].nmiss   = 0;
       vars1[varID].missval = missval;
-      vars1[varID].ptr     = malloc(gridsize*nlevel*sizeof(double));
+      vars1[varID].ptr     = (double*) malloc(gridsize*nlevel*sizeof(double));
     }
 
   tsID = 0;

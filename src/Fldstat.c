@@ -165,10 +165,10 @@ void *Fldstat(void *argument)
   field_init(&field);
 
   lim = vlistGridsizeMax(vlistID1);
-  field.ptr    = malloc(lim*sizeof(double));
+  field.ptr    = (double*) malloc(lim*sizeof(double));
   field.weight = NULL;
   if ( needWeights )
-    field.weight = malloc(lim*sizeof(double));
+    field.weight = (double*) malloc(lim*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

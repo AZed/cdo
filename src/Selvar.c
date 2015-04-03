@@ -150,7 +150,7 @@ void *Selvar(void *argument)
 
   if ( nsel )
     {
-      selfound = malloc(nsel*sizeof(int));
+      selfound = (int*) malloc(nsel*sizeof(int));
       for ( i = 0; i < nsel; i++ ) selfound[i] = FALSE;
     }
 
@@ -407,7 +407,7 @@ void *Selvar(void *argument)
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   tsID = 0;

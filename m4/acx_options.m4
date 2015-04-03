@@ -135,18 +135,20 @@ AC_SUBST([HDF5_INCLUDE])
 AC_SUBST([HDF5_LIBS])
 #  ----------------------------------------------------------------------
 #  Compile application with netcdf
+ENABLE_NETCDF=no
 NETCDF_ROOT=''
 NETCDF_INCLUDE=''
 NETCDF_LIBS=''
 AC_ARG_WITH([netcdf],
-            [AS_HELP_STRING([--with-netcdf=<yes|no|directory> (default=yes)],[location of netcdf library (lib and include subdirs)])],
+            [AS_HELP_STRING([--with-netcdf=<yes|no|directory> (default=no)],[location of netcdf library (lib and include subdirs)])],
             [AS_CASE(["$with_netcdf"],
                      [no],[AC_MSG_CHECKING([for netcdf library])
                            AC_MSG_RESULT([suppressed])],
                      [yes],[AC_CHECK_HEADERS([netcdf.h])
                             AC_SEARCH_LIBS([nc_open],
                                            [netcdf],
-                                           [AC_DEFINE([HAVE_LIBNETCDF],[1],[Define to 1 for NETCDF support])],
+                                           [AC_DEFINE([HAVE_LIBNETCDF],[1],[Define to 1 for NETCDF support])
+                                            ENABLE_NETCDF=yes],
                                            [AC_MSG_ERROR([Could not link to netcdf library])])
                             NETCDF_LIBS=" -lnetcdf"
                             AC_CHECK_PROG(NC_CONFIG,nc-config,nc-config)
@@ -167,7 +169,8 @@ AC_ARG_WITH([netcdf],
                                  AC_CHECK_HEADERS([netcdf.h])
                                  AC_SEARCH_LIBS([nc_open],
                                                 [netcdf],
-                                                [AC_DEFINE([HAVE_LIBNETCDF],[1],[Define to 1 for NETCDF support])],
+                                                [AC_DEFINE([HAVE_LIBNETCDF],[1],[Define to 1 for NETCDF support])
+                                                 ENABLE_NETCDF=yes],
                                                 [AC_MSG_ERROR([Could not link to netcdf library])])
                                  NETCDF_LIBS=" -L$NETCDF_ROOT/lib -lnetcdf"
                                  NETCDF_INCLUDE=" -I$NETCDF_ROOT/include"
@@ -191,6 +194,7 @@ AC_ARG_WITH([netcdf],
                                 [AC_MSG_NOTICE([$with_netcdf is not a directory! NETCDF suppressed])])])],
             [AC_MSG_CHECKING([for NETCDF library])
              AC_MSG_RESULT([suppressed])])
+AC_SUBST([ENABLE_NETCDF])
 AC_SUBST([NETCDF_ROOT])
 AC_SUBST([NETCDF_INCLUDE])
 AC_SUBST([NETCDF_LIBS])

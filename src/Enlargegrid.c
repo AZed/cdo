@@ -69,13 +69,13 @@ void gen_index(int gridID1, int gridID2, int *index)
       if ( ! (gridInqXvals(gridID2, NULL) && gridInqYvals(gridID2, NULL)) )
 	cdoAbort("Grid 2 has no values!");
 
-      xvals1 = malloc(nlon1*sizeof(double));
-      yvals1 = malloc(nlat1*sizeof(double));
-      xvals2 = malloc(nlon2*sizeof(double));
-      yvals2 = malloc(nlat2*sizeof(double));
+      xvals1 = (double*) malloc(nlon1*sizeof(double));
+      yvals1 = (double*) malloc(nlat1*sizeof(double));
+      xvals2 = (double*) malloc(nlon2*sizeof(double));
+      yvals2 = (double*) malloc(nlat2*sizeof(double));
 
-      xindex = malloc(nlon2*sizeof(int));
-      yindex = malloc(nlat2*sizeof(int));
+      xindex = (int*) malloc(nlon2*sizeof(int));
+      yindex = (int*) malloc(nlat2*sizeof(int));
 
       gridInqXvals(gridID1, xvals1);
       gridInqYvals(gridID1, yvals1);
@@ -209,9 +209,9 @@ void *Enlargegrid(void *argument)
   gridsize1 = gridInqSize(gridID1);
   gridsize2 = gridInqSize(gridID2);
 
-  array1 = malloc(gridsize1*sizeof(double));
-  array2 = malloc(gridsize2*sizeof(double));
-  gindex = malloc(gridsize1*sizeof(int));
+  array1 = (double*) malloc(gridsize1*sizeof(double));
+  array2 = (double*) malloc(gridsize2*sizeof(double));
+  gindex = (int*) malloc(gridsize1*sizeof(int));
 
   gen_index(gridID2, gridID1, gindex);
 

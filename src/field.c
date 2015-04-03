@@ -560,7 +560,7 @@ double fldpctl(field_t field, const int p)
     {
       if ( nmiss > 0 )
         {
-          array2 = malloc((len - nmiss)*sizeof(double));
+          array2 = (double*) malloc((len - nmiss)*sizeof(double));
 
           for ( i = 0, j = 0; i < len; i++ ) 
             if ( !DBL_IS_EQUAL(array[i], missval) )

@@ -64,7 +64,7 @@ void cdoInqHistory(int fileID)
   if ( ghistorysize > 0 )
     {
       size_t len;
-      ghistory = malloc(ghistorysize+1);
+      ghistory = (char*) malloc(ghistorysize+1);
       ghistory[ghistorysize] = 0;
       streamInqHistoryString(fileID, ghistory);
       len = strlen(ghistory);
@@ -77,29 +77,44 @@ void cdoInqHistory(int fileID)
 }
 
 
-void cdoDefHistory(int fileID, char *histstring)
+void cdoDefHistory(int fileID, char* histstring)
 {
-  char *history = NULL;
+  char* strtimeptr = NULL;
+  char* history = NULL;
   size_t historysize = 0;
-  char *strtimeptr;
-  extern int cdoDisableHistory;
+  extern int CDO_Append_History;
+  extern int CDO_Reset_History;
 
-  strtimeptr = get_strtimeptr();
-  
-  historysize = ghistorysize+strlen(strtimeptr)+strlen(histstring)+2;
-  history = malloc(historysize);
+  if ( !CDO_Reset_History ) historysize += ghistorysize+1;
 
-  strcpy(history, strtimeptr);
-  strcat(history, histstring);
+  if ( CDO_Append_History )
+    {
+      strtimeptr = get_strtimeptr();
+      historysize += strlen(strtimeptr)+strlen(histstring)+1;
+    }
 
-  if ( cdoDisableHistory == FALSE )
+  if ( historysize )
+    {
+      history = (char*) malloc(historysize);
+      history[0] = 0;
+    }
+
+  if ( CDO_Append_History )
+    {
+      strcpy(history, strtimeptr);
+      strcat(history, histstring);
+    }
+
+  if ( !CDO_Reset_History )
     if ( ghistory )
       {
-	strcat(history, "\n");
+	if ( CDO_Append_History ) strcat(history, "\n");
 	strcat(history, ghistory);
       }
-
-  streamDefHistory(fileID, strlen(history), history);
   
-  free(history);
+  if ( historysize )
+    {
+      streamDefHistory(fileID, strlen(history), history);
+      free(history);
+    }
 }

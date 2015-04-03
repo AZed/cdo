@@ -133,8 +133,7 @@ static
 void printGridInfo(int vlistID)
 {
   int ngrids, index;
-  int gridID, gridtype, trunc, gridsize, xsize, ysize;
-  int nbyte0;
+  int gridID, gridtype, trunc, gridsize, xsize, ysize, xysize;
   char xname[CDI_MAX_NAME], yname[CDI_MAX_NAME], xunits[CDI_MAX_NAME], yunits[CDI_MAX_NAME];
   char uuidOfHGrid[17];
 
@@ -147,12 +146,13 @@ void printGridInfo(int vlistID)
       gridsize = gridInqSize(gridID);
       xsize    = gridInqXsize(gridID);
       ysize    = gridInqYsize(gridID);
+      xysize   = xsize*ysize;
       gridInqXname(gridID, xname);
       gridInqYname(gridID, yname);
       gridInqXunits(gridID, xunits);
       gridInqYunits(gridID, yunits);
 
-      nbyte0   = fprintf(stdout, "  %4d : %-12s > ", index+1, gridNamePtr(gridtype));
+      fprintf(stdout, "  %4d : %-24s", index+1, gridNamePtr(gridtype));
 
       if ( gridtype == GRID_LONLAT   ||
 	   gridtype == GRID_LCC2 ||
@@ -171,13 +171,14 @@ void printGridInfo(int vlistID)
 	  ylast  = gridInqYval(gridID, ysize-1);
 	  yinc   = gridInqYinc(gridID);
 
+          fprintf(stdout, " : points=%d", gridsize);
 	  if ( gridtype == GRID_GAUSSIAN_REDUCED )
-	    fprintf(stdout, "size : dim = %d  nlat = %d", gridsize, ysize);
-	  else
-	    fprintf(stdout, "size      : dim = %d  nx = %d  ny = %d", gridsize, xsize, ysize);
+	    fprintf(stdout, "  nlat=%d", ysize);
+	  else if ( xysize )
+	    fprintf(stdout, " (%dx%d)", xsize, ysize);
 
 	  if ( gridtype == GRID_GAUSSIAN || gridtype == GRID_GAUSSIAN_REDUCED )
-	    fprintf(stdout, "  np = %d", gridInqNP(gridID));
+	    fprintf(stdout, "  np=%d", gridInqNP(gridID));
 
 	  fprintf(stdout, "\n");
 
@@ -186,36 +187,31 @@ void printGridInfo(int vlistID)
 
 	  if ( xsize > 0 && lxcoord )
 	    {
-	      if ( gridtype == GRID_GAUSSIAN_REDUCED )
-		{
-		  fprintf(stdout, "size : dim = %d  nlat = %d\n", gridsize, ysize);
-		  fprintf(stdout, "%*s", nbyte0, "");
-		  fprintf(stdout, "longitude : reduced\n");
-		}
-	      else
-		{
-		  xfirst = gridInqXval(gridID, 0);
-		  xlast  = gridInqXval(gridID, xsize-1);
-		  xinc   = gridInqXinc(gridID);
-		  fprintf(stdout, "%*s", nbyte0, "");
-		  fprintf(stdout, "%-9s : first = %.9g", xname, xfirst);
-		  if ( xsize > 1 ) fprintf(stdout, "  last = %.9g", xlast);
-		  if ( IS_NOT_EQUAL(xinc, 0) )
-		    fprintf(stdout, "  inc = %.9g", xinc);
-		  fprintf(stdout, "  %s", xunits);
-		  if ( gridIsCircular(gridID) ) fprintf(stdout, "  circular");
-		  fprintf(stdout, "\n");
-		}
+              xfirst = gridInqXval(gridID, 0);
+              xlast  = gridInqXval(gridID, xsize-1);
+              xinc   = gridInqXinc(gridID);
+              fprintf(stdout, "%33s : %g", xname, xfirst);
+              if ( xsize > 1 )
+                {
+                  fprintf(stdout, " to %g", xlast);
+                  if ( IS_NOT_EQUAL(xinc, 0) )
+                    fprintf(stdout, " by %g", xinc);
+                }
+              fprintf(stdout, " %s", xunits);
+              if ( gridIsCircular(gridID) ) fprintf(stdout, "  circular");
+              fprintf(stdout, "\n");
 	    }
 
 	  if ( ysize > 0 && lycoord )
 	    {
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "%-9s : first = %.9g", yname, yfirst);
-	      if ( ysize > 1 ) fprintf(stdout, "  last = %.9g", ylast);
-	      if ( IS_NOT_EQUAL(yinc, 0) && gridtype != GRID_GAUSSIAN && gridtype != GRID_GAUSSIAN_REDUCED )
-		fprintf(stdout, "  inc = %.9g", yinc);
-	      fprintf(stdout, "  %s", yunits);
+	      fprintf(stdout, "%33s : %g", yname, yfirst);
+	      if ( ysize > 1 )
+                {
+                  fprintf(stdout, " to %g", ylast);
+                  if ( IS_NOT_EQUAL(yinc, 0) && gridtype != GRID_GAUSSIAN && gridtype != GRID_GAUSSIAN_REDUCED )
+                    fprintf(stdout, " by %g", yinc);
+                }
+              fprintf(stdout, " %s", yunits);
 	      fprintf(stdout, "\n");
 	    }
 
@@ -225,18 +221,15 @@ void printGridInfo(int vlistID)
 	      lonpole = gridInqXpole(gridID);
 	      latpole = gridInqYpole(gridID);
 	      angle   = gridInqAngle(gridID);
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "northpole : lon = %.9g  lat = %.9g", lonpole, latpole);
-	      if ( angle > 0 ) fprintf(stdout, "  angle = %.9g", angle);
+	      fprintf(stdout, "%33s : lon=%g  lat=%g", "northpole", lonpole, latpole);
+	      if ( angle > 0 ) fprintf(stdout, "  angle=%g", angle);
 	      fprintf(stdout, "\n");
 	    }
 
 	  if ( gridInqXbounds(gridID, NULL) || gridInqYbounds(gridID, NULL) )
 	    {
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "available :");
-	      if ( gridInqXbounds(gridID, NULL) ) fprintf(stdout, " xbounds");
-	      if ( gridInqYbounds(gridID, NULL) ) fprintf(stdout, " ybounds");
+	      fprintf(stdout, "%33s :", "available");
+	      if ( gridInqXbounds(gridID, NULL) && gridInqYbounds(gridID, NULL) ) fprintf(stdout, " cellbounds");
 	      if ( gridHasArea(gridID) )          fprintf(stdout, " area");
 	      if ( gridInqMask(gridID, NULL) )    fprintf(stdout, " mask");
 	      fprintf(stdout, "\n");
@@ -246,45 +239,43 @@ void printGridInfo(int vlistID)
 	    {
 	      double a, lon_0, lat_0;
 	      gridInqLaea(gridID, &a, &lon_0, &lat_0);
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "projpar   : a = %g  lon_0 = %g  lat_0 = %g\n", a, lon_0, lat_0);
+	      fprintf(stdout, "%33s : a=%g  lon_0=%g  lat_0=%g\n", "projpar", a, lon_0, lat_0);
 	    }
 
 	  if ( gridtype == GRID_LCC2 )
 	    {
 	      double a, lon_0, lat_0, lat_1, lat_2;
 	      gridInqLcc2(gridID, &a, &lon_0, &lat_0, &lat_1, &lat_2);
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "projpar   : a = %7.0f  lon_0 = %g  lat_0 = %g  lat_1 = %g  lat_2 = %g\n",
-		      a, lon_0, lat_0, lat_1, lat_2);
+	      fprintf(stdout, "%33s : a=%7.0f  lon_0=%g  lat_0=%g  lat_1=%g  lat_2=%g\n",
+                      "projpar", a, lon_0, lat_0, lat_1, lat_2);
 	    }
 	}
       else if ( gridtype == GRID_SPECTRAL )
 	{
-	  fprintf(stdout, "size      : dim = %d  nsp = %d  truncation = %d\n", gridsize, gridsize/2, trunc);
-	  fprintf(stdout, "%*s", nbyte0, "");
-	  fprintf(stdout, "            complexPacking = %d\n", gridInqComplexPacking(gridID));
+	  fprintf(stdout, " : points=%d  nsp=%d  truncation=%d", gridsize, gridsize/2, trunc);
+          if ( gridInqComplexPacking(gridID) ) fprintf(stdout, "  complexPacking");
+          fprintf(stdout, "\n");
 	}
       else if ( gridtype == GRID_FOURIER )
 	{
-	  fprintf(stdout, "size      : dim = %d  nfc = %d  truncation = %d\n", gridsize, gridsize/2, trunc);
+	  fprintf(stdout, " : points=%d  nfc=%d  truncation=%d\n", gridsize, gridsize/2, trunc);
 	}
       else if ( gridtype == GRID_GME )
 	{
 	  int ni, nd;
 	  ni = gridInqGMEni(gridID);
 	  nd = gridInqGMEnd(gridID);
-	  fprintf(stdout, "size      : dim = %d  nd = %d  ni = %d\n", gridsize, nd, ni);
+	  fprintf(stdout, " : points=%d  nd=%d  ni=%d\n", gridsize, nd, ni);
 	}
       else if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED )
 	{
 	  if ( gridtype == GRID_CURVILINEAR )
-	    fprintf(stdout, "size      : dim = %d  nx = %d  ny = %d", gridsize, xsize, ysize);
+	    fprintf(stdout, " : points=%d (%dx%d)", gridsize, xsize, ysize);
 	  else
-	    fprintf(stdout, "size      : dim = %d", gridsize);
+	    fprintf(stdout, " : points=%d", gridsize);
 
           if ( gridtype == GRID_UNSTRUCTURED && gridInqNvertex(gridID) > 0 )
-	    fprintf(stdout, "  nvertex = %d", gridInqNvertex(gridID));
+	    fprintf(stdout, "  nvertex=%d", gridInqNvertex(gridID));
 
           fprintf(stdout, "\n");
 
@@ -295,16 +286,14 @@ void printGridInfo(int vlistID)
 
               if ( number > 0 )
                 {
-                  fprintf(stdout, "%*s", nbyte0, "");
-                  fprintf(stdout, "grid      : number = %d  position = %d\n", number, position);
+                  fprintf(stdout, "%33s : number=%d  position=%d\n", "grid", number, position);
                 }
 
               if ( gridInqReference(gridID, NULL) )
                 {
                   char reference_link[8192];
                   gridInqReference(gridID, reference_link);
-                  fprintf(stdout, "%*s", nbyte0, "");
-                  fprintf(stdout, "uri       : %s\n", reference_link);
+                  fprintf(stdout, "%33s : %s\n", "uri", reference_link);
                 }
             }
 
@@ -313,8 +302,8 @@ void printGridInfo(int vlistID)
 	      int i;
 	      double *xvals, *yvals;
 	      double xfirst, xlast, yfirst, ylast;
-	      xvals = malloc(gridsize*sizeof(double));
-	      yvals = malloc(gridsize*sizeof(double));
+	      xvals = (double*) malloc(gridsize*sizeof(double));
+	      yvals = (double*) malloc(gridsize*sizeof(double));
 
 	      gridInqXvals(gridID, xvals);
 	      gridInqYvals(gridID, yvals);
@@ -326,17 +315,15 @@ void printGridInfo(int vlistID)
 	      for ( i = 1; i < gridsize; i++ )
 		{
 		  if ( xvals[i] < xfirst ) xfirst = xvals[i];
-		  if ( xvals[i] > xlast )  xlast  = xvals[i];
+		  if ( xvals[i] > xlast  ) xlast  = xvals[i];
 		  if ( yvals[i] < yfirst ) yfirst = yvals[i];
-		  if ( yvals[i] > ylast )  ylast  = yvals[i];
+		  if ( yvals[i] > ylast  ) ylast  = yvals[i];
 		}
 
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "%-9s : min = %.9g  max = %.9g  %s", xname, xfirst, xlast, xunits);
+	      fprintf(stdout, "%33s : %g to %g %s", xname, xfirst, xlast, xunits);
 	      if ( gridIsCircular(gridID) ) fprintf(stdout, "  circular");
 	      fprintf(stdout, "\n");
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "%-9s : min = %.9g  max = %.9g  %s\n", yname, yfirst, ylast, yunits);
+	      fprintf(stdout, "%33s : %g to %g %s\n", yname, yfirst, ylast, yunits);
 
 	      free(xvals);
 	      free(yvals);
@@ -350,37 +337,30 @@ void printGridInfo(int vlistID)
 	  gridInqLCC(gridID, &originLon, &originLat, &lonParY, &lat1, &lat2, &xincm, &yincm,
 		     &projflag, &scanflag);
 
-	  fprintf(stdout, "size      : dim = %d  nx = %d  ny = %d  ", gridsize, xsize, ysize);
+	  fprintf(stdout, " : points=%d (%dx%d)  ", gridsize, xsize, ysize);
 	  if ( (projflag&128) == 0 )
 	    fprintf(stdout, "North Pole\n");
 	  else
 	    fprintf(stdout, "South Pole\n");
-	  fprintf(stdout, "%*s", nbyte0, "");
-	  fprintf(stdout, "            originLon = %g  originLat = %g  lonParY = %g\n",
-		  originLon, originLat, lonParY);
-	  fprintf(stdout, "%*s", nbyte0, "");
-	  fprintf(stdout, "            lat1 = %g  lat2 = %g  xinc = %g m  yinc = %g m\n",
-		  lat1, lat2, xincm, yincm);
+
+	  fprintf(stdout, "%33s : originLon=%g  originLat=%g  lonParY=%g\n", " ", originLon, originLat, lonParY);
+	  fprintf(stdout, "%33s : lat1=%g  lat2=%g  xinc=%g m  yinc=%g m\n", " ", lat1, lat2, xincm, yincm);
 	}
       else /* if ( gridtype == GRID_GENERIC ) */
 	{
 	  if ( ysize == 0 )
-	    fprintf(stdout, "size      : dim = %d\n", gridsize);
+	    fprintf(stdout, " : points=%d\n", gridsize);
 	  else
-            fprintf(stdout, "size      : dim = %d  nx = %d  ny = %d\n", gridsize, xsize, ysize);
+            fprintf(stdout, " : points=%d (%dx%d)\n", gridsize, xsize, ysize);
 	}
 
       if ( gridtype == GRID_CURVILINEAR || gridtype == GRID_UNSTRUCTURED || gridtype == GRID_LCC )
 	{
-	  if ( gridInqXvals(gridID, NULL) || gridInqYvals(gridID, NULL) || gridHasArea(gridID) ||
+	  if ( gridHasArea(gridID) ||
 	       gridInqXbounds(gridID, NULL) || gridInqYbounds(gridID, NULL) )
 	    {
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "available :");
-	      if ( gridInqXvals(gridID, NULL) )   fprintf(stdout, " xvals");
-	      if ( gridInqYvals(gridID, NULL) )   fprintf(stdout, " yvals");
-	      if ( gridInqXbounds(gridID, NULL) ) fprintf(stdout, " xbounds");
-	      if ( gridInqYbounds(gridID, NULL) ) fprintf(stdout, " ybounds");
+	      fprintf(stdout, "%33s :", "available");
+	      if ( gridInqXbounds(gridID, NULL) && gridInqYbounds(gridID, NULL) ) fprintf(stdout, " cellbounds");
 	      if ( gridHasArea(gridID) )          fprintf(stdout, " area");
 	      if ( gridInqMask(gridID, NULL) )    fprintf(stdout, " mask");
 	      fprintf(stdout, "\n");
@@ -394,10 +374,235 @@ void printGridInfo(int vlistID)
           uuid2str(uuidOfHGrid, uuidOfHGridStr);
           if ( uuidOfHGridStr[0] != 0  && strlen(uuidOfHGridStr) == 36 )
             {
-	      fprintf(stdout, "%*s", nbyte0, "");
-	      fprintf(stdout, "uuid      : %s\n", uuidOfHGridStr);
+	      fprintf(stdout, "%33s : %s\n", "uuid", uuidOfHGridStr);
             }
         }
+    }
+}
+
+static
+void printZaxisInfo(int vlistID)
+{
+  int nzaxis, index;
+  int zaxisID, zaxistype, levelsize, levelID;
+  int ltype;
+  double *levels = NULL;
+  char zaxisname[CDI_MAX_NAME], zname[CDI_MAX_NAME], zunits[CDI_MAX_NAME];
+
+  nzaxis = vlistNzaxis(vlistID);
+  for ( index = 0; index < nzaxis; index++)
+    {
+      double zfirst = 0, zlast = 0, zinc = 0;
+      zaxisID   = vlistZaxis(vlistID, index);
+      zaxistype = zaxisInqType(zaxisID);
+      ltype     = zaxisInqLtype(zaxisID);
+      levelsize = zaxisInqSize(zaxisID);
+      zaxisName(zaxistype, zaxisname);
+      zaxisInqName(zaxisID, zname);
+      zaxisInqUnits(zaxisID, zunits);
+      zunits[12] = 0;
+
+      if ( zaxistype == ZAXIS_GENERIC && ltype != 0 )
+        fprintf(stdout, "  %4d : %-12s (ltype=%3d) :", vlistZaxisIndex(vlistID, zaxisID)+1, zaxisname, ltype);
+      else
+        fprintf(stdout, "  %4d : %-24s :", vlistZaxisIndex(vlistID, zaxisID)+1, zaxisname);
+
+      fprintf(stdout, " levels=%d", levelsize);
+      fprintf(stdout, "\n");
+
+      levels = (double*) malloc(levelsize*sizeof(double));
+      zaxisInqLevels(zaxisID, levels);
+
+      if ( !(zaxistype == ZAXIS_SURFACE && levelsize == 1 && !(fabs(levels[0]) > 0)) )
+        {
+          zfirst = levels[0];
+          zlast  = levels[levelsize-1];
+          if ( levelsize > 2 )
+            {
+              zinc = (levels[levelsize-1] - levels[0]) / (levelsize-1);
+              for ( levelID = 2; levelID < levelsize; ++levelID )
+                if ( fabs(fabs(levels[levelID] - levels[levelID-1]) - zinc) > 0.001*zinc ) break;
+
+              if ( levelID < levelsize ) zinc = 0;
+            }
+
+          fprintf(stdout, "%33s : %g", zname, zfirst);
+          if ( levelsize > 1 )
+            {
+              fprintf(stdout, " to %g", zlast);
+              if ( IS_NOT_EQUAL(zinc, 0) )
+                fprintf(stdout, " by %g", zinc);
+            }
+          fprintf(stdout, " %s", zunits);
+          fprintf(stdout, "\n");
+        }
+
+      free(levels);
+
+      if ( zaxisInqLbounds(zaxisID, NULL) && zaxisInqUbounds(zaxisID, NULL) )
+        {
+          double level1, level2;
+          fprintf(stdout, "%33s : ", "bounds");
+
+          level1 = zaxisInqLbound(zaxisID, 0);
+          level2 = zaxisInqUbound(zaxisID, 0);
+          fprintf(stdout, "%.9g-%.9g", level1, level2);
+          if ( levelsize > 1 )
+            {
+              level1 = zaxisInqLbound(zaxisID, levelsize-1);
+              level2 = zaxisInqUbound(zaxisID, levelsize-1);
+              fprintf(stdout, " to %.9g-%.9g", level1, level2);
+              if ( IS_NOT_EQUAL(zinc, 0) )
+                fprintf(stdout, " by %g", zinc);
+            }
+          fprintf(stdout, " %s", zunits);
+          fprintf(stdout, "\n");
+        }
+
+      if ( zaxistype == ZAXIS_REFERENCE )
+        {
+          int number   = zaxisInqNumber(zaxisID);
+
+          if ( number > 0 )
+            {
+              fprintf(stdout, "%33s : ", "zaxis");
+              fprintf(stdout, "number = %d\n", number);
+            }
+
+          char uuidOfVGrid[17];
+          zaxisInqUUID(zaxisID, uuidOfVGrid);
+          if ( uuidOfVGrid[0] != 0 )
+            {
+              char uuidOfVGridStr[37];
+              uuid2str(uuidOfVGrid, uuidOfVGridStr);
+              if ( uuidOfVGridStr[0] != 0  && strlen(uuidOfVGridStr) == 36 )
+                {
+                  fprintf(stdout, "%33s : ", "uuid");
+                  fprintf(stdout, "%s\n", uuidOfVGridStr);
+                }
+            }
+        }
+    }
+}
+
+
+static
+int printDateTime(int ntimeout, int vdate, int vtime)
+{
+  char vdatestr[32], vtimestr[32];
+
+  if ( ntimeout == 4 )
+    {
+      ntimeout = 0;
+      fprintf(stdout, "\n");
+    }
+
+  date2str(vdate, vdatestr, sizeof(vdatestr));
+  time2str(vtime, vtimestr, sizeof(vtimestr));
+
+  fprintf(stdout, " %s %s", vdatestr, vtimestr);
+
+  return (++ntimeout);
+}
+
+#define NUM_TIMESTEP 60
+#define MAX_DOTS     80
+
+static
+int printDot(int ndotout, int *nfact, int *ncout)
+{
+
+  //printf("ncout %d %d %d\n",*ncout, (*ncout)%(*nfact), *nfact);
+  if ( (*ncout)%(*nfact) == 0 )
+    {
+      if ( ndotout == MAX_DOTS )
+	{
+	  *ncout = 0;
+	  ndotout = 0;
+	  fprintf(stdout, "\n   ");
+	  (*nfact) *= 10;
+	}
+
+      fprintf(stdout, ".");
+      fflush(stdout);
+      ndotout++;
+    }
+
+  (*ncout)++;
+
+  return (ndotout);
+}
+
+static
+void printTimesteps(int streamID, int taxisID, int verbose)
+{
+  int nrecs;
+  int vdate, vtime;
+  struct datetime {
+    int vdate;
+    int vtime;
+    struct datetime *next;
+  };
+  struct datetime vdatetime[NUM_TIMESTEP];
+  struct datetime *next_vdatetime = vdatetime;
+
+  for ( int i = 0; i < NUM_TIMESTEP-1; ++i ) vdatetime[i].next = &vdatetime[i+1];
+  vdatetime[NUM_TIMESTEP-1].next = &vdatetime[0];
+
+  int ntimeout = 0;
+  int ndotout = 0;
+  int nvdatetime = 0;
+  int ncout = 0;
+  int nfact = 1;
+  int tsID = 0;
+
+  while ( (nrecs = streamInqTimestep(streamID, tsID)) )
+    {
+      vdate = taxisInqVdate(taxisID);
+      vtime = taxisInqVtime(taxisID);
+
+      if ( verbose || tsID < NUM_TIMESTEP )
+	{
+	  ntimeout = printDateTime(ntimeout, vdate, vtime);
+	}
+      else
+	{
+	  if ( tsID == 2*NUM_TIMESTEP ) fprintf(stdout, "\n   ");
+	  if ( tsID >= 2*NUM_TIMESTEP ) ndotout = printDot(ndotout, &nfact, &ncout);
+
+	  if ( nvdatetime < NUM_TIMESTEP )
+	    {
+	      vdatetime[nvdatetime].vdate = vdate;
+	      vdatetime[nvdatetime].vtime = vtime;
+	      nvdatetime++;
+	    }
+	  else
+	    {
+	      next_vdatetime->vdate = vdate;
+	      next_vdatetime->vtime = vtime;
+	      next_vdatetime = next_vdatetime->next;
+	    }
+	}
+
+      tsID++;
+    }
+
+  if ( nvdatetime )
+    {
+      fprintf(stdout, "\n");
+
+      ntimeout = 0;
+      int toff = tsID%4;
+      if ( toff > 0 ) toff = 4 - toff;
+      for ( int i = 0; i < toff; ++i ) next_vdatetime = next_vdatetime->next;
+
+      for ( int i = toff; i < nvdatetime; ++i )
+	{
+	  vdate = next_vdatetime->vdate;
+	  vtime = next_vdatetime->vtime;
+	  ntimeout = printDateTime(ntimeout, vdate, vtime);
+	  next_vdatetime = next_vdatetime->next;
+	}
     }
 }
 /*

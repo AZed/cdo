@@ -21,15 +21,15 @@ case "${HOSTNAME}" in
 	${CONFPATH}configure --prefix=$HOME/local \
                     --enable-maintainer-mode \
                     --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
+                    --with-grib_api=$HOME/local/gribapi-1.10.4 \
                     --with-netcdf=$HOME/local \
                     --with-hdf5=$HOME/local \
                     --with-szlib=$HOME/local \
+                    --with-udunits2=$HOME/local/udunits-2.1.24 \
                     --with-proj=/opt/local \
-	            CC=icc CFLAGS="-g  -D_REENTRANT -Wall -W -O3 -march=native -openmp" \
+                    --with-curl=/opt/local \
+	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -openmp -fp-model source -fast-transcendentals" \
                     LIBS="-L/opt/local/lib -lopenjpeg"
-#                    --with-libxml2=/usr \
-#                    --with-magics=/Users/m214003/local/magics-2.14.9 \
 	;;
 # i386-apple-darwin10
     bailung*)
@@ -43,12 +43,10 @@ case "${HOSTNAME}" in
                     --with-udunits2=$HOME/local/udunits-2.1.24 \
                     --with-proj=/opt/local \
                     --with-curl=/opt/local \
-                    --with-libxml2=/usr \
-                    --with-magics=/Users/m214003/local/magics-2.14.9 \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp" \
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -std=c99 -pedantic -O3 -march=native" \
                     LIBS="-L/opt/local/lib -lopenjpeg"
-#                    --with-libxml2=/usr
-#                    --with-magics=/Users/m214003/local/magics-2.14.9
+#                    --with-libxml2=/usr 
+#                    --with-magics=/Users/m214003/local/magics-2.14.9 
 	;;
     hama*)
 	${CONFPATH}configure --prefix=$HOME/local \
@@ -60,9 +58,9 @@ case "${HOSTNAME}" in
                     --with-szlib=$HOME/local \
                     --with-proj=/opt/local \
                     --with-curl=/opt/local \
-                    --with-libxml2=/usr \
-                    --with-magics=/Users/m214003/local/Magics-2.18.14nio \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native -fopenmp"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -march=native"
+#                    --with-libxml2=/usr \
+#                    --with-magics=/Users/m214003/local/Magics-2.18.14nio \
 	;;
 # ia64-xxx-linux
     ds*)
@@ -87,7 +85,7 @@ case "${HOSTNAME}" in
                     --with-szlib=/sw/squeeze-x64/szip-2.1 \
                     --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
                     --with-proj=/sw/squeeze-x64/proj-4.7.0 \
-                    CC=gcc CFLAGS='-g -Wall -O3 -march=native -fopenmp'
+                    CC=gcc CFLAGS='-g -Wall -O3 -march=native'
 	;;
 # x86_64-lenny-linux-gnu
     squall*)
@@ -100,7 +98,7 @@ case "${HOSTNAME}" in
                     --with-szlib=/sw/squeeze-x64/szip-2.1 \
                     --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
                     --with-proj=/sw/squeeze-x64/proj-4.7.0 \
-                    CC=gcc CFLAGS='-g -Wall -O3 -fopenmp'
+                    CC=gcc CFLAGS='-g -Wall -O3'
 	;;
 # x86_64-archlinux
     thingol*)
@@ -115,18 +113,8 @@ case "${HOSTNAME}" in
                     --with-magics=$HOME/src/cdo/branches/libs4cdo/build-dev \
                     --with-libxml2=/usr \
                       --with-pic \
-                      CC=gcc CFLAGS="-g -Wall -O2 -fopenmp -DWITH_DATA" \
+                      CC=gcc CFLAGS="-g -Wall -O2 -DWITH_DATA" \
                       LDFLAGS='-L/home/ram/local/netcdf-4.1.2/lib -L/usr/lib64 -L/usr/lib -lhdf5_hl -lhdf5  -lz -lm -lhdf5_hl -lhdf5 -lz  -lcurl -L/usr/local/lib64 -L/usr/X11R6/lib64 -lpangocairo-1.0 -lpango-1.0 -lgobject-2.0 -lglib-2.0 -lcairo   -lexpat -lpthread -lfontconfig -lz -lgd -lproj -lgrib_api -lpng -lxml2 -lm -ljasper -lopenjpeg   -L/home/ram/local/netcdf-4.1.2/lib -lnetcdf_c++ -lnetcdf  -lcurl  -lstdc++ -lgfortran'
-	;;
-# i686-suse-linux
-    linux | laptop)
-	${CONFPATH}configure --prefix=$HOME/local \
-                    --with-jasper=/usr \
-                    --with-grib_api=$HOME/local \
-                    --with-netcdf=$HOME/local \
-                    --with-hdf5=$HOME/local \
-                    --with-szlib=$HOME/local \
-	            CC=colorgcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
 	;;
 # standard workstations at MPI-M x86_64-lenny
     mpipc* )
@@ -138,7 +126,7 @@ case "${HOSTNAME}" in
                --with-szlib='/sw/lenny-x64/szip-latest' \
                --with-proj='/sw/lenny-x64/proj-latest' \
                --enable-ruby --enable-swig --enable-python \
-	           CC=gcc CFLAGS="-g -fopenmp -Wall -W -Wfloat-equal -pedantic -O2"
+	           CC=gcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2"
         ;;
 # dap enabled
     egmont | columbine)
@@ -149,7 +137,7 @@ case "${HOSTNAME}" in
                     --with-szlib=/sw/etch-ia32/szip-2.1 \
                     --with-proj=/sw/etch-ia32/proj-4.6.0 \
 	            --enable-all-static CC=icc CFLAGS="-g -fast -openmp" AR=xiar LD=xild
-#	            CC=gcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2 -fopenmp"
+#	            CC=gcc CFLAGS="-g -Wall -W -Wfloat-equal -pedantic -O2"
     ;;
 # i386-pc-solaris2.10
     grim | mil* )
@@ -187,7 +175,7 @@ case "${HOSTNAME}" in
                     --with-netcdf=/sw/centos58-x64/netcdf-4.2.1.1 \
                     --with-szlib=/sw/centos58-x64/szip-2.1 \
                     --with-zlib=/usr \
-	            CC=gcc44 CFLAGS="-g -Wall -O3 -fopenmp"
+	            CC=gcc44 CFLAGS="-g -Wall -O3"
 	;;
 # powerpc-ibm-aix5.2.0.0
     ecga*)
@@ -211,7 +199,7 @@ case "${HOSTNAME}" in
                     --with-udunits2=/sw/aix61/udunits-2.1.14 \
                     --with-proj=/sw/aix53/proj-4.6.1 \
                     --with-curl=/sw/aix61/curl-7.21.3 \
-                    AR="ar -X 64"  LDFLAGS="-brtl" \
+                    AR="ar -X 64"  LDFLAGS="-brtl -R/sw/aix61/openssl-1.0.0d/lib:/sw/aix61/zlib-1.2.6/lib" \
  	            CC=xlc_r CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -qsmp=omp -DHAVE_MMAP -qthreaded"
 	;;
     vip*)

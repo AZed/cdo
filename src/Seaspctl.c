@@ -95,14 +95,14 @@ void *Seaspctl(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords * sizeof(int));
-  recLevelID = malloc(nrecords * sizeof(int));
+  recVarID   = (int*) malloc(nrecords * sizeof(int));
+  recLevelID = (int*) malloc(nrecords * sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  field.ptr = malloc(gridsize*sizeof(double));
+  field.ptr = (double*) malloc(gridsize*sizeof(double));
 
-  vars1 = malloc(nvars * sizeof(field_t *));
+  vars1 = (field_t **) malloc(nvars * sizeof(field_t *));
   hset = hsetCreate(nvars);
 
   for ( varID = 0; varID < nvars; varID++ )
@@ -112,7 +112,7 @@ void *Seaspctl(void *argument)
       nlevels   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval  = vlistInqVarMissval(vlistID1, varID);
 
-      vars1[varID] = malloc(nlevels * sizeof(field_t));
+      vars1[varID] = (field_t*) malloc(nlevels * sizeof(field_t));
       hsetCreateVarLevels(hset, varID, nlevels, gridID);
 
       for ( levelID = 0; levelID < nlevels; levelID++ )
@@ -120,7 +120,7 @@ void *Seaspctl(void *argument)
 	  vars1[varID][levelID].grid    = gridID;
 	  vars1[varID][levelID].nmiss   = 0;
 	  vars1[varID][levelID].missval = missval;
-	  vars1[varID][levelID].ptr     = malloc(gridsize * sizeof(double));
+	  vars1[varID][levelID].ptr     = (double*) malloc(gridsize * sizeof(double));
 	}
     }
 

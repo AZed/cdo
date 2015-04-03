@@ -148,8 +148,9 @@ void *Timstat2(void *argument)
   nvars  = vlistNvars(vlistID1);
   nrecs  = vlistNrecs(vlistID1);
   nrecs3 = nrecs;
-  recVarID   = malloc(nrecs*sizeof(int));
-  recLevelID = malloc(nrecs*sizeof(int));
+  recVarID   = (int*) malloc(nrecs*sizeof(int));
+  recLevelID = (int*) malloc(nrecs*sizeof(int));
+
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
   taxisID3 = taxisDuplicate(taxisID1);
@@ -161,11 +162,11 @@ void *Timstat2(void *argument)
  
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1  = malloc(gridsize*sizeof(double));
-  array2  = malloc(gridsize*sizeof(double));
+  array1  = (double*) malloc(gridsize*sizeof(double));
+  array2  = (double*) malloc(gridsize*sizeof(double));
   				 
-  work    = malloc(nvars*sizeof(double ***));
-  nofvals = malloc(nvars*sizeof(int **));
+  work    = (double ****) malloc(nvars*sizeof(double ***));
+  nofvals = (int ***) malloc(nvars*sizeof(int **));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
@@ -173,18 +174,18 @@ void *Timstat2(void *argument)
       gridsize = gridInqSize(gridID);
       nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
-      work[varID]    = malloc(nlevs*sizeof(double **));
-      nofvals[varID] = malloc(nlevs*sizeof(int *));  
+      work[varID]    = (double ***) malloc(nlevs*sizeof(double **));
+      nofvals[varID] = (int **) malloc(nlevs*sizeof(int *));  
 
       for ( levelID = 0; levelID < nlevs; levelID++ )
 	{
-	  nofvals[varID][levelID] = malloc(gridsize*sizeof(int));
+	  nofvals[varID][levelID] = (int*) malloc(gridsize*sizeof(int));
 	  memset(nofvals[varID][levelID], 0, gridsize*sizeof(int));
       
-	  work[varID][levelID] = malloc(nwork*sizeof(double *));
+	  work[varID][levelID] = (double **) malloc(nwork*sizeof(double *));
 	  for ( i = 0; i < nwork; i++ )
 	    {
-	      work[varID][levelID][i] = malloc(gridsize*sizeof(double));
+	      work[varID][levelID][i] = (double*) malloc(gridsize*sizeof(double));
 	      memset(work[varID][levelID][i], 0, gridsize*sizeof(double));
 	    }
 	}

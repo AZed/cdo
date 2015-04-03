@@ -99,11 +99,11 @@ void *Testdata(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array = malloc(gridsize*sizeof(double));
-  fval = malloc(gridsize*sizeof(float));
-  ival = malloc(gridsize*sizeof(int));
-  cval = malloc(gridsize*sizeof(unsigned char)*4);
-  cval2 = malloc(gridsize*sizeof(unsigned char)*4);
+  array = (double*) malloc(gridsize*sizeof(double));
+  fval = (float*) malloc(gridsize*sizeof(float));
+  ival = (int*) malloc(gridsize*sizeof(int));
+  cval = (unsigned char*) malloc(gridsize*sizeof(unsigned char)*4);
+  cval2 = (unsigned char*) malloc(gridsize*sizeof(unsigned char)*4);
 
   fp = fopen("testdata", "w");
 

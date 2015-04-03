@@ -58,6 +58,9 @@ char *strdup(const char *s);
 #ifndef  _IEG_H
 #  include "ieg.h"
 #endif
+#ifndef RESOURCE_HANDLE_H
+#  include "resource_handle.h"
+#endif
 
 
 #define check_parg(arg)  if ( arg == 0 ) Warning("Argument '" #arg "' not allocated!")
@@ -88,14 +91,6 @@ char *strdup(const char *s);
 #  define IS_EQUAL(x,y)     (!IS_NOT_EQUAL(x,y))
 #endif
 
-
-#ifndef INT
-#  define  INT(x)  ((int)(x))
-#endif
-
-#ifndef NINT
-#  define  NINT(x)  ((x) < 0 ? (int)((x)-.5) : (int)((x)+.5))
-#endif
 
 #define  FALSE  0
 #define  TRUE   1
@@ -131,15 +126,7 @@ typedef struct
   int       sec2[4096];
   int       sec3[2];
   int       sec4[512];
-#if  defined  (HAVE_LIBSERVICE)
-  srvrec_t   *srvp;
-#endif
-#if  defined  (HAVE_LIBEXTRA)
-  extrec_t   *extp;
-#endif
-#if  defined  (HAVE_LIBIEG)
-  iegrec_t   *iegp;
-#endif
+  void     *exsep;
 }
 Record;
 
@@ -226,7 +213,7 @@ typedef struct {
   tsteps_t   *tsteps;
   int         tstepsTableSize;
   int         tstepsNextID;
-  BaseTime    basetime;
+  basetime_t  basetime;
   int         ncmode;
   int         vlistID;
   int         xdimID[MAX_GRIDS_PS];
@@ -265,6 +252,7 @@ stream_t;
 
 
 extern int CDI_Debug;      /* If set to 1, debuggig (default 0)            */
+extern int cdiGribApiDebug;
 extern double cdiDefaultMissval;
 extern int cdiDefaultInstID;
 extern int cdiDefaultModelID;
@@ -285,9 +273,11 @@ void stream_check_ptr(const char *caller, stream_t *streamptr);
 
 int     streamInqFileID(int streamID);
 
-int     zaxisInqLevelID(int zaxisID, double level);
-char   *gridNamePtr(int gridtype);
+void    gridDefHasDims(int gridID, int hasdims);
+int     gridInqHasDims(int gridID);
+const char *gridNamePtr(int gridtype);
 char   *zaxisNamePtr(int leveltype);
+int     zaxisInqLevelID(int zaxisID, double level);
 
 void    streamCheckID(const char *caller, int streamID);
 
@@ -300,7 +290,7 @@ int     stream_new_var(stream_t *streamptr, int gridID, int zaxisID);
 
 int     tstepsNewEntry(stream_t *streamptr);
 
-char   *strfiletype(int filetype);
+const char *strfiletype(int filetype);
 
 void    cdi_generate_vars(stream_t *streamptr);
 
@@ -351,7 +341,7 @@ struct streamAssoc
 
 struct streamAssoc
 streamUnpack(char * unpackBuffer, int unpackBufferSize,
-             int * unpackBufferPos, int nspTarget, void *context);
+             int * unpackBufferPos, int originNamespace, void *context);
 
 int
 cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
@@ -376,7 +366,7 @@ void cdiStreamSync_(stream_t *streamptr);
 
 char *cdiUnitNamePtr(int cdi_unit);
 
-
+extern const resOps streamOps;
 
 #endif  /* _CDI_INT_H */
 /*

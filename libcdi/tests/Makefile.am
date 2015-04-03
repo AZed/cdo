@@ -42,7 +42,7 @@ pio_write_deco2d_LDADD = $(LDADD)
 endif
 
 LDADD = ../src/libcdi.la -lm
-INCLUDES   = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src
 #
 # EXTRA_DIST = $(TESTS)
 #

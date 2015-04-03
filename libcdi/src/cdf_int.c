@@ -84,7 +84,7 @@ int cdf_open(const char *path, int omode, int *ncidp)
   size_t chunksizehint = 0;
 
 #if  defined  (HAVE_LIBNC_DAP)
-  if ( memcmp(path, "http:", 5) == 0 ) dapfile = TRUE;
+  if ( strncmp(path, "http:", 5) == 0 || strncmp(path, "https:", 6) == 0 ) dapfile = TRUE;
 #endif
 
   if ( dapfile )
@@ -143,6 +143,20 @@ void cdf_enddef(int ncid)
   int status;
 
   status = nc_enddef(ncid);
+
+  if ( status != NC_NOERR ) Error("%s", nc_strerror(status));
+}
+
+
+void cdf__enddef(const int ncid, const size_t hdr_pad)
+{
+  int status;
+  const size_t v_align   = 4UL; /* [B] Alignment of beginning of data section for fixed variables */
+  const size_t v_minfree = 0UL; /* [B] Pad at end of data section for fixed size variables */
+  const size_t r_align   = 4UL; /* [B] Alignment of beginning of data section for record variables */
+
+  /* nc_enddef(ncid) is equivalent to nc__enddef(ncid, 0, 4, 0, 4) */
+  status = nc__enddef(ncid, hdr_pad, v_align, v_minfree, r_align);
 
   if ( status != NC_NOERR ) Error("%s", nc_strerror(status));
 }

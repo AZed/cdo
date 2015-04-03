@@ -1,6 +1,13 @@
 CDI NEWS
 --------
 
+Version 1.6.4 (26 June 2014):
+
+   New features:
+     * Added support for SPECS forecast time axis
+   Fixed bugs:
+     * netCDF4 classic: existing files are converted to netCDF4 - classic flag is lost
+
 Version 1.6.3 (14 February 2014):
 
    New features:

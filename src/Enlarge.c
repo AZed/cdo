@@ -77,8 +77,8 @@ void *Enlarge(void *argument)
 
   streamDefVlist(streamID2, vlistID2);
 
-  array1 = malloc(gridsize2*sizeof(double));
-  array2 = malloc(gridsize2*sizeof(double));
+  array1 = (double*) malloc(gridsize2*sizeof(double));
+  array2 = (double*) malloc(gridsize2*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

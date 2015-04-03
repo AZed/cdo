@@ -366,7 +366,7 @@ void merpctl(field_t field1, field_t *field2, int p)
   nx = gridInqXsize(grid);
   ny = gridInqYsize(grid);
   
-  array2 = malloc(nx*sizeof(double));
+  array2 = (double*) malloc(nx*sizeof(double));
   
   if ( nmiss > 0 )
     {

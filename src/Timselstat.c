@@ -110,13 +110,13 @@ void *Timselstat(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
 
   field_init(&field);
-  field.ptr = malloc(gridsize*sizeof(double));
+  field.ptr = (double*) malloc(gridsize*sizeof(double));
 
   vars1 = field_malloc(vlistID1, FIELD_PTR);
   samp1 = field_malloc(vlistID1, FIELD_NONE);
@@ -190,7 +190,7 @@ void *Timselstat(void *argument)
 		  if ( nmiss > 0 || samp1[varID][levelID].ptr )
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
-			samp1[varID][levelID].ptr = malloc(gridsize*sizeof(double));
+			samp1[varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 
 		      for ( i = 0; i < gridsize; i++ )
 			if ( DBL_IS_EQUAL(vars1[varID][levelID].ptr[i],
@@ -210,7 +210,7 @@ void *Timselstat(void *argument)
 		    {
 		      if ( samp1[varID][levelID].ptr == NULL )
 			{
-			  samp1[varID][levelID].ptr = malloc(gridsize*sizeof(double));
+			  samp1[varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 			  for ( i = 0; i < gridsize; i++ )
 			    samp1[varID][levelID].ptr[i] = nsets;
 			}

@@ -75,10 +75,10 @@ int gentpngrid(int gridID1)
     {
       if ( gridtype == GRID_CURVILINEAR )
 	{
-	  xvals1 = malloc(nlon1*nlat1*sizeof(double));
-	  yvals1 = malloc(nlon1*nlat1*sizeof(double));
-	  xvals2 = malloc(nlon2*nlat2*sizeof(double));
-	  yvals2 = malloc(nlon2*nlat2*sizeof(double));
+	  xvals1 = (double*) malloc(nlon1*nlat1*sizeof(double));
+	  yvals1 = (double*) malloc(nlon1*nlat1*sizeof(double));
+	  xvals2 = (double*) malloc(nlon2*nlat2*sizeof(double));
+	  yvals2 = (double*) malloc(nlon2*nlat2*sizeof(double));
 
 	  gridInqXvals(gridID1, xvals1);
 	  gridInqYvals(gridID1, yvals1);
@@ -115,10 +115,10 @@ int gentpngrid(int gridID1)
     {
       if ( gridtype == GRID_CURVILINEAR )
 	{
-	  xbounds1 = malloc(4*nlon1*nlat1*sizeof(double));
-	  ybounds1 = malloc(4*nlon1*nlat1*sizeof(double));
-	  xbounds2 = malloc(4*nlon2*nlat2*sizeof(double));
-	  ybounds2 = malloc(4*nlon2*nlat2*sizeof(double));
+	  xbounds1 = (double*) malloc(4*nlon1*nlat1*sizeof(double));
+	  ybounds1 = (double*) malloc(4*nlon1*nlat1*sizeof(double));
+	  xbounds2 = (double*) malloc(4*nlon2*nlat2*sizeof(double));
+	  ybounds2 = (double*) malloc(4*nlon2*nlat2*sizeof(double));
 
 	  gridInqXbounds(gridID1, xbounds1);
 	  gridInqYbounds(gridID1, ybounds1);
@@ -238,17 +238,17 @@ int gengrid(int gridID1, int lhalo, int rhalo)
     {
       if ( gridtype == GRID_CURVILINEAR )
 	{
-	  xvals1 = malloc(nlon1*nlat1*sizeof(double));
-	  yvals1 = malloc(nlon1*nlat1*sizeof(double));
-	  xvals2 = malloc(nlon2*nlat2*sizeof(double));
-	  yvals2 = malloc(nlon2*nlat2*sizeof(double));
+	  xvals1 = (double*) malloc(nlon1*nlat1*sizeof(double));
+	  yvals1 = (double*) malloc(nlon1*nlat1*sizeof(double));
+	  xvals2 = (double*) malloc(nlon2*nlat2*sizeof(double));
+	  yvals2 = (double*) malloc(nlon2*nlat2*sizeof(double));
 	}
       else
 	{
-	  xvals1 = malloc(nlon1*sizeof(double));
-	  yvals1 = malloc(nlat1*sizeof(double));
-	  xvals2 = malloc(nlon2*sizeof(double));
-	  yvals2 = malloc(nlat2*sizeof(double));
+	  xvals1 = (double*) malloc(nlon1*sizeof(double));
+	  yvals1 = (double*) malloc(nlat1*sizeof(double));
+	  xvals2 = (double*) malloc(nlon2*sizeof(double));
+	  yvals2 = (double*) malloc(nlat2*sizeof(double));
 	}
 
       pxvals2 = xvals2;
@@ -305,17 +305,17 @@ int gengrid(int gridID1, int lhalo, int rhalo)
     {
       if ( gridtype == GRID_CURVILINEAR )
 	{
-	  xbounds1 = malloc(4*nlon1*nlat1*sizeof(double));
-	  ybounds1 = malloc(4*nlon1*nlat1*sizeof(double));
-	  xbounds2 = malloc(4*nlon2*nlat2*sizeof(double));
-	  ybounds2 = malloc(4*nlon2*nlat2*sizeof(double));
+	  xbounds1 = (double*) malloc(4*nlon1*nlat1*sizeof(double));
+	  ybounds1 = (double*) malloc(4*nlon1*nlat1*sizeof(double));
+	  xbounds2 = (double*) malloc(4*nlon2*nlat2*sizeof(double));
+	  ybounds2 = (double*) malloc(4*nlon2*nlat2*sizeof(double));
 	}
       else
 	{
-	  xbounds1 = malloc(2*nlon1*sizeof(double));
-	  ybounds1 = malloc(2*nlat1*sizeof(double));
-	  xbounds2 = malloc(2*nlon2*sizeof(double));
-	  ybounds2 = malloc(2*nlat2*sizeof(double));
+	  xbounds1 = (double*) malloc(2*nlon1*sizeof(double));
+	  ybounds1 = (double*) malloc(2*nlat1*sizeof(double));
+	  xbounds2 = (double*) malloc(2*nlon2*sizeof(double));
+	  ybounds2 = (double*) malloc(2*nlat2*sizeof(double));
 	}
 
       pxbounds2 = xbounds2;
@@ -547,7 +547,7 @@ void *Sethalo(void *argument)
     }
 
   nvars = vlistNvars(vlistID1);
-  vars  = malloc(nvars*sizeof(int));
+  vars  = (int*) malloc(nvars*sizeof(int));
   for ( varID = 0; varID < nvars; varID++ )
     {
       if ( gridID1 == vlistInqVarGrid(vlistID1, varID) )
@@ -561,10 +561,10 @@ void *Sethalo(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = gridInqSize(gridID1);
-  array1 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
 
   gridsize2 = gridInqSize(gridID2);
-  array2 = malloc(gridsize2*sizeof(double));
+  array2 = (double*) malloc(gridsize2*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

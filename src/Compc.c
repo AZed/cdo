@@ -78,8 +78,8 @@ void *Compc(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 

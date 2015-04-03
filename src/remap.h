@@ -1,15 +1,36 @@
+#ifndef _REMAP_H
+#define _REMAP_H
+
 #if defined(_OPENMP)
 #include <omp.h>
 #endif
 
 #include <math.h>
 
-#define  PI       M_PI
-#define  PI2      2.0*PI
-#define  PIH      0.5*PI
+#ifndef  M_PI
+#define  M_PI        3.14159265358979323846264338327950288  /* pi */
+#endif
 
-#define  REMAP_GRID_BASIS_SRC  1
-#define  REMAP_GRID_BASIS_TGT  2
+#define  PI       M_PI
+#define  PI2      (2.0*PI)
+#define  PIH      (0.5*PI)
+
+#define  ZERO     0.0
+#define  ONE      1.0
+#define  TWO      2.0
+#define  THREE    3.0
+#define  HALF     0.5
+#define  QUART    0.25
+#define  BIGNUM   1.e+20
+#define  TINY     1.e-14
+
+
+#define  REMAP_GRID_TYPE_REG2D     1
+#define  REMAP_GRID_TYPE_CURVE2D   2
+#define  REMAP_GRID_TYPE_UNSTRUCT  3
+
+#define  REMAP_GRID_BASIS_SRC      1
+#define  REMAP_GRID_BASIS_TGT      2
 
 #define  RESTR_TYPE  int  /* restrict data types: 0 -> double, float; 1 -> int */
 
@@ -40,19 +61,19 @@ typedef RESTR_TYPE restr_t;
 
 #define  TINY_FRAC     1.e-10
 
-#define  NORM_OPT_NONE      1
-#define  NORM_OPT_DESTAREA  2
-#define  NORM_OPT_FRACAREA  3
+#define  NORM_OPT_NONE        1
+#define  NORM_OPT_DESTAREA    2
+#define  NORM_OPT_FRACAREA    3
 
-#define  MAP_TYPE_CONSERV   1
-#define  MAP_TYPE_BILINEAR  2
-#define  MAP_TYPE_BICUBIC   3
-#define  MAP_TYPE_DISTWGT   4
-#define  MAP_TYPE_CONSPHERE 5
+#define  MAP_TYPE_CONSERV     1
+#define  MAP_TYPE_BILINEAR    2
+#define  MAP_TYPE_BICUBIC     3
+#define  MAP_TYPE_DISTWGT     4
+#define  MAP_TYPE_CONSERV_YAC 5
 
-#define  SUBMAP_TYPE_NONE   0
-#define  SUBMAP_TYPE_LAF    1
-#define  SUBMAP_TYPE_SUM    2
+#define  SUBMAP_TYPE_NONE     0
+#define  SUBMAP_TYPE_LAF      1
+#define  SUBMAP_TYPE_SUM      2
 
 
 typedef struct {
@@ -166,11 +187,16 @@ void remap_laf(double *restrict dst_array, double missval, long dst_size, long n
 void remap_sum(double *restrict dst_array, double missval, long dst_size, long num_links, double *restrict map_wts,
 	       long num_wts, const int *restrict dst_add, const int *restrict src_add, const double *restrict src_array);
 
-void remap_bilin(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
-void remap_bicub(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
-void remap_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
-void remap_consphere(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
-void remap_distwgt(int num_neighbors, remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+void scrip_remap_weights_bilinear(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+void scrip_remap_weights_bicubic(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+void scrip_remap_weights_distwgt(int num_neighbors, remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+void scrip_remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
+
+void scrip_remap_bilinear(remapgrid_t* src_grid, remapgrid_t* tgt_grid, const double* restrict src_array, double* restrict tgt_array, double missval);
+void scrip_remap_bicubic(remapgrid_t *src_grid, remapgrid_t *tgt_grid, const double* restrict src_array, double* restrict tgt_array, double missval);
+void remap_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, const double* restrict src_array, double* restrict tgt_array, double missval);
+
 
 void resize_remap_vars(remapvars_t *rv, int increment);
 
@@ -189,8 +215,27 @@ void write_remap_scrip(const char *interp_file, int map_type, int submap_type, i
 void read_remap_scrip(const char *interp_file, int gridID1, int gridID2, int *map_type, int *submap_type, int *num_neighbors,
 		      int *remap_order, remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapvars_t *rv);
 
-void store_link_bilin(remapvars_t *rv, int dst_add, int *restrict src_add, double *restrict weights);
-
+void store_link_bilin(remapvars_t *rv, int dst_add, int src_add[4], double weights[4]);
 
 void calc_bin_addr(long gridsize, long nbins, const restr_t* restrict bin_lats, const restr_t* restrict cell_bound_box, int* restrict bin_addr);
 void calc_lat_bins(remapgrid_t* src_grid, remapgrid_t* tgt_grid, int map_type);
+long get_srch_cells(long tgt_grid_add, long nbins, int *bin_addr1, int *bin_addr2,
+		    restr_t *tgt_cell_bound_box, restr_t *src_cell_bound_box, long src_grid_size, int *srch_add);
+
+int grid_search_reg2d_nn(long nx, long ny, int *restrict nbr_add, double *restrict nbr_dist, double plat, double plon,
+			 const double *restrict src_center_lat, const double *restrict src_center_lon);
+
+int grid_search_reg2d(remapgrid_t *src_grid, int *restrict src_add, double *restrict src_lats, 
+		      double *restrict src_lons,  double plat, double plon, const int *restrict src_grid_dims,
+		      const double *restrict src_center_lat, const double *restrict src_center_lon);
+
+int grid_search(remapgrid_t *src_grid, int *restrict src_add, double *restrict src_lats, 
+		double *restrict src_lons,  double plat, double plon, const int *restrict src_grid_dims,
+		const double *restrict src_center_lat, const double *restrict src_center_lon,
+		const restr_t *restrict src_grid_bound_box, const int *restrict src_bin_add);
+
+int find_ij_weights(double plon, double plat, double* restrict src_lats, double* restrict src_lons, double *ig, double *jg);
+int rect_grid_search(long *ii, long *jj, double x, double y, long nxm, long nym, const double *restrict xm, const double *restrict ym);
+
+
+#endif  /* _REMAP_H */

@@ -3,8 +3,6 @@
 #endif
 
 
-#ifdef USE_MPI
-
 #include <ctype.h>
 #include <yaxt.h>
 
@@ -31,10 +29,6 @@ long initial_buffersize = 16 * 1024 * 1024;
 /* 16 * 1024; */
 /* 4 * 1024; */
 
-enum {
-  tagKey = 100,
-};
-
 double accumProbe   = 0.0;
 double accumRecv    = 0.0;
 double accumSend    = 0.0;
@@ -43,25 +37,6 @@ double accumWait    = 0.0;
 double accumWrite   = 0.0;
 
 char *token = "%";
-
-/***************************************************************/
-
-int encodeFileOpTag(int ID, int sc)
-{
-  return ID * tagKey + sc;
-}
-
-/***************************************************************/
-
-struct fileOpTag decodeFileOpTag(int tag)
-{
-  struct fileOpTag rtag;
-
-  rtag.id = tag / tagKey;
-  rtag.command = tag % tagKey;
-
-  return rtag;
-}
 
 /***************************************************************/
 
@@ -143,7 +118,7 @@ int pioFileOpen(const char *filename, const char *mode)
 
 /***************************************************************/
 
-void backendInit(void (*postCommSetupActions)(void))
+void cdiPioFileWritingInit(void (*postCommSetupActions)(void))
 {
   int IOMode = commInqIOMode ();
 
@@ -176,7 +151,7 @@ void backendInit(void (*postCommSetupActions)(void))
 
 /***************************************************************/
 
-void backendCleanup ( void )
+void cdiPioFileWritingFinalize(void)
 {
   int IOMode = commInqIOMode ();
   switch ( IOMode )
@@ -202,7 +177,6 @@ void backendCleanup ( void )
 
 /***************************************************************/
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

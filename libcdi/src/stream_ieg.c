@@ -69,11 +69,10 @@ int iegInqRecord(stream_t *streamptr, int *varID, int *levelID)
   int icode, ilevel;
   int zaxisID = -1;
   int vlistID;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   vlistID = streamptr->vlistID;
   fileID  = streamptr->fileID;
-  iegp    = streamptr->record->iegp;
 
   *varID   = -1;
   *levelID = -1;
@@ -108,7 +107,7 @@ int iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
   int varID, gridID;
   int i, size;
   double missval;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   vlistID = streamptr->vlistID;
   fileID  = streamptr->fileID;
@@ -117,7 +116,6 @@ int iegReadRecord(stream_t *streamptr, double *data, int *nmiss)
   recID   = streamptr->tsteps[tsID].recIDs[vrecID];
   recpos  = streamptr->tsteps[tsID].records[recID].position;
   varID   = streamptr->tsteps[tsID].records[recID].varID;
-  iegp    = streamptr->record->iegp;
 
   fileSetPos(fileID, recpos, SEEK_SET);
 
@@ -304,11 +302,11 @@ void iegDefGrid(int *gdb, int gridID)
 
       IEG_G_NumLon(gdb)   = nlon;
       IEG_G_NumLat(gdb)   = nlat;
-      IEG_G_FirstLat(gdb) = NINT(yfirst*1000);
-      IEG_G_LastLat(gdb)  = NINT(ylast*1000);
-      IEG_G_FirstLon(gdb) = NINT(xfirst*1000);
-      IEG_G_LastLon(gdb)  = NINT(xlast*1000);
-      IEG_G_LonIncr(gdb)  = NINT(xinc*1000);
+      IEG_G_FirstLat(gdb) = lround(yfirst*1000);
+      IEG_G_LastLat(gdb)  = lround(ylast*1000);
+      IEG_G_FirstLon(gdb) = lround(xfirst*1000);
+      IEG_G_LastLon(gdb)  = lround(xlast*1000);
+      IEG_G_LonIncr(gdb)  = lround(xinc*1000);
       if ( fabs(xinc*1000 - IEG_G_LonIncr(gdb)) > FLT_EPSILON )
 	IEG_G_LonIncr(gdb) = 0;
 
@@ -316,17 +314,17 @@ void iegDefGrid(int *gdb, int gridID)
 	IEG_G_LatIncr(gdb) = nlat/2;
       else
 	{
-	  IEG_G_LatIncr(gdb) = NINT(yinc*1000);
+	  IEG_G_LatIncr(gdb) = lround(yinc*1000);
 	  if ( fabs(yinc*1000 - IEG_G_LatIncr(gdb)) > FLT_EPSILON )
 	    IEG_G_LatIncr(gdb) = 0;
 
 	  if ( IEG_G_LatIncr(gdb) < 0 ) IEG_G_LatIncr(gdb) = -IEG_G_LatIncr(gdb);
 	}
 
-      if ( IEG_G_NumLon(gdb) > 1 && IEG_G_NumLat(gdb) == 1 ) 
+      if ( IEG_G_NumLon(gdb) > 1 && IEG_G_NumLat(gdb) == 1 )
 	if ( IEG_G_LonIncr(gdb) != 0 && IEG_G_LatIncr(gdb) == 0 ) IEG_G_LatIncr(gdb) = IEG_G_LonIncr(gdb);
 
-      if ( IEG_G_NumLon(gdb) == 1 && IEG_G_NumLat(gdb) > 1 ) 
+      if ( IEG_G_NumLon(gdb) == 1 && IEG_G_NumLat(gdb) > 1 )
 	if ( IEG_G_LonIncr(gdb) == 0 && IEG_G_LatIncr(gdb) != 0 ) IEG_G_LonIncr(gdb) = IEG_G_LatIncr(gdb);
 
       if ( IEG_G_LatIncr(gdb) == 0 || IEG_G_LonIncr(gdb) == 0 )
@@ -336,8 +334,8 @@ void iegDefGrid(int *gdb, int gridID)
 
       if ( gridIsRotated(gridID) )
 	{
-	  IEG_G_LatSP(gdb) = - NINT(gridInqYpole(gridID) * 1000);
-	  IEG_G_LonSP(gdb) =   NINT((gridInqXpole(gridID) + 180) * 1000);
+	  IEG_G_LatSP(gdb) = - lround(gridInqYpole(gridID) * 1000);
+	  IEG_G_LonSP(gdb) =   lround((gridInqXpole(gridID) + 180) * 1000);
 	  IEG_G_Size(gdb)  = 42;
 	}
       else
@@ -569,10 +567,9 @@ int iegDefRecord(stream_t *streamptr)
   int param, pdis, pcat, pnum;
   int varID, levelID, tsID, zaxisID;
   int byteorder;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   vlistID = streamptr->vlistID;
-  iegp    = streamptr->record->iegp;
   byteorder = streamptr->byteorder;
 
   varID   = streamptr->record->varID;
@@ -612,10 +609,9 @@ int iegWriteRecord(stream_t *streamptr, const double *data)
   int status = 0;
   int i, gridsize, gridID;
   double refval;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   fileID = streamptr->fileID;
-  iegp   = streamptr->record->iegp;
   gridID = streamptr->record->gridID;
 
   gridsize = gridInqSize(gridID);
@@ -770,7 +766,7 @@ void iegAddRecord(stream_t *streamptr, int param, int *pdb, int *gdb, double *vc
   datatype = iegInqDatatype(prec);
 
   varAddRecord(recID, param, gridID, leveltype, lbounds, level1, level2, 0, 0,
-	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL);
+	       datatype, &varID, &levelID, UNDEFID, 0, 0, NULL, NULL, NULL, NULL);
 
   (*record).varID   = varID;
   (*record).levelID = levelID;
@@ -849,11 +845,10 @@ void iegScanTimestep1(stream_t *streamptr)
   taxis_t *taxis;
   int vlistID;
   IEGCOMPVAR compVar, compVar0;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   streamptr->curTsID = 0;
 
-  iegp  = streamptr->record->iegp;
   tsID  = tstepsNewEntry(streamptr);
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -986,13 +981,12 @@ int iegScanTimestep2(stream_t *streamptr)
   taxis_t *taxis;
   int vlistID;
   IEGCOMPVAR compVar, compVar0;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   streamptr->curTsID = 1;
 
   vlistID = streamptr->vlistID;
   fileID  = streamptr->fileID;
-  iegp    = streamptr->record->iegp;
 
   tsID = streamptr->rtsteps;
   if ( tsID != 1 )
@@ -1166,7 +1160,7 @@ int iegScanTimestep(stream_t *streamptr)
   taxis_t *taxis;
   int rindex, nrecs = 0;
   IEGCOMPVAR compVar, compVar0;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   if ( CDI_Debug )
     {
@@ -1179,7 +1173,6 @@ int iegScanTimestep(stream_t *streamptr)
   if ( streamptr->rtsteps == 0 )
     Error("Internal problem! Missing contents.");
 
-  iegp  = streamptr->record->iegp;
   tsID  = streamptr->rtsteps;
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -1317,9 +1310,8 @@ void iegReadVarDP(stream_t *streamptr, int varID, double *data, int *nmiss)
   int recID;
   int i;
   double missval;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
-  iegp     = streamptr->record->iegp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   nlevs    = streamptr->vars[varID].nlevs;
@@ -1362,9 +1354,8 @@ void iegReadVarSliceDP(stream_t *streamptr, int varID, int levID, double *data, 
   int recID;
   int i;
   double missval;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
-  iegp     = streamptr->record->iegp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   nlevs    = streamptr->vars[varID].nlevs;
@@ -1409,12 +1400,10 @@ void iegWriteVarDP(stream_t *streamptr, int varID, const double *data)
   int date, time;
   int param, pdis, pcat, pnum;
   double refval;
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
   if ( CDI_Debug )
     Message("streamID = %d  varID = %d", streamptr->self, varID);
-
-  iegp     = streamptr->record->iegp;
 
   iegInitMem(iegp);
   for ( i = 0; i < 37; i++ ) iegp->ipdb[i] = -1;
@@ -1470,9 +1459,8 @@ void iegWriteVarSliceDP(stream_t *streamptr, int varID, int levID, const double 
   /* int tsID; */
   int vlistID;
   /* int param, date, time, datasize; */
-  iegrec_t *iegp;
+  iegrec_t *iegp = (iegrec_t*) streamptr->record->exsep;
 
-  iegp     = streamptr->record->iegp;
   vlistID  = streamptr->vlistID;
   fileID   = streamptr->fileID;
   /* tsID     = streamptr->curTsID; */

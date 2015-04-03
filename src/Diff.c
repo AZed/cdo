@@ -30,7 +30,7 @@
 
 void *Diff(void *argument)
 {
-  int DIFF, DIFF2, DIFFP, DIFFN, DIFFC;
+  int DIFF, DIFFP, DIFFN, DIFFC;
   int operatorID;
   int lhead = TRUE;
   int i;
@@ -40,6 +40,7 @@ void *Diff(void *argument)
   int ndiff;
   int code, param;
   int gridID, zaxisID, vdate, vtime;
+  int checkrel;
   int nrecs, nrecs2;
   int levelID;
   int tsID;
@@ -52,19 +53,23 @@ void *Diff(void *argument)
   char varname[CDI_MAX_NAME];
   char paramstr[32];
   char vdatestr[32], vtimestr[32];
-  double *array1, *array2;
+  double absdiff;
+  double abslim = 0., abslim2 = 1.e-3, rellim = 0.5;
   double absm, relm;
   double missval1, missval2;
+  double *array1, *array2;
 
   cdoInitialize(argument);
 
   DIFF  = cdoOperatorAdd("diff",  0, 0, NULL);
-  DIFF2 = cdoOperatorAdd("diff2", 0, 0, NULL);
   DIFFP = cdoOperatorAdd("diffp", 0, 0, NULL);
   DIFFN = cdoOperatorAdd("diffn", 0, 0, NULL);
   DIFFC = cdoOperatorAdd("diffc", 0, 0, NULL);
 
   operatorID = cdoOperatorID();
+
+  if ( operatorArgc() == 1 ) abslim = atof(operatorArgv()[0]);
+  if ( abslim < -1.e33 || abslim > 1.e+33 ) cdoAbort("Abs. limit out of range\n");
 
   streamID1 = streamOpenRead(cdoStreamName(0));
   streamID2 = streamOpenRead(cdoStreamName(1));
@@ -76,8 +81,8 @@ void *Diff(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
 
   indg = 0;
   tsID = 0;
@@ -113,6 +118,8 @@ void *Diff(void *argument)
 	  missval1 = vlistInqVarMissval(vlistID1, varID1);
 	  missval2 = vlistInqVarMissval(vlistID2, varID2);
 
+	  checkrel = gridInqType(gridID) != GRID_SPECTRAL;
+
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 
 	  streamReadRecord(streamID1, array1, &nmiss1);
@@ -126,21 +133,28 @@ void *Diff(void *argument)
 
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-	      if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) )
+	      if ( (DBL_IS_NAN(array1[i]) && !DBL_IS_NAN(array2[i])) ||
+		  (!DBL_IS_NAN(array1[i]) &&  DBL_IS_NAN(array2[i])) )
 		{
-		  if ( fabs(array1[i] - array2[i]) > 0 ) ndiff++;
+		  ndiff++;
+		  relm = 1.0;
+		}
+	      else if ( !DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2) )
+		{
+		  absdiff = fabs(array1[i] - array2[i]);
+		  if ( absdiff > 0. ) ndiff++;
 
-		  absm = MAX(absm, fabs(array1[i]-array2[i]));
-		  if ( array1[i]*array2[i] < 0 )
+		  absm = MAX(absm, absdiff);
+
+		  if ( array1[i]*array2[i] < 0. )
 		    dsgn = TRUE;
-		  else if ( IS_EQUAL(array1[i]*array2[i], 0) )
+		  else if ( IS_EQUAL(array1[i]*array2[i], 0.) )
 		    zero = TRUE;
 		  else
-		    relm = MAX(relm, fabs(array1[i]-array2[i]) /
-			   MAX(fabs(array1[i]), fabs(array2[i])));
+		    relm = MAX(relm, absdiff / MAX(fabs(array1[i]), fabs(array2[i])));
 		}
 	      else if ( (DBL_IS_EQUAL(array1[i], missval1) && !DBL_IS_EQUAL(array2[i], missval2)) || 
-			(!DBL_IS_EQUAL(array1[i], missval1) && DBL_IS_EQUAL(array2[i], missval2)) )
+		       (!DBL_IS_EQUAL(array1[i], missval1) &&  DBL_IS_EQUAL(array2[i], missval2)) )
 		{
 		  ndiff++;
 		  relm = 1.0;
@@ -149,63 +163,81 @@ void *Diff(void *argument)
 
 	  if ( ! cdoSilentMode || cdoVerbose )
 	    {
-	      if ( absm > 0 || relm > 0 || cdoVerbose )
+	      if ( absm > abslim || (checkrel && relm > rellim) || cdoVerbose )
 		{
 		  if ( lhead )
 		    {
 		      lhead = FALSE;
 
+		      set_text_color(stdout, BRIGHT, BLACK);
 		      fprintf(stdout, "               Date     Time   Level Gridsize    Miss ");
-			
-		      if ( operatorID == DIFF2 ) fprintf(stdout, "   Diff ");
-
+		      fprintf(stdout, "   Diff ");
 		      fprintf(stdout, ": S Z  Max_Absdiff Max_Reldiff");
 
-		      if ( operatorID == DIFFN || operatorID == DIFF2 )
+		      if ( operatorID == DIFFN )
 			fprintf(stdout, " : Parameter name");
 		      else if ( operatorID == DIFF || operatorID == DIFFP )
 			fprintf(stdout, " : Parameter ID");
 		      else if ( operatorID == DIFFC )
 			fprintf(stdout, " : Code number");
+		      reset_text_color(stdout);
 
 		      fprintf(stdout, "\n");
 		    }
 
 		  if ( operatorID == DIFFN ) vlistInqVarName(vlistID1, varID1, varname);
+		  
+		  set_text_color(stdout, BRIGHT, BLACK);
+		  fprintf(stdout, "%6d ", indg);
+		  reset_text_color(stdout);
+		  set_text_color(stdout, RESET, BLACK);
+		  fprintf(stdout, ":");
+		  reset_text_color(stdout);
 		
-		  fprintf(stdout, "%6d :%s %s ", indg, vdatestr, vtimestr);
-
+		  set_text_color(stdout, RESET, BLUE);
+		  fprintf(stdout, "%s %s ", vdatestr, vtimestr);
 		  fprintf(stdout, "%7g ", zaxisInqLevel(zaxisID, levelID));
-
 		  fprintf(stdout, "%8d %7d ", gridsize, MAX(nmiss1, nmiss2));
-
-		  if ( operatorID == DIFF2 )  fprintf(stdout, "%7d ", ndiff);
+		  fprintf(stdout, "%7d ", ndiff);
+		  reset_text_color(stdout);
 		
-		  fprintf(stdout, ": %c %c ", dsgn ? 'T' : 'F', zero ? 'T' : 'F');
+		  set_text_color(stdout, RESET, BLACK);
+		  fprintf(stdout, ":");
+		  reset_text_color(stdout);
+		  fprintf(stdout, " %c %c ", dsgn ? 'T' : 'F', zero ? 'T' : 'F');
 		  fprintf(stdout, "%#12.5g%#12.5g", absm, relm);
+		  set_text_color(stdout, RESET, BLACK);
+		  fprintf(stdout, " : ");
+		  reset_text_color(stdout);
 
+		  set_text_color(stdout, BRIGHT, GREEN);
 		  if ( operatorID == DIFFN )
-		    fprintf(stdout, " : %-11s", varname);
-		  else if ( operatorID == DIFF || operatorID == DIFF2 || operatorID == DIFFP )
-		    fprintf(stdout, " : %-11s", paramstr);
+		    fprintf(stdout, "%-11s", varname);
+		  else if ( operatorID == DIFF || operatorID == DIFFP )
+		    fprintf(stdout, "%-11s", paramstr);
 		  else if ( operatorID == DIFFC )
-		    fprintf(stdout, " : %4d", code);
+		    fprintf(stdout, "%4d", code);
+		  reset_text_color(stdout);
 		      
 		  fprintf(stdout, "\n");
 		}
 	    }
 
 	  ngrec++;
-	  if ( absm > 0     || relm > 0     ) ndrec++;
-	  if ( absm > 1.e-3 || relm > 1.e-3 ) nd2rec++;
+	  if ( absm > abslim  || (checkrel && relm > rellim) ) ndrec++;
+	  if ( absm > abslim2 || (checkrel && relm > rellim) ) nd2rec++;
 	}
       tsID++;
     }
 
   if ( ndrec > 0 )
     {
-      fprintf(stdout, "  %d of %d records differ\n", ndrec, ngrec);
-      if ( ndrec != nd2rec )
+      set_text_color(stdout, BRIGHT, RED);
+      fprintf(stdout, "  %d of %d records differ", ndrec, ngrec);
+      reset_text_color(stdout);
+      fprintf(stdout, "\n");
+
+      if ( ndrec != nd2rec && abslim < abslim2 )
 	fprintf(stdout, "  %d of %d records differ more than 0.001\n", nd2rec, ngrec);
       /*  fprintf(stdout, "  %d of %d records differ more then one thousandth\n", nprec, ngrec); */
     }

@@ -170,19 +170,19 @@ void *Trms(void *argument)
 
   streamDefVlist(streamID3, vlistID3);
 
-  vardata1 = malloc(nvars*sizeof(double*));
-  vardata2 = malloc(nvars*sizeof(double*));
+  vardata1 = (double**) malloc(nvars*sizeof(double*));
+  vardata2 = (double**) malloc(nvars*sizeof(double*));
 
   gridsize = gridInqSize(vlistInqVarGrid(vlistID1, pvarID));
   nlevel   = vctsize/2 - 1;
-  dp = malloc(gridsize*nlevel*sizeof(double));
+  dp = (double*) malloc(gridsize*nlevel*sizeof(double));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
-      vardata2[varID] = malloc(gridsize*nlevel*sizeof(double));
+      vardata1[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
+      vardata2[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
     }
 
   field_init(&field1);
@@ -192,7 +192,7 @@ void *Trms(void *argument)
   lim = vlistGridsizeMax(vlistID1);
   field1.weight = NULL;
   if ( needWeights )
-    field1.weight = malloc(lim*sizeof(double));
+    field1.weight = (double*) malloc(lim*sizeof(double));
 
   field2.weight = NULL;
 

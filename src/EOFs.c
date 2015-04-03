@@ -144,7 +144,7 @@ void *EOFs(void * argument)
   nvars       = vlistNvars(vlistID1);
   nrecs       = vlistNrecs(vlistID1);
 
-  weight      = malloc(gridsize*sizeof(double));
+  weight      = (double*) malloc(gridsize*sizeof(double));
   if ( WEIGHTS )
     gridWeights(gridID1, &weight[0]);
   else
@@ -157,7 +157,7 @@ void *EOFs(void * argument)
   tsID        = 0;
 
   /* COUNT NUMBER OF TIMESTEPS if EOF_ or EOF_TIME */
-  if ( operfunc == EOF_ || operfunc == EOF_TIME)
+  if ( operfunc == EOF_ || operfunc == EOF_TIME )
     {
       if ( cdoVerbose ) 
 	cdoPrint("Counting timesteps in ifile");
@@ -183,10 +183,11 @@ void *EOFs(void * argument)
       streamID1   = streamOpenRead(cdoStreamName(0));
       vlistID1    = streamInqVlist(streamID1);
       taxisID1    = vlistInqTaxis(vlistID1);
-      if ( nts < gridsize || operfunc == EOF_TIME) {
-         time_space = 1;
-         grid_space = 0;
-       }
+      if ( nts < gridsize || operfunc == EOF_TIME )
+	{
+	  time_space = 1;
+	  grid_space = 0;
+	}
       else
         {
           time_space = 0;
@@ -237,11 +238,11 @@ void *EOFs(void * argument)
   if ( cdoTimer ) timer_start(timer_alloc);
 
   /* allocation of temporary fields and output structures */
-  in           = malloc(gridsize*sizeof(double));
-  datafields   = malloc(nvars*sizeof(double ***));
-  datacounts   = malloc(nvars*sizeof(int **));
-  eigenvectors = malloc(nvars*sizeof(double ***));
-  eigenvalues  = malloc(nvars*sizeof(double ***));
+  in           = (double*) malloc(gridsize*sizeof(double));
+  datafields   = (double ****) malloc(nvars*sizeof(double ***));
+  datacounts   = (int ***) malloc(nvars*sizeof(int **));
+  eigenvectors = (double ****) malloc(nvars*sizeof(double ***));
+  eigenvalues  = (double ****) malloc(nvars*sizeof(double ***));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -250,22 +251,22 @@ void *EOFs(void * argument)
       nlevs               = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval             = vlistInqVarMissval(vlistID1, varID);
 
-      datafields[varID]   = malloc(nlevs*sizeof(double **));
-      datacounts[varID]   = malloc(nlevs*sizeof(int* ));
-      eigenvectors[varID] = malloc(nlevs*sizeof(double **));
-      eigenvalues[varID]  = malloc(nlevs*sizeof(double **));
+      datafields[varID]   = (double ***) malloc(nlevs*sizeof(double **));
+      datacounts[varID]   = (int* *) malloc(nlevs*sizeof(int* ));
+      eigenvectors[varID] = (double ***) malloc(nlevs*sizeof(double **));
+      eigenvalues[varID]  = (double ***) malloc(nlevs*sizeof(double **));
 
       for ( levelID = 0; levelID < nlevs; ++levelID )
         {
           if ( grid_space )
             {
-              datafields[varID][levelID]            = malloc(1*sizeof(double *));
+              datafields[varID][levelID]            = (double **) malloc(1*sizeof(double *));
               //datafields[varID][levelID][0].grid    = gridID1;
               //datafields[varID][levelID][0].nmiss   = 0;
               //datafields[varID][levelID][0].missval = missval;
-              datafields[varID][levelID][0]     = malloc(gridsize*gridsize*sizeof(double));
+              datafields[varID][levelID][0]     = (double*) malloc(gridsize*gridsize*sizeof(double));
 
-              datacounts[varID][levelID]            = malloc(gridsize*gridsize*sizeof(int));
+              datacounts[varID][levelID]            = (int*) malloc(gridsize*gridsize*sizeof(int));
 	      for ( i = 0; i<gridsize*gridsize; i++ )
 		{
 		  datacounts[varID][levelID][i] = 0;
@@ -274,34 +275,34 @@ void *EOFs(void * argument)
 	    }
           else if ( time_space )
             {
-              datafields[varID][levelID] = malloc(nts*sizeof(double *));
+              datafields[varID][levelID] = (double **) malloc(nts*sizeof(double *));
               for ( tsID = 0; tsID < nts; tsID++ )
                 {
                   //datafields[varID][levelID][tsID].grid    = gridID1;
                   //datafields[varID][levelID][tsID].nmiss   = 0;
                   //datafields[varID][levelID][tsID].missval = missval;
-                  datafields[varID][levelID][tsID]    = malloc(gridsize*sizeof(double));
+                  datafields[varID][levelID][tsID]    = (double*) malloc(gridsize*sizeof(double));
                   for ( i = 0; i < gridsize; ++i )
                     datafields[varID][levelID][tsID][i] = 0;
                 }
-              datacounts[varID][levelID] = malloc(gridsize*sizeof(int));	      
+              datacounts[varID][levelID] = (int*) malloc(gridsize*sizeof(int));	      
 	      for(i=0;i<gridsize;i++)
 		datacounts[varID][levelID][i] = 0;
             }
 
-          eigenvectors[varID][levelID] = malloc(n_eig*sizeof(double *));
-          eigenvalues[varID][levelID]  = malloc(n*sizeof(double *));
+          eigenvectors[varID][levelID] = (double **) malloc(n_eig*sizeof(double *));
+          eigenvalues[varID][levelID]  = (double **) malloc(n*sizeof(double *));
 
           for ( i = 0; i < n; i++ )
             {
               if ( i < n_eig )
                 {
-                  eigenvectors[varID][levelID][i] = malloc(gridsize*sizeof(double));
+                  eigenvectors[varID][levelID][i] = (double*) malloc(gridsize*sizeof(double));
                   for ( ii = 0; ii < gridsize; ++ii )
                     eigenvectors[varID][levelID][i][ii] = missval;
                 }
 
-              eigenvalues[varID][levelID][i] = malloc(1*sizeof(double));
+              eigenvalues[varID][levelID][i] = (double*) malloc(1*sizeof(double));
               eigenvalues[varID][levelID][i][0]  = missval;
             }
         }
@@ -400,8 +401,8 @@ void *EOFs(void * argument)
         }
 
   /*
-  pack = malloc(gridsize*sizeof(int)); //TODO
-  miss = malloc(gridsize*sizeof(int));
+  pack = (int*) malloc(gridsize*sizeof(int)); //TODO
+  miss = (int*) malloc(gridsize*sizeof(int));
   */
 
   if ( cdoTimer ) timer_stop(timer_read);
@@ -436,8 +437,8 @@ void *EOFs(void * argument)
 
           if ( grid_space )
             {
-	      pack = malloc(gridsize*sizeof(int));
-	      miss = malloc(gridsize*sizeof(int));
+	      pack = (int*) malloc(gridsize*sizeof(int));
+	      miss = (int*) malloc(gridsize*sizeof(int));
 
               for ( i1 = 0; i1 < gridsize; i1++ )
                 {
@@ -453,10 +454,10 @@ void *EOFs(void * argument)
 	      n = npack;
 	      if ( npack )
 		{
-		  cov = malloc(npack*sizeof(double *));
+		  cov = (double **) malloc(npack*sizeof(double *));
 		  for (i1 = 0; i1 < npack; i1++ )
-		    cov[i1] = malloc(npack*sizeof(double));
-		  eigv = malloc(npack*sizeof(double));
+		    cov[i1] = (double*) malloc(npack*sizeof(double));
+		  eigv = (double*) malloc(npack*sizeof(double));
 		}
 
               for (i1 = 0; i1 < npack; i1++)
@@ -471,10 +472,10 @@ void *EOFs(void * argument)
             {
               sum_w = 0;
 
-	      pack = malloc ( gridsize * sizeof(int) );
-	      miss = malloc ( gridsize * sizeof(int) );
+	      pack = (int*) malloc(gridsize*sizeof(int));
+	      miss = (int*) malloc(gridsize*sizeof(int));
 
-              for ( i = 0; i < gridsize ; i++ )
+              for ( i = 0; i < gridsize; i++ )
                 {
 		  if ( datacountv[i] )
 		    {
@@ -487,10 +488,10 @@ void *EOFs(void * argument)
 	      if ( cdoVerbose )
 		cdoPrint("allocating cov with %i x %i elements | npack=%i",nts,nts,npack);
 
-              cov = malloc (nts*sizeof(double*));
+              cov = (double**) malloc(nts*sizeof(double*));
               for ( j1 = 0; j1 < nts; j1++)
-                cov[j1] = malloc(nts*sizeof(double));
-	      eigv = malloc (nts*sizeof(double));
+                cov[j1] = (double*) malloc(nts*sizeof(double));
+	      eigv = (double*) malloc(nts*sizeof(double));
 
 #if defined(_OPENMP)
 #pragma omp parallel for private(j1,j2,i,sum, df1p, df2p) default(shared) schedule(dynamic)
@@ -530,12 +531,14 @@ void *EOFs(void * argument)
           for (i = 0; i < n; i++) 
             eigenvalues[varID][levelID][i][0] = eigv[i]*sum_w;
 
-          for (i = 0; i < n_eig; i++)
+          for ( i = 0; i < n_eig; i++ )
             {
+	      double *eigenvec = eigenvectors[varID][levelID][i];
+
               if ( grid_space )
 		{
 		  for(j = 0; j < npack; j++)
-		    eigenvectors[varID][levelID][i][pack[j]] = 
+		    eigenvec[pack[j]] = 
 #ifdef OLD_IMPLEMENTATION
 		      cov[i][j] / sqrt(weight[pack[j]]);
 #else
@@ -545,7 +548,7 @@ void *EOFs(void * argument)
               else if ( time_space )
                 {
 #if defined(_OPENMP)
-#pragma omp parallel for private(i2,j,sum) shared(datafieldv,eigenvectors)
+#pragma omp parallel for private(i2,j,sum) shared(datafieldv,eigenvec)
 #endif
                   for ( i2 = 0; i2 < npack; i2++ )
                     {
@@ -553,14 +556,14 @@ void *EOFs(void * argument)
                       for ( j = 0; j < nts; j++ )
                         sum += datafieldv[j][pack[i2]] * cov[i][j];
 
-                      eigenvectors[varID][levelID][i][pack[i2]] = sum;
+                      eigenvec[pack[i2]] = sum;
                     }
                   // NORMALIZING
                   sum = 0;
 
 #if defined(_OPENMP)
 #pragma omp parallel for private(i2) default(none) reduction(+:sum)	\
-  shared(eigenvectors,weight,pack,varID,levelID,i,npack)
+  shared(eigenvec,weight,pack,npack)
 #endif
                   for ( i2 = 0; i2 < npack; i2++ )
 		    {
@@ -572,8 +575,8 @@ void *EOFs(void * argument)
 #else
 		      sum += /*weight[pack[i2]] **/
 #endif
-		      eigenvectors[varID][levelID][i][pack[i2]] *
-		      eigenvectors[varID][levelID][i][pack[i2]];
+			eigenvec[pack[i2]] *
+			eigenvec[pack[i2]];
 		    }
 
                   if ( sum > 0 )
@@ -581,19 +584,19 @@ void *EOFs(void * argument)
                       sum = sqrt(sum);
 #if defined(_OPENMP)
 #pragma omp parallel for private(i2) default(none) \
-  shared(npack,varID,levelID,i,pack,sum,eigenvectors)
+  shared(npack,pack,sum,eigenvec)
 #endif
                       for( i2 = 0; i2 < npack; i2++ )
-                        eigenvectors[varID][levelID][i][pack[i2]] /= sum;
+                        eigenvec[pack[i2]] /= sum;
                     }
                   else
 		    {
 #if defined(_OPENMP)
 #pragma omp parallel for private(i2) default(none) \
-  shared(npack,varID,levelID,i,pack,sum,eigenvectors,missval)
+  shared(npack,pack,eigenvec,missval)
 #endif
 		      for( i2 = 0; i2 < npack; i2++ )
-			eigenvectors[varID][levelID][i][pack[i2]] = missval;
+			eigenvec[pack[i2]] = missval;
 		    }
                 } // else if ( time_space )
             } // for ( i = 0; i < n_eig; i++ )
@@ -766,4 +769,3 @@ void *EOFs(void * argument)
 
   return (0);
 }
-

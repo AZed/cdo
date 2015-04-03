@@ -11,11 +11,8 @@
 #include <math.h>
 #include <time.h>
 
-#define PI_QU 1*atan(1)
-#define PI_HA 2*atan(1)
-#define PI    4*atan(1)
-#define FNORM_PRECISION 1e-12
-#define MAX_JACOBI_ITER 12
+#define  FNORM_PRECISION  1e-12
+#define  MAX_JACOBI_ITER  12
 
 int jacobi_1side(double **M, double *A, long n);
 void annihilate_1side(double **M, long i, long j, long k, long n);
@@ -72,7 +69,7 @@ void eigen_solution_of_symmetric_matrix (double **a, double *eig_val,
   int i, j;
   double temp;
   
-  e = malloc (n * sizeof (double));
+  e = (double*) malloc(n * sizeof(double));
   
   make_symmetric_matrix_triangular (a, n, eig_val, e, prompt);
   
@@ -150,12 +147,14 @@ void heap_sort (double *eig_val, double **a, int n)
 }
 
 
-void make_symmetric_matrix_triangular (double **a, int n,
-				       double *d, double *e, const char *prompt)
+void make_symmetric_matrix_triangular(double **a, int n,
+				      double *d, double *e, const char *prompt)
 {
   int i, j, k;
   double f, g, h, hh, scale;
   
+  UNUSED(prompt);
+
   for (i = n - 1; i >= 1; i--)
     {
       h = scale = 0;
@@ -366,7 +365,7 @@ int solution_of_linear_equation (double **a, double *b, int n)
   int sign;
   int not_singular;
   
-  index = malloc (n * sizeof (int));
+  index = (int*) malloc(n * sizeof(int));
   
   not_singular = lu_decomposition (a, n, index, &sign);
   
@@ -387,8 +386,8 @@ int inverse_of_matrix (double **a, double **b, int n)
   int not_singular;
   double *col;
   
-  index = malloc (n * sizeof (int));
-  col = malloc (n * sizeof (double));
+  index = (int*) malloc(n * sizeof(int));
+  col = (double*) malloc(n * sizeof(double));
   
   not_singular = lu_decomposition (a, n, index, &sign);
   
@@ -418,7 +417,7 @@ int lu_decomposition (double **a, int n, int *index, int *sign)
   double big, sum, temp;
   double *v;
   
-  v = malloc (n * sizeof (double));
+  v = (double*) malloc(n * sizeof(double));
   *sign = 1;
   for (i = 0; i < n; i++)
     {
@@ -511,31 +510,36 @@ void lu_backsubstitution (double **a, int n, int *index, double *b)
 }
 
 
-void fft (double *real, double *imag, int n, int sign)
-{				/* n must be a power of 2 */
+void fft(double *real, double *imag, int n, int sign)
+{
+  /* n must be a power of 2 */
   /* sign should be 1 (FT) or -1 (reverse FT) */
   int i, j, j1, j2;
   int bit;
+  int step;
   double temp_r, temp_i, norm;
   double w_r, w_i, ww_r, ww_i;
-  int step;
   
   /* Bit reversal part */
-  for (i = j = 0; i < n; i++)	/* The bit pattern of i and j are reverse */
+  for ( i = j = 0; i < n; i++ )	/* The bit pattern of i and j are reverse */
     {
-      if (i > j)
+      if ( i > j )
         {
+          /* swap real part */
           temp_r = real[i];
           real[i] = real[j];
           real[j] = temp_r;
+
+          /* swap imaginary part */
           temp_i = imag[i];
           imag[i] = imag[j];
           imag[j] = temp_i;
         }
-      for (bit = n >> 1; j & bit; bit >>= 1)
-        j ^= bit;
+
+      for ( bit = n >> 1; j & bit; bit >>= 1 ) j ^= bit;
       j |= bit;
     }
+
   /* Danielson-Lanczos Part */
   for (step = 1; step < n; step <<= 1)
     {
@@ -559,17 +563,19 @@ void fft (double *real, double *imag, int n, int sign)
           ww_i = temp_r * w_i + ww_i * w_r;
         }
     }
-  norm = sqrt (n);
-  for (i = 0; i < n; i++)
+
+  norm = 1./sqrt(n);
+  for ( i = 0; i < n; i++ )
     {
-      real[i] /= norm;
-      imag[i] /= norm;
+      real[i] *= norm;
+      imag[i] *= norm;
     }
 }
 
 
-void ft (double *real, double *imag, int n, int sign)
-{				/* sign should be 1 (FT) or -1 (reverse FT) */
+void ft(double *real, double *imag, int n, int sign)
+{
+  /* sign should be 1 (FT) or -1 (reverse FT) */
   int j, k;
   static double *work_r = 0, *work_i = 0;
   double sum_r, sum_i, norm;
@@ -577,12 +583,12 @@ void ft (double *real, double *imag, int n, int sign)
   
   if (!work_r)
     {
-      work_r = malloc (n * sizeof (double));
+      work_r = (double*) malloc(n * sizeof(double));
       /* free_at_exit (work_r); */
     }
   if (!work_i)
     {
-      work_i = malloc (n * sizeof (double));
+      work_i = (double*) malloc(n * sizeof(double));
       /* free_at_exit (work_i); */
     }
   
@@ -605,22 +611,24 @@ void ft (double *real, double *imag, int n, int sign)
       work_r[k] = sum_r;
       work_i[k] = sum_i;
     }
-  norm = sqrt (n);
+
+  norm = 1./sqrt(n);
   for (k = 0; k < n; k++)
     {
-      real[k] = work_r[k] / norm;
-      imag[k] = work_i[k] / norm;
+      real[k] = work_r[k] * norm;
+      imag[k] = work_i[k] * norm;
     }
 }
 
 /* reentrant version of ft */
-void ft_r(double *real, double *imag, int n, int sign, double *work_r, double *work_i)
-{				/* sign should be 1 (FT) or -1 (reverse FT) */
+void ft_r(double * restrict real, double * restrict imag, int n, int sign, double * restrict work_r, double * restrict work_i)
+{
+  /* sign should be 1 (FT) or -1 (reverse FT) */
   int j, k;
   double sum_r, sum_i, norm;
   double w_r, w_i, ww_r, ww_i, temp_r;
     
-  for (k = 0; k < n; k++)
+  for ( k = 0; k < n; k++ )
     {
       w_r = cos (2 * M_PI * k / n);
       w_i = sin (2 * M_PI * k / n) * sign;
@@ -628,7 +636,7 @@ void ft_r(double *real, double *imag, int n, int sign, double *work_r, double *w
       ww_i = 0;
       sum_r = 0;
       sum_i = 0;
-      for (j = 0; j < n; j++)
+      for ( j = 0; j < n; j++ )
         {
           sum_r += real[j] * ww_r - imag[j] * ww_i;
           sum_i += real[j] * ww_i + imag[j] * ww_r;
@@ -639,11 +647,12 @@ void ft_r(double *real, double *imag, int n, int sign, double *work_r, double *w
       work_r[k] = sum_r;
       work_i[k] = sum_i;
     }
-  norm = sqrt (n);
-  for (k = 0; k < n; k++)
+
+  norm = 1./sqrt(n);
+  for ( k = 0; k < n; k++ )
     {
-      real[k] = work_r[k] / norm;
-      imag[k] = work_i[k] / norm;
+      real[k] = work_r[k] * norm;
+      imag[k] = work_i[k] * norm;
     }
 }
 
@@ -1307,10 +1316,12 @@ void annihilate_1side(double **M, long i, long j, long k, long n)
   //  int first_annihilation = 0;
   long r;
 
+  UNUSED(k);
+
   i--; j--;
 
-  mi = malloc(n*sizeof(double));
-  mj = malloc(n*sizeof(double));
+  mi = (double*) malloc(n*sizeof(double));
+  mj = (double*) malloc(n*sizeof(double));
 
   if ( ! mj || ! mi) 
     fprintf(stderr, 
@@ -1376,8 +1387,8 @@ int jacobi_1side(double **M, double *A, long n)
 
   if ( n > 0 )
     {
-      annihilations_buff = malloc (n*n*2*sizeof(int));
-      annihilations = malloc((n*n)*sizeof(int*));
+      annihilations_buff = (int*) malloc(n*n*2*sizeof(int));
+      annihilations = (int**) malloc((n*n)*sizeof(int*));
     }
 
   for(i=0;i<n*n;i++)

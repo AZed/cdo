@@ -5,8 +5,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <mpi.h>
 #include <yaxt.h>
 
@@ -96,7 +94,6 @@ enum
 
 #endif
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

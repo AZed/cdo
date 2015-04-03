@@ -113,7 +113,7 @@ void *Setgrid(void *argument)
 
       gridID = vlistInqVarGrid(vlistID, varID);
       areasize = gridInqSize(gridID);
-      areaweight = malloc(areasize*sizeof(double));
+      areaweight = (double*) malloc(areasize*sizeof(double));
   
       streamReadRecord(streamID, areaweight, &nmiss);
 
@@ -157,7 +157,7 @@ void *Setgrid(void *argument)
       missval  = vlistInqVarMissval(vlistID, varID);
       gridID   = vlistInqVarGrid(vlistID, varID);
       masksize = gridInqSize(gridID);
-      gridmask = malloc(masksize*sizeof(double));
+      gridmask = (double*) malloc(masksize*sizeof(double));
   
       streamReadRecord(streamID, gridmask, &nmiss);
 
@@ -249,6 +249,8 @@ void *Setgrid(void *argument)
 	  gridID1 = vlistGrid(vlistID1, index);
 	  gridID2 = -1;
 
+	  if ( gridInqType(gridID1) == GRID_GENERIC && gridInqSize(gridID1) == 1 ) continue;
+	  
 	  if ( lregular )
 	    {
 	      if ( gridInqType(gridID1) == GRID_GAUSSIAN_REDUCED )
@@ -256,7 +258,7 @@ void *Setgrid(void *argument)
 		  gridID2 = gridToRegular(gridID1);
 		}
 	    }
-	  else if ( ldereference    )
+	  else if ( ldereference )
 	    {
 	      gridID2 = referenceToGrid(gridID1);
 	      if ( gridID2 == -1 ) cdoAbort("Reference to horizontal grid not found!");
@@ -275,7 +277,7 @@ void *Setgrid(void *argument)
 		  if ( ligme )
 		    {
 		      grid2_nvgp = gridInqSize(gridID2);
-		      grid2_vgpm = malloc(grid2_nvgp*sizeof(int));
+		      grid2_vgpm = (int*) malloc(grid2_nvgp*sizeof(int));
 		      gridInqMaskGME(gridID2, grid2_vgpm);
 		      gridCompress(gridID2);
 		    }
@@ -322,13 +324,13 @@ void *Setgrid(void *argument)
 	  if ( gridsize == masksize )
 	    {
 	      int *mask;
-	      mask = malloc(masksize*sizeof(int));
+	      mask = (int*) malloc(masksize*sizeof(int));
 	      for ( i = 0; i < masksize; i++ )
 		{
 		  if ( gridmask[i] < 0 || gridmask[i] > 255 )
 		    mask[i] = 0;
 		  else
-		    mask[i] = NINT(gridmask[i]);
+		    mask[i] = lround(gridmask[i]);
 		}
 	      gridID2 = gridDuplicate(gridID1);
 	      gridDefMask(gridID2, mask);
@@ -358,7 +360,7 @@ void *Setgrid(void *argument)
     gridsize = vlistGridsizeMax(vlistID1);
 
   if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

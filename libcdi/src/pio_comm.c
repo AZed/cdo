@@ -10,8 +10,6 @@
 #include "dmemory.h"
 #include "pio_util.h"
 
-#ifdef USE_MPI
-
 #include "cdipio.h"
 
 typedef struct {
@@ -99,7 +97,7 @@ void pioInfoInit ( pioInfo_t * p )
 void commInit ( void )
 {
   xassert ( info == 0 );
-  info = xmalloc ( sizeof ( pioInfo_t ));
+  info = (pioInfo_t*) xmalloc ( sizeof ( pioInfo_t ));
   pioInfoInit ( info );
 }
 
@@ -384,7 +382,7 @@ void commDefCommNode ( void )
 
   size = info->sizePio;
 
-  myHost = xmalloc(MPI_MAX_PROCESSOR_NAME);
+  myHost = (char*) xmalloc(MPI_MAX_PROCESSOR_NAME);
   {
     int len;
     xmpi ( MPI_Get_processor_name ( myHost, &len ));
@@ -512,7 +510,7 @@ void     commRecvNodeMap    ( void )
 
   xdebug ( "info->nProcsColl=%d", info->nProcsColl );
 
-  info->nodeMap = xmalloc ( info->nProcsColl * 
+  info->nodeMap = (int*) xmalloc ( info->nProcsColl * 
                                 sizeof ( info->nodeMap[0] )); 
 
   xmpi ( MPI_Recv ( info->nodeMap, info->nProcsColl, MPI_INTEGER, 
@@ -552,7 +550,7 @@ void     commEvalPhysNodes  ( void )
 
   size = info->nProcsIO * sizeNodeInfo;
 
-  nodeInfo = xmalloc ( size * sizeof ( int ));
+  nodeInfo = (nodeInfo_t*) xmalloc ( size * sizeof ( int ));
 
   if ( info->rankGlob == info->root )
     {
@@ -592,12 +590,12 @@ void     commEvalPhysNodes  ( void )
 
   xassert ( info->nProcsColl <= info->nProcsModel );
 
-  info->procsCollMap = xmalloc ( info->nProcsColl * 
+  info->procsCollMap = (int*) xmalloc ( info->nProcsColl * 
                                  sizeof ( info->procsCollMap[0] )); 
 
   // define nodeSizes
   info->nodeInfo.nNodes = nNodes; 
-  info->nodeSizes = xmalloc ( info->nodeInfo.nNodes * 
+  info->nodeSizes = (int*) xmalloc ( info->nodeInfo.nNodes * 
                                   sizeof ( info->nodeSizes[0] ));
   collID = 0;
   for ( IOID = 0; IOID < info->nProcsIO; IOID++ )
@@ -608,11 +606,11 @@ void     commEvalPhysNodes  ( void )
       }
 
   // define nodeMap
-  info->nodeMap   = xmalloc ( info->nProcsColl * 
+  info->nodeMap   = (int*) xmalloc ( info->nProcsColl * 
                                   sizeof ( info->nodeMap[0] ));
   // helpers
-  p1 = xmalloc ( info->nodeInfo.nNodes * sizeof ( p1[0] ));
-  p2 = xmalloc ( info->nodeInfo.nNodes * sizeof ( p2[0] ));
+  p1 = (int**) xmalloc ( info->nodeInfo.nNodes * sizeof ( p1[0] ));
+  p2 = (int**) xmalloc ( info->nodeInfo.nNodes * sizeof ( p2[0] ));
   idx = 0;
   for ( i = 0; i < info->nodeInfo.nNodes; i++ )
     {
@@ -694,7 +692,7 @@ void     commDefCommsIO     ( void )
            info->nProcsModel != CDI_UNDEFID &&
            info->commGlob != MPI_COMM_NULL );
 
-  info->commsIO = xmalloc ( info->nProcsColl * 
+  info->commsIO = (MPI_Comm*) xmalloc ( info->nProcsColl * 
                                 sizeof ( info->commsIO[0] ));
   for ( collID = 0; collID < info->nProcsColl; collID++ )
     info->commsIO[collID] = MPI_COMM_NULL;
@@ -702,7 +700,7 @@ void     commDefCommsIO     ( void )
   strncpy ( name, "COMMSIO_", 8 ); 
   name[MAXCOMMIONAME - 1] = '\0';
   
-  ranks = xmalloc (( info->nProcsModel + 1 ) * sizeof ( ranks[0] ));
+  ranks = (int*) xmalloc (( info->nProcsModel + 1 ) * sizeof ( ranks[0] ));
   for ( i = 0; i < info->nProcsModel; i++ )
     ranks[i] = i;
   
@@ -859,9 +857,6 @@ void commPrint ( FILE * fp )
   fprintf ( fp, "############################\n" );
   fprintf ( fp, "\n" );
 }
-
-#endif
-
 
 /************************************************************************/
 /*

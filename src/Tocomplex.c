@@ -70,8 +70,8 @@ void *Tocomplex(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(2*gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(2*gridsize*sizeof(double));
       
   tsID  = 0;
   tsID2 = 0;

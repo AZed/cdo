@@ -32,7 +32,7 @@ void *Deltime(void *argument)
   int recID, varID, levelID;
   int vlistID1, vlistID2;
   int taxisID1, taxisID2;
-  int vdate, vtime;
+  int vdate /*, vtime */;
   int copytimestep;
   int lcopy = FALSE;
   int gridsize;
@@ -47,6 +47,8 @@ void *Deltime(void *argument)
 
   DELDAY   = cdoOperatorAdd("delday",   0, 0, NULL);
   DEL29FEB = cdoOperatorAdd("del29feb", 0, 0, NULL);
+
+  UNUSED(DELDAY);
 
   operatorID = cdoOperatorID();
 
@@ -66,7 +68,7 @@ void *Deltime(void *argument)
       sarg = operatorArgv()[0];
       dday = atoi(sarg);
       dmon = 0;
-      while ( isdigit(*sarg) ) *sarg++;
+      while ( isdigit(*sarg) ) sarg++;
       if ( isalpha(*sarg) )
 	{
 	  char smon[32];
@@ -100,7 +102,7 @@ void *Deltime(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(vlistID1);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
       
   nfound = 0;
@@ -109,7 +111,7 @@ void *Deltime(void *argument)
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )
     {
       vdate = taxisInqVdate(taxisID1);
-      vtime = taxisInqVtime(taxisID1);
+      // vtime = taxisInqVtime(taxisID1);
 
       cdiDecodeDate(vdate, &year, &month, &day);
 

@@ -1,6 +1,6 @@
 ! This file was automatically generated, don't edit!
 !
-! Fortran interface for CDI library version 1.6.3
+! Fortran interface for CDI library version 1.6.4
 !
 ! Author:
 ! -------
@@ -325,6 +325,8 @@
       PARAMETER (TAXIS_ABSOLUTE         =  1)
       INTEGER    TAXIS_RELATIVE        
       PARAMETER (TAXIS_RELATIVE         =  2)
+      INTEGER    TAXIS_FORECAST        
+      PARAMETER (TAXIS_FORECAST         =  3)
 !
 !  TUNIT types
 !
@@ -2021,6 +2023,16 @@
 !                                     INTEGER         time)
       EXTERNAL        taxisDefRtime
 
+!                     taxisDefFdate
+!                                    (INTEGER         taxisID,
+!                                     INTEGER         date)
+      EXTERNAL        taxisDefFdate
+
+!                     taxisDefFtime
+!                                    (INTEGER         taxisID,
+!                                     INTEGER         time)
+      EXTERNAL        taxisDefFtime
+
       INTEGER         taxisHasBounds
 !                                    (INTEGER         taxisID)
       EXTERNAL        taxisHasBounds
@@ -2087,6 +2099,14 @@
       INTEGER         taxisInqRtime
 !                                    (INTEGER         taxisID)
       EXTERNAL        taxisInqRtime
+
+      INTEGER         taxisInqFdate
+!                                    (INTEGER         taxisID)
+      EXTERNAL        taxisInqFdate
+
+      INTEGER         taxisInqFtime
+!                                    (INTEGER         taxisID)
+      EXTERNAL        taxisInqFtime
 
       INTEGER         taxisInqCalendar
 !                                    (INTEGER         taxisID)

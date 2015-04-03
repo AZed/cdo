@@ -34,6 +34,7 @@
 #include "cdo_int.h"
 #include "pstream.h"
 #include "list.h"
+#include "grid.h"
 #include "stdnametable.h"
 
 
@@ -88,7 +89,7 @@ std_atm_pressure(double height)
 
 void *Vargen(void *argument)
 {
-  int RANDOM, SINCOS, CONST, FOR, TOPO, TEMP, MASK, STDATM;
+  int RANDOM, SINCOS, COSHILL, CONST, FOR, TOPO, TEMP, MASK, STDATM;
   int operatorID;
   int streamID;
   int nvars, ntimesteps, nlevels = 1;
@@ -104,14 +105,15 @@ void *Vargen(void *argument)
 
   cdoInitialize(argument);
 
-  RANDOM = cdoOperatorAdd("random", 0, 0, "grid description file or name, <seed>");
-  SINCOS = cdoOperatorAdd("sincos", 0, 0, "grid description file or name");
-  CONST  = cdoOperatorAdd("const",  0, 0, "constant value, grid description file or name");
-  FOR    = cdoOperatorAdd("for",    0, 0, "start, end, <increment>");
-  TOPO   = cdoOperatorAdd("topo",   0, 0, NULL);
-  TEMP   = cdoOperatorAdd("temp",   0, 0, NULL);
-  MASK   = cdoOperatorAdd("mask",   0, 0, NULL);
-  STDATM = cdoOperatorAdd("stdatm", 0, 0, "levels");
+  RANDOM  = cdoOperatorAdd("random",  0, 0, "grid description file or name, <seed>");
+  SINCOS  = cdoOperatorAdd("sincos",  0, 0, "grid description file or name");
+  COSHILL = cdoOperatorAdd("coshill", 0, 0, "grid description file or name");
+  CONST   = cdoOperatorAdd("const",   0, 0, "constant value, grid description file or name");
+  FOR     = cdoOperatorAdd("for",     0, 0, "start, end, <increment>");
+  TOPO    = cdoOperatorAdd("topo",    0, 0, NULL);
+  TEMP    = cdoOperatorAdd("temp",    0, 0, NULL);
+  MASK    = cdoOperatorAdd("mask",    0, 0, NULL);
+  STDATM  = cdoOperatorAdd("stdatm",  0, 0, "height levels [m]");
 
   operatorID = cdoOperatorID();
 
@@ -132,7 +134,7 @@ void *Vargen(void *argument)
         }
       srand(seed);
     }
-  else if ( operatorID == SINCOS )
+  else if ( operatorID == SINCOS || operatorID == COSHILL )
     {
       operatorInputArg(cdoOperatorEnter(operatorID));
       operatorCheckArgc(1);
@@ -190,7 +192,7 @@ void *Vargen(void *argument)
       double lon = 0, lat = 0;
       LIST *flist = listNew(FLT_LIST);
 
-      operatorInputArg("levels");
+      operatorInputArg(cdoOperatorEnter(operatorID));
       nlevels = args2fltlist(operatorArgc(), operatorArgv(), flist);
       levels  = (double *) listArrayPtr(flist);
       //listDelete(flist);
@@ -260,7 +262,7 @@ void *Vargen(void *argument)
   taxisID = taxisCreate(TAXIS_RELATIVE);
   vlistDefTaxis(vlistID, taxisID);
 
-  if ( operatorID == RANDOM || operatorID == SINCOS || operatorID == CONST || operatorID == TOPO ||
+  if ( operatorID == RANDOM || operatorID == SINCOS || operatorID == COSHILL || operatorID == CONST || operatorID == TOPO ||
        operatorID == TEMP || operatorID == MASK || operatorID == STDATM )
     vlistDefNtsteps(vlistID, 1);
 
@@ -269,7 +271,7 @@ void *Vargen(void *argument)
   streamDefVlist(streamID, vlistID);
 
   gridsize = gridInqSize(gridID);
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   if ( operatorID == FOR )
     ntimesteps = 1.001 + ((rstop-rstart)/rinc);
@@ -304,22 +306,39 @@ void *Vargen(void *argument)
                   for ( i = 0; i < gridsize; i++ )
                     array[i] = rand()/(RAND_MAX+1.0);
                 }
-              else if ( operatorID == SINCOS )
+              else if ( operatorID == SINCOS || operatorID == COSHILL )
                 {
-		  int nlon = gridInqXsize(gridID);
-		  int nlat = gridInqYsize(gridID);
-		  double dlon = 360./nlon;
-		  double dlat = 180./nlat;
-		  double lon0 = 0;
-		  double lat0 = -90 + dlat/2;
+		  double *xvals = (double*) malloc(gridsize*sizeof(double));
+		  double *yvals = (double*) malloc(gridsize*sizeof(double));
 
-                  for ( i = 0; i < gridsize; i++ )
+		  if ( gridInqType(gridID) == GRID_GME ) gridID = gridToUnstructured(gridID, 0);
+
+		  if ( gridInqType(gridID) != GRID_UNSTRUCTURED && gridInqType(gridID) != GRID_CURVILINEAR )
+		    gridID = gridToCurvilinear(gridID, 0);
+
+		  gridInqXvals(gridID, xvals);
+		  gridInqYvals(gridID, yvals);
+
+		  /* Convert lat/lon units if required */
+		  char units[CDI_MAX_NAME];
+		  gridInqXunits(gridID, units);
+		  grid_to_radian(units, gridsize, xvals, "grid center lon");
+		  gridInqYunits(gridID, units);
+		  grid_to_radian(units, gridsize, yvals, "grid center lat");
+
+		  if ( operatorID == SINCOS )
 		    {
-		      int ilat = (i%gridsize)/ nlon;
-		      int ilon = i%nlon;
-		      array[i] = cos(2.0 * M_PI * (lon0 + ilon*dlon)/360)
-		   	       * sin(2.0 * M_PI * (lat0 + ilat*dlat)/180);
+		      for ( i = 0; i < gridsize; i++ )
+			array[i] = cos(1.0 * xvals[i]) * sin(2.0 * yvals[i]);
 		    }
+		  else if ( operatorID == COSHILL )
+		    {		     
+		      for ( i = 0; i < gridsize; i++ )
+			array[i] = 2 - cos(acos(cos(xvals[i]) * cos(yvals[i]))/1.2);
+		    }
+
+		  free(xvals);
+		  free(yvals);
 		}
               else if ( operatorID == CONST )
                 {

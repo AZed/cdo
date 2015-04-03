@@ -101,7 +101,7 @@ void *Splitsel(void *argument)
     {
       gridsize = vlistGridsizeMax(vlistID1);
       if ( vlistNumber(vlistID1) != CDI_REAL ) gridsize *= 2;
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   nvars = vlistNvars(vlistID1);
@@ -111,7 +111,7 @@ void *Splitsel(void *argument)
 
   if ( nconst )
     {
-      vars = malloc(nvars*sizeof(field_t *));
+      vars = (field_t **) malloc(nvars*sizeof(field_t *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
@@ -121,13 +121,13 @@ void *Splitsel(void *argument)
 	      nlevel  = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      gridsize = gridInqSize(gridID);
 		  
-	      vars[varID] = malloc(nlevel*sizeof(field_t));
+	      vars[varID] = (field_t*) malloc(nlevel*sizeof(field_t));
 
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
 		  field_init(&vars[varID][levelID]);
 		  vars[varID][levelID].grid    = gridID;
-		  vars[varID][levelID].ptr     = malloc(gridsize*sizeof(double));
+		  vars[varID][levelID].ptr     = (double*) malloc(gridsize*sizeof(double));
 		}
 	    }
 	}

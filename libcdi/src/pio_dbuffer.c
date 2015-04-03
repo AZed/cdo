@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#ifdef USE_MPI
 #include "pio_impl.h"
 #include "pio_util.h"
 
@@ -162,7 +161,6 @@ dbuffer_push(struct dBuffer *dbuffer, const void *buffer, size_t len)
   return 0;
 }
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

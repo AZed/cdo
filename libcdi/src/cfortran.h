@@ -474,7 +474,13 @@ for (i=0; i<sizeofcstr/elem_len; i++) {
 } return cstr; }
 
 /* kill the trailing char t's in string s. */
-#if defined (__GNUC__)
+#if !defined(GNUC_PUSH_POP) && defined(__GNUC__) && !defined(__ICC) && !defined(__clang__)
+#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 4)
+#define GNUC_PUSH_POP
+#endif
+#endif
+
+#if defined(GNUC_PUSH_POP)
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
 #endif
@@ -489,7 +495,7 @@ if (e>s) {                           /* Need this to handle NULL string.*/
   while (e>s && *--e==t);            /* Don't follow t's past beginning. */
   e[*e==t?0:1] = '\0';               /* Handle s[0]=t correctly.       */
 } return s; }
-#if defined (__GNUC__)
+#if defined(GNUC_PUSH_POP)
 #pragma GCC pop_options
 #endif
 
@@ -1489,7 +1495,7 @@ do{VVCF(T1,A1,B1)  VVCF(T2,A2,B2)  VVCF(T3,A3,B3)  VVCF(T4,A4,B4)  VVCF(T5,A5,B5
 /* VOID breaks U into U and UU. */
 #define       INT_cfUU(T,A) _(T,VVVVVVV_cfTYPE) A
 #define      VOID_cfUU(T,A)             /* Needed for FORTRAN calls C sub.s.  */
-#define    STRING_cfUU(T,A) char *A 
+#define    STRING_cfUU(T,A) const char *A
 
 
 #define      BYTE_cfPU(A)   CFextern INTEGER_BYTE      FCALLSC_QUALIFIER A

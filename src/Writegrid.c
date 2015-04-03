@@ -55,7 +55,7 @@ void *Writegrid(void *argument)
   if ( gridInqXbounds(gridID, NULL) == 0 || gridInqYbounds(gridID, NULL) == 0 )
     cdoAbort("Grid corner missing!");
 
-  mask = malloc(gridsize*sizeof(int));
+  mask = (int*) malloc(gridsize*sizeof(int));
 
   if ( gridInqMask(gridID, NULL) )
     {

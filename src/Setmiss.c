@@ -132,7 +132,7 @@ void *Setmiss(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array = malloc(gridsize*sizeof(double));
+  array = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

@@ -126,12 +126,12 @@ void *Ymonstat(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
   field_init(&field);
-  field.ptr = malloc(gridsize*sizeof(double));
+  field.ptr = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   otsID = 0;
@@ -179,7 +179,7 @@ void *Ymonstat(void *argument)
 	      if ( nmiss > 0 || samp1[month][varID][levelID].ptr )
 		{
 		  if ( samp1[month][varID][levelID].ptr == NULL )
-		    samp1[month][varID][levelID].ptr = malloc(gridsize*sizeof(double));
+		    samp1[month][varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 
 		  for ( i = 0; i < gridsize; i++ )
 		    if ( DBL_IS_EQUAL(vars1[month][varID][levelID].ptr[i],
@@ -199,7 +199,7 @@ void *Ymonstat(void *argument)
 		{
 		  if ( samp1[month][varID][levelID].ptr == NULL )
 		    {
-		      samp1[month][varID][levelID].ptr = malloc(gridsize*sizeof(double));
+		      samp1[month][varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 		      for ( i = 0; i < gridsize; i++ )
 			samp1[month][varID][levelID].ptr[i] = nsets[month];
 		    }
@@ -233,6 +233,13 @@ void *Ymonstat(void *argument)
 
       nsets[month]++;
       tsID++;
+    }
+
+  if ( nmon == 12 )
+    {
+      int smon = 0;
+      for ( month = 1; month <= 12; month++ ) if ( nsets[month] ) smon++;
+      if ( smon == 12 ) for ( month = 1; month <= 12; month++ ) mon[month-1] = month;
     }
 
   /* sort output time steps */

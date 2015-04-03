@@ -30,7 +30,7 @@
 #include "statistic.h"
 
 
-#define  NALLOC_INC  1000
+#define  NALLOC_INC  1024
 
 
 static
@@ -40,6 +40,7 @@ void spectrum(int nrec, double *data, double *spectrum, double *real, double *im
   int k;
   double sumx, sumkx;
   double a, b;
+  double *work_r = NULL, *work_i = NULL;
   int seg_i, offset;
   int bit;
 
@@ -65,6 +66,12 @@ void spectrum(int nrec, double *data, double *spectrum, double *real, double *im
       a = sumx / nrec - b * (nrec - 1) / 2.;
       for (k = 0; k < nrec; k++)
 	data[k] -= a + b * k;
+    }
+
+  if ( bit != 1 )
+    {
+      work_r = (double*) malloc(seg_l*sizeof(double));
+      work_i = (double*) malloc(seg_l*sizeof(double));
     }
 	
   for (seg_i = 0; seg_i < seg_n; seg_i += 2)
@@ -123,9 +130,9 @@ void spectrum(int nrec, double *data, double *spectrum, double *real, double *im
 	  imag[k] = 0;
       
       if (bit == 1)	/* seg_l is a power of 2 */
-	fft (real, imag, seg_l, 1);
+	fft(real, imag, seg_l, 1);
       else
-	ft (real, imag, seg_l, 1);
+	ft_r(real, imag, seg_l, 1, work_r, work_i);
 	
       spectrum[0] += real[0] * real[0] + imag[0] * imag[0];
       
@@ -138,6 +145,12 @@ void spectrum(int nrec, double *data, double *spectrum, double *real, double *im
 	spectrum[seg_l / 2] +=
 	  real[seg_l / 2] * real[seg_l / 2] +
 	  imag[seg_l / 2] * imag[seg_l / 2];
+    }
+
+  if ( bit != 1 )
+    {
+      free(work_r);
+      free(work_i);
     }
 	
   for (k = 0; k <= seg_l / 2; k++)
@@ -194,9 +207,9 @@ void *Spectrum(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  vdate = realloc(vdate, nalloc*sizeof(int));
-	  vtime = realloc(vtime, nalloc*sizeof(int));
-	  vars  = realloc(vars, nalloc*sizeof(field_t **));
+	  vdate = (int*) realloc(vdate, nalloc*sizeof(int));
+	  vtime = (int*) realloc(vtime, nalloc*sizeof(int));
+	  vars  = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       vdate[tsID] = taxisInqVdate(taxisID1);
@@ -209,7 +222,7 @@ void *Spectrum(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 
@@ -251,15 +264,15 @@ void *Spectrum(void *argument)
 
   nfreq = seg_l/2 + 1;
 
-  vars2 = malloc(nfreq*sizeof(field_t **));
+  vars2 = (field_t ***) malloc(nfreq*sizeof(field_t **));
   for ( freq = 0; freq < nfreq; freq++ )
     vars2[freq] = field_malloc(vlistID1, FIELD_PTR);
 
-  array1  = malloc(nts   * sizeof(double));
-  array2  = malloc(nfreq * sizeof(double));
-  real    = malloc(seg_l * sizeof(double));
-  imag    = malloc(seg_l * sizeof(double));
-  window  = malloc(seg_l * sizeof(double));
+  array1  = (double*) malloc(nts   * sizeof(double));
+  array2  = (double*) malloc(nfreq * sizeof(double));
+  real    = (double*) malloc(seg_l * sizeof(double));
+  imag    = (double*) malloc(seg_l * sizeof(double));
+  window  = (double*) malloc(seg_l * sizeof(double));
   	   
   switch (which_window)
     {

@@ -166,19 +166,19 @@ void *CDIwrite(void *argument)
       cdoPrint("nvars      : %d", nvars);
     } 
 
-  vars = malloc(nvars*sizeof(double **));
+  vars = (double ***) malloc(nvars*sizeof(double **));
   for ( varID = 0; varID < nvars; varID++ )
     {
-      vars[varID] = malloc(nlevs*sizeof(double *));
+      vars[varID] = (double **) malloc(nlevs*sizeof(double *));
       for ( levelID = 0; levelID < nlevs; levelID++ )
 	{
-	  vars[varID][levelID] = malloc(gridsize*sizeof(double));
+	  vars[varID][levelID] = (double*) malloc(gridsize*sizeof(double));
 	  for ( i = 0; i < gridsize; ++i )
 	    vars[varID][levelID][i] = varID + rand()/(RAND_MAX+1.0);
 	}
     }
 
-  if ( memtype == MEMTYPE_FLOAT ) farray = malloc(gridsize*sizeof(float));
+  if ( memtype == MEMTYPE_FLOAT ) farray = (float*) malloc(gridsize*sizeof(float));
 
   vlistID = vlistCreate();
 

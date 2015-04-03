@@ -304,19 +304,19 @@ void *Wind(void *argument)
   streamDefVlist(streamID2, vlistID2);
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array1 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
 
   if ( varID1 != -1 && varID2 != -1 )
     {
       nlev     = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID1));
 
       gridsize = gridInqSize(gridID1);
-      ivar1 = malloc(nlev*gridsize*sizeof(double));
-      ivar2 = malloc(nlev*gridsize*sizeof(double));
+      ivar1 = (double*) malloc(nlev*gridsize*sizeof(double));
+      ivar2 = (double*) malloc(nlev*gridsize*sizeof(double));
   
       gridsize = gridInqSize(gridID2);
-      ovar1 = malloc(nlev*gridsize*sizeof(double));
-      ovar2 = malloc(nlev*gridsize*sizeof(double));
+      ovar1 = (double*) malloc(nlev*gridsize*sizeof(double));
+      ovar2 = (double*) malloc(nlev*gridsize*sizeof(double));
     }
 
   tsID = 0;

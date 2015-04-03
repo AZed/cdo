@@ -48,8 +48,11 @@ typedef struct
 levinfo_t;
 
 #define DEFAULT_LEVINFO(levID) \
+  (levinfo_t){ 0, -1, levID, levID}
+/*
+#define DEFAULT_LEVINFO(levID) \
   (levinfo_t){ .flag = 0, .index = -1, .flevelID = levID, .mlevelID = levID}
-
+*/
 typedef struct
 {
   int ens_index;
@@ -155,13 +158,17 @@ int      vlistHasTime(int vlistID);
 int      vlistDelAtts(int vlistID, int varID);
 int      vlistCopyVarAtts(int vlistID1, int varID_1, int vlistID2, int varID_2);
 
-void     vlistUnpack(char * buffer, int bufferSize, int * pos, int, void *context);
+void     vlistUnpack(char * buffer, int bufferSize, int * pos,
+                     int originNamespace, void *context, int force_id);
 
 /*      vlistDefVarValidrange: Define the valid range of a Variable */
 void    vlistDefVarValidrange(int vlistID, int varID, const double *validrange);
 
 /*      vlistInqVarValidrange: Get the valid range of a Variable */
 int     vlistInqVarValidrange(int vlistID, int varID, double *validrange);
+
+int vlist_att_compare(vlist_t *a, int varIDA, vlist_t *b, int varIDB,
+                      int attnum);
 
 #if  defined  (HAVE_LIBGRIB_API)
 extern int   cdiNAdditionalGRIBKeys;

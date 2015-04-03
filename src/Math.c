@@ -98,8 +98,8 @@ void *Math(void *argument)
 
   gridsize = vlistGridsizeMax(vlistID1);
 
-  array1 = malloc(gridsize*sizeof(double));
-  array2 = malloc(gridsize*sizeof(double));
+  array1 = (double*) malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
 
@@ -132,7 +132,7 @@ void *Math(void *argument)
 	      break;
 	    case FNINT:
 	      for ( i = 0; i < gridsize; i++ )
-		array2[i] = DBL_IS_EQUAL(array1[i], missval1) ? missval1 : NINT(array1[i]);
+		array2[i] = DBL_IS_EQUAL(array1[i], missval1) ? missval1 : round(array1[i]);
 	      break;
 	    case SQR:
 	      for ( i = 0; i < gridsize; i++ )

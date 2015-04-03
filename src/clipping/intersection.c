@@ -36,74 +36,58 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 #include "utils.h"
 #include "geometry.h"
 
-static double const tol = 1.0e-12;
+// angle tolerance
+const double angle_tol = 1e-9;
+static double const tol = 1.0e-10;
 
-static void crossproduct (double a[], double b[], double cross[]) {
+static int vector_is_between (double a[], double b[], double p[],
+                              double * angle_ab, double dot_ab) {
 
-/* crossproduct in cartesian coordinates */
+   double dot_ap = a[0]*p[0] + a[1]*p[1] + a[2]*p[2];
+   double dot_pb = p[0]*b[0] + p[1]*b[1] + p[2]*b[2];
 
-   cross[0] = a[1] * b[2] - a[2] * b[1];
-   cross[1] = a[2] * b[0] - a[0] * b[2];
-   cross[2] = a[0] * b[1] - a[1] * b[0];
-}
+   // catches most obvious false-cases
+   if ((dot_ap < dot_ab - 0.1) ||
+       (dot_pb < dot_ab - 0.1))
+   return 0;
 
-static int vector_is_between (double a[], double b[], double p[], double e_ab[]) {
+   if (*angle_ab < 0)
+      *angle_ab = get_vector_angle(a, b);
 
 /* determines whether p is between a and b
    (a, b, p are in the same plane AB)
-   e_ab is the crossproduct of a and b */
+   angle_ab is the angle between a and b */
 
-   // if a and b are the same point
-   if (fabs(e_ab[0]) < tol && fabs(e_ab[1]) < tol && fabs(e_ab[2]) < tol) {
+   return fabs(get_vector_angle(a, p) +
+               get_vector_angle(b, p) -
+               *angle_ab) < angle_tol;
+}
 
-      return fabs(a[0]-p[0]) < tol &&
-             fabs(a[1]-p[1]) < tol &&
-             fabs(a[2]-p[2]) < tol;
-   }
+static int vector_is_between_lat (double a[], double b[], double p[]) {
 
-   double cross_ap, cross_pb; // we only need one element of the cross product
-   int needed_index;
+/* determines whether p is between a and b
+   (a, b, p have the same latitude)*/
 
-   needed_index = 0;
-   if (fabs(e_ab[1]) > fabs(e_ab[0])) needed_index |= 1;
-   if (fabs(e_ab[2]) > fabs(e_ab[0])) needed_index |= 2;
-   if (fabs(e_ab[2]) > fabs(e_ab[1])) needed_index |= 4;
+   if (fabs(fabs(a[2]) - 1.0) < tol) return 1;
 
-   switch (needed_index) {
-      case (0): // index 0 is biggest value in e_ab
-      case (4):
-         cross_ap = a[1] * p[2] - a[2] * p[1];
-         cross_pb = p[1] * b[2] - p[2] * b[1];
+   long double a_0 = a[0], a_1 = a[1];
+   long double b_0 = b[0], b_1 = b[1];
+   long double p_0 = p[0], p_1 = p[1];
 
-         return (e_ab[0] > - tol && cross_ap > - tol && cross_pb > - tol) ||
-                (e_ab[0] < + tol && cross_ap < + tol && cross_pb < + tol);
+   if (((a_0*p_0+a_1*p_1) < 0) || ((b_0*p_0+b_1*p_1) < 0))
+    return 0;
 
-      case (1): // index 1 is biggest value in e_ab
-      case (3):
-         cross_ap = a[2] * p[0] - a[0] * p[2];
-         cross_pb = p[2] * b[0] - p[0] * b[2];
+   double cross_ab = fabs(a_0*b_1-a_1*b_0);
+   double cross_ap = fabs(a_0*p_1-a_1*p_0);
+   double cross_bp = fabs(b_0*p_1-b_1*p_0);
 
-         return (e_ab[1] > - tol && cross_ap > - tol && cross_pb > - tol) ||
-                (e_ab[1] < + tol && cross_ap < + tol && cross_pb < + tol);
-
-      case (6): // index 2 is biggest value in e_ab
-      case (7):
-         cross_ap = a[0] * p[1] - a[1] * p[0];
-         cross_pb = p[0] * b[1] - p[1] * b[0];
-
-
-         return (e_ab[2] > - tol && cross_ap > - tol && cross_pb > - tol) ||
-                (e_ab[2] < + tol && cross_ap < + tol && cross_pb < + tol);
-
-      default:
-         abort_message("internal error", __FILE__, __LINE__);
-         // this function should never reach this point...
-         return -1;
-   };
+   // maybe this should be the cross_** should be scaled by z at some point
+   return (cross_ap < cross_ab + tol) && (cross_bp < cross_ab + tol);
 }
 
 /** \brief compute the intersection points of two great circles
@@ -112,6 +96,7 @@ static int vector_is_between (double a[], double b[], double p[], double e_ab[])
   *
   * the return value is :
   *    -  0 if the intersection points are neither between (a and b) or (c and d)
+  *    - -1 if an error occurred
   *    - 1st bit will be set if p is between a and b
   *    - 2nd bit will be set if q is between a and b
   *    - 3rd bit will be set if p is between c and d
@@ -146,6 +131,7 @@ static int vector_is_between (double a[], double b[], double p[], double e_ab[])
   *
   * the return value is :
   *    -  0 if the intersection points are neither between (a and b) or (c and d)
+  *    - -1 if an error occurred
   *    - 1st bit will be set if p is between a and b
   *    - 2nd bit will be set if q is between a and b
   *    - 3rd bit will be set if p is between c and d
@@ -160,42 +146,125 @@ static int vector_is_between (double a[], double b[], double p[], double e_ab[])
 
    double e_ab[3], e_cd[3], n;
    double cross_ab[3], cross_cd[3];
+   int ab_is_point, cd_is_point;
 
    // compute unit vector of ab plane
-   crossproduct(a, b, cross_ab);
-   n = 1.0 / sqrt(cross_ab[0] * cross_ab[0] +
-                  cross_ab[1] * cross_ab[1] +
-                  cross_ab[2] * cross_ab[2]);
-   e_ab[0] = cross_ab[0] * n;
-   e_ab[1] = cross_ab[1] * n;
-   e_ab[2] = cross_ab[2] * n;
+   crossproduct_ld(a, b, cross_ab);
+   n = sqrt(cross_ab[0] * cross_ab[0] +
+            cross_ab[1] * cross_ab[1] +
+            cross_ab[2] * cross_ab[2]);
+
+   ab_is_point = n < tol;
+
+   if (!ab_is_point) {
+
+      n = 1.0 / n;
+      e_ab[0] = cross_ab[0] * n;
+      e_ab[1] = cross_ab[1] * n;
+      e_ab[2] = cross_ab[2] * n;
+   }
 
    // compute unit vector of cd plane
-   crossproduct(c, d, cross_cd);
-   n = 1.0 / sqrt(cross_cd[0] * cross_cd[0] +
-                  cross_cd[1] * cross_cd[1] +
-                  cross_cd[2] * cross_cd[2]);
-   e_cd[0] = cross_cd[0] * n;
-   e_cd[1] = cross_cd[1] * n;
-   e_cd[2] = cross_cd[2] * n;
+   crossproduct_ld(c, d, cross_cd);
+   n = sqrt(cross_cd[0] * cross_cd[0] +
+            cross_cd[1] * cross_cd[1] +
+            cross_cd[2] * cross_cd[2]);
+   cd_is_point = n < tol;
 
-   double f1, f2;
+   if (!cd_is_point) {
+      n = 1.0 / n;
+      e_cd[0] = cross_cd[0] * n;
+      e_cd[1] = cross_cd[1] * n;
+      e_cd[2] = cross_cd[2] * n;
+   }
 
-   // compute cos between e and c_/d_ times length of e
-   f1 = e_ab[0] * c[0] + e_ab[1] * c[1] + e_ab[2] * c[2];
-   f2 = e_ab[0] * d[0] + e_ab[1] * d[1] + e_ab[2] * d[2];
+   if (ab_is_point && cd_is_point) {
+
+      double angle = get_vector_angle(a, c);
+
+      if (p != NULL) p[0] = a[0], p[1] = a[1], p[2] = a[2];
+      if (q != NULL) q[0] = -a[0], q[1] = -a[1], q[2] = -a[2];
+
+      // if points are identically
+      if (angle < tol)
+         return 1 + 4;
+      // if the points are directly opposit of each other
+      else if (fabs(angle - M_PI) < tol)
+         return 1 + 8;
+      else
+         return -1;
+
+   } else if (ab_is_point) {
+
+      if (p != NULL) p[0] = a[0], p[1] = a[1], p[2] = a[2];
+      if (q != NULL) q[0] = -a[0], q[1] = -a[1], q[2] = -a[2];
+
+      // if ab is on the plane of cd
+      if (fabs(get_vector_angle(a, e_cd) - M_PI_2) < tol) {
+
+         int result = 1;
+         double angle_cd = -1;
+         double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
+	 double an[3] = {-a[0], -a[1], -a[2]};
+
+         if (vector_is_between(c, d, a, &angle_cd, dot_cd))
+            result |= 1 << 2;
+         if (vector_is_between(c, d, an, &angle_cd,
+                               dot_cd)) result |= 1 << 3;
+
+         return result;
+      }
+
+      return -1;
+
+   } else if (cd_is_point) {
+
+      if (p != NULL) p[0] = c[0], p[1] = c[1], p[2] = c[2];
+      if (q != NULL) q[0] = -c[0], q[1] = -c[1], q[2] = -c[2];
+
+      // if cd is on the plane of ab
+      if (fabs(get_vector_angle(c, e_ab) - M_PI_2) < tol) {
+
+         int result = 4;
+
+         double angle_ab = -1;
+         double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+	 double cn[3] = {-c[0], -c[1], -c[2]};
+
+         if (vector_is_between(a, b, c, &angle_ab, dot_ab))
+            result |= 1 << 0;
+         if (vector_is_between(a, b, cn, &angle_ab,
+                               dot_ab)) result |= 1 << 1;
+
+         return result;
+      }
+
+      return -1;
+   }
+
+   double temp_cross[3];
+
+   // compute unit vector of ab plane
+   crossproduct_ld(e_ab, e_cd, temp_cross);
+   n = sqrt(temp_cross[0] * temp_cross[0] +
+            temp_cross[1] * temp_cross[1] +
+            temp_cross[2] * temp_cross[2]);
 
    // if both great circles are nearly identically
-   if ((fabs(f1) < tol) && (fabs(f2) < tol)) {
+   if (n < tol) {
 
       int ret_value = 1 << 4;
 
       int a_between_cd, b_between_cd, c_between_ab, d_between_ab;
+      double angle_ab = -1;
+      double angle_cd = -1;
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+      double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
 
-      a_between_cd = vector_is_between(c, d, a, cross_cd) << 0;
-      b_between_cd = vector_is_between(c, d, b, cross_cd) << 1;
-      c_between_ab = vector_is_between(a, b, c, cross_ab) << 2;
-      d_between_ab = vector_is_between(a, b, d, cross_ab) << 3;
+      a_between_cd = vector_is_between(c, d, a, &angle_cd, dot_cd) << 0;
+      b_between_cd = vector_is_between(c, d, b, &angle_cd, dot_cd) << 1;
+      c_between_ab = vector_is_between(a, b, c, &angle_ab, dot_ab) << 2;
+      d_between_ab = vector_is_between(a, b, d, &angle_ab, dot_ab) << 3;
 
       switch (a_between_cd + b_between_cd + c_between_ab + d_between_ab) {
 
@@ -245,65 +314,151 @@ static int vector_is_between (double a[], double b[], double p[], double e_ab[])
       return ret_value;
    }
 
-   double g[3];
+    n = 1.0 / n;
+    // determine p and q
+    double p_[3], q_[3];
 
-   // compute line intersection of both planes defined by the two great circles
-   if (fabs(f1) > fabs(f2)) {
+    p_[0]= temp_cross[0] * n;
+    p_[1]= temp_cross[1] * n;
+    p_[2]= temp_cross[2] * n;
 
-      n = - (f2 / f1);
+    q_[0]=-p_[0];
+    q_[1]=-p_[1];
+    q_[2]=-p_[2];
 
-      g[0] = n * c[0] + d[0];
-      g[1] = n * c[1] + d[1];
-      g[2] = n * c[2] + d[2];
+    // set p and q
+    if (p != 0) {
+       p[0] = p_[0];
+       p[1] = p_[1];
+       p[2] = p_[2];
+    }
+    if (q != 0) {
+       q[0] = q_[0];
+       q[1] = q_[1];
+       q[2] = q_[2];
+    }
 
-   } else {
+    int result;
+    double angle_ab = -1;
+    double angle_cd = -1;
+    double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
 
-      n = - (f1 / f2);
+    result = 0;
+    if (vector_is_between(a, b, p_, &angle_ab, dot_ab)) result |= 1 << 0;
+    if (vector_is_between(a, b, q_, &angle_ab, dot_ab)) result |= 1 << 1;
+    if (vector_is_between(c, d, p_, &angle_cd, dot_cd)) result |= 1 << 2;
+    if (vector_is_between(c, d, q_, &angle_cd, dot_cd)) result |= 1 << 3;
 
-      g[0] = c[0] + n * d[0];
-      g[1] = c[1] + n * d[1];
-      g[2] = c[2] + n * d[2];
+    return result;
+}
+
+int gcxgc_vec_ (double a[3], double b[3], double c[3], double d[3]) {
+
+   double e_ab[3] = {0, 0, 0}, e_cd[3] = {0, 0, 0}, n;
+   double cross_ab[3], cross_cd[3];
+   int ab_is_point, cd_is_point;
+
+   // compute unit vector of ab plane
+   crossproduct_ld(a, b, cross_ab);
+   n = sqrt(cross_ab[0] * cross_ab[0] +
+            cross_ab[1] * cross_ab[1] +
+            cross_ab[2] * cross_ab[2]);
+
+   ab_is_point = n < tol;
+
+   if (!ab_is_point) {
+
+      n = 1.0 / n;
+      e_ab[0] = cross_ab[0] * n;
+      e_ab[1] = cross_ab[1] * n;
+      e_ab[2] = cross_ab[2] * n;
    }
 
-   // normalise g
-   n = 1.0 / sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
+   // compute unit vector of cd plane
+   crossproduct_ld(c, d, cross_cd);
+   n = sqrt(cross_cd[0] * cross_cd[0] +
+            cross_cd[1] * cross_cd[1] +
+            cross_cd[2] * cross_cd[2]);
+   cd_is_point = n < tol;
 
-   g[0]=g[0]*n;
-   g[1]=g[1]*n;
-   g[2]=g[2]*n;
-
-   // determine p and q
-   double p_[3], q_[3];
-
-   p_[0]= g[0];
-   p_[1]= g[1];
-   p_[2]= g[2];
-
-   q_[0]=-p_[0];
-   q_[1]=-p_[1];
-   q_[2]=-p_[2];
-
-   // set p and q
-   if (p != 0) {
-      p[0] = p_[0];
-      p[1] = p_[1];
-      p[2] = p_[2];
-   }
-   if (q != 0) {
-      q[0] = q_[0];
-      q[1] = q_[1];
-      q[2] = q_[2];
+   if (!cd_is_point) {
+      n = 1.0 / n;
+      e_cd[0] = cross_cd[0] * n;
+      e_cd[1] = cross_cd[1] * n;
+      e_cd[2] = cross_cd[2] * n;
    }
 
-   int result;
+   if (ab_is_point && cd_is_point) {
 
-   result = 0;
-   if (vector_is_between(a, b, p_, e_ab)) result |= 1 << 0;
-   if (vector_is_between(a, b, q_, e_ab)) result |= 1 << 1;
-   if (vector_is_between(c, d, p_, e_cd)) result |= 1 << 2;
-   if (vector_is_between(c, d, q_, e_cd)) result |= 1 << 3;
+      return get_vector_angle(a, c) < tol;
 
-   return result;
+   } else if (ab_is_point) {
+
+      // if ab is not on the plane of cd
+      if (fabs(get_vector_angle(a, e_cd) - M_PI_2) > tol)
+         return 0;
+
+      double angle_cd = -1;
+      double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
+
+      return vector_is_between(c, d, a, &angle_cd, dot_cd);
+
+   } else if (cd_is_point) {
+
+      // if cd is not on the plane of ab
+      if (fabs(get_vector_angle(c, e_ab) - M_PI_2) > tol) return 0;
+
+      double angle_ab = -1;
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+
+      return vector_is_between(a, b, c, &angle_ab, dot_ab);
+   }
+
+   double temp_cross[3];
+
+   // compute unit vector of ab plane
+   crossproduct_ld(e_ab, e_cd, temp_cross);
+   n = sqrt(temp_cross[0] * temp_cross[0] +
+            temp_cross[1] * temp_cross[1] +
+            temp_cross[2] * temp_cross[2]);
+
+   // if both great circles are nearly identically
+   if (n < tol) {
+
+      double angle_ab = -1;
+      double angle_cd = -1;
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+      double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
+
+      return vector_is_between(c, d, a, &angle_cd, dot_cd) ||
+             vector_is_between(c, d, b, &angle_cd, dot_cd) ||
+             vector_is_between(a, b, c, &angle_ab, dot_ab) ||
+             vector_is_between(a, b, d, &angle_ab, dot_ab);
+   }
+
+    n = 1.0 / n;
+    double p_[3];
+    p_[0] = temp_cross[0] * n;
+    p_[1] = temp_cross[1] * n;
+    p_[2] = temp_cross[2] * n;
+
+    double angle_ab = -1;
+    double angle_cd = -1;
+    double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
+
+    if (vector_is_between(a, b, p_, &angle_ab, dot_ab) &&
+        vector_is_between(c, d, p_, &angle_cd, dot_cd))
+       return 1;
+
+    double q_[3];
+    q_[0]=-p_[0];
+    q_[1]=-p_[1];
+    q_[2]=-p_[2];
+
+    return vector_is_between(a, b, q_, &angle_ab, dot_ab) &&
+           vector_is_between(c, d, q_, &angle_cd, dot_cd);
 }
 
 /** \brief compute the intersection point two circles of latitude
@@ -438,22 +593,12 @@ int latcxlatc_vec (double a[3], double b[3], double c[3], double d[3],
 
    int result = 16;
 
-   double cross_ab[3], cross_cd[3];
-
-   crossproduct(a, b, cross_ab);
-   crossproduct(c, d, cross_cd);
-
-   double a_[3] = {a[0], a[1], 0};
-   double b_[3] = {b[0], b[1], 0};
-   double c_[3] = {c[0], c[1], 0};
-   double d_[3] = {d[0], d[1], 0};
-
    int a_between_cd, b_between_cd, c_between_ab, d_between_ab;
 
-   a_between_cd = vector_is_between(c_, d_, a_, cross_cd);
-   b_between_cd = vector_is_between(c_, d_, b_, cross_cd);
-   c_between_ab = vector_is_between(a_, b_, c_, cross_ab);
-   d_between_ab = vector_is_between(a_, b_, d_, cross_ab);
+   a_between_cd = vector_is_between_lat(c, d, a);
+   b_between_cd = vector_is_between_lat(c, d, b);
+   c_between_ab = vector_is_between_lat(a, b, c);
+   d_between_ab = vector_is_between_lat(a, b, d);
 
    if (a_between_cd && b_between_cd && c_between_ab && d_between_ab) {
 
@@ -499,6 +644,35 @@ int latcxlatc_vec (double a[3], double b[3], double c[3], double d[3],
    }
 
    return result;
+}
+
+static int latcxlatc_(struct edge edge_a, struct edge edge_b) {
+
+   // if both edges are on the same circle of latitude
+   if (fabs(edge_a.points[0].lat - edge_b.points[0].lat) > tol)
+      return 0;
+
+   // if both edges are on the pole
+   if (fabs(fabs(edge_a.points[0].lat) - M_PI_2) < tol)
+      return 1;
+
+   double angle_ab = fabs(get_angle(edge_a.points[0].lon,
+                                    edge_a.points[1].lon)) + tol;
+   double angle_cd = fabs(get_angle(edge_b.points[0].lon,
+                                    edge_b.points[1].lon)) + tol;
+   double angle_ac = fabs(get_angle(edge_a.points[0].lon,
+                                    edge_b.points[0].lon));
+   double angle_ad = fabs(get_angle(edge_a.points[0].lon,
+                                    edge_b.points[1].lon));
+   double angle_bc = fabs(get_angle(edge_a.points[1].lon,
+                                    edge_b.points[0].lon));
+   double angle_bd = fabs(get_angle(edge_a.points[1].lon,
+                                    edge_b.points[1].lon));
+
+   return ((angle_ac + angle_bc) < angle_ab) ||
+          ((angle_ad + angle_bd) < angle_ab) ||
+          ((angle_ac + angle_ad) < angle_cd) ||
+          ((angle_bc + angle_bd) < angle_cd);
 }
 
 /** \brief compute the intersection point two circles of longitude
@@ -665,13 +839,15 @@ int loncxlonc_vec (double a[3], double b[3], double c[3], double d[3],
 
    double cross_ab[3], cross_cd[3];
 
-   crossproduct(a, b, cross_ab);
-   crossproduct(c, d, cross_cd);
+   crossproduct_ld(a, b, cross_ab);
+   crossproduct_ld(c, d, cross_cd);
 
    double abs_norm_cross_ab[2], abs_norm_cross_cd[2];
 
    // abs_norm_cross_ab[2] = 0;
    // abs_norm_cross_cd[2] = 0;
+
+   int edge_is_pole_point = 0;
 
    double * ref_point;
 
@@ -680,13 +856,16 @@ int loncxlonc_vec (double a[3], double b[3], double c[3], double d[3],
    if (fabs(ref_point[2]) > 1.0-tol) {
       abs_norm_cross_ab[0] = 1;
       abs_norm_cross_ab[1] = 0;
-      ret_value |= 16;
+      edge_is_pole_point = 1;
    } else {
       double scale = 1.0 / sqrt(ref_point[0]*ref_point[0] +
                                 ref_point[1]*ref_point[1]);
       abs_norm_cross_ab[0] = ref_point[1] * scale;
       abs_norm_cross_ab[1] = ref_point[0] * scale;
-      if (abs_norm_cross_ab[0] < 0) {
+      double max_abs_val = (fabs(abs_norm_cross_ab[0]) >
+                            fabs(abs_norm_cross_ab[1]))?(abs_norm_cross_ab[0]):
+                                                        (abs_norm_cross_ab[1]);
+      if (max_abs_val < 0) {
          abs_norm_cross_ab[0] *= -1.0;
          abs_norm_cross_ab[1] *= -1.0;
       }
@@ -695,32 +874,41 @@ int loncxlonc_vec (double a[3], double b[3], double c[3], double d[3],
    ref_point = (fabs(c[2]) > fabs(d[2]))?d:c;
    // if both points are at the pole
    if (fabs(ref_point[2]) > 1.0-tol) {
-      abs_norm_cross_cd[0] = 1;
-      abs_norm_cross_cd[1] = 0;
-      ret_value |= 16;
+      abs_norm_cross_cd[0] = 0;
+      abs_norm_cross_cd[1] = 1;
+      edge_is_pole_point = 1;
    } else {
       double scale = 1.0 / sqrt(ref_point[0]*ref_point[0] +
                                 ref_point[1]*ref_point[1]);
       abs_norm_cross_cd[0] = ref_point[1] * scale;
       abs_norm_cross_cd[1] = ref_point[0] * scale;
-      if (abs_norm_cross_cd[0] < 0) {
+      double max_abs_val = (fabs(abs_norm_cross_cd[0]) >
+                            fabs(abs_norm_cross_cd[1]))?(abs_norm_cross_cd[0]):
+                                                        (abs_norm_cross_cd[1]);
+      if (max_abs_val < 0) {
          abs_norm_cross_cd[0] *= -1.0;
          abs_norm_cross_cd[1] *= -1.0;
       }
    }
 
+   double angle_ab = -1;
+   double angle_cd = -1;
+
    // if both edges are on the same circle of longitude
    if (fabs(abs_norm_cross_ab[0] - abs_norm_cross_cd[0]) < tol &&
        fabs(abs_norm_cross_ab[1] - abs_norm_cross_cd[1]) < tol) {
 
-      ret_value |= 16;
+      if (!edge_is_pole_point)
+         ret_value |= 16;
 
       int a_between_cd, b_between_cd, c_between_ab, d_between_ab;
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+      double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
 
-      a_between_cd = vector_is_between(c, d, a, cross_cd) << 0;
-      b_between_cd = vector_is_between(c, d, b, cross_cd) << 1;
-      c_between_ab = vector_is_between(a, b, c, cross_ab) << 2;
-      d_between_ab = vector_is_between(a, b, d, cross_ab) << 3;
+      a_between_cd = vector_is_between(c, d, a, &angle_cd, dot_cd) << 0;
+      b_between_cd = vector_is_between(c, d, b, &angle_cd, dot_cd) << 1;
+      c_between_ab = vector_is_between(a, b, c, &angle_ab, dot_ab) << 2;
+      d_between_ab = vector_is_between(a, b, d, &angle_ab, dot_ab) << 3;
 
       switch (a_between_cd + b_between_cd + c_between_ab + d_between_ab) {
 
@@ -770,12 +958,94 @@ int loncxlonc_vec (double a[3], double b[3], double c[3], double d[3],
       q[0] = 0, q[1] = 0; q[2] = -1;
    }
 
-   if (vector_is_between(a, b, p, cross_ab)) ret_value |= 1;
-   if (vector_is_between(a, b, q, cross_ab)) ret_value |= 2;
-   if (vector_is_between(c, d, p, cross_cd)) ret_value |= 4;
-   if (vector_is_between(c, d, q, cross_cd)) ret_value |= 8;
+   double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+   double dot_cd = c[0]*d[0] + c[1]*d[1] + c[2]*d[2];
+
+   if (ret_value & 16) {
+      if (vector_is_between(a, b, p, &angle_ab, dot_ab)) ret_value |= 1;
+      if (vector_is_between(a, b, q, &angle_ab, dot_ab)) ret_value |= 2;
+      if (vector_is_between(c, d, p, &angle_cd, dot_cd)) ret_value |= 4;
+      if (vector_is_between(c, d, q, &angle_cd, dot_cd)) ret_value |= 8;
+   } else {
+      if (vector_is_between(a, b, p, &angle_ab, dot_ab)) ret_value |= 1;
+      else if (vector_is_between(a, b, q, &angle_ab, dot_ab)) ret_value |= 2;
+      if (vector_is_between(c, d, p, &angle_cd, dot_cd)) ret_value |= 4;
+      else if (vector_is_between(c, d, q, &angle_cd, dot_cd)) ret_value |= 8;
+   }
 
    return ret_value;
+}
+
+int loncxlonc_ (struct edge edge_a, struct edge edge_b) {
+
+   // if edge goes across pole
+   if (fabs(get_angle(edge_a.points[0].lon, edge_a.points[1].lon)) > tol) {
+
+      double lat = (edge_a.points[0].lat > 0)?M_PI_2:-M_PI_2;
+
+      return
+         loncxlonc_(
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_a.points[0].lon,
+                           .lat = edge_a.points[0].lat},
+                          {.lon = edge_a.points[0].lon,
+                           .lat = lat}}}, edge_b)
+         ||
+         loncxlonc_(
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_a.points[1].lon,
+                           .lat = edge_a.points[1].lat},
+                          {.lon = edge_a.points[1].lon,
+                           .lat = lat}}}, edge_b);
+
+   } else if (fabs(get_angle(edge_b.points[0].lon,
+                             edge_b.points[1].lon)) > tol) {
+
+      double lat = (edge_b.points[0].lat > 0)?M_PI_2:-M_PI_2;
+
+      return
+         loncxlonc_(edge_a,
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_b.points[0].lon,
+                           .lat = edge_b.points[0].lat},
+                          {.lon = edge_b.points[0].lon,
+                           .lat = lat}}})
+         ||
+         loncxlonc_(edge_a,
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_b.points[1].lon,
+                           .lat = edge_b.points[1].lat},
+                          {.lon = edge_b.points[1].lon,
+                           .lat = lat}}});
+   }
+
+   // if both edges touch a pole
+   if (((fabs(fabs(edge_a.points[0].lat) - M_PI_2) < tol) ||
+        (fabs(fabs(edge_a.points[1].lat) - M_PI_2) < tol)) &&
+       ((fabs(fabs(edge_b.points[0].lat) - M_PI_2) < tol) ||
+        (fabs(fabs(edge_b.points[1].lat) - M_PI_2) < tol))) {
+
+      return !((edge_a.points[0].lat > 0) ^ (edge_b.points[0].lat > 0));
+   }
+
+   if (fabs(get_angle(edge_a.points[0].lon, edge_b.points[0].lon)) > tol)
+      return 0;
+
+   double angle_ab = fabs(edge_a.points[0].lat - edge_a.points[1].lat) + tol;
+   double angle_cd = fabs(edge_b.points[0].lat - edge_b.points[1].lat) + tol;
+   double angle_ac = fabs(edge_a.points[0].lat - edge_b.points[0].lat);
+   double angle_ad = fabs(edge_a.points[0].lat - edge_b.points[1].lat);
+   double angle_bc = fabs(edge_a.points[1].lat - edge_b.points[0].lat);
+   double angle_bd = fabs(edge_a.points[1].lat - edge_b.points[1].lat);
+
+   return ((angle_ac + angle_bc) < angle_ab) ||
+          ((angle_ad + angle_bd) < angle_ab) ||
+          ((angle_ac + angle_ad) < angle_cd) ||
+          ((angle_bc + angle_bd) < angle_cd);
 }
 
 /** \brief compute the intersection point of a meridian and a parallel
@@ -901,13 +1171,22 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
 
    ret_value = 0;
 
-   if (fabs(a[0] * b[1] - a[1] * b[0]) > tol)
+   // this test is not very accurate but should catch the most obvious cases
+   // the accuracy of this test is not allowed to be higher than the one in then
+   // routine is_inside_gc
+   if ((fabs(a[0] * b[1] - a[1] * b[0]) > 1e-7) &&
+       (fabs(fabs(a[2]) - 1.0) > tol) &&
+       (fabs(fabs(b[2]) - 1.0) > tol)) {
+
       abort_message("edge is not a circle of longitude", __FILE__, __LINE__);
+   }
 
    unsigned ab_goes_across_pole;
    unsigned cd_is_on_pole;
    unsigned ab_is_point;
    unsigned cd_is_point;
+   double angle_ab = get_vector_angle(a, b);
+   double angle_cd = get_vector_angle(c, d);
 
    ab_goes_across_pole =
       ((fabs(1.0 - fabs(a[2])) < tol || fabs(1.0 - fabs(b[2])) < tol) ||
@@ -915,13 +1194,9 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
 
    cd_is_on_pole = fabs(1.0 - fabs(c[2])) < tol;
 
-   ab_is_point = fabs(a[0]-b[0]) < tol &&
-                 fabs(a[1]-b[1]) < tol &&
-                 fabs(a[2]-b[2]) < tol;
+   ab_is_point = angle_ab < tol;
 
-   cd_is_point = fabs(c[0]-d[0]) < tol &&
-                 fabs(c[1]-d[1]) < tol &&
-                 fabs(c[2]-d[2]) < tol;
+   cd_is_point = angle_cd < tol;
 
    if (cd_is_on_pole) {
 
@@ -933,6 +1208,15 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
             p[0] = c[0], p[1] = c[1], p[2] = c[2];
          if (q != NULL)
             q[0] = c[0], q[1] = c[1], q[2] = c[2];
+
+      ret_value |= 4;
+
+   } else if (ab_goes_across_pole && ab_is_point) {
+
+      if (p != NULL)
+         p[0] = c[0], p[1] = c[1], p[2] = c[2];
+      if (q != NULL)
+         q[0] = -p[0], q[1] = -p[1], q[2] = p[2];
 
       ret_value |= 4;
 
@@ -962,10 +1246,12 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
       */
       {
 
-         if (fabs(a[2]) < fabs(b[2])) {
+        double tmp_scale_a = a[0] * a[0] + a[1] * a[1];
+        double tmp_scale_b = b[0] * b[0] + b[1] * b[1];
 
-            double scale = sqrt((1.0 - c[2] * c[2])/
-                                (a[0] * a[0] + a[1] * a[1]));
+         if (tmp_scale_a > tmp_scale_b) {
+
+            double scale = sqrt((1.0 - c[2] * c[2])/tmp_scale_a);
 
             if (p != NULL)
                p[0] = a[0] * scale, p[1] = a[1] * scale, p[2] = c[2];
@@ -974,8 +1260,7 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
 
          } else {
 
-            double scale = sqrt((1.0 - c[2] * c[2])/
-                                (b[0] * b[0] + b[1] * b[1]));
+            double scale = sqrt((1.0 - c[2] * c[2])/tmp_scale_b);
 
             if (p != NULL)
                p[0] = b[0] * scale, p[1] = b[1] * scale, p[2] = c[2];
@@ -997,19 +1282,9 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
 
       } else {
 
-         double angle_cd, angle_cp, angle_dp, angle_cq, angle_dq;
-
-         angle_cd = get_vector_angle(c, d);
-         angle_cp = get_vector_angle(c, p);
-         angle_dp = get_vector_angle(d, p);
-         angle_cq = get_vector_angle(c, q);
-         angle_dq = get_vector_angle(d, q);
-
-         if (angle_cp < tol || angle_dp < tol ||
-             (angle_cp < angle_cd + tol && angle_dp < angle_cd + tol))
+         if (vector_is_between_lat(c, d, p))
             ret_value |= 1 << 2;
-         if (angle_cq < tol || angle_dq < tol ||
-             (angle_cq < angle_cd + tol && angle_dq < angle_cd + tol))
+         if (vector_is_between_lat(c, d, q))
             ret_value |= 1 << 3;
       }
 
@@ -1022,16 +1297,59 @@ int loncxlatc_vec (double a[3], double b[3], double c[3], double d[3],
              fabs(a[2]-q[2]) < tol) ret_value |= 1 << 1;
       } else {
 
-         double cross_ab[3];
+         double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 
-         crossproduct(a, b, cross_ab);
-
-         if (vector_is_between(a, b, p, cross_ab)) ret_value |= 1 << 0;
-         if (vector_is_between(a, b, q, cross_ab)) ret_value |= 1 << 1;
+         if (vector_is_between(a, b, p, &angle_ab, dot_ab)) ret_value |= 1 << 0;
+         if (vector_is_between(a, b, q, &angle_ab, dot_ab)) ret_value |= 1 << 1;
       }
    }
 
    return ret_value;
+}
+
+static int loncxlatc_ (struct edge edge_a, struct edge edge_b) {
+
+   // if edge goes across pole
+   if (fabs(get_angle(edge_a.points[0].lon, edge_a.points[1].lon)) > tol) {
+
+      double lat = (edge_a.points[0].lat > 0)?M_PI_2:-M_PI_2;
+
+      return
+         loncxlatc_(
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_a.points[0].lon,
+                           .lat = edge_a.points[0].lat},
+                          {.lon = edge_a.points[0].lon,
+                           .lat = lat}}}, edge_b)
+         ||
+         loncxlatc_(
+            (struct edge){
+               .edge_type = LON_CIRCLE,
+               .points = {{.lon = edge_a.points[1].lon,
+                           .lat = edge_a.points[1].lat},
+                          {.lon = edge_a.points[1].lon,
+                           .lat = lat}}}, edge_b);
+   }
+
+   // if edge b is at the pole
+   if (fabs(fabs(edge_b.points[0].lat) - M_PI_2) < tol) {
+
+      return (fabs(edge_a.points[0].lat - edge_b.points[0].lat) < tol) ||
+             (fabs(edge_a.points[1].lat - edge_b.points[0].lat) < tol);
+   }
+
+   double lat_diff = fabs(edge_a.points[0].lat - edge_a.points[1].lat) + tol;
+
+   if ((fabs(edge_a.points[0].lat - edge_b.points[0].lat) > lat_diff) ||
+       (fabs(edge_a.points[1].lat - edge_b.points[0].lat) > lat_diff))
+      return 0;
+
+   double lon_diff = fabs(get_angle(edge_b.points[0].lon,
+                                    edge_b.points[1].lon)) + tol;
+
+   return (fabs(edge_a.points[0].lon - edge_b.points[0].lon) < lon_diff) &&
+          (fabs(edge_a.points[0].lon - edge_b.points[1].lon) < lon_diff);
 }
 
 /** \brief compute the intersection of a great circle with the parallel
@@ -1115,7 +1433,7 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
 
    double cross_ab[3], scale;
    
-   crossproduct(a, b, cross_ab);
+   crossproduct_ld(a, b, cross_ab);
    scale = sqrt(cross_ab[0]*cross_ab[0]+
                 cross_ab[1]*cross_ab[1]+
                 cross_ab[2]*cross_ab[2]);
@@ -1126,7 +1444,9 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
       return latcxlatc_vec(a, b, c, d, p, q);
 
    // if the great circle is  a circle of longitude
-   } else if (scale < tol || fabs(cross_ab[2]/scale) < tol) {
+   } else if (scale < tol || fabs(cross_ab[2]/scale) < tol ||
+              fabs(fabs(a[2])-1.0) < 1e-13 ||
+              fabs(fabs(b[2])-1.0) < 1e-13) {
 
       return loncxlatc_vec(a, b, c, d, p, q);
    }
@@ -1199,13 +1519,11 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
       p[1] = t[1] + n[0] * s[1];
       p[2] = t[2] + n[0] * s[2];
 
-      double cross_cd[3] = {0, 0, c[0]*d[1]-c[1]*d[0]};
-      double temp_c[3] = {c[0], c[1], 0};
-      double temp_d[3] = {d[0], d[1], 0};
-      double temp_p[3] = {p[0], p[1], 0};
+      double angle_ab = -1;
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 
-      if (vector_is_between(a, b, p, cross_ab)) result |= 1;
-      if (vector_is_between(temp_c, temp_d, temp_p, cross_cd)) result |= 4;
+      if (vector_is_between(a, b, p, &angle_ab, dot_ab)) result |= 1;
+      if (vector_is_between_lat(c, d, p)) result |= 4;
 
       if (fabs(n[0] - n[1]) >= tol) {
 
@@ -1213,15 +1531,131 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
          q[1] = t[1] + n[1] * s[1];
          q[2] = t[2] + n[1] * s[2];
 
-         double temp_q[3] = {q[0], q[1], 0};
-
-         if (vector_is_between(a, b, q, cross_ab)) result |= 2;
-         if (vector_is_between(temp_c, temp_d, temp_q, cross_cd)) result |= 8;
+         if (vector_is_between(a, b, q, &angle_ab, dot_ab)) result |= 2;
+         if (vector_is_between_lat(c, d, q)) result |= 8;
       } else
          q[0] = p[0], q[1] = p[1], q[2] = p[2];
    }
 
    return result;
+}
+
+static int gcxlatc_vec_(double a[3], double b[3], double c[3], double d[3]) {
+
+   double angle_ab = get_vector_angle(a, b);
+   double angle_cd = get_vector_angle(c, d);
+
+   // if ab is a point
+   if (angle_ab < tol) {
+
+      return (fabs(a[2] - c[2]) < tol) && vector_is_between_lat(c, d, a);
+
+   } else if (angle_cd < tol) {
+
+      double cross_ab[3];
+
+      crossproduct_ld(a, b, cross_ab);
+
+      double n = 1.0 / sqrt(cross_ab[0] * cross_ab[0] +
+                            cross_ab[1] * cross_ab[1] +
+                            cross_ab[2] * cross_ab[2]);
+      cross_ab[0] *= n;
+      cross_ab[1] *= n;
+      cross_ab[2] *= n;
+
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+
+      return (fabs(get_vector_angle(cross_ab, c) - M_PI_2) < tol) &&
+             vector_is_between(a, b, c, &angle_ab, dot_ab);
+   }
+
+   double t[3], s[3];
+
+   if (fabs(a[2]) > fabs(b[2])) {
+
+      double scale = c[2] / a[2];
+
+      t[0] = scale * a[0];
+      t[1] = scale * a[1];
+      
+   } else {
+
+      double scale = c[2] / b[2];
+
+      t[0] = scale * b[0];
+      t[1] = scale * b[1];
+   }
+
+   t[2] = c[2];
+
+   s[2] = 0;
+
+   if (fabs(a[2]) < tol)
+      s[0] = a[0], s[1] = a[1];
+   else if (fabs(b[2]) < tol)
+      s[0] = b[0], s[1] = b[1];
+   else if (fabs(a[2]) > fabs(b[2])) {
+      double scale = b[2] / a[2];
+      s[0] = b[0] - scale * a[0];
+      s[1] = b[1] - scale * a[1];
+   } else {
+      double scale = a[2] / b[2];
+      s[0] = a[0] - scale * b[0];
+      s[1] = a[1] - scale * b[1];
+   }
+
+   if (fabs(s[0]) < tol && fabs(s[1]) < tol)
+      abort_message("internal error", __FILE__, __LINE__);
+
+   {
+      // the intersection of the planes of both circles is defined by:
+      // x = t + n * s
+
+      // x_0^2 + x_1^2 + x_2^2 = 1
+      // x_2 = c_2
+
+      double a_ = s[0] * s[0] + s[1] * s[1];
+      double b_ = 2.0 * (t[0] * s[0] + t[1] * s[1]);
+      double c_ = t[0] * t[0] + t[1] * t[1] + c[2] * c[2] - 1.0;
+
+      double temp = b_ * b_ - 4.0 * a_ * c_;
+
+      // no intersection possible
+      if (temp < 0.0) {
+        if (temp < -tol)
+          return 0;
+        else
+          temp = 0;
+      }
+
+      double n[2];
+
+      n[0] = - (b_ + sqrt(temp)) / (2.0 * a_);
+      n[1] = - (b_ - sqrt(temp)) / (2.0 * a_);
+
+      double p[3];
+
+      p[0] = t[0] + n[0] * s[0];
+      p[1] = t[1] + n[0] * s[1];
+      p[2] = t[2] + n[0] * s[2];
+
+      double dot_ab = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+
+      if (vector_is_between(a, b, p, &angle_ab, dot_ab) &&
+          vector_is_between_lat(c, d, p))
+         return 1;
+
+      if (fabs(n[0] - n[1]) >= tol) {
+
+         p[0] = t[0] + n[1] * s[0];
+         p[1] = t[1] + n[1] * s[1];
+         p[2] = t[2] + n[1] * s[2];
+
+         return vector_is_between(a, b, p, &angle_ab, dot_ab) &&
+                vector_is_between_lat(c, d, p);
+      }  else
+         return 0;
+   }
 }
 
 int intersect (struct edge const edge_a, struct edge const edge_b,
@@ -1392,4 +1826,38 @@ int intersect_vec (enum edge_type edge_type_a, double a[3], double b[3],
                   ((ret_value & (4 + 8)) >> 2);
 
    return ret_value;
+}
+
+int do_intersect (struct edge edge_a, double a[3], double b[3],
+                  struct edge edge_b, double c[3], double d[3]) {
+
+   int flag = ((edge_a.edge_type == LAT_CIRCLE)   << 0) |
+              ((edge_a.edge_type == LON_CIRCLE)   << 1) |
+              ((edge_a.edge_type == GREAT_CIRCLE) << 2) |
+              ((edge_b.edge_type == LAT_CIRCLE)   << 3) |
+              ((edge_b.edge_type == LON_CIRCLE)   << 4) |
+              ((edge_b.edge_type == GREAT_CIRCLE) << 5);
+
+   switch (flag) {
+
+      case ((1 << 0) | (1 << 3)):
+         return latcxlatc_(edge_a, edge_b);
+      case ((1 << 0) | (1 << 4)):
+         return loncxlatc_(edge_b, edge_a);
+      case ((1 << 0) | (1 << 5)):
+         return gcxlatc_vec_(c, d, a, b);
+      case ((1 << 1) | (1 << 3)):
+         return loncxlatc_(edge_a, edge_b);
+      case ((1 << 1) | (1 << 4)):
+         return loncxlonc_(edge_a, edge_b);
+      case ((1 << 1) | (1 << 5)):
+      case ((1 << 2) | (1 << 4)):
+      case ((1 << 2) | (1 << 5)):
+         return gcxgc_vec_(a, b, c, d);
+      case ((1 << 2) | (1 << 3)):
+         return gcxlatc_vec_(a, b, c, d);
+      default:
+         abort_message ( "ERROR: unknown edge type.", __FILE__, __LINE__ );
+         exit(EXIT_FAILURE);
+   };
 }

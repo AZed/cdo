@@ -79,7 +79,7 @@ static const union namespaceSwitchValue defaultSwitches[NUM_NAMESPACE_SWITCH] = 
     }
 #endif
 
-struct namespace
+struct Namespace
 {
   statusCode resStage;
   union namespaceSwitchValue switches[NUM_NAMESPACE_SWITCH];
@@ -111,7 +111,7 @@ struct namespace
 #endif
 };
 
-struct namespace *namespaces = &initialNamespace;
+struct Namespace *namespaces = &initialNamespace;
 
 static int namespacesSize = 1;
 
@@ -202,8 +202,7 @@ namespaceNew()
   else if (namespacesSize == 1)
     {
       /* make room for additional namespace */
-      struct namespace *newNameSpaces
-        = xmalloc((namespacesSize + 1) * sizeof (namespaces[0]));
+      struct Namespace *newNameSpaces = (struct Namespace*) xmalloc((namespacesSize + 1) * sizeof (namespaces[0]));
       memcpy(newNameSpaces, namespaces, sizeof (namespaces[0]));
       namespaces = newNameSpaces;
       ++namespacesSize;
@@ -213,8 +212,7 @@ namespaceNew()
     {
       /* make room for additional namespace */
       newNamespaceID = namespacesSize;
-      namespaces
-        = xrealloc(namespaces, (namespacesSize + 1) * sizeof (namespaces[0]));
+      namespaces = (struct Namespace*) xrealloc(namespaces, (namespacesSize + 1) * sizeof (namespaces[0]));
       ++namespacesSize;
     }
   else /* implicit: namespacesSize >= NUM_NAMESPACES */
@@ -269,17 +267,17 @@ int namespaceGetActive ()
   return activeNamespace;
 }
 
-int namespaceAdaptKey ( int key, int nspTarget )
+int namespaceAdaptKey ( int originResH, int originNamespace )
 {
   namespaceTuple_t tin;
   int nsp;
 
-  if ( key == CDI_UNDEFID ) return CDI_UNDEFID;
+  if ( originResH == CDI_UNDEFID ) return CDI_UNDEFID;
 
-  tin.idx = key & idxmask;
-  tin.nsp = (int)(((unsigned)( key & nspmask )) >> idxbits);
+  tin.idx = originResH & idxmask;
+  tin.nsp = (int)(((unsigned)( originResH & nspmask )) >> idxbits);
 
-  xassert ( tin.nsp == nspTarget );
+  xassert ( tin.nsp == originNamespace );
 
   nsp = namespaceGetActive ();
 
@@ -287,15 +285,15 @@ int namespaceAdaptKey ( int key, int nspTarget )
 }
 
 
-int namespaceAdaptKey2 ( int key )
+int namespaceAdaptKey2 ( int originResH )
 {
   namespaceTuple_t tin;
   int nsp;
 
-  if ( key == CDI_UNDEFID ) return CDI_UNDEFID;
+  if ( originResH == CDI_UNDEFID ) return CDI_UNDEFID;
 
-  tin.idx = key & idxmask;
-  tin.nsp = (int)(((unsigned)( key & nspmask )) >> idxbits);
+  tin.idx = originResH & idxmask;
+  tin.nsp = (int)(((unsigned)( originResH & nspmask )) >> idxbits);
 
   nsp = namespaceGetActive ();
 

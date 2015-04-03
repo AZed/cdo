@@ -246,7 +246,7 @@ void *Rhopot(void *argument)
   if ( nlevel1 != nlevel2 ) cdoAbort("temperature and salinity have different number of levels!");
   nlevel = nlevel1;
 
-  pressure = malloc(nlevel*sizeof(double));
+  pressure = (double*) malloc(nlevel*sizeof(double));
   zaxisInqLevels(zaxisID, pressure);
 
   if ( pin >= 0 ) 
@@ -264,9 +264,9 @@ void *Rhopot(void *argument)
   field_init(&to);
   field_init(&sao);
   field_init(&rho);
-  to.ptr = malloc(gridsize*nlevel*sizeof(double));
-  sao.ptr = malloc(gridsize*nlevel*sizeof(double));
-  rho.ptr = malloc(gridsize*nlevel*sizeof(double));
+  to.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
+  sao.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
+  rho.ptr = (double*) malloc(gridsize*nlevel*sizeof(double));
 
   to.nmiss = 0;
   sao.nmiss = 0;

@@ -35,6 +35,8 @@
 #include "process.h"
 #include "const.h"
 
+#define  OPENMP4  201307
+
 #ifndef strdupx
 #ifndef strdup
 char *strdup(const char *s);
@@ -50,6 +52,8 @@ char *strdup(const char *s);
 })
 */
 #endif
+
+#define strcompare(s1, s2)  (strncmp(s1, s2, strlen(s2)))
 
 
 /* sxxxYYYYMMDDhhmm0 */
@@ -116,8 +120,6 @@ char   *commandLine(void);
 int     readline(FILE *fp, char *line, int len);
 
 int zaxis2ltype(int zaxisID);
-int ztype2ltype(int zaxistype);
-int ltype2ztype(int ltype);
 
 
 int nfc2nlat(int nfc, int ntr);

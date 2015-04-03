@@ -8,11 +8,11 @@
 #define  CDI_H_
 
 #include <sys/types.h>
-
+/*
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
+*/
 #define  CDI_MAX_NAME           256   /* max length of a name                 */
 
 #define  CDI_UNDEFID             -1
@@ -191,6 +191,7 @@ extern "C" {
 
 #define  TAXIS_ABSOLUTE           1
 #define  TAXIS_RELATIVE           2
+#define  TAXIS_FORECAST           3
 
 /* TUNIT types */
 
@@ -277,6 +278,7 @@ void    streamDefVlist(int streamID, int vlistID);
 
 /*      streamInqVlist: Get the Vlist of a stream */
 int     streamInqVlist(int streamID);
+/*      PIO: */
 int     streamInqVlistIDorig(int streamID);
 
 /*      streamInqFiletype: Get the filetype */
@@ -291,11 +293,11 @@ int     streamInqByteorder(int streamID);
 /*      streamDefCompType: Define compression type */
 void    streamDefCompType(int streamID, int comptype);
 
-/*      streamDefCompLevel: Define compression level */
-void    streamDefCompLevel(int streamID, int complevel);
-
 /*      streamInqCompType: Get compression type */
 int     streamInqCompType(int streamID);
+
+/*      streamDefCompLevel: Define compression level */
+void    streamDefCompLevel(int streamID, int complevel);
 
 /*      streamInqCompLevel: Get compression level */
 int     streamInqCompLevel(int streamID);
@@ -303,11 +305,11 @@ int     streamInqCompLevel(int streamID);
 /*      streamDefTimestep: Define time step */
 int     streamDefTimestep(int streamID, int tsID);
 
-/* query currently set timestep id  */
-int streamInqCurTimestepID(int streamID);
-
 /*      streamInqTimestep: Get time step */
 int     streamInqTimestep(int streamID, int tsID);
+
+/*      PIO: query currently set timestep id  */
+int     streamInqCurTimestepID(int streamID);
 
 char   *streamFilename(int streamID);
 char   *streamFilesuffix(int filetype);
@@ -318,19 +320,19 @@ int     streamInqNvars ( int streamID );
 
 /* STREAM var I/O routines */
 
-/*      streamReadVar: Read a variable */
-void    streamReadVar(int streamID, int varID, double *data_vec, int *nmiss);
-
 /*      streamWriteVar: Write a variable */
 void    streamWriteVar(int streamID, int varID, const double *data_vec, int nmiss);
 void    streamWriteVarF(int streamID, int varID, const float *data_vec, int nmiss);
 
-/*      streamReadVarSlice: Read a horizontal slice of a variable */
-void    streamReadVarSlice(int streamID, int varID, int levelID, double *data_vec, int *nmiss);
+/*      streamReadVar: Read a variable */
+void    streamReadVar(int streamID, int varID, double *data_vec, int *nmiss);
 
 /*      streamWriteVarSlice: Write a horizontal slice of a variable */
 void    streamWriteVarSlice(int streamID, int varID, int levelID, const double *data_vec, int nmiss);
 void    streamWriteVarSliceF(int streamID, int varID, int levelID, const float *data_vec, int nmiss);
+
+/*      streamReadVarSlice: Read a horizontal slice of a variable */
+void    streamReadVarSlice(int streamID, int varID, int levelID, double *data_vec, int *nmiss);
 
 void    streamWriteVarChunk(int streamID, int varID, const int rect[][2],
                             const double *data_vec, int nmiss);
@@ -338,11 +340,11 @@ void    streamWriteVarChunk(int streamID, int varID, const int rect[][2],
 
 /* STREAM record I/O routines */
 
-void    streamInqRecord(int streamID, int *varID, int *levelID);
 void    streamDefRecord(int streamID, int  varID, int  levelID);
-void    streamReadRecord(int streamID, double *data_vec, int *nmiss);
+void    streamInqRecord(int streamID, int *varID, int *levelID);
 void    streamWriteRecord(int streamID, const double *data_vec, int nmiss);
 void    streamWriteRecordF(int streamID, const float *data_vec, int nmiss);
+void    streamReadRecord(int streamID, double *data_vec, int *nmiss);
 void    streamCopyRecord(int streamIDdest, int streamIDsrc);
 
 void    streamInqGinfo(int streamID, int *intnum, float *fltnum, off_t *bignum);
@@ -428,8 +430,8 @@ int     vlistInqVarZaxis(int vlistID, int varID);
 /* used in MPIOM */
 int     vlistInqVarID(int vlistID, int code);
 
-int     vlistInqVarTsteptype(int vlistID, int varID);
 void    vlistDefVarTsteptype(int vlistID, int varID, int tsteptype);
+int     vlistInqVarTsteptype(int vlistID, int varID);
 
 void    vlistDefVarCompType(int vlistID, int varID, int comptype);
 int     vlistInqVarCompType(int vlistID, int varID);
@@ -577,7 +579,7 @@ int     vlistInqAttTxt(int vlistID, int varID, const char *name, int mlen, char 
 /* GRID routines */
 
 void    gridName(int gridtype, char *gridname);
-char   *gridNamePtr(int gridtype);
+const char *gridNamePtr(int gridtype);
 
 void    gridCompress(int gridID);
 
@@ -637,44 +639,44 @@ int     gridInqYvals(int gridID, double *yvals_vec);
 /*      gridDefXname: Define the name of a X-axis */
 void    gridDefXname(int gridID, const char *xname);
 
-/*      gridDefXlongname: Define the longname of a X-axis  */
-void    gridDefXlongname(int gridID, const char *xlongname);
-
-/*      gridDefXunits: Define the units of a X-axis */
-void    gridDefXunits(int gridID, const char *xunits);
-
-/*      gridDefYname: Define the name of a Y-axis */
-void    gridDefYname(int gridID, const char *yname);
-
-/*      gridDefYlongname: Define the longname of a Y-axis */
-void    gridDefYlongname(int gridID, const char *ylongname);
-
-/*      gridDefYunits: Define the units of a Y-axis */
-void    gridDefYunits(int gridID, const char *yunits);
-
 /*      gridInqXname: Get the name of a X-axis */
 void    gridInqXname(int gridID, char *xname);
+
+/*      gridDefXlongname: Define the longname of a X-axis  */
+void    gridDefXlongname(int gridID, const char *xlongname);
 
 /*      gridInqXlongname: Get the longname of a X-axis */
 void    gridInqXlongname(int gridID, char *xlongname);
 
-/*      gridInqXstdname: Get the standard name of a X-axis */
-void    gridInqXstdname(int gridID, char *xstdname);
+/*      gridDefXunits: Define the units of a X-axis */
+void    gridDefXunits(int gridID, const char *xunits);
 
 /*      gridInqXunits: Get the units of a X-axis */
 void    gridInqXunits(int gridID, char *xunits);
 
+/*      gridDefYname: Define the name of a Y-axis */
+void    gridDefYname(int gridID, const char *yname);
+
 /*      gridInqYname: Get the name of a Y-axis */
 void    gridInqYname(int gridID, char *yname);
+
+/*      gridDefYlongname: Define the longname of a Y-axis */
+void    gridDefYlongname(int gridID, const char *ylongname);
 
 /*      gridInqYlongname: Get the longname of a Y-axis */
 void    gridInqYlongname(int gridID, char *ylongname);
 
-/*      gridInqYstdname: Get the standard name of a Y-axis */
-void    gridInqYstdname(int gridID, char *ystdname);
+/*      gridDefYunits: Define the units of a Y-axis */
+void    gridDefYunits(int gridID, const char *yunits);
 
 /*      gridInqYunits: Get the units of a Y-axis */
 void    gridInqYunits(int gridID, char *yunits);
+
+/*      gridInqXstdname: Get the standard name of a X-axis */
+void    gridInqXstdname(int gridID, char *xstdname);
+
+/*      gridInqYstdname: Get the standard name of a Y-axis */
+void    gridInqYstdname(int gridID, char *ystdname);
 
 /*      gridDefPrec: Define the precision of a Grid */
 void    gridDefPrec(int gridID, int prec);
@@ -693,23 +695,23 @@ double  gridInqYinc(int gridID);
 
 int     gridIsCircular(int gridID);
 int     gridIsRotated(int gridID);
-double  gridInqXpole(int gridID);
 void    gridDefXpole(int gridID, double xpole);
-double  gridInqYpole(int gridID);
+double  gridInqXpole(int gridID);
 void    gridDefYpole(int gridID, double ypole);
-double  gridInqAngle(int gridID);
+double  gridInqYpole(int gridID);
 void    gridDefAngle(int gridID, double angle);
-void    gridDefTrunc(int gridID, int trunc);
+double  gridInqAngle(int gridID);
 int     gridInqTrunc(int gridID);
+void    gridDefTrunc(int gridID, int trunc);
 /* Hexagonal GME grid */
-int     gridInqGMEnd(int gridID);
 void    gridDefGMEnd(int gridID, int nd);
-int     gridInqGMEni(int gridID);
+int     gridInqGMEnd(int gridID);
 void    gridDefGMEni(int gridID, int ni);
-int     gridInqGMEni2(int gridID);
+int     gridInqGMEni(int gridID);
 void    gridDefGMEni2(int gridID, int ni2);
-int     gridInqGMEni3(int gridID);
+int     gridInqGMEni2(int gridID);
 void    gridDefGMEni3(int gridID, int ni3);
+int     gridInqGMEni3(int gridID);
 
 /* Reference of an unstructured grid */
 
@@ -836,23 +838,23 @@ void    zaxisInqUUID(int zaxisID, char *uuid_cbuf);
 /*      zaxisDefName: Define the name of a Z-axis */
 void    zaxisDefName(int zaxisID, const char *name);
 
-/*      zaxisDefLongname: Define the longname of a Z-axis */
-void    zaxisDefLongname(int zaxisID, const char *longname);
-
-/*      zaxisDefUnits: Define the units of a Z-axis */
-void    zaxisDefUnits(int zaxisID, const char *units);
-
 /*      zaxisInqName: Get the name of a Z-axis */
 void    zaxisInqName(int zaxisID, char *name);
+
+/*      zaxisDefLongname: Define the longname of a Z-axis */
+void    zaxisDefLongname(int zaxisID, const char *longname);
 
 /*      zaxisInqLongname: Get the longname of a Z-axis */
 void    zaxisInqLongname(int zaxisID, char *longname);
 
-/*      zaxisInqStdname: Get the standard name of a Z-axis */
-void    zaxisInqStdname(int zaxisID, char *stdname);
+/*      zaxisDefUnits: Define the units of a Z-axis */
+void    zaxisDefUnits(int zaxisID, const char *units);
 
 /*      zaxisInqUnits: Get the units of a Z-axis */
 void    zaxisInqUnits(int zaxisID, char *units);
+
+/*      zaxisInqStdname: Get the standard name of a Z-axis */
+void    zaxisInqStdname(int zaxisID, char *stdname);
 
 void    zaxisDefPrec(int zaxisID, int prec);
 int     zaxisInqPrec(int zaxisID);
@@ -868,14 +870,14 @@ void    zaxisDefVct(int zaxisID, int size, const double *vct_vec);
 void    zaxisInqVct(int zaxisID, double *vct_vec);
 int     zaxisInqVctSize(int zaxisID);
 const double *zaxisInqVctPtr(int zaxisID);
-int     zaxisInqLbounds(int zaxisID, double *lbounds_vec);
-int     zaxisInqUbounds(int zaxisID, double *ubounds_vec);
-int     zaxisInqWeights(int zaxisID, double *weights_vec);
-double  zaxisInqLbound(int zaxisID, int index);
-double  zaxisInqUbound(int zaxisID, int index);
 void    zaxisDefLbounds(int zaxisID, const double *lbounds_vec);
+int     zaxisInqLbounds(int zaxisID, double *lbounds_vec);
+double  zaxisInqLbound(int zaxisID, int index);
 void    zaxisDefUbounds(int zaxisID, const double *ubounds_vec);
+int     zaxisInqUbounds(int zaxisID, double *ubounds_vec);
+double  zaxisInqUbound(int zaxisID, int index);
 void    zaxisDefWeights(int zaxisID, const double *weights_vec);
+int     zaxisInqWeights(int zaxisID, double *weights_vec);
 void    zaxisChangeType(int zaxisID, int zaxistype);
 
 /* TAXIS routines */
@@ -898,11 +900,35 @@ void    taxisDefVdate(int taxisID, int date);
 /*      taxisDefVtime: Define the verification time */
 void    taxisDefVtime(int taxisID, int time);
 
+/*      taxisInqVdate: Get the verification date */
+int     taxisInqVdate(int taxisID);
+
+/*      taxisInqVtime: Get the verification time */
+int     taxisInqVtime(int taxisID);
+
 /*      taxisDefRdate: Define the reference date */
 void    taxisDefRdate(int taxisID, int date);
 
-/*      taxisDefRtime: Define the reference date */
+/*      taxisDefRtime: Define the reference time */
 void    taxisDefRtime(int taxisID, int time);
+
+/*      taxisInqRdate: Get the reference date */
+int     taxisInqRdate(int taxisID);
+
+/*      taxisInqRtime: Get the reference time */
+int     taxisInqRtime(int taxisID);
+
+/*      taxisDefFdate: Define the forecast reference date */
+void    taxisDefFdate(int taxisID, int date);
+
+/*      taxisDefFtime: Define the forecast reference time */
+void    taxisDefFtime(int taxisID, int time);
+
+/*      taxisInqFdate: Get the forecast reference date */
+int     taxisInqFdate(int taxisID);
+
+/*      taxisInqFtime: Get the forecast reference time */
+int     taxisInqFtime(int taxisID);
 
 int     taxisHasBounds(int taxisID);
 
@@ -919,28 +945,21 @@ void    taxisInqVtimeBounds(int taxisID, int *vtime_lb, int *vtime_ub);
 /*      taxisDefCalendar: Define the calendar */
 void    taxisDefCalendar(int taxisID, int calendar);
 
+/*      taxisInqCalendar: Get the calendar */
+int     taxisInqCalendar(int taxisID);
+
 void    taxisDefTunit(int taxisID, int tunit);
+int     taxisInqTunit(int taxisID);
+
+void    taxisDefForecastTunit(int taxisID, int tunit);
+int     taxisInqForecastTunit(int taxisID);
+
+void    taxisDefForecastPeriod(int taxisID, double fc_period);
+double  taxisInqForecastPeriod(int taxisID);
 
 void    taxisDefNumavg(int taxisID, int numavg);
 
 int     taxisInqType(int taxisID);
-
-/*      taxisInqVdate: Get the verification date */
-int     taxisInqVdate(int taxisID);
-
-/*      taxisInqVtime: Get the verification time */
-int     taxisInqVtime(int taxisID);
-
-/*      taxisInqRdate: Get the reference date */
-int     taxisInqRdate(int taxisID);
-
-/*      taxisInqRtime: Get the reference time */
-int     taxisInqRtime(int taxisID);
-
-/*      taxisInqCalendar: Get the calendar */
-int     taxisInqCalendar(int taxisID);
-
-int     taxisInqTunit(int taxisID);
 
 int     taxisInqNumavg(int taxisID);
 
@@ -998,10 +1017,11 @@ void    streamDefHistory(int streamID, int size, const char *history);
 int     streamInqHistorySize(int streamID);
 void    streamInqHistoryString(int streamID, char *history);
 
+/*
 #if defined (__cplusplus)
 }
 #endif
-
+*/
 #endif  /* CDI_H_ */
 /*
  * Local Variables:

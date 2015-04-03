@@ -14,10 +14,6 @@
 #  include "cfortran.h"
 #endif
 
-#if ! defined (_CDIFORTRAN_H)
-#  include "cdiFortran.h"
-#endif
-
 
 /*  parallel IO IOMode  */
 
@@ -29,8 +25,8 @@ FCALLSCSUB0 (pioEndTimestepping, PIOENDTIMESTEPPING, pioendtimestepping)
 FCALLSCSUB0 (pioFinalize, PIOFINALIZE, piofinalize)
 FCALLSCSUB0 (cdiPioNoPostCommSetup, CDIPIONOPOSTCOMMSETUP, cdipionopostcommsetup)
 
-#undef ROUTINE_5
-#define ROUTINE_5 (void (*)(void))
+#undef ROUTINE_6
+#define ROUTINE_6 (void (*)(void))
 static int pioInit_fwrap(int commSuper, int nProcsIO, int IOMode, int *pioNamespace, float partInflate, void (*postCommSetupActions)(void))
 {
   MPI_Comm v;

@@ -41,6 +41,9 @@
 #define GEOMETRY_H
 
 #include "grid.h"
+#include "utils.h"
+
+extern const double angle_tol;
 
 struct line {
    struct {
@@ -106,10 +109,12 @@ int check_overlap_cells2 (struct grid_cell const cell_a,
 /**
  * checks whether a given point is within a given cell \n
  * @param[in] point
+ * @param[in] point_coords
  * @param[in] cell
  * @return 0 if the point is not in the cell
  */
-int point_in_cell (struct point point, struct grid_cell cell);
+int point_in_cell (struct point point, double point_coords[3],
+                   struct grid_cell cell);
 
 /** \example test_point_in_cell.c
  * This contains examples on how to use point_in_cell.
@@ -118,12 +123,13 @@ int point_in_cell (struct point point, struct grid_cell cell);
 /**
  * checks whether a given point is within a given cell \n
  * @param[in] point
+ * @param[in] point_coords
  * @param[in] cell
  * @param[in] bnd_circle
  * @return 0 if the point is not in the cell
  */
-int point_in_cell2 (struct point point, struct grid_cell cell,
-                    struct bounding_circle bnd_circle);
+int point_in_cell2 (struct point point,  double point_coords[3],
+                    struct grid_cell cell, struct bounding_circle bnd_circle);
 
 /**
  * computes the angle between two longitude coordinates (in rad) \n
@@ -132,7 +138,10 @@ int point_in_cell2 (struct point point, struct grid_cell cell,
  * @param[in] b_lon
  * @return angle between both coordinates (in rad)
  */
-double get_angle(double a_lon, double b_lon);
+static inline double get_angle (double a_lon, double b_lon) {
+   double diff = a_lon - b_lon;
+   return diff - round(diff / (2.0 * M_PI)) * (2.0 * M_PI);
+}
 
 /** \example test_find_overlap.c
  * This contains an example on how to use find_overlapping_cells.
@@ -200,6 +209,7 @@ void find_overlapping_cells_s (struct grid_cell src_cell,
  * @param[out] p intersection point
  * @param[out] q intersection point
  * @return  0 if the intersection points are neither on edge a or b \n
+ *          -1 if an error occurred \n
  *          1st bit will be set if p is on edge a \n
  *          2nd bit will be set if q is on edge a \n
  *          3rd bit will be set if p is on edge b \n
@@ -221,6 +231,7 @@ int gcxgc (struct edge edge_a, struct edge edge_b,
  * @param[out] p intersection point
  * @param[out] q intersection point
  * @return  0 if the intersection points are neither on edge a or b \n
+ *          -1 if an error occurred \n
  *          1st bit will be set if p is on edge a \n
  *          2nd bit will be set if q is on edge a \n
  *          3rd bit will be set if p is on edge b \n
@@ -543,12 +554,31 @@ unsigned point_in_bounding_circle(struct point point,
                                   struct bounding_circle * bnd_circle);
 
 /**
+ * checks whether a point is within a bounding circle
+ * @param[in] point_vector point to be checked
+ * @param[in] bnd_circle bounding circle
+ * @return 0 if point is not within the bounding circle
+ */
+unsigned point_in_bounding_circle_vec(double point_vector[3],
+                                      struct bounding_circle * bnd_circle);
+
+/**
  * converts lon-lat coordinates into xyz ones
+ *
+ * Further information:
+ * http://en.wikipedia.org/wiki/List_of_common_coordinate_transformations
+ *
  * @param[in]  lon   longitude coordinates in radian
  * @param[in]  lat   latitude coordinates in radian
  * @param[out] p_out xyz coordinates
  */
-void LLtoXYZ(double lon, double lat, double p_out[]);
+static inline void LLtoXYZ(double lon, double lat, double p_out[]) {
+
+   double cos_lat = cos(lat);
+   p_out[0] = cos_lat * cos(lon);
+   p_out[1] = cos_lat * sin(lon);
+   p_out[2] = sin(lat);
+}
 
 /**
  * converts lon-lat coordinates into xyz ones
@@ -556,23 +586,73 @@ void LLtoXYZ(double lon, double lat, double p_out[]);
  * @param[in]  lat   latitude coordinates in deg
  * @param[out] p_out xyz coordinates
  */
-void LLtoXYZ_deg(double lon, double lat, double p_out[]);
+static inline void LLtoXYZ_deg(double lon, double lat, double p_out[]) {
+   LLtoXYZ(lon*rad, lat*rad, p_out);
+}
 
 /**
  * converts lon-lat coordinates into xyz ones
+ *
+ * Further information:
+ * http://en.wikipedia.org/wiki/List_of_common_coordinate_transformations
+ *
  * @param[in]  p_in xyz coordinates
  * @param[out] lon  longitude coordinate in radian
  * @param[out] lat  latitude coordinate in radian
  */
-void XYZtoLL(double p_in[], double * lon, double * lat);
+static inline void XYZtoLL (double p_in[], double * lon, double * lat) {
+
+   *lon = atan2(p_in[1] , p_in[0]);
+   *lat = M_PI_2 - acos(p_in[2]);
+}
+
+static inline void crossproduct_ld (double a[], double b[], double cross[]) {
+
+/* crossproduct in Cartesian coordinates */
+
+   long double a_[3] = {a[0], a[1], a[2]};
+   long double b_[3] = {b[0], b[1], b[2]};
+
+   cross[0] = a_[1] * b_[2] - a_[2] * b_[1];
+   cross[1] = a_[2] * b_[0] - a_[0] * b_[2];
+   cross[2] = a_[0] * b_[1] - a_[1] * b_[0];
+}
+
+/**
+ * for small angles <= 1e-?8? the crossproduct is inaccurate\n
+ * use \ref crossproduct_ld for these cases
+ */
+static inline void crossproduct_d (double a[], double b[], double cross[]) {
+
+/* crossproduct in Cartesian coordinates */
+
+   cross[0] = a[1] * b[2] - a[2] * b[1];
+   cross[1] = a[2] * b[0] - a[0] * b[2];
+   cross[2] = a[0] * b[1] - a[1] * b[0];
+}
 
 /**
  * computes the great circle distance in rad for two points given in xyz coordinates
- * @param[in] a_vector point coordinates of point a
- * @param[in] b_vector point coordinates of point b
+ * taken from http://johnblackburne.blogspot.de/2012/05/angle-between-two-3d-vectors.html
+ * @param[in] a point coordinates of point a
+ * @param[in] b point coordinates of point b
  * @return great circle distance in rad between both points
  */
-double get_vector_angle(double a_vector[3], double b_vector[3]);
+static inline double get_vector_angle(double a[3], double b[3]) {
+   double cross[3], dot, cross_abs;
+
+   crossproduct_ld(a, b, cross);
+   dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+   cross_abs = sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+   //   return fabs(atan2(cross_abs, dot));
+   double asin_tmp = asin(cross_abs);
+
+   if (dot < 0.0) // if the angle is bigger than (PI / 2)
+     return M_PI - asin_tmp;
+   else
+     return asin_tmp;
+}
 
 /**
  * computes the great circle distance in rad for two points given in lon-lat coordinates
@@ -581,5 +661,19 @@ double get_vector_angle(double a_vector[3], double b_vector[3]);
  * @return great circle distance in rad between both points
  */
 double get_point_angle(struct point * a, struct point * b);
+
+/**
+ * determines whether two edges intersect
+ * @param[in] edge_a first edge
+ * @param[in] a      3d coordinate of first point of first edge
+ * @param[in] b      3d coordinate of second point of first edge
+ * @param[in] edge_b second edge
+ * @param[in] c      3d coordinate of first point of second edge
+ * @param[in] d      3d coordinate of second point of second edge
+ * @return 0 if edges do not intersect\n
+ *         1 if edges intersect
+ */
+int do_intersect (struct edge edge_a, double a[3], double b[3],
+                  struct edge edge_b, double c[3], double d[3]);
 
 #endif // GEOMETRY_H

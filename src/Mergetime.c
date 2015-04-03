@@ -80,7 +80,7 @@ void *Mergetime(void *argument)
 
   nfiles = cdoStreamCnt() - 1;
 
-  sf = malloc(nfiles*sizeof(sfile_t));
+  sf = (sfile_t*) malloc(nfiles*sizeof(sfile_t));
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
     {
@@ -130,7 +130,7 @@ void *Mergetime(void *argument)
   if ( ! lcopy )
     {
       gridsize = vlistGridsizeMax(sf[0].vlistID);
-      array = malloc(gridsize*sizeof(double));
+      array = (double*) malloc(gridsize*sizeof(double));
     }
 
   while ( TRUE )

@@ -257,7 +257,7 @@ int gridGenArea(int gridID, double* area)
 	{
 	  lgriddestroy = TRUE;
 	  gridID = gridToUnstructured(gridID, 1);
-	  grid_mask = malloc(gridsize*sizeof(int));
+	  grid_mask = (int*) malloc(gridsize*sizeof(int));
 	  gridInqMaskGME(gridID, grid_mask);
 	}
       else
@@ -302,8 +302,8 @@ int gridGenArea(int gridID, double* area)
       return (status);
     }
 
-  grid_corner_lon = malloc(nv*gridsize*sizeof(double));
-  grid_corner_lat = malloc(nv*gridsize*sizeof(double));
+  grid_corner_lon = (double*) malloc(nv*gridsize*sizeof(double));
+  grid_corner_lat = (double*) malloc(nv*gridsize*sizeof(double));
 
   if ( gridInqYbounds(gridID, NULL) && gridInqXbounds(gridID, NULL) )
     {
@@ -324,8 +324,8 @@ int gridGenArea(int gridID, double* area)
 	  double *grid_center_lon = NULL;
 	  double *grid_center_lat = NULL;
 
-	  grid_center_lon = malloc(gridsize*sizeof(double));
-	  grid_center_lat = malloc(gridsize*sizeof(double));
+	  grid_center_lon = (double*) malloc(gridsize*sizeof(double));
+	  grid_center_lat = (double*) malloc(gridsize*sizeof(double));
 
 	  gridInqXvals(gridID, grid_center_lon);
 	  gridInqYvals(gridID, grid_center_lat);

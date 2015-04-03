@@ -1,10 +1,29 @@
 CDO NEWS
 --------
 
+Version 1.6.4 (26 June 2014):
+
+   New features:
+     * Option --history: Do not append to netCDF "history" global attribute
+     * Option --netcdf_hdr_pad <nbr>: Pad netCDF output header with nbr bytes
+   New operators:
+     * setpartabn: set parameter table by name
+     * setpartabp: set parameter table by parameter ID
+     * sealevelpressure: sea level pressure
+   Changed operators:
+     * Filter: disable zero-padding
+     * diff: print number of different values
+     * Ymonstat: sorts output by month of year
+   Fixed bugs:
+     * Filter:
+     * eof3d: set sum of weights to 1
+     * eofcoeff: remove scaling with grib cell area weights
+     * eofcoeff3d: remove scaling with grib cell area weights
+
 Version 1.6.3 (18 February 2014):
 
    New features:
-     * remapbil, remapbic, remapdis: performance optimization for regular 2D source grids
+     * remapbil, remapbic, remapdis, remapnn: performance optimization for regular 2D source grids
      * gradsdes: added support for GRIB files >2GB
      * eca_csu: added number of csu periods with more than 5days per time period
      * eca_cfd: added number of cfd periods with more than 5days per time period

@@ -44,7 +44,6 @@ void *Vertint(void *argument)
   enum {ECHAM_MODE, WMO_MODE};
   enum {func_pl, func_hl};
   enum {type_lin, type_log};
-  int geop_code = 0, temp_code = 0, ps_code = 0, lsp_code = 0;
   int streamID1, streamID2;
   int vlistID1, vlistID2;
   int gridsize, ngp = 0;
@@ -57,11 +56,11 @@ void *Vertint(void *argument)
   int nplev, nhlev = 0, nhlevf = 0, nhlevh = 0, nlevel, maxlev;
   int *vert_index = NULL;
   int nvct;
-  int geop_needed = FALSE;
-  int geopID = -1, tempID = -1, psID = -1, lnpsID = -1, gheightID = -1;
+  int sgeopot_needed = FALSE;
+  int sgeopotID = -1, geopotID = -1, tempID = -1, psID = -1, lnpsID = -1, presID = -1, gheightID = -1;
   int code, param;
   int pnum, pcat, pdis;
-  int sortlevels = TRUE;
+  //int sortlevels = TRUE;
   int **varnmiss = NULL, *pnmiss = NULL;
   int *varinterp = NULL;
   char paramstr[32];
@@ -73,7 +72,7 @@ void *Vertint(void *argument)
   double *rvct = NULL; /* reduced VCT for LM */
   double *single1, *single2;
   double **vardata1 = NULL, **vardata2 = NULL;
-  double *geop = NULL, *ps_prog = NULL, *full_press = NULL, *half_press = NULL;
+  double *sgeopot = NULL, *ps_prog = NULL, *full_press = NULL, *half_press = NULL;
   double *hyb_press = NULL;
   int Extrapolate = 0;
   int taxisID1, taxisID2;
@@ -82,6 +81,7 @@ void *Vertint(void *argument)
   int instNum, tableNum;
   int useTable;
   int operfunc, opertype;
+  gribcode_t gribcodes = {0};
   LIST *flist = listNew(FLT_LIST);
 
   cdoInitialize(argument);
@@ -114,7 +114,7 @@ void *Vertint(void *argument)
 	    }
 	}
     }
-  else
+  else if ( operatorID == ML2PLX || operatorID == ML2HLX || operatorID == ML2PLX_LP || operatorID == ML2HLX_LP )
     {
       Extrapolate = 1;
     }
@@ -175,7 +175,7 @@ void *Vertint(void *argument)
 	{
 	  double *level;
 	  int l;
-	  level = malloc(nlevel*sizeof(double));
+	  level = (double*) malloc(nlevel*sizeof(double));
 	  zaxisInqLevels(zaxisID, level);
 	  for ( l = 0; l < nlevel; l++ )
 	    {
@@ -199,7 +199,7 @@ void *Vertint(void *argument)
 		  nhlevf   = nhlev;
 		  nhlevh   = nhlevf + 1;
 	      
-		  vct = malloc(nvct*sizeof(double));
+		  vct = (double*) malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
@@ -220,7 +220,7 @@ void *Vertint(void *argument)
 		  nhlevf   = nhlev - 1;
 		  nhlevh   = nhlev;
 	      
-		  vct = malloc(nvct*sizeof(double));
+		  vct = (double*) malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, vct);
 
 		  vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
@@ -238,7 +238,7 @@ void *Vertint(void *argument)
 		  int vctsize;
 		  int voff = 4;
 		  
-		  rvct = malloc(nvct*sizeof(double));
+		  rvct = (double*) malloc(nvct*sizeof(double));
 		  zaxisInqVct(zaxisID, rvct);
 
 		  if ( (int)(rvct[0]+0.5) == 100000 && rvct[voff] < rvct[voff+1] )
@@ -250,7 +250,7 @@ void *Vertint(void *argument)
 		      nhlevh   = nhlev + 1;
 
 		      vctsize = 2*nhlevh;
-		      vct = malloc(vctsize*sizeof(double));
+		      vct = (double*) malloc(vctsize*sizeof(double));
 
 		      vlistChangeZaxisIndex(vlistID2, i, zaxisIDp);
 
@@ -288,16 +288,16 @@ void *Vertint(void *argument)
 
   nvars = vlistNvars(vlistID1);
 
-  vars      = malloc(nvars*sizeof(int));
-  vardata1  = malloc(nvars*sizeof(double*));
-  vardata2  = malloc(nvars*sizeof(double*));
-  varnmiss  = malloc(nvars*sizeof(int*));
-  varinterp = malloc(nvars*sizeof(int));
+  vars      = (int*) malloc(nvars*sizeof(int));
+  vardata1  = (double**) malloc(nvars*sizeof(double*));
+  vardata2  = (double**) malloc(nvars*sizeof(double*));
+  varnmiss  = (int**) malloc(nvars*sizeof(int*));
+  varinterp = (int*) malloc(nvars*sizeof(int));
 
   maxlev   = nhlevh > nplev ? nhlevh : nplev;
 
   if ( Extrapolate == 0 )
-    pnmiss   = malloc(nplev*sizeof(int));
+    pnmiss = (int*) malloc(nplev*sizeof(int));
 
   // check levels
   if ( zaxisIDh != -1 )
@@ -311,7 +311,7 @@ void *Vertint(void *argument)
 	{
 	  if ( (ilev+1) != (int)levels[ilev] )
 	    {
-	      sortlevels = FALSE;
+	      //sortlevels = FALSE;
 	      break;
 	    }
 	}
@@ -319,17 +319,17 @@ void *Vertint(void *argument)
 
   if ( zaxisIDh != -1 && ngp > 0 )
     {
-      vert_index = malloc(ngp*nplev*sizeof(int));
-      ps_prog    = malloc(ngp*sizeof(double));
-      full_press = malloc(ngp*nhlevf*sizeof(double));
-      half_press = malloc(ngp*nhlevh*sizeof(double));
+      vert_index = (int*) malloc(ngp*nplev*sizeof(int));
+      ps_prog    = (double*) malloc(ngp*sizeof(double));
+      full_press = (double*) malloc(ngp*nhlevf*sizeof(double));
+      half_press = (double*) malloc(ngp*nhlevh*sizeof(double));
     }
   else
-    cdoWarning("No data on hybrid model level found!");
+    cdoWarning("No 3D variable with hybrid sigma pressure coordinate found!");
 
   if ( operfunc == func_hl )
     {
-      phlev = malloc(nplev*sizeof(double));
+      phlev = (double*) malloc(nplev*sizeof(double));
       h2p(phlev, plev, nplev);
 
       if ( cdoVerbose )
@@ -377,17 +377,12 @@ void *Vertint(void *argument)
 	  if ( tableNum == 2 )
 	    {
 	      mode = WMO_MODE;
-	      geop_code  =   6;
-	      temp_code  =  11;
-	      ps_code    =   1;
+	      wmo_gribcodes(&gribcodes);
 	    }
 	  else if ( tableNum == 128 || tableNum == 0 )
 	    {
 	      mode = ECHAM_MODE;
-	      geop_code  = 129;
-	      temp_code  = 130;
-	      ps_code    = 134;
-	      lsp_code   = 152;
+	      echam_gribcodes(&gribcodes);
 	    }
 	  else
 	    mode = -1;
@@ -395,10 +390,7 @@ void *Vertint(void *argument)
       else
 	{
 	  mode = ECHAM_MODE;
-	  geop_code  = 129;
-	  temp_code  = 130;
-	  ps_code    = 134;
-	  lsp_code   = 152;
+	  echam_gribcodes(&gribcodes);
 	}
 
       if ( cdoVerbose )
@@ -414,30 +406,33 @@ void *Vertint(void *argument)
 
 	  code = echamcode_from_stdname(stdname);
 
-	  if ( code < 0 )
+	  if ( code == -1 )
 	    {
 	      /*                                  ECHAM                            ECMWF       */
-	      if      ( geopID == -1  && (strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0) ) code = 129;
-	      else if ( tempID == -1  && (strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0) ) code = 130;
-	      else if ( psID   == -1  && (strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0) ) code = 134;
-	      else if ( lnpsID == -1  && (strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0) ) code = 152;
+	      if      ( sgeopotID == -1 && (strcmp(varname, "geosp") == 0 || strcmp(varname, "z")    == 0) ) code = gribcodes.geopot;
+	      else if ( tempID    == -1 && (strcmp(varname, "st")    == 0 || strcmp(varname, "t")    == 0) ) code = gribcodes.temp;
+	      else if ( psID      == -1 && (strcmp(varname, "aps")   == 0 || strcmp(varname, "sp"  ) == 0) ) code = gribcodes.ps;
+	      else if ( lnpsID    == -1 && (strcmp(varname, "lsp")   == 0 || strcmp(varname, "lnsp") == 0) ) code = gribcodes.lsp;
+	      else if ( geopotID  == -1 && strcmp(stdname, "geopotential_full") == 0 ) code = gribcodes.geopot;
 	      /* else if ( strcmp(varname, "geopoth") == 0 ) code = 156; */
 	    }
 	}
 
       if ( mode == ECHAM_MODE )
 	{
-	  if      ( code == geop_code  && nlevel == 1      ) geopID    = varID;
-	  else if ( code == temp_code  && nlevel == nhlevf ) tempID    = varID;
-	  else if ( code == ps_code    && nlevel == 1      ) psID      = varID;
-	  else if ( code == lsp_code   && nlevel == 1      ) lnpsID    = varID;
-	  else if ( code == 156        && nlevel == nhlevf ) gheightID = varID;
+	  if      ( code == gribcodes.geopot  && nlevel == 1      ) sgeopotID = varID;
+	  else if ( code == gribcodes.geopot  && nlevel == nhlevf ) geopotID  = varID;
+	  else if ( code == gribcodes.temp    && nlevel == nhlevf ) tempID    = varID;
+	  else if ( code == gribcodes.ps      && nlevel == 1      ) psID      = varID;
+	  else if ( code == gribcodes.lsp     && nlevel == 1      ) lnpsID    = varID;
+	  else if ( code == gribcodes.gheight && nlevel == nhlevf ) gheightID = varID;
 	}
       else if ( mode == WMO_MODE )
 	{
-	  if      ( code == geop_code  && nlevel == 1      ) geopID  = varID;
-	  else if ( code == temp_code  && nlevel == nhlevf ) tempID  = varID;
-	  else if ( code == ps_code    && nlevel == 1      ) psID    = varID;
+	  if      ( code == gribcodes.geopot  && nlevel == 1      ) sgeopotID = varID;
+	  else if ( code == gribcodes.geopot  && nlevel == nhlevf ) geopotID  = varID;
+	  else if ( code == gribcodes.temp    && nlevel == nhlevf ) tempID    = varID;
+	  else if ( code == gribcodes.ps      && nlevel == 1      ) psID      = varID;
 	}
 
       if ( gridInqType(gridID) == GRID_SPECTRAL && zaxisInqType(zaxisID) == ZAXIS_HYBRID )
@@ -447,17 +442,17 @@ void *Vertint(void *argument)
 	cdoAbort("Spectral data unsupported!");
 
       if ( varID == gheightID )
-	vardata1[varID] = malloc(gridsize*(nlevel+1)*sizeof(double));
+	vardata1[varID] = (double*) malloc(gridsize*(nlevel+1)*sizeof(double));
       else
-	vardata1[varID] = malloc(gridsize*nlevel*sizeof(double));
+	vardata1[varID] = (double*) malloc(gridsize*nlevel*sizeof(double));
 
       /* if ( zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && nlevel == nhlev ) */
       if ( zaxisID == zaxisIDh ||
 	   (zaxisInqType(zaxisID) == ZAXIS_HYBRID && zaxisIDh != -1 && (nlevel == nhlevh || nlevel == nhlevf)) )
 	{
 	  varinterp[varID] = TRUE;
-	  vardata2[varID]  = malloc(gridsize*nplev*sizeof(double));
-	  varnmiss[varID]  = malloc(maxlev*sizeof(int));
+	  vardata2[varID]  = (double*) malloc(gridsize*nplev*sizeof(double));
+	  varnmiss[varID]  = (int*) malloc(maxlev*sizeof(int));
 	  memset(varnmiss[varID], 0, maxlev*sizeof(int));
 	}
       else
@@ -467,45 +462,55 @@ void *Vertint(void *argument)
 		       varID+1, paramstr, nlevel);
 	  varinterp[varID] = FALSE;
 	  vardata2[varID]  = vardata1[varID];
-	  varnmiss[varID]  = malloc(nlevel*sizeof(int));
+	  varnmiss[varID]  = (int*) malloc(nlevel*sizeof(int));
 	}
     }
 
   if ( cdoVerbose )
     {
       cdoPrint("Found:");
-      if ( tempID != -1 )    cdoPrint("  %s", var_stdname(air_temperature));
-      if ( psID   != -1 )    cdoPrint("  %s", var_stdname(surface_air_pressure));
-      if ( geopID != -1 )    cdoPrint("  %s", var_stdname(surface_geopotential));
+      if ( tempID    != -1 ) cdoPrint("  %s", var_stdname(air_temperature));
+      if ( psID      != -1 ) cdoPrint("  %s", var_stdname(surface_air_pressure));
+      if ( lnpsID    != -1 ) cdoPrint("  LOG(%s)", var_stdname(surface_air_pressure));
+      if ( sgeopotID != -1 ) cdoPrint("  %s", var_stdname(surface_geopotential));
+      if ( geopotID  != -1 ) cdoPrint("  %s", var_stdname(geopotential));
       if ( gheightID != -1 ) cdoPrint("  %s", var_stdname(geopotential_height));
     }
 
-  if ( tempID != -1 || gheightID != -1 ) geop_needed = TRUE;
+  if ( tempID != -1 || gheightID != -1 ) sgeopot_needed = TRUE;
 
-  if ( zaxisIDh != -1 && geop_needed )
+  if ( zaxisIDh != -1 && sgeopot_needed )
     {
-      geop = malloc(ngp*sizeof(double));
-      if ( geopID == -1 )
+      sgeopot = (double*) malloc(ngp*sizeof(double));
+      if ( sgeopotID == -1 )
 	{
-	  cdoWarning("%s not found - using zero %s!", var_stdname(surface_geopotential), var_stdname(surface_geopotential));
-	  memset(geop, 0, ngp*sizeof(double));
+	  if ( geopotID == -1 )
+	    cdoWarning("%s not found - set to zero!", var_stdname(surface_geopotential));
+	  else
+	    cdoPrint("%s not found - using bottom layer of %s!", var_stdname(surface_geopotential), var_stdname(geopotential));
+
+	  memset(sgeopot, 0, ngp*sizeof(double));
 	}
     }
 
   if ( zaxisIDh != -1 && gheightID != -1 && tempID == -1 )
     cdoAbort("Temperature not found, needed to compute geopotheight!");
 
+  presID = lnpsID;
   if ( zaxisIDh != -1 && lnpsID == -1 )
     {
-      if ( psID != -1 )
-	{
-	  param = vlistInqVarParam(vlistID1, psID);
-	  cdiParamToString(param, paramstr, sizeof(paramstr));
-	  if ( cdoVerbose )
-	    cdoWarning("LOG(%s) not found - using %s!", var_stdname(surface_air_pressure), var_stdname(surface_air_pressure));
-	}
-      else
+      if ( psID == -1 )
 	cdoAbort("%s not found!", var_stdname(surface_air_pressure));
+      else
+	presID = psID;
+    }
+
+  if ( cdoVerbose )
+    {
+      if ( presID == lnpsID )
+	cdoPrint("using LOG(%s)", var_stdname(surface_air_pressure));      
+      else
+	cdoPrint("using %s", var_stdname(surface_air_pressure));
     }
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -543,16 +548,22 @@ void *Vertint(void *argument)
 
       if ( zaxisIDh != -1 )
 	{
-	  if ( geop_needed && geopID != -1 )
+	  if ( sgeopot_needed )
 	    {
-	      memcpy(geop, vardata1[geopID], ngp*sizeof(double));
+	      if ( sgeopotID != -1 )
+		memcpy(sgeopot, vardata1[sgeopotID], ngp*sizeof(double));
+	      else if ( geopotID != -1 )
+		memcpy(sgeopot, vardata1[geopotID]+ngp*(nhlevf-1), ngp*sizeof(double));
 
-	      /* check range of geop */
-	      minmaxval(ngp, geop, NULL, &minval, &maxval);
-	      if ( minval < MIN_FIS || maxval > MAX_FIS )
-		cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
-	      if ( minval >= 0 && maxval <= 9000 )
-		cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
+	      /* check range of surface geopot */
+	      if ( sgeopotID != -1 || geopotID != -1 )
+		{
+		  minmaxval(ngp, sgeopot, NULL, &minval, &maxval);
+		  if ( minval < MIN_FIS || maxval > MAX_FIS )
+		    cdoWarning("Surface geopotential out of range (min=%g max=%g)!", minval, maxval);
+		  if ( ngp > 1 && minval >= 0 && maxval <= 9000 )
+		    cdoWarning("Surface geopotential has an unexpected range (min=%g max=%g)!", minval, maxval);
+		}
 	    }
 
 	  if ( lnpsID != -1 )
@@ -644,16 +655,16 @@ void *Vertint(void *argument)
 		      if ( opertype == type_log && Extrapolate )
 			cdoAbort("Log. extrapolation of temperature unsupported!");
 
-		      interp_T(geop, vardata1[varID], vardata2[varID],
+		      interp_T(sgeopot, vardata1[varID], vardata2[varID],
 			       full_press, half_press, vert_index,
 			       plev, nplev, ngp, nlevel, missval);
 		    }
 		  else if ( varID == gheightID )
 		    {
 		      for ( i = 0; i < ngp; ++i )
-			vardata1[varID][ngp*nlevel+i] = geop[i]/C_EARTH_GRAV;
+			vardata1[varID][ngp*nlevel+i] = sgeopot[i]/C_EARTH_GRAV;
 
-		      interp_Z(geop, vardata1[varID], vardata2[varID],
+		      interp_Z(sgeopot, vardata1[varID], vardata2[varID],
 			       full_press, half_press, vert_index, vardata1[tempID],
 			       plev, nplev, ngp, nlevel, missval);
 		    }
@@ -706,7 +717,7 @@ void *Vertint(void *argument)
 
   if ( pnmiss     ) free(pnmiss);
 
-  if ( geop       ) free(geop);
+  if ( sgeopot    ) free(sgeopot);
   if ( ps_prog    ) free(ps_prog);
   if ( vert_index ) free(vert_index);
   if ( full_press ) free(full_press);

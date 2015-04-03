@@ -2,8 +2,6 @@
 #  include "config.h"
 #endif
 
-#ifdef USE_MPI
-
 #include <inttypes.h>
 
 #include <mpi.h>
@@ -72,7 +70,8 @@ setupDtDict()
 }
 #endif
 
-int serializeGetSizeMPI(int count, int datatype, void *context)
+static int
+serializeGetSizeMPI(int count, int datatype, void *context)
 {
   int size;
   xmpi(MPI_Pack_size(count, dtDict[lookupDt(datatype)].mpidt,
@@ -81,21 +80,23 @@ int serializeGetSizeMPI(int count, int datatype, void *context)
 }
 
 
-void serializePackMPI(void *data, int count, int datatype,
-                      void *buf, int buf_size, int *position, void *context)
+static void
+serializePackMPI(void *data, int count, int datatype,
+                 void *buf, int buf_size, int *position, void *context)
 {
   xmpi(MPI_Pack(data, count, dtDict[lookupDt(datatype)].mpidt,
                 buf, buf_size, position, *(MPI_Comm *)context));
 }
 
-void serializeUnpackMPI(void *buf, int buf_size, int *position,
-                        void *data, int count, int datatype, void *context)
+static void
+serializeUnpackMPI(void *buf, int buf_size, int *position,
+                   void *data, int count, int datatype, void *context)
 {
   xmpi(MPI_Unpack(buf, buf_size, position, data, count,
                   dtDict[lookupDt(datatype)].mpidt, *(MPI_Comm *)context));
 }
 
-void serializeSetMPI()
+void cdiPioSerializeSetMPI()
 {
 #if CDI_DT_MATCH_NEEDED
   if (!dtDictMatchComplete)
@@ -110,7 +111,6 @@ void serializeSetMPI()
 }
 
 
-#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

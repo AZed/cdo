@@ -113,6 +113,8 @@ Operator catalog:
 -------------------------------------------------------------
    Modification
 -------------------------------------------------------------
+   Setpartab     setpartabp      Set parameter table
+   Setpartab     setpartabn      Set parameter table
    Set           setpartab       Set parameter table
    Set           setcode         Set code number
    Set           setparam        Set parameter identifier
@@ -488,6 +490,7 @@ Operator catalog:
    Vargen        stdatm          Create values for pressure and temperature for hydrostatic atmosphere
    Rotuv         rotuvb          Backward rotation
    Mastrfu       mastrfu         Mass stream function
+   Derivepar     sealevelpressure Sea level pressure
    Adisit        adisit          Potential temperature to in-situ temperature
    Adisit        adipot          In-situ temperature to potential temperature
    Rhopot        rhopot          Calculates potential density

@@ -69,6 +69,10 @@ void abort_message ( char * text, char * file, int line )
   exit(EXIT_FAILURE);
 }
 
+void yac_abort_message ( char * text, char * file, int line ) {
+	abort_message ( text, file, line );
+}
+
 /* ------------------------------------
 
    Source: http://www.cse.yorku.ca/~oz/hash.html 

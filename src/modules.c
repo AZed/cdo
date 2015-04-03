@@ -293,9 +293,9 @@ void *Maggraph(void *argument);
 #define  ConsecstatOperators    {"consects", "consecsum"}
 #define  CopyOperators          {"copy", "selall", "szip"}
 #define  DeltimeOperators       {"delday", "del29feb"}
-#define  DeriveparOperators     {"geopotheight", "sealevelpressure"}
+#define  DeriveparOperators     {"gheight", "sealevelpressure"}
 #define  DetrendOperators       {"detrend"}
-#define  DiffOperators          {"diff", "diff2", "diffp", "diffn", "diffc"}
+#define  DiffOperators          {"diff", "diffp", "diffn", "diffc"}
 #define  DuplicateOperators     {"duplicate"}
 #define  Echam5iniOperators     {"import_e5ml", "import_e5res", \
                                  "export_e5ml", "export_e5res"}
@@ -369,8 +369,8 @@ void *Maggraph(void *argument);
 #define  PressureOperators      {"pressure_fl", "pressure_hl", "deltap"}
 #define  RegresOperators        {"regres"}
 #define  RemapOperators         {"remap"}
-#define    RemapgridOperators   {"remapcons", "remapcon", "remapbil", "remapbic", "remapdis", "remapnn", "remaplaf", "remapcon2", "remapsum"}
-#define    GenweightsOperators  {"gencons", "gencon", "genbil", "genbic", "gendis", "gennn", "genlaf", "gencon2"}
+#define    RemapgridOperators   {"remapycon", "remapcon", "remapbil", "remapbic", "remapdis", "remapnn", "remaplaf", "remapcon2", "remapsum"}
+#define    GenweightsOperators  {"genycon", "gencon", "genbil", "genbic", "gendis", "gennn", "genlaf", "gencon2"}
 #define  RemapetaOperators      {"remapeta", "remapeta_s", "remapeta_z"}
 #define  ReplaceOperators       {"replace"}
 #define  ReplacevaluesOperators {"setvals", "setrtoc", "setrtoc2"}
@@ -389,13 +389,13 @@ void *Maggraph(void *argument);
 #define  SelrecOperators        {"selrec"}
 #define  SeltimeOperators       {"seltimestep", "selyear", "selseas", "selmon", "selday", "selhour", "seldate", \
                                  "seltime", "selsmon"}
-#define  SetOperators           {"setcode", "setparam", "setname", "setunit", "setlevel", "setltype", "settabnum"}
+#define  SetOperators           {"setpartab", "setcode", "setparam", "setname", "setunit", "setlevel", "setltype", "settabnum"}
 #define  SetboxOperators        {"setclonlatbox", "setcindexbox"}
 #define  SetgattOperators       {"setgatt", "setgatts"}
 #define  SetgridOperators       {"setgrid", "setgridtype", "setgridarea", "setgridmask", "unsetgridmask", "setgridnumber", "setgriduri"}
 #define  SethaloOperators       {"sethalo", "tpnhalo"}
 #define  SetmissOperators       {"setmissval", "setctomiss", "setmisstoc", "setrtomiss", "setvrange"}
-#define  SetpartabOperators     {"setpartab", "setpartabc", "setpartabp", "setpartabn"}
+#define  SetpartabOperators     {"setpartabc", "setpartabp", "setpartabn"}
 #define  SetrcanameOperators    {"setrcaname"}
 #define  SettimeOperators       {"setyear", "setmon", "setday", "setdate", "settime", "settunits", \
                                  "settaxis", "setreftime", "setcalendar", "shifttime"}
@@ -452,7 +452,7 @@ void *Maggraph(void *argument);
 #define  TrmsOperators          {"trms"}
 #define  TstepcountOperators    {"tstepcount"}
 #define  VardupOperators        {"pardup", "parmul"}
-#define  VargenOperators        {"random", "const", "sincos", "for", "topo", "temp", "mask", "stdatm"}
+#define  VargenOperators        {"random", "const", "sincos", "coshill", "for", "topo", "temp", "mask", "stdatm"}
 #define  VarrmsOperators        {"varrms"}
 #define  VertintOperators       {"ml2pl", "ml2hl", "ml2plx", "ml2hlx", \
                                  "ml2pl_lp", "ml2hl_lp", "ml2plx_lp", "ml2hlx_lp"}
@@ -562,7 +562,7 @@ static modules_t Modules[] =
   { Consecstat,     ConsecstatHelp,    ConsecstatOperators,    CDI_REAL,  1,  1 },
   { Copy,           CopyHelp,          CopyOperators,          CDI_REAL, -1,  1 },
   { Deltime,        NULL,              DeltimeOperators,       CDI_REAL,  1,  1 },
-  { Derivepar,      NULL,              DeriveparOperators,     CDI_REAL,  1,  1 },
+  { Derivepar,      DeriveparHelp,     DeriveparOperators,     CDI_REAL,  1,  1 },
   { Detrend,        DetrendHelp,       DetrendOperators,       CDI_REAL,  1,  1 },
   { Diff,           DiffHelp,          DiffOperators,          CDI_REAL,  2,  0 },
   { Duplicate,      DuplicateHelp,     DuplicateOperators,     CDI_REAL,  1,  1 },
@@ -655,7 +655,7 @@ static modules_t Modules[] =
   { Setgrid,        SetgridHelp,       SetgridOperators,       CDI_BOTH,  1,  1 },
   { Sethalo,        SethaloHelp,       SethaloOperators,       CDI_REAL,  1,  1 },
   { Setmiss,        SetmissHelp,       SetmissOperators,       CDI_REAL,  1,  1 },
-  { Setpartab,      SetHelp,           SetpartabOperators,     CDI_REAL,  1,  1 },
+  { Setpartab,      SetpartabHelp,     SetpartabOperators,     CDI_REAL,  1,  1 },
   { Setrcaname,     NULL,              SetrcanameOperators,    CDI_REAL,  1,  1 },
   { Settime,        SettimeHelp,       SettimeOperators,       CDI_BOTH,  1,  1 },
   { Setzaxis,       SetzaxisHelp,      SetzaxisOperators,      CDI_BOTH,  1,  1 },
@@ -790,6 +790,7 @@ static char *opalias[][2] =
   {"diffv",               "diffn"      },
   {"covar0",              "timcovar"   },
   {"covar0r",             "fldcovar"   },
+  {"geopotheight",        "gheight"    },
   {"ggstat",              "info"       },
   {"ggstats",             "sinfo"      },
   {"globavg",             "fldavg"     },

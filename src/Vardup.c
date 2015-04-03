@@ -79,20 +79,20 @@ void *Vardup(void *argument)
   nvars    = vlistNvars(vlistID1);
   nrecords = vlistNrecs(vlistID1);
 
-  recVarID   = malloc(nrecords*sizeof(int));
-  recLevelID = malloc(nrecords*sizeof(int));
+  recVarID   = (int*) malloc(nrecords*sizeof(int));
+  recLevelID = (int*) malloc(nrecords*sizeof(int));
 
   gridsize = vlistGridsizeMax(vlistID1);
-  array    = malloc(gridsize*sizeof(double));
-  vardata  = malloc(nvars*sizeof(double *));
-  varnmiss = malloc(nvars*sizeof(int *));
+  array    = (double*) malloc(gridsize*sizeof(double));
+  vardata  = (double **) malloc(nvars*sizeof(double *));
+  varnmiss = (int **) malloc(nvars*sizeof(int *));
 
   for ( varID = 0; varID < nvars; varID++ )
     {
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
-      vardata[varID]  = malloc(gridsize*nlevel*sizeof(double));
-      varnmiss[varID] = malloc(nlevel*sizeof(int));
+      vardata[varID]  = (double*) malloc(gridsize*nlevel*sizeof(double));
+      varnmiss[varID] = (int*) malloc(nlevel*sizeof(int));
     }
 
   for ( i = 1; i < nmul; i++ )

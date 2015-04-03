@@ -61,6 +61,7 @@ typedef struct
   int           lmissval;
   double        missval;
   char         *name;
+  char         *stdname;
   char         *longname;
   char         *units;
   ensinfo_t    *ensdata;
@@ -111,6 +112,7 @@ void paramInitEntry(int varID, int param)
   vartable[varID].lmissval       = 0;
   vartable[varID].missval        = 0;
   vartable[varID].name           = NULL;
+  vartable[varID].stdname        = NULL;
   vartable[varID].longname       = NULL;
   vartable[varID].units          = NULL;
   vartable[varID].ensdata        = NULL;
@@ -152,6 +154,7 @@ void varFree(void)
 	free(vartable[varID].levelTable);
 
       if ( vartable[varID].name )     free(vartable[varID].name);
+      if ( vartable[varID].stdname )  free(vartable[varID].stdname);
       if ( vartable[varID].longname ) free(vartable[varID].longname);
       if ( vartable[varID].units )    free(vartable[varID].units);
       if ( vartable[varID].ensdata )  free(vartable[varID].ensdata);
@@ -314,7 +317,7 @@ int paramNewEntry(int param)
 void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
 		  int level1, int level2, int level_sf, int level_unit, int prec,
 		  int *pvarID, int *plevelID, int tsteptype, int numavg, int ltype,
-		  const char *name, const char *longname, const char *units)
+		  const char *name, const char *stdname, const char *longname, const char *units)
 {
   int varID = UNDEFID;
   int levelID = -1;
@@ -336,6 +339,7 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
       if ( numavg ) vartable[varID].timave = 1;
 
       if ( name )     if ( name[0] )     vartable[varID].name     = strdup(name);
+      if ( stdname )  if ( stdname[0] )  vartable[varID].stdname  = strdup(stdname);
       if ( longname ) if ( longname[0] ) vartable[varID].longname = strdup(longname);
       if ( units )    if ( units[0] )    vartable[varID].units    = strdup(units);
     }
@@ -361,9 +365,6 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
   levelID = levelNewEntry(varID, level1, level2);
   vartable[varID].levelTable[levelID].recID = recID;
 
-  if ( CDI_Debug )
-    Message("varID = %d  levelID = %d", varID, levelID);
-
   *pvarID   = varID;
   *plevelID = levelID;
 }
@@ -383,8 +384,8 @@ static
 int cmpLevelTable(const void* s1, const void* s2)
 {
   int cmp = 0;
-  const leveltable_t* x = s1;
-  const leveltable_t* y = s2;
+  const leveltable_t* x = (const leveltable_t*) s1;
+  const leveltable_t* y = (const leveltable_t*) s2;
   /*
   printf("%g %g  %d %d\n", x->leve11, y->level1, x, y);
   */
@@ -398,8 +399,8 @@ static
 int cmpLevelTableInv(const void* s1, const void* s2)
 {
   int cmp = 0;
-  const leveltable_t* x = s1;
-  const leveltable_t* y = s2;
+  const leveltable_t* x = (const leveltable_t*) s1;
+  const leveltable_t* y = (const leveltable_t*) s2;
   /*
   printf("%g %g  %d %d\n", x->leve11, y->level1, x, y);
   */
@@ -422,26 +423,11 @@ param_t;
 static
 int cmpparam(const void* s1, const void* s2)
 {
-  int cmp = 0;
-  const param_t* x = s1;
-  const param_t* y = s2;
+  const param_t* x = (const param_t*) s1;
+  const param_t* y = (const param_t*) s2;
 
-  if      ( x->param > y->param ) cmp =  1;
-  else if ( x->param < y->param ) cmp = -1;
-
-  return (cmp);
-}
-
-
-static
-int cmpltype(const void* s1, const void* s2)
-{
-  int cmp = 0;
-  const param_t* x = s1;
-  const param_t* y = s2;
-
-  if      ( x->ltype > y->ltype ) cmp =  1;
-  else if ( x->ltype < y->ltype ) cmp = -1;
+  int cmp = (( x->param > y->param ) - ( x->param < y->param )) * 2
+           + ( x->ltype > y->ltype ) - ( x->ltype < y->ltype );
 
   return (cmp);
 }
@@ -486,7 +472,6 @@ void cdi_generate_vars(stream_t *streamptr)
 	  varInfo[varid]->param = vartable[varid].param;
 	  varInfo[varid]->ltype = vartable[varid].ltype;
 	}
-      qsort(varInfo[0], nvars, sizeof(param_t), cmpltype);
       qsort(varInfo[0], nvars, sizeof(param_t), cmpparam);
       for ( varid = 0; varid < nvars; varid++ )
 	{
@@ -621,6 +606,7 @@ void cdi_generate_vars(stream_t *streamptr)
       if ( vartable[varid].lmissval ) vlistDefVarMissval(vlistID, varID, vartable[varid].missval);
 
       if ( vartable[varid].name )     vlistDefVarName(vlistID, varID, vartable[varid].name);
+      if ( vartable[varid].stdname )  vlistDefVarStdname(vlistID, varID, vartable[varid].stdname);
       if ( vartable[varid].longname ) vlistDefVarLongname(vlistID, varID, vartable[varid].longname);
       if ( vartable[varid].units )    vlistDefVarUnits(vlistID, varID, vartable[varid].units);
 
@@ -780,7 +766,7 @@ int varDefGrid(int vlistID, grid_t grid, int mode)
       ngrids = gridSize();
       if ( ngrids > 0 )
         {
-          gridIndexList = malloc(ngrids*sizeof(int));
+          gridIndexList = (int*) malloc(ngrids*sizeof(int));
           gridGetIndexList ( ngrids, gridIndexList );
           for ( i = 0; i < ngrids; i++ )
             {

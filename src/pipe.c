@@ -20,6 +20,10 @@
 #  include "config.h"
 #endif
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600 /* struct timespec */
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h> // time()
@@ -87,28 +91,28 @@ void pipe_init(pipe_t *pipe)
   pipe->usedata = TRUE;
   pipe->pstreamptr_in = 0;
 
-  pipe->mutex = malloc(sizeof(pthread_mutex_t));
+  pipe->mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
   pthread_mutex_init(pipe->mutex, &m_attr);
 
-  pipe->tsDef = malloc(sizeof(pthread_cond_t));
+  pipe->tsDef = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->tsDef, &c_attr);
-  pipe->tsInq = malloc(sizeof(pthread_cond_t));
+  pipe->tsInq = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->tsInq, &c_attr);
 
-  pipe->recDef = malloc(sizeof(pthread_cond_t));
+  pipe->recDef = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->recDef, &c_attr);
-  pipe->recInq = malloc(sizeof(pthread_cond_t));
+  pipe->recInq = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->recInq, &c_attr);
   
-  pipe->vlistDef = malloc(sizeof(pthread_cond_t));
+  pipe->vlistDef = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->vlistDef, &c_attr);
-  pipe->isclosed = malloc(sizeof(pthread_cond_t));
+  pipe->isclosed = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->isclosed, &c_attr);
 
-  pipe->writeCond = malloc(sizeof(pthread_cond_t));
+  pipe->writeCond = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->writeCond, &c_attr);
 
-  pipe->readCond = malloc(sizeof(pthread_cond_t));
+  pipe->readCond = (pthread_cond_t*) malloc(sizeof(pthread_cond_t));
   pthread_cond_init(pipe->readCond, &c_attr);
 
   pthread_mutexattr_destroy(&m_attr);
@@ -120,7 +124,7 @@ pipe_t *pipeNew()
 {
   pipe_t *pipe;
 
-  pipe = malloc(sizeof(pipe_t));
+  pipe = (pipe_t*) malloc(sizeof(pipe_t));
 
   pipe_init(pipe);
 

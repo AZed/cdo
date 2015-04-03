@@ -68,8 +68,8 @@ void *Subtrend(void *argument)
 
   field_init(&field1);
   field_init(&field4);
-  field1.ptr = malloc(gridsize*sizeof(double));
-  field4.ptr = malloc(gridsize*sizeof(double));
+  field1.ptr = (double*) malloc(gridsize*sizeof(double));
+  field4.ptr = (double*) malloc(gridsize*sizeof(double));
 
   vars2 = field_malloc(vlistID1, FIELD_PTR);
   vars3 = field_malloc(vlistID1, FIELD_PTR);

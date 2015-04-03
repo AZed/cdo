@@ -2,7 +2,7 @@
 #  include "config.h"
 #endif
 
-#if defined USE_MPI && defined (HAVE_NETCDF4) && defined (HAVE_PARALLEL_NC4)
+#if defined (HAVE_NETCDF4) && defined (HAVE_PARALLEL_NC4)
 
 #include <netcdf.h>
 #ifdef HAVE_NETCDF_PAR_H
@@ -62,7 +62,6 @@ cdiPioEnableNetCDFParAccess()
   namespaceSwitchSet(NSSWITCH_NC__CREATE, NSSW_FUNC(cdiPio_nc__create));
   namespaceSwitchSet(NSSWITCH_CDF_DEF_VAR, NSSW_FUNC(cdiPioCdfDefVar));
 }
-
 
 #endif
 /*

@@ -108,15 +108,15 @@ void *Ensstat(void *argument)
       if ( !userFileOverwrite(ofilename) )
 	cdoAbort("Outputfile %s already exists!", ofilename);
 
-  ef = malloc(nfiles*sizeof(ens_file_t));
+  ef = (ens_file_t*) malloc(nfiles*sizeof(ens_file_t));
 
-  field = malloc(ompNumThreads*sizeof(field_t));
+  field = (field_t*) malloc(ompNumThreads*sizeof(field_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
       field_init(&field[i]);
       field[i].size   = nfiles;
-      field[i].ptr    = malloc(nfiles*sizeof(double));
-      field[i].weight = malloc(nfiles*sizeof(double));
+      field[i].ptr    = (double*) malloc(nfiles*sizeof(double));
+      field[i].weight = (double*) malloc(nfiles*sizeof(double));
       for ( fileID = 0; fileID < nfiles; fileID++ )
 	field[i].weight[fileID] = 1;
     }
@@ -148,9 +148,9 @@ void *Ensstat(void *argument)
   gridsize = vlistGridsizeMax(vlistID1);
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    ef[fileID].array = malloc(gridsize*sizeof(double));
+    ef[fileID].array = (double*) malloc(gridsize*sizeof(double));
 
-  array2 = malloc(gridsize*sizeof(double));
+  array2 = (double*) malloc(gridsize*sizeof(double));
 
   tsID = 0;
   do

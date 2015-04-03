@@ -68,7 +68,6 @@ typedef struct {
 }
 datasets_t;
 
-#define  NINT(x)   ((x) < 0 ? (int)((x)-0.5) : (int)((x)+0.5))
 
 #if defined(HAVE_LIBHDF5)
 static
@@ -109,7 +108,7 @@ void get_grid_info(double c0, double re, int *nrxp, int *nryp,
 
   git=2.*pi*re*cos(pi/6.)/c0;
   /* number of longitude pixels */
-  nrx=2*NINT(0.5*git);
+  nrx=2*lround(0.5*git);
 
   /* central index in longitude */
   r0=nrx/2+0.5;
@@ -177,10 +176,10 @@ int defLonLatGrid(int nx, int ny, double c0, double lts, double re)
       return(-1);
     }
 
-  xvals = malloc(nx*sizeof(double));
-  yvals = malloc(ny*sizeof(double));
-  xbounds = malloc(nx*2*sizeof(double));
-  ybounds = malloc(nx*2*sizeof(double));
+  xvals = (double*) malloc(nx*sizeof(double));
+  yvals = (double*) malloc(ny*sizeof(double));
+  xbounds = (double*) malloc(nx*2*sizeof(double));
+  ybounds = (double*) malloc(nx*2*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -231,8 +230,8 @@ int defSinusoidalGrid(int nx, int ny, double xmin, double xmax, double ymin, dou
   int i;
   double *xvals, *yvals;
 
-  xvals = malloc(nx*sizeof(double));
-  yvals = malloc(ny*sizeof(double));
+  xvals = (double*) malloc(nx*sizeof(double));
+  yvals = (double*) malloc(ny*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -266,8 +265,8 @@ int defLaeaGrid(int nx, int ny, double xmin, double xmax, double ymin, double ym
   int i;
   double *xvals, *yvals;
 
-  xvals = malloc(nx*sizeof(double));
-  yvals = malloc(ny*sizeof(double));
+  xvals = (double*) malloc(nx*sizeof(double));
+  yvals = (double*) malloc(ny*sizeof(double));
 
   for ( i = 0; i < nx; ++i )
     {
@@ -476,8 +475,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
   H5Gclose(grp_id);
 
   /* check region */
-  xsize = NINT((region.xmax-region.xmin)/region.dx);
-  ysize = NINT((region.ymax-region.ymin)/region.dy);
+  xsize = lround((region.xmax-region.xmin)/region.dx);
+  ysize = lround((region.ymax-region.ymin)/region.dy);
 
   if ( cdoVerbose ) cdoPrint("  Size: xsize=%d  ysize=%d", xsize, ysize);
 
@@ -496,8 +495,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
          cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
                 region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
 
-       xsize = NINT((region.xmax-region.xmin)/region.dx);
-       ysize = NINT((region.ymax-region.ymin)/region.dy);
+       xsize = lround((region.xmax-region.xmin)/region.dx);
+       ysize = lround((region.ymax-region.ymin)/region.dy);
        if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
     }
 
@@ -513,8 +512,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
         cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
                region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
 
-        xsize = NINT((region.xmax-region.xmin)/region.dx);
-        ysize = NINT((region.ymax-region.ymin)/region.dy);
+        xsize = lround((region.xmax-region.xmin)/region.dx);
+        ysize = lround((region.ymax-region.ymin)/region.dy);
         if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
     }
 
@@ -737,8 +736,8 @@ int read_region(hid_t loc_id, int nx, int ny)
   dx = (xmax-xmin) / nx;
   dy = (ymax-ymin) / ny;
   /*
-  xsize = NINT((region.xmax-region.xmin)/region.dx);
-  ysize = NINT((region.ymax-region.ymin)/region.dy);
+  xsize = lround((region.xmax-region.xmin)/region.dx);
+  ysize = lround((region.ymax-region.ymin)/region.dy);
 
   if ( cdoVerbose ) cdoPrint("  Size: xsize=%d  ysize=%d", xsize, ysize);
   */
@@ -1061,7 +1060,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
       
       offset = gridsize*(nz-1);
       array  = ((datasets_t *) opdata)->obj[nset].array;
-      array  = realloc(array, gridsize*nz*nt*sizeof(double));
+      array  = (double*) realloc(array, gridsize*nz*nt*sizeof(double));
       ((datasets_t *) opdata)->obj[nset].array    = array;
       array  = array+offset;
 
@@ -1071,7 +1070,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 	    {
 	      float *farray;
 	      int i;
-	      farray = malloc(gridsize*nt*sizeof(float));
+	      farray = (float*) malloc(gridsize*nt*sizeof(float));
 	      status = H5Dread(dset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, farray);
 	      if ( status < 0 )
 		cdoAbort("Reading of NATIVE_FLOAT variable %s failed!", varname);
@@ -1088,7 +1087,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
       else
 	{
 	  int *iarray, i;
-	  iarray = malloc(gridsize*nt*sizeof(int));
+	  iarray = (int*) malloc(gridsize*nt*sizeof(int));
 	  status = H5Dread(dset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, iarray);
 	  if ( status < 0 )
 	    cdoAbort("Reading of NATIVE_INT variable %s failed!", varname);
@@ -1120,7 +1119,7 @@ void read_dataset(hid_t loc_id, const char *name, void *opdata)
 
       if ( nz == 1 ) ((datasets_t *) opdata)->nsets++;
 
-      mask = malloc(gridsize*nt*sizeof(short));
+      mask = (short*) malloc(gridsize*nt*sizeof(short));
       memset(mask, 0, gridsize*nt*sizeof(short));
 
       nmiss  = 0;
@@ -1457,7 +1456,7 @@ void *Importcmsaf(void *argument)
 
   if ( nt > 1 )
     {
-      vtimes = malloc(nt*sizeof(int));
+      vtimes = (int*) malloc(nt*sizeof(int));
       
       for ( i = 0; i < nt; ++i ) vtimes[i] = i*10000 + 45*100;
 
@@ -1513,7 +1512,7 @@ void *Importcmsaf(void *argument)
   else
     {
       double *levels;
-      levels = malloc(nz*sizeof(double));
+      levels = (double*) malloc(nz*sizeof(double));
       for ( i = 0; i < nz; ++i ) levels[i] = i+1;
       zaxisID = zaxisCreate(ZAXIS_GENERIC, nz);
       zaxisDefLevels(zaxisID, levels);

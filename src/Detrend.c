@@ -114,7 +114,7 @@ void *Detrend(void *argument)
     double *array1;
     double *array2;
   } memory_t;
-  memory_t *mem = NULL;
+  memory_t *ompmem = NULL;
 
   cdoInitialize(argument);
 
@@ -139,8 +139,8 @@ void *Detrend(void *argument)
       if ( tsID >= nalloc )
 	{
 	  nalloc += NALLOC_INC;
-	  dtinfo = realloc(dtinfo, nalloc*sizeof(dtinfo_t));
-	  vars   = realloc(vars, nalloc*sizeof(field_t **));
+	  dtinfo = (dtinfo_t*) realloc(dtinfo, nalloc*sizeof(dtinfo_t));
+	  vars   = (field_t ***) realloc(vars, nalloc*sizeof(field_t **));
 	}
 
       taxisInqDTinfo(taxisID1, &dtinfo[tsID]);
@@ -152,7 +152,7 @@ void *Detrend(void *argument)
 	  streamInqRecord(streamID1, &varID, &levelID);
 	  gridID   = vlistInqVarGrid(vlistID1, varID);
 	  gridsize = gridInqSize(gridID);
-	  vars[tsID][varID][levelID].ptr = malloc(gridsize*sizeof(double));
+	  vars[tsID][varID][levelID].ptr = (double*) malloc(gridsize*sizeof(double));
 	  streamReadRecord(streamID1, vars[tsID][varID][levelID].ptr, &nmiss);
 	  vars[tsID][varID][levelID].nmiss = nmiss;
 	}
@@ -162,11 +162,11 @@ void *Detrend(void *argument)
 
   nts = tsID;
 
-  mem = malloc(ompNumThreads*sizeof(memory_t));
+  ompmem = (memory_t*) malloc(ompNumThreads*sizeof(memory_t));
   for ( i = 0; i < ompNumThreads; i++ )
     {
-      mem[i].array1 = malloc(nts*sizeof(double));
-      mem[i].array2 = malloc(nts*sizeof(double));
+      ompmem[i].array1 = (double*) malloc(nts*sizeof(double));
+      ompmem[i].array2 = (double*) malloc(nts*sizeof(double));
     }
 
   for ( varID = 0; varID < nvars; varID++ )
@@ -188,22 +188,22 @@ void *Detrend(void *argument)
               ompthID = 0;
 #endif
 	      for ( tsID = 0; tsID < nts; tsID++ )
-		mem[ompthID].array1[tsID] = vars[tsID][varID][levelID].ptr[i];
+		ompmem[ompthID].array1[tsID] = vars[tsID][varID][levelID].ptr[i];
 
-	      detrend(nts, missval, mem[ompthID].array1, mem[ompthID].array2);
+	      detrend(nts, missval, ompmem[ompthID].array1, ompmem[ompthID].array2);
 
 	      for ( tsID = 0; tsID < nts; tsID++ )
-		vars[tsID][varID][levelID].ptr[i] = mem[ompthID].array2[tsID];
+		vars[tsID][varID][levelID].ptr[i] = ompmem[ompthID].array2[tsID];
 	    }
 	}
     }
 
   for ( i = 0; i < ompNumThreads; i++ )
     {
-      free(mem[i].array1);
-      free(mem[i].array2);
+      free(ompmem[i].array1);
+      free(ompmem[i].array2);
     }
-  free(mem);
+  free(ompmem);
 
   for ( tsID = 0; tsID < nts; tsID++ )
     {

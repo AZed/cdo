@@ -321,7 +321,6 @@ modelRun(struct model_config setup, MPI_Comm comm)
                                         varslice, var);
                   size_t layerSize = (size_t)(chunk[0] * chunk[1]);
                   size_t nblk = (layerSize + nproma - 1)/nproma - 1;
-                  size_t npromz = layerSize - nblk * nproma;
                   for (size_t k = 0; k < varLevs; ++k)
                     {
                       blk_displ[k] = k * (nblk + 1) * nproma;

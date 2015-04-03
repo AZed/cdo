@@ -72,8 +72,8 @@ void *Ydayarith(void *argument)
 
   field_init(&field1);
   field_init(&field2);
-  field1.ptr = malloc(gridsize*sizeof(double));
-  field2.ptr = malloc(gridsize*sizeof(double));
+  field1.ptr = (double*) malloc(gridsize*sizeof(double));
+  field2.ptr = (double*) malloc(gridsize*sizeof(double));
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = vlistInqTaxis(vlistID2);
@@ -99,15 +99,15 @@ void *Ydayarith(void *argument)
 
       if ( vardata2[day] != NULL ) cdoAbort("Day %d already allocatd!", day);
 
-      vardata2[day]  = malloc(nvars*sizeof(double *));
-      varnmiss2[day] = malloc(nvars*sizeof(int *));
+      vardata2[day]  = (double **) malloc(nvars*sizeof(double *));
+      varnmiss2[day] = (int **) malloc(nvars*sizeof(int *));
 
       for ( varID = 0; varID < nvars; varID++ )
 	{
 	  gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
 	  nlev     = zaxisInqSize(vlistInqVarZaxis(vlistID2, varID));
-	  vardata2[day][varID]  = malloc(nlev*gridsize*sizeof(double));
-	  varnmiss2[day][varID] = malloc(nlev*sizeof(int));
+	  vardata2[day][varID]  = (double*) malloc(nlev*gridsize*sizeof(double));
+	  varnmiss2[day][varID] = (int*) malloc(nlev*sizeof(int));
 	}
 
       for ( recID = 0; recID < nrecs; recID++ )

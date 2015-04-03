@@ -115,18 +115,26 @@ void *Zonstat(void *argument)
     }
   if ( ndiffgrids > 0 ) cdoAbort("Too many different grids!");
 
-  if ( gridInqType(gridID1) == GRID_LONLAT   ||
-       gridInqType(gridID1) == GRID_GAUSSIAN ||
-       gridInqType(gridID1) == GRID_GENERIC )
+  if ( gridID1 != -1 )
     {
-      if ( zongridID != -1 && gridInqYsize(zongridID) == gridInqYsize(gridID1) )
-	gridID2 = zongridID;
+      if ( gridInqType(gridID1) == GRID_LONLAT   ||
+	   gridInqType(gridID1) == GRID_GAUSSIAN ||
+	   gridInqType(gridID1) == GRID_GENERIC )
+	{
+	  if ( zongridID != -1 && gridInqYsize(zongridID) == gridInqYsize(gridID1) )
+	    gridID2 = zongridID;
+	  else
+	    gridID2 = gridToZonal(gridID1);
+	}
       else
-	gridID2 = gridToZonal(gridID1);
+	{
+	  cdoAbort("Unsupported gridtype: %s", gridNamePtr(gridInqType(gridID1)));
+	}
     }
   else
     {
-      cdoAbort("Unsupported gridtype: %s", gridNamePtr(gridInqType(gridID1)));
+      gridID2 = zongridID;
+      cdoWarning("Input stream contains only zonal data!");
     }
 
   for ( index = 0; index < ngrids; index++ )
@@ -142,8 +150,8 @@ void *Zonstat(void *argument)
   lim = vlistGridsizeMax(vlistID1);
   field_init(&field2);
   field_init(&field2);
-  field1.ptr  = malloc(lim*sizeof(double));
-  field2.ptr  = malloc(nlatmax*sizeof(double));
+  field1.ptr  = (double*) malloc(lim*sizeof(double));
+  field2.ptr  = (double*) malloc(nlatmax*sizeof(double));
   field2.grid = gridID2;
 
   tsID = 0;

@@ -73,13 +73,12 @@ void cpledn(int kn, int kodd, double *pfn, double pdx, int kflag,
 }
 
 static
-void gawl(double *pfn, double *pl, double *pw, int kn, int *kiter)
+void gawl(double *pfn, double *pl, double *pw, int kn)
 {
   int iodd;
   double pmod = 0;
   int iflag;
   int itemax;
-  int jter;
   double zw = 0;
   double zdlx;
   double zdlxn = 0;
@@ -95,9 +94,8 @@ void gawl(double *pfn, double *pl, double *pw, int kn, int *kiter)
 
   /* 2.0 Newton iteration */
 
-  for (jter = 1; jter <= itemax+1; jter++) 
+  for (int jter = 1; jter <= itemax+1; jter++)
     {
-      *kiter = jter;
       cpledn(kn, iodd, pfn, zdlx, iflag, &zw, &zdlxn, &pmod);
       zdlx = zdlxn;
       if (iflag == 1) break;
@@ -111,7 +109,7 @@ void gawl(double *pfn, double *pl, double *pw, int kn, int *kiter)
 }
 
 static
-void gauaw(int kn, double *pl, double *pw)
+void gauaw(int kn, double *restrict pl, double *restrict pw)
 {
   /*
    * 1.0 Initialize Fourier coefficients for ordinary Legendre polynomials
@@ -123,11 +121,8 @@ void gauaw(int kn, double *pl, double *pw)
 
   double z, zfnn;
 
-  int *iter;
-
   int ik, ins2, isym, jgl, jglm1, jn, iodd;
 
-  iter   = (int *)    malloc(kn*sizeof(int));
   zfn    = (double *) malloc((kn+1)*(kn+1)*sizeof(double));
   zfnlat = (double *) malloc((kn/2+1+1)*sizeof(double));  
 
@@ -179,7 +174,7 @@ void gauaw(int kn, double *pl, double *pw)
   for (jgl = ins2; jgl >= 1 ; jgl--) 
     {
       jglm1 = jgl-1;
-      gawl(zfnlat, &(pl[jglm1]), &(pw[jglm1]), kn, &(iter[jglm1]));
+      gawl(zfnlat, &(pl[jglm1]), &(pw[jglm1]), kn);
     }
 
   /* convert to physical latitude */
@@ -199,7 +194,6 @@ void gauaw(int kn, double *pl, double *pw)
 
   free(zfnlat);
   free(zfn);
-  free(iter);
 
   return;
 }
@@ -297,7 +291,7 @@ void gauaw_old(double *pa, double *pw, int nlat)
 }
 #endif
 
-void gaussaw(double *pa, double *pw, int nlat)
+void gaussaw(double *restrict pa, double *restrict pw, int nlat)
 {
   //gauaw_old(pa, pw, nlat);
   gauaw(nlat, pa, pw);

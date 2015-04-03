@@ -2,12 +2,11 @@ CLEANFILES =
 
 export
 
-TESTS = $(top_srcdir)/test/test_Gridarea.sh \
-        $(top_srcdir)/test/test_Cat.sh \
-        $(top_srcdir)/test/test_Spectral.sh \
-        $(top_srcdir)/test/test_Timstat.sh \
-        $(top_srcdir)/test/test_Select.sh \
-        $(top_srcdir)/test/test_Vertint.sh
+TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+                  $(top_srcdir)/config/tap-driver.sh
+
+TESTS = Cat.test Gridarea.test Detrend.test Genweights.test Remap.test \
+        Select.test Spectral.test Timstat.test Vertint.test
 
 #        $(top_srcdir)/test/test_Remap.sh \
 #       $(top_srcdir)/test/test_info.py
@@ -17,21 +16,16 @@ TESTS = $(top_srcdir)/test/test_Gridarea.sh \
 #	$(top_srcdir)/test/test_Selvar.py
 #	$(top_srcdir)/test/test_intgridbil.py
 
-EXTRA_DIST = $(TESTS) $(top_srcdir)/test/testStreams.py
+#EXTRA_DIST = $(TESTS) $(top_srcdir)/test/testStreams.py
 
-CDO   = $(top_builddir)/src/cdo
+CDO        = $(top_builddir)/src/cdo
 
 DATAPATH   = $(top_srcdir)/test/data
 
 PYTHONPATH = $(top_srcdir)/contrib/python:$(top_srcdir)/test
 
-listTests:
-	@echo $(TESTS)
-
-test: $(TESTS)
-
-.PHONY: $(TESTS)
+#.PHONY: $(TESTS)
 
 CLEANFILES += `ls *.pyc`
 
-AUTOMAKE_OPTIONS = color-tests
+#AUTOMAKE_OPTIONS = color-tests

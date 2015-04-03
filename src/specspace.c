@@ -55,16 +55,16 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
   dimsp = (ntr + 1) * (ntr + 2);
   pdim  = dimsp / 2 * nlat;
 
-  gmu  = malloc(nlat * sizeof(double));
-  gwt  = malloc(nlat * sizeof(double));
+  gmu  = (double*) malloc(nlat * sizeof(double));
+  gwt  = (double*) malloc(nlat * sizeof(double));
 
   gaussaw(gmu, gwt, nlat);
 
 #if ! defined(_OPENMP)
-  pnm    = malloc(dimsp * sizeof(double));
-  hnm    = malloc(dimsp * sizeof(double));
-  ztemp1 = malloc((waves<<1) * sizeof(double));
-  ztemp2 = malloc((waves<<1) * sizeof(double));
+  pnm    = (double*) malloc(dimsp * sizeof(double));
+  hnm    = (double*) malloc(dimsp * sizeof(double));
+  ztemp1 = (double*) malloc((waves<<1) * sizeof(double));
+  ztemp2 = (double*) malloc((waves<<1) * sizeof(double));
 #endif
 
 #if defined(_OPENMP)
@@ -73,10 +73,10 @@ void legini_old(int ntr, int nlat, double *poli, double *pold,
   for ( jgl = 0; jgl < nlat; jgl++ )
     {
 #if defined(_OPENMP)
-      pnm    = malloc(dimsp * sizeof(double));
-      hnm    = malloc(dimsp * sizeof(double));
-      ztemp1 = malloc((waves<<1) * sizeof(double));
-      ztemp2 = malloc((waves<<1) * sizeof(double));
+      pnm    = (double*) malloc(dimsp * sizeof(double));
+      hnm    = (double*) malloc(dimsp * sizeof(double));
+      ztemp1 = (double*) malloc((waves<<1) * sizeof(double));
+      ztemp2 = (double*) malloc((waves<<1) * sizeof(double));
 #endif
       gmusq = 1.0 - gmu[jgl]*gmu[jgl];
       coslat[jgl] =  sqrt(gmusq);
@@ -126,10 +126,10 @@ void legini(int ntr, int nlat, double *poli, double *pold, double *rcoslat)
   dimsp  = (ntr + 1)*(ntr + 2);
   dimpnm = (ntr + 1)*(ntr + 4)/2;
 
-  gmu  = malloc(nlat * sizeof(double));
-  gwt  = malloc(nlat * sizeof(double));
-  pnm  = malloc(dimpnm * sizeof(double));
-  work = malloc(3*waves * sizeof(double));
+  gmu  = (double*) malloc(nlat * sizeof(double));
+  gwt  = (double*) malloc(nlat * sizeof(double));
+  pnm  = (double*) malloc(dimpnm * sizeof(double));
+  work = (double*) malloc(3*waves * sizeof(double));
 
   gaussaw(gmu, gwt, nlat);
   for ( jgl = 0; jgl < nlat; jgl++ ) gwt[jgl] *= 0.5;
@@ -184,7 +184,7 @@ void grid2spec(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, d
   waves = ntr + 1;
   nfc   = waves * 2;
 
-  fpwork = malloc(nlat*nfc*nlev*sizeof(double));
+  fpwork = (double*) malloc(nlat*nfc*nlev*sizeof(double));
 
   gp2fc(sptrans->trig, sptrans->ifax, arrayIn, fpwork, nlat, nlon, nlev, nfc);
   fc2sp(fpwork, arrayOut, sptrans->pold, nlev, nlat, nfc, ntr);
@@ -207,7 +207,7 @@ void spec2grid(SPTRANS *sptrans, int gridIDin, double *arrayIn, int gridIDout, d
   waves = ntr + 1;
   nfc   = waves * 2;
 
-  fpwork = malloc(nlat*nfc*nlev*sizeof(double));
+  fpwork = (double*) malloc(nlat*nfc*nlev*sizeof(double));
 
   sp2fc(arrayIn, fpwork, sptrans->poli, nlev, nlat, nfc, ntr);
   fc2gp(sptrans->trig, sptrans->ifax, fpwork, arrayOut, nlat, nlon, nlev, nfc);
@@ -309,7 +309,7 @@ SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
   SPTRANS *sptrans;
   int nsp;
 
-  sptrans = malloc(sizeof(SPTRANS));
+  sptrans = (SPTRANS*) malloc(sizeof(SPTRANS));
 
   sptrans->nlon = nlon;
   sptrans->nlat = nlat;
@@ -318,15 +318,15 @@ SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
   nsp = (ntr + 1)*(ntr + 2);
   sptrans->poldim = nsp / 2 * nlat;
 
-  sptrans->trig = malloc(nlon * sizeof(double));
+  sptrans->trig = (double*) malloc(nlon * sizeof(double));
   fft_set(sptrans->trig, sptrans->ifax, nlon);
 
-  sptrans->poli = malloc(sptrans->poldim * sizeof(double));
-  sptrans->pold = malloc(sptrans->poldim * sizeof(double));
+  sptrans->poli = (double*) malloc(sptrans->poldim * sizeof(double));
+  sptrans->pold = (double*) malloc(sptrans->poldim * sizeof(double));
   if ( flag )
     {
-      sptrans->pol2 = malloc(sptrans->poldim * sizeof(double));
-      sptrans->pol3 = malloc(sptrans->poldim * sizeof(double));
+      sptrans->pol2 = (double*) malloc(sptrans->poldim * sizeof(double));
+      sptrans->pol3 = (double*) malloc(sptrans->poldim * sizeof(double));
     }
   else
     {
@@ -334,8 +334,8 @@ SPTRANS *sptrans_new(int nlon, int nlat, int ntr, int flag)
       sptrans->pol3 = NULL;
     }
 
-  sptrans->coslat  = malloc(nlat * sizeof(double));
-  sptrans->rcoslat = malloc(nlat * sizeof(double));
+  sptrans->coslat  = (double*) malloc(nlat * sizeof(double));
+  sptrans->rcoslat = (double*) malloc(nlat * sizeof(double));
 
   if ( flag )
     legini_old(ntr, nlat, sptrans->poli, sptrans->pold,
@@ -369,15 +369,15 @@ DVTRANS *dvtrans_new(int ntr)
   DVTRANS *dvtrans;
   int dimsp;
 
-  dvtrans = malloc(sizeof(DVTRANS));
+  dvtrans = (DVTRANS*) malloc(sizeof(DVTRANS));
 
   dvtrans->ntr = ntr;
 
   dimsp = (ntr + 1)*(ntr + 2);
   dvtrans->fdim = dimsp / 2;
 
-  dvtrans->f1 = malloc(dvtrans->fdim * sizeof(double));
-  dvtrans->f2 = malloc(dvtrans->fdim * sizeof(double));
+  dvtrans->f1 = (double*) malloc(dvtrans->fdim * sizeof(double));
+  dvtrans->f2 = (double*) malloc(dvtrans->fdim * sizeof(double));
 
   geninx(ntr, dvtrans->f1, dvtrans->f2);
 
@@ -623,8 +623,8 @@ void trans_uv2dv(SPTRANS *sptrans, int nlev,
   waves = ntr + 1;
   nfc   = waves * 2;
 
-  fpwork1 = malloc(nlat*nfc*nlev*sizeof(double));
-  fpwork2 = malloc(nlat*nfc*nlev*sizeof(double));
+  fpwork1 = (double*) malloc(nlat*nfc*nlev*sizeof(double));
+  fpwork2 = (double*) malloc(nlat*nfc*nlev*sizeof(double));
 
   gp2fc(sptrans->trig, sptrans->ifax, gu, fpwork1, nlat, nlon, nlev, nfc);
   gp2fc(sptrans->trig, sptrans->ifax, gv, fpwork2, nlat, nlon, nlev, nfc);
@@ -669,7 +669,7 @@ void trans_dv2uv(SPTRANS *sptrans, DVTRANS *dvtrans, int nlev,
 
   dv2uv(sd, svo, su, sv, dvtrans->f1, dvtrans->f2, ntr, dimsp, nlev);
 
-  fpwork = malloc(nlat*nfc*nlev*sizeof(double));
+  fpwork = (double*) malloc(nlat*nfc*nlev*sizeof(double));
 
   sp2fc(su, fpwork, sptrans->poli, nlev, nlat, nfc, ntr);
   scaluv(fpwork, sptrans->rcoslat, nlat, nfc*nlev);
