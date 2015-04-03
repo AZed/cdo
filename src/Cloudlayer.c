@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -138,6 +138,7 @@ void *Cloudlayer(void *argument)
   int aclcac_code;
   int aclcacID = -1;
   int nvars2 = 0;
+  int aclcac_code_found = 0;
   int kmin[NVARS], kmax[NVARS];
   char varname[CDI_MAX_NAME];
   double sfclevel = 0;
@@ -202,18 +203,28 @@ void *Cloudlayer(void *argument)
       if ( code <= 0 )
 	{
 	  vlistInqVarName(vlistID1, varID, varname);
-
 	  strtolower(varname);
-
 	  if ( strcmp(varname, "aclcac") == 0 ) code = 223;
 	}
 
-      if ( zaxisInqType(zaxisID) == ZAXIS_PRESSURE || zaxisInqType(zaxisID) == ZAXIS_HYBRID )
-	if  ( code == aclcac_code ) aclcacID  = varID;
+      if  ( code == aclcac_code )
+	{
+	  aclcac_code_found = 1;
+	  if ( zaxisInqType(zaxisID) == ZAXIS_PRESSURE || zaxisInqType(zaxisID) == ZAXIS_HYBRID )
+	    {
+	      aclcacID  = varID;
+	      break;
+	    }
+	}
     }
 
   if ( aclcacID == -1 )
-    cdoAbort("Cloud cover (code 223) not found on pressure or hybrid levels!");
+    {
+      if ( aclcac_code_found )
+	cdoAbort("Cloud cover (parameter 223) not found on pressure or hybrid levels!");
+      else
+	cdoAbort("Cloud cover (parameter 223) not found!");
+    }
 
   missval = vlistInqVarMissval(vlistID1, aclcacID);
   gridID  = vlistInqVarGrid(vlistID1, aclcacID);
@@ -305,7 +316,7 @@ void *Cloudlayer(void *argument)
 
   if ( nvars2 == 1 )
     {
-      varID = vlistDefVar(vlistID2, gridID, surfaceID, TIME_VARIABLE);
+      varID = vlistDefVar(vlistID2, gridID, surfaceID, TSTEP_INSTANT);
       vlistDefVarCode(vlistID2, varID, 33);
       vlistDefVarName(vlistID2, varID, "cld_lay");
       vlistDefVarLongname(vlistID2, varID, "cloud layer");
@@ -313,19 +324,19 @@ void *Cloudlayer(void *argument)
     }
   else
     {
-      varID = vlistDefVar(vlistID2, gridID, surfaceID, TIME_VARIABLE);
+      varID = vlistDefVar(vlistID2, gridID, surfaceID, TSTEP_INSTANT);
       vlistDefVarCode(vlistID2, varID, 34);
       vlistDefVarName(vlistID2, varID, "low_cld");
       vlistDefVarLongname(vlistID2, varID, "low cloud");
       vlistDefVarMissval(vlistID2, varID, missval);
 
-      varID = vlistDefVar(vlistID2, gridID, surfaceID, TIME_VARIABLE);
+      varID = vlistDefVar(vlistID2, gridID, surfaceID, TSTEP_INSTANT);
       vlistDefVarCode(vlistID2, varID, 35);
       vlistDefVarName(vlistID2, varID, "mid_cld");
       vlistDefVarLongname(vlistID2, varID, "mid cloud");
       vlistDefVarMissval(vlistID2, varID, missval);
 
-      varID = vlistDefVar(vlistID2, gridID, surfaceID, TIME_VARIABLE);
+      varID = vlistDefVar(vlistID2, gridID, surfaceID, TSTEP_INSTANT);
       vlistDefVarCode(vlistID2, varID, 36);
       vlistDefVarName(vlistID2, varID, "hih_cld");
       vlistDefVarLongname(vlistID2, varID, "high cloud");
@@ -359,7 +370,7 @@ void *Cloudlayer(void *argument)
 	  if ( varID == aclcacID )
 	    {
 	      streamReadRecord(streamID1, aclcac+offset, &nmiss);
-	      if ( nmiss != 0 ) cdoAbort("missing values unsupported!");
+	      if ( nmiss != 0 ) cdoAbort("Missing values unsupported!");
 	    }
 	}
 

@@ -181,7 +181,7 @@ void *EOF3d(void * argument)
 
   varID2 = (int *) malloc (nvars*sizeof(int));
   for ( varID=0; varID<nvars; varID++ )
-    varID2[varID] = vlistDefVar(vlistID2, gridID2, zaxisID2, TIME_VARIABLE);
+    varID2[varID] = vlistDefVar(vlistID2, gridID2, zaxisID2, TSTEP_INSTANT);
   ngrids      = vlistNgrids(vlistID2);
   for ( i = 0; i < ngrids; i++ )
     vlistChangeGridIndex(vlistID2, i, gridID2);

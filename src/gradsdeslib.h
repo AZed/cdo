@@ -138,6 +138,7 @@ typedef struct {
                                   grid/absolute coord transformation
                                   (Time coordinate always linear).      */
   gaint idxflg;                /* File records are indexed; 1==grib,station 2==grib2 */
+  gaint flt64;                 /* 20120711 Uwe Schulzweida: added support for 64 bit floats */ 
   gaint tmplat;                /* File name templating:
                                    3==templating on E and T 
                                    2==templating only on E 

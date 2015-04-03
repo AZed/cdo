@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #include "functs.h"
 #include "dmemory.h"
 #include "process.h"
+#include "const.h"
 
 #ifndef strdupx
 #ifndef strdup
@@ -103,9 +104,11 @@ char *strdup(const char *s);
 
 #define  IX2D(y,x,nx)  ((y)*(nx)+(x))
 
+#define  MEMTYPE_DOUBLE  1
+#define  MEMTYPE_FLOAT   2
 
-#define CDO_EXP_LOCAL   1
-#define CDO_EXP_REMOTE  2
+#define  CDO_EXP_LOCAL   1
+#define  CDO_EXP_REMOTE  2
 
 
 enum {DATE_FIRST, DATE_LAST, DATE_MIDDLE};
@@ -185,5 +188,8 @@ int  cdf_openread(const char *filename);
 void printFiletype(int streamID, int vlistID);
 
 void job_submit(const char *expname, const char *jobfilename, const char *jobname, const char *tmppath, const char *ftppath);
+
+void minmaxval(long nvals, double *array, int *imiss, double *minval, double *maxval);
+
 
 #endif  /* _CDO_INT_H */

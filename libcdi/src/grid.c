@@ -1216,14 +1216,17 @@ void gridDefXsize(int gridID, int xsize)
     Error("xsize %d is greater then gridsize %d", xsize, gridInqSize(gridID));
 
   if ( gridInqType(gridID) == GRID_UNSTRUCTURED && xsize != gridInqSize(gridID) )
-    Error("xsize %d must be equal gridsize %d for gridtype CELL", xsize, gridInqSize(gridID));
+    Error("xsize %d must be equal gridsize %d for gridtype: UNSTRUCTURED", xsize, gridInqSize(gridID));
 
   gridptr->xsize = xsize;
 
-  if ( gridInqType(gridID) != GRID_UNSTRUCTURED &&
-       gridptr->xsize*gridptr->ysize > gridInqSize(gridID) )
-    Error("inconsistent grid declaration! (xsize %d ysize %d gridsize %d)",
-	  gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
+  if ( gridInqType(gridID) != GRID_UNSTRUCTURED )
+    {
+      long gridsize = gridptr->xsize*gridptr->ysize;
+      if ( gridsize > 0 && gridsize != gridInqSize(gridID) )
+        Error("Inconsistent grid declaration! (xsize=%d ysize=%d gridsize=%d)",
+              gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
+    }
 }
 
 
@@ -1324,14 +1327,17 @@ void gridDefYsize(int gridID, int ysize)
     Error("ysize %d is greater then gridsize %d", ysize, gridInqSize(gridID));
 
   if ( gridInqType(gridID) == GRID_UNSTRUCTURED && ysize != gridInqSize(gridID) )
-    Error("ysize %d must be equal gridsize %d for gridtype CELL", ysize, gridInqSize(gridID));
+    Error("ysize %d must be equal gridsize %d for gridtype: UNSTRUCTURED", ysize, gridInqSize(gridID));
 
   gridptr->ysize = ysize;
 
-  if ( gridInqType(gridID) != GRID_UNSTRUCTURED && 
-       gridptr->xsize*gridptr->ysize > gridInqSize(gridID) )
-    Error("inconsistent grid declaration! (xsize %d ysize %d gridsize %d)",
-	  gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
+  if ( gridInqType(gridID) != GRID_UNSTRUCTURED )
+    {
+      long gridsize = gridptr->xsize*gridptr->ysize;
+      if ( gridsize > 0 && gridsize != gridInqSize(gridID) )
+        Error("Inconsistent grid declaration! (xsize=%d ysize=%d gridsize=%d)",
+              gridptr->xsize, gridptr->ysize, gridInqSize(gridID));
+    }
 }
 
 /*

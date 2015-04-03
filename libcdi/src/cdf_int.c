@@ -57,6 +57,8 @@ void cdf_create(const char *path, int cmode, int *ncidp)
   chunksizehint = 16777216; /* 16 MB */
 #endif
 
+  if ( cdiNcChunksizehint != CDI_UNDEFID ) chunksizehint = cdiNcChunksizehint;
+
   status = nc__create(path, cmode, initialsz, &chunksizehint, ncidp);
 
   if ( CDF_Debug || status != NC_NOERR )
@@ -65,13 +67,11 @@ void cdf_create(const char *path, int cmode, int *ncidp)
   if ( CDF_Debug || status != NC_NOERR )
     Message("chunksizehint %d", chunksizehint);
 
-  if ( status != NC_NOERR )
-    Error("%s", nc_strerror(status));
+  if ( status != NC_NOERR ) Error("%s", nc_strerror(status));
 
   status = nc_set_fill(*ncidp, NC_NOFILL, &oldfill);
 
-  if ( status != NC_NOERR )
-    Error("%s", nc_strerror(status));
+  if ( status != NC_NOERR ) Error("%s", nc_strerror(status));
 }
 
 
@@ -100,17 +100,17 @@ int cdf_open(const char *path, int omode, int *ncidp)
       /*
       if ( chunksizehint < ChunkSizeMin ) chunksizehint = ChunkSizeMin;
       */
+      if ( cdiNcChunksizehint != CDI_UNDEFID ) chunksizehint = cdiNcChunksizehint;
+
       status = nc__open(path, omode, &chunksizehint, ncidp);
 
-      if ( CDF_Debug )
-	Message("chunksizehint %d", chunksizehint);
+      if ( CDF_Debug ) Message("chunksizehint %d", chunksizehint);
     }
 
   if ( CDF_Debug )
     Message("ncid = %d  mode = %d  file = %s", *ncidp, omode, path);
 
-  if ( CDF_Debug && status != NC_NOERR )
-    Message("%s", nc_strerror(status));
+  if ( CDF_Debug && status != NC_NOERR ) Message("%s", nc_strerror(status));
 
   return (status);
 }
@@ -446,8 +446,8 @@ void cdf_put_var_float(int ncid, int varid, const float *fp)
 }
 
 
-void  cdf_put_vara_double (int ncid, int varid, const size_t start[],
-			   const size_t count[], const double *dp)
+void  cdf_put_vara_double(int ncid, int varid, const size_t start[],
+                          const size_t count[], const double *dp)
 {
   int status;
 
@@ -461,8 +461,23 @@ void  cdf_put_vara_double (int ncid, int varid, const size_t start[],
 }
 
 
-void  cdf_get_vara_int (int ncid, int varid, const size_t start[],
-			const size_t count[], int *dp)
+void  cdf_put_vara_float(int ncid, int varid, const size_t start[],
+                         const size_t count[], const float *fp)
+{
+  int status;
+
+  status = nc_put_vara_float(ncid, varid, start, count, fp);
+
+  if ( CDF_Debug || status != NC_NOERR )
+    Message("ncid = %d varid = %d val0 = %f", ncid, varid, *fp);
+
+  if ( status != NC_NOERR )
+    Error("%s", nc_strerror(status));
+}
+
+
+void  cdf_get_vara_int(int ncid, int varid, const size_t start[],
+                       const size_t count[], int *dp)
 {
   int status;
 
@@ -476,12 +491,27 @@ void  cdf_get_vara_int (int ncid, int varid, const size_t start[],
 }
 
 
-void  cdf_get_vara_double (int ncid, int varid, const size_t start[],
-			   const size_t count[], double *dp)
+void  cdf_get_vara_double(int ncid, int varid, const size_t start[],
+                          const size_t count[], double *dp)
 {
   int status;
 
   status = nc_get_vara_double(ncid, varid, start, count, dp);
+
+  if ( CDF_Debug || status != NC_NOERR )
+    Message("ncid = %d varid = %d", ncid, varid);
+
+  if ( status != NC_NOERR )
+    Error("%s", nc_strerror(status));
+}
+
+
+void  cdf_get_vara_float(int ncid, int varid, const size_t start[],
+                         const size_t count[], float *fp)
+{
+  int status;
+
+  status = nc_get_vara_float(ncid, varid, start, count, fp);
 
   if ( CDF_Debug || status != NC_NOERR )
     Message("ncid = %d varid = %d", ncid, varid);

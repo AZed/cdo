@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -120,6 +120,7 @@ void *Invertlev(void *argument)
   int lcopy = FALSE;
   int nlev, nlevel;
   int gridID, zaxisID, zaxistype, offset;
+  int linvert = FALSE;
 
   cdoInitialize(argument);
 
@@ -172,10 +173,13 @@ void *Invertlev(void *argument)
 	}
       else
 	{
+	  linvert = TRUE;
 	  vardata[varID]  = (double *) malloc(gridsize*nlev*sizeof(double));
 	  varnmiss[varID] = (int *) malloc(nlev*sizeof(int));
 	}
     }
+
+  if ( linvert == FALSE ) cdoWarning("No variables with invertable levels found!");
 
   tsID = 0;
   while ( (nrecs = streamInqTimestep(streamID1, tsID)) )

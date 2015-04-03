@@ -193,6 +193,10 @@ Operator catalog:
    Ydayarith     ydaysub         Subtract multi-year daily time series
    Ydayarith     ydaymul         Multiply multi-year daily time series
    Ydayarith     ydaydiv         Divide multi-year daily time series
+   Yhourarith    yhouradd        Add multi-year hourly time series
+   Yhourarith    yhoursub        Subtract multi-year hourly time series
+   Yhourarith    yhourmul        Multiply multi-year hourly time series
+   Yhourarith    yhourdiv        Divide multi-year hourly time series
    Arithdays     muldpm          Multiply with days per month
    Arithdays     divdpm          Divide by days per month
    Arithdays     muldpy          Multiply with days per year

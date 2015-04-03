@@ -85,13 +85,17 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
   int gridID;
   int gridID2 = -1;
   int gridtype = -1;
-  int xsize = 0, ysize = 0;
+  int *xsize, *ysize;
+  int *xoff, *yoff;
   int xsize2, ysize2;
+  int idx;
   int nx, ny, ix, iy, i, j, ij, offset;
   double **xvals, **yvals;
   double *xvals2, *yvals2;
   xyinfo_t *xyinfo;
 
+  xsize = (int *) malloc(nfiles*sizeof(int));
+  ysize = (int *) malloc(nfiles*sizeof(int));
   xyinfo = (xyinfo_t *) malloc(nfiles*sizeof(xyinfo_t));
   xvals = (double **) malloc(nfiles*sizeof(double));
   yvals = (double **) malloc(nfiles*sizeof(double));
@@ -104,13 +108,16 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
 	    (gridtype == GRID_GENERIC && gridInqXsize(gridID) > 0 && gridInqYsize(gridID) > 0)) )
 	cdoAbort("Unsupported grid type: %s!", gridNamePtr(gridtype));
 
+      xsize[fileID] = gridInqXsize(gridID);
+      ysize[fileID] = gridInqYsize(gridID);
+      /*
       if ( xsize == 0 ) xsize = gridInqXsize(gridID);
       if ( ysize == 0 ) ysize = gridInqYsize(gridID);
       if ( xsize != gridInqXsize(gridID) ) cdoAbort("xsize differ!");
       if ( ysize != gridInqYsize(gridID) ) cdoAbort("ysize differ!");
-
-      xvals[fileID] = (double *) malloc(xsize*sizeof(double));
-      yvals[fileID] = (double *) malloc(ysize*sizeof(double));
+      */
+      xvals[fileID] = (double *) malloc(xsize[fileID]*sizeof(double));
+      yvals[fileID] = (double *) malloc(ysize[fileID]*sizeof(double));
       gridInqXvals(gridID, xvals[fileID]);
       gridInqYvals(gridID, yvals[fileID]);
 
@@ -120,9 +127,9 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
       xyinfo[fileID].y  = yvals[fileID][0];
       xyinfo[fileID].id = fileID;
 
-      if ( fileID == 0 && ysize > 1 )
+      if ( fileID == 0 && ysize[fileID] > 1 )
 	{
-	  if ( yvals[fileID][0] > yvals[fileID][ysize-1] ) lsouthnorth = FALSE;
+	  if ( yvals[fileID][0] > yvals[fileID][ysize[fileID]-1] ) lsouthnorth = FALSE;
 	}
     }
   
@@ -152,36 +159,54 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
       else break;
     }
   ny = nfiles/nx;
-  // printf("nx %d  ny %d\n", nx, ny);
-  xsize2 = nx*xsize;
-  ysize2 = ny*ysize;
+  if ( cdoVerbose ) cdoPrint("nx %d  ny %d", nx, ny);
+
+  xsize2 = 0;
+  for ( i = 0; i < nx; ++i ) xsize2 += xsize[xyinfo[i].id];
+  ysize2 = 0;
+  for ( j = 0; j < ny; ++j ) ysize2 += ysize[xyinfo[j*nx].id];
+  if ( cdoVerbose ) cdoPrint("xsize2 %d  ysize2 %d", xsize2, ysize2);
 
   xvals2 = (double *) malloc(xsize2*sizeof(double));
   yvals2 = (double *) malloc(ysize2*sizeof(double));
 
-  for ( i = 0; i < nx; ++i )
-    memcpy(xvals2+i*xsize, xvals[xyinfo[i].id], xsize*sizeof(double));
+  xoff = (int *) malloc((nx+1)*sizeof(int));
+  yoff = (int *) malloc((ny+1)*sizeof(int));
 
+  xoff[0] = 0;
+  for ( i = 0; i < nx; ++i )
+    {
+      idx = xyinfo[i].id;
+      memcpy(xvals2+xoff[i], xvals[idx], xsize[idx]*sizeof(double));
+      xoff[i+1] = xoff[i] + xsize[idx];
+    }
+
+  yoff[0] = 0;
   for ( j = 0; j < ny; ++j )
-    memcpy(yvals2+j*ysize, yvals[xyinfo[j*nx].id], ysize*sizeof(double));
+    {
+      idx = xyinfo[j*nx].id;
+      memcpy(yvals2+yoff[j], yvals[idx], ysize[idx]*sizeof(double));
+      yoff[j+1] = yoff[j] + ysize[idx];
+    }
 
   if ( igrid == 0 )
     {
       for ( fileID = 0; fileID < nfiles; fileID++ )
 	{
+	  idx = xyinfo[fileID].id;
 	  iy = fileID/nx;
 	  ix = fileID - iy*nx;
 
-          offset = iy*xsize2*ysize + ix*xsize;
+          offset = yoff[iy]*xsize2 + xoff[ix];
 	  /*
 	  printf("fileID %d %d, iy %d, ix %d, offset %d\n",
 		 fileID, xyinfo[fileID].id, iy, ix, offset);
 	  */
 	  ij = 0;
-	  for ( j = 0; j < ysize; ++j )
-	    for ( i = 0; i < xsize; ++i )
+	  for ( j = 0; j < ysize[idx]; ++j )
+	    for ( i = 0; i < xsize[idx]; ++i )
 	      {
-		gridindex[xyinfo[fileID].id][ij++] = offset+j*xsize2+i;
+		gridindex[idx][ij++] = offset+j*xsize2+i;
 	      }
 	}
     }
@@ -192,6 +217,10 @@ int genGrid(int nfiles, ens_file_t *ef, int **gridindex, int igrid)
   gridDefXvals(gridID2, xvals2);
   gridDefYvals(gridID2, yvals2);
 
+  free(xoff);
+  free(yoff);
+  free(xsize);
+  free(ysize);
   free(xvals2);
   free(yvals2);
 
@@ -233,6 +262,7 @@ void *Gather(void *argument)
   int cmpfunc;
   int varID, recID;
   int gridsize = 0;
+  int gridsizemax = 0;
   int gridsize2;
   int gridID2;
   int *gridIDs = NULL;
@@ -277,24 +307,30 @@ void *Gather(void *argument)
   /* check that the contents is always the same */
   nvars = vlistNvars(ef[0].vlistID);
   if ( nvars == 1 ) 
-    cmpfunc = CMP_NAME | CMP_GRIDSIZE | CMP_NLEVEL;
+    cmpfunc = CMP_NAME | CMP_NLEVEL;
   else
-    cmpfunc = CMP_NAME | CMP_GRIDSIZE | CMP_NLEVEL;
+    cmpfunc = CMP_NAME | CMP_NLEVEL;
 
   for ( fileID = 1; fileID < nfiles; fileID++ )
     vlistCompare(ef[0].vlistID, ef[fileID].vlistID, cmpfunc);
 
   vlistID1 = ef[0].vlistID;
-  gridsize = vlistGridsizeMax(vlistID1);
+  gridsizemax = vlistGridsizeMax(vlistID1);
+  for ( fileID = 1; fileID < nfiles; fileID++ )
+    {
+      gridsize = vlistGridsizeMax(ef[fileID].vlistID);
+      if ( gridsize > gridsizemax ) gridsizemax = gridsize;
+    }
+  gridsize = gridsizemax;
 
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    ef[fileID].array = (double *) malloc(gridsize*sizeof(double));
+    ef[fileID].array = (double *) malloc(gridsizemax*sizeof(double));
 
   ngrids = vlistNgrids(ef[0].vlistID);
   gridIDs = (int *) malloc(ngrids*sizeof(int));
   gridindex = (int **) malloc(nfiles*sizeof(int*));
   for ( fileID = 0; fileID < nfiles; fileID++ )
-    gridindex[fileID] = (int *) malloc(gridsize*sizeof(int));
+    gridindex[fileID] = (int *) malloc(gridsizemax*sizeof(int));
 
   for ( i = 0; i < ngrids; ++i )
     gridIDs[i] = genGrid(nfiles, ef, gridindex, i);
@@ -355,6 +391,7 @@ void *Gather(void *argument)
 	      streamInqRecord(streamID, &varID, &levelID);
 	      streamReadRecord(streamID, ef[fileID].array, &nmiss);
 
+	      gridsize = gridInqSize(vlistInqVarGrid(ef[fileID].vlistID, varID));
 	      for ( i = 0; i < gridsize; ++i )
 		array2[gridindex[fileID][i]] = ef[fileID].array[i];
 	    }

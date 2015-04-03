@@ -8,6 +8,8 @@ cdo_SOURCES += Arith.c         \
                Arithdays.c     \
                Arithlat.c      \
                CDItest.c       \
+               CDIread.c       \
+               CDIwrite.c      \
                Cat.c           \
                Change.c        \
                Change_e5slm.c  \
@@ -54,7 +56,6 @@ cdo_SOURCES += Arith.c         \
                Harmonic.c      \
                Hi.c            \
                Histogram.c     \
-               IFS2ICON.c      \
                Importamsr.c    \
                Importbinary.c  \
                Importcmsaf.c   \
@@ -72,6 +73,9 @@ cdo_SOURCES += Arith.c         \
                Invertlev.c     \
                Isosurface.c    \
                Log.c           \
+               Magplot.c       \
+               Magvector.c     \
+               Maggraph.c      \
                Maskbox.c       \
                Mastrfu.c       \
                Math.c          \
@@ -93,6 +97,7 @@ cdo_SOURCES += Arith.c         \
                Remapeta.c      \
                Replace.c       \
                Replacevalues.c \
+               Rhopot.c        \
                Rotuv.c         \
                Runpctl.c       \
                Runstat.c       \
@@ -128,6 +133,7 @@ cdo_SOURCES += Arith.c         \
                Splitsel.c      \
                Splittime.c     \
                Splityear.c     \
+               SSOpar.c        \
                Subtrend.c      \
                Templates.c     \
                Test.c          \
@@ -161,6 +167,7 @@ cdo_SOURCES += Arith.c         \
                Ydaystat.c      \
                Ydrunpctl.c     \
                Ydrunstat.c     \
+               Yhourarith.c    \
                Yhourstat.c     \
                Ymonarith.c     \
                Ymonpctl.c      \
@@ -172,9 +179,20 @@ cdo_SOURCES += Arith.c         \
                cdo_int.h       \
                cdo_pthread.c   \
                cdo_vlist.c     \
+               template_parser.h   \
+               template_parser.c   \
+               results_template_parser.h   \
+               results_template_parser.c   \
+               magics_template_parser.h   \
+               magics_template_parser.c   \
+               StringUtilities.h   \
+               StringUtilities.c   \
+               CdoMagicsMapper.h   \
+               CdoMagicsMapper.c   \
                color.c         \
                color.h         \
                commandline.c   \
+               const.h       \
                counter.h       \
                dmemory.h       \
                dtypes.h        \
@@ -251,6 +269,7 @@ cdo_SOURCES += Arith.c         \
                realtime.c      \
                remap.h         \
                remaplib.c      \
+               remapsort.c     \
                specspace.c     \
                specspace.h     \
                statistic.c     \
@@ -288,4 +307,4 @@ cdo-userlog.o: userlog.c config.h
 cdo_static-userlog.o: userlog.c config.h
 	$(COMPILE) -DLOGPATH=${exec_prefix}/log -c -o cdo_static-userlog.o `test -f 'userlog.c' || echo '$(srcdir)/'`userlog.c
 #
-CLEANFILES  = `ls *~`
+CLEANFILES  = `ls *~ 2> /dev/null`

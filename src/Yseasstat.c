@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,29 @@
 
 #define  NSEAS       4
 
+typedef struct {
+  int vdate;
+  int vtime;
+}
+date_time_t;
+
+
+static 
+void set_date(int vdate_new, int vtime_new, date_time_t *datetime)
+{
+  int year, month, day;
+
+  cdiDecodeDate(vdate_new, &year, &month, &day);
+  if ( month == 12 ) vdate_new = cdiEncodeDate(year-1, month, day);
+
+  if ( vdate_new > datetime->vdate )
+    {
+      datetime->vdate = vdate_new;
+      datetime->vtime = vtime_new;
+    }
+}
+
+
 void *Yseasstat(void *argument)
 {
   int operatorID;
@@ -57,7 +80,7 @@ void *Yseasstat(void *argument)
   int nmiss;
   int nvars, nlevel;
   int *recVarID, *recLevelID;
-  int vdates[NSEAS], vtimes[NSEAS];
+  date_time_t datetime[NSEAS];
   double missval;
   field_t **vars1[NSEAS], **vars2[NSEAS], **samp1[NSEAS];
   field_t field;
@@ -79,10 +102,12 @@ void *Yseasstat(void *argument)
   season_start = get_season_start();
   for ( seas = 0; seas < NSEAS; seas++ )
     {
-      vars1[seas] = NULL;
-      vars2[seas] = NULL;
-      samp1[seas] = NULL;
-      nsets[seas] = 0;
+      vars1[seas]  = NULL;
+      vars2[seas]  = NULL;
+      samp1[seas]  = NULL;
+      nsets[seas]  = 0;
+      datetime[seas].vdate = 0;
+      datetime[seas].vtime = 0;
     }
 
   streamID1 = streamOpenRead(cdoStreamName(0));
@@ -92,6 +117,7 @@ void *Yseasstat(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID2) ) taxisDeleteBounds(taxisID2);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());
@@ -135,8 +161,7 @@ void *Yseasstat(void *argument)
       if ( seas < 0 || seas > 3 )
 	cdoAbort("Season %d out of range!", seas+1);
 
-      vdates[seas] = vdate;
-      vtimes[seas] = vtime;
+      set_date(vdate, vtime, &datetime[seas]);
 
       if ( vars1[seas] == NULL )
 	{
@@ -243,7 +268,7 @@ void *Yseasstat(void *argument)
       if ( nsets[seas] == 0 && (operfunc == func_std || operfunc == func_var) )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -260,7 +285,7 @@ void *Yseasstat(void *argument)
 	if ( operfunc == func_mean || operfunc == func_avg )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
@@ -273,7 +298,7 @@ void *Yseasstat(void *argument)
 	else if ( operfunc == func_std || operfunc == func_var )
 	  for ( varID = 0; varID < nvars; varID++ )
 	    {
-	      if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	      if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	      nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	      for ( levelID = 0; levelID < nlevel; levelID++ )
 		{
@@ -295,8 +320,8 @@ void *Yseasstat(void *argument)
 		}
 	    }
 
-	taxisDefVdate(taxisID2, vdates[seas]);
-	taxisDefVtime(taxisID2, vtimes[seas]);
+	taxisDefVdate(taxisID2, datetime[seas].vdate);
+	taxisDefVtime(taxisID2, datetime[seas].vtime);
 	streamDefTimestep(streamID2, otsID);
 
 	for ( recID = 0; recID < nrecords; recID++ )
@@ -304,7 +329,7 @@ void *Yseasstat(void *argument)
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	    streamDefRecord(streamID2, varID, levelID);
 	    streamWriteRecord(streamID2, vars1[seas][varID][levelID].ptr,

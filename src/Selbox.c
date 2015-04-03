@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -940,7 +940,7 @@ void *Selbox(void *argument)
 
 	      if ( operatorID == SELLONLATBOX  && gridtype == GRID_UNSTRUCTURED )
 		window_cell(nwpv, array1, gridID1, array2, gridsize2, sbox[index].cellidx);
-	      else
+ 	      else
 		window(nwpv, array1, gridID1, array2, sbox[index].lat1, sbox[index].lat2, sbox[index].lon11, 
 		       sbox[index].lon12, sbox[index].lon21, sbox[index].lon22);
 

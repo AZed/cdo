@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -227,17 +227,25 @@ int fileExist(const char *filename)
 
 int userFileOverwrite(const char *filename)
 {
-  int status = 0;
+  int status = 0, len;
   char line[1024], *pline;
 
   fprintf(stderr, "File %s already exist, overwrite? (yes/no): ", filename);
   readline(stdin, line, 1024);
   pline = line;
   while ( isspace((int) *pline) ) pline++;
-  if ( pline[0] == 'y' && pline[1] == 'e' && pline[2] == 's' )
-    status = 1;
-  else if ( pline[0] == 'Y' && pline[1] == 'E' && pline[2] == 'S' )
-    status = 1;
+  len = strlen(pline);
+  if ( len == 3 )
+    {
+      if ( pline[0] == 'y' && pline[1] == 'e' && pline[2] == 's' )
+	status = 1;
+      else if ( pline[0] == 'Y' && pline[1] == 'E' && pline[2] == 'S' )
+	status = 1;
+    }
+  else if ( len == 1 )
+    {
+      if ( pline[0] == 'y' ) status = 1;
+    }
 
   return (status);
 }

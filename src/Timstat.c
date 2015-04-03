@@ -303,7 +303,7 @@ void *Timstat(void *argument)
 	  if ( nsets == 0 && (operfunc == func_std || operfunc == func_var) )
 	    for ( varID = 0; varID < nvars; varID++ )
 	      {
-		if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+		if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 		nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 		for ( levelID = 0; levelID < nlevel; levelID++ )
 		  farmoq(&vars2[varID][levelID], vars1[varID][levelID]);
@@ -320,7 +320,7 @@ void *Timstat(void *argument)
       if ( operfunc == func_mean || operfunc == func_avg )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
 	      {
@@ -333,7 +333,7 @@ void *Timstat(void *argument)
       else if ( operfunc == func_std || operfunc == func_var )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
 	      {
@@ -365,7 +365,7 @@ void *Timstat(void *argument)
       if ( lvfrac && operfunc == func_mean )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 	    gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
@@ -420,7 +420,7 @@ void *Timstat(void *argument)
 	  varID   = recVarID[recID];
 	  levelID = recLevelID[recID];
 
-	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	  if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, vars1[varID][levelID].ptr,  vars1[varID][levelID].nmiss);
@@ -429,7 +429,7 @@ void *Timstat(void *argument)
 	      if ( samp1[varID][levelID].ptr )
 		{
 		  streamDefRecord(streamID3, varID, levelID);
-		      streamWriteRecord(streamID3, samp1[varID][levelID].ptr,  0);
+		  streamWriteRecord(streamID3, samp1[varID][levelID].ptr, 0);
 		}
 	    }
 	}

@@ -108,7 +108,7 @@ void writeNcFile(const char path[], const double array[], int length)
   zaxisID = zaxisCreate(ZAXIS_SURFACE, 1);
   vlistID = vlistCreate();
   
-  varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+  varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
   vlistDefVarName(vlistID, varID, "test_values");
   vlistDefVarDatatype(vlistID, varID, DATATYPE_FLT64);
   vlistDefVarMissval(vlistID, varID, MISSVAL);

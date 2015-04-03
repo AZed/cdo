@@ -17,13 +17,13 @@ case "${HOSTNAME}" in
                     --enable-maintainer-mode \
                     --enable-swig \
                     --enable-python \
-                    --with-jasper=$HOME/local \
-                    --with-grib_api=$HOME/local \
+                    --with-jasper=/opt/local \
+                    --with-grib_api=$HOME/local/gribapi-1.9.16 \
                     --with-netcdf=$HOME/local \
                     --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -Df2cFortran"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -Df2cFortran" LIBS="-L/opt/local/lib -lopenjpeg"
 	;;
-    cinglung*|feilung*)
+    cinglung*|feilung*|wanglung*)
 	./configure --prefix=$HOME/local \
                     --enable-shared \
                     --enable-maintainer-mode \
@@ -47,7 +47,7 @@ case "${HOSTNAME}" in
                     --with-grib_api=$HOME/local/gribapi-1.9.8 \
                     --with-netcdf=/opt/local \
                     --with-szlib=$HOME/local \
-	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O2 -Df2cFortran"
+	            CC=gcc CFLAGS="-g -pipe -D_REENTRANT -Wall -W -Wfloat-equal -pedantic -O3 -Df2cFortran"
 	;;
 # ia64-nec-linux
     ds*)
@@ -125,12 +125,13 @@ case "${HOSTNAME}" in
     blizzard*)
         CONFIG_SHELL=/bin/bash /bin/bash \
                     ./configure --prefix=$HOME/local \
-                    --with-netcdf=/sw/aix61/netcdf-4.1.1-rc2 \
-                    --with-hdf5=/sw/aix61/hdf5-1.8.4-patch1-threadsafe \
-                    --with-zlib=/sw/aix53/zlib-1.2.3 \
-                    --with-szlib=/sw/aix53/szip-2.1 \
-                    AR="ar -X 64" LDFLAGS="-brtl" FC=xlf_r CC=xlc_r \
-                    CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=auto -qtune=auto -DHAVE_MMAP -Dextname" \
+                    --with-netcdf=/sw/aix61/netcdf-4.2 \
+                    --with-hdf5=/sw/aix61/hdf5-1.8.8-threadsafe \
+                    --with-zlib=/sw/aix61/zlib-1.2.6 \
+                    --with-szlib=/sw/aix61/szip-2.1-threadsafe \
+                    AR="ar -X 64" LDFLAGS="-brtl" FC=xlf2003_r CC=xlc_r \
+                    CFLAGS="-g -O3 -q64 -qhot -qstrict -qarch=pwr6 -qtune=balanced -qlistfmt=html=transforms -DHAVE_MMAP -Dextname" \
+                    FCFLAGS="-qsuffix=cpp=f90" \
                     SHELL=/bin/bash
         ;;
     *)

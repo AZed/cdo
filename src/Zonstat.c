@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.1
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 
       Zonstat    zonmin          Zonal minimum
       Zonstat    zonmax          Zonal maximum
+      Zonstat    zonrange        Zonal range
       Zonstat    zonsum          Zonal sum
       Zonstat    zonmean         Zonal mean
       Zonstat    zonavg          Zonal average
@@ -57,15 +58,16 @@ void *Zonstat(void *argument)
 
   cdoInitialize(argument);
 
-  cdoOperatorAdd("zonmin",  func_min,  0, NULL);
-  cdoOperatorAdd("zonmax",  func_max,  0, NULL);
-  cdoOperatorAdd("zonsum",  func_sum,  0, NULL);
-  cdoOperatorAdd("zonmean", func_mean, 0, NULL);
-  cdoOperatorAdd("zonavg",  func_avg,  0, NULL);
-  cdoOperatorAdd("zonvar",  func_var,  0, NULL);
-  cdoOperatorAdd("zonstd",  func_std,  0, NULL);
+  cdoOperatorAdd("zonmin",   func_min,   0, NULL);
+  cdoOperatorAdd("zonmax",   func_max,   0, NULL);
+  cdoOperatorAdd("zonrange", func_range, 0, NULL);
+  cdoOperatorAdd("zonsum",   func_sum,   0, NULL);
+  cdoOperatorAdd("zonmean",  func_mean,  0, NULL);
+  cdoOperatorAdd("zonavg",   func_avg,   0, NULL);
+  cdoOperatorAdd("zonvar",   func_var,   0, NULL);
+  cdoOperatorAdd("zonstd",   func_std,   0, NULL);
   /* RQ */
-  cdoOperatorAdd("zonpctl", func_pctl, 0, NULL);
+  cdoOperatorAdd("zonpctl",  func_pctl,  0, NULL);
   /* QR */
 
   operatorID = cdoOperatorID();

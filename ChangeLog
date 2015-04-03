@@ -1,3 +1,145 @@
+2012-07-26 Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Version 1.5.6.1 released
+	* arradd: disable SSE2 optimazation (bug in residual loop)
+	    The following statistical functions are affected:
+	        *mean, *avg, *sum, *var, *std
+	    if all of the following conditions are  complied:
+	       - x86_64 machine (tornado, squall, thunder, lizard)
+	       - dataset has no missing values
+	       - the horizontal grid size is > 1 and not multiple of 8
+            This bug was introduced in CDO version 1.5.5.
+
+2012-07-23  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.6
+	* Version 1.5.6 released
+
+2012-07-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Fixed bug #2605
+
+2012-07-17  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Added operator zonrange
+
+2012-07-12  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* vlistCompare(): added check to compare sorted parameter names
+
+2012-07-11  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* gradsdes: added support for 64-bit SERVICE, EXTRA and IEG format
+	* import_binary: added support for 64-bit floats via extra OPTION keyword flt64 [request: Tim Bruecher]
+
+2012-07-10  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* sort_iter: call to sort_par() only for parent <= (nthreads-1)
+	* added remapsort.c
+
+2012-07-07  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remaplib::sort_add: use optimized version (speedup +20%)
+
+2012-07-03  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* userFileOverwrite: accept also a simple 'y' as yes [request: Dirk Notz]
+
+2012-06-26  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Arith: added support for 3D masks [request: Ralf Müller]
+	* pipeInqVlist: wait only 1s and check for other active CDO processes
+
+2012-06-25  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Selvar: added check for time constant fields (bug fix) [report: Ralf Müller]
+	* mastrfu: use grid coordinates from input file
+
+2012-06-21  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pstreamCheckDatarange: activate check only if ivals > 0
+
+2012-06-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ymonmean: removed time bounds if present (bug fix) [Bug #2474]
+	* ymonsub: added support for time bounds (bug fix) [Bug #2475]
+
+2012-06-08  Ralf Mueller     <ralf.mueller@zmaw.de>
+
+	* New operator: showunit (Showinfo)
+
+2012-06-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Sinfo: changed Time entry to Ttype
+	* changed timeID to tsteptype
+
+2012-05-31  Luis Kornblueh  <Luis.Kornblueh@zmaw.de>
+
+	* arradd: SSE2 version (performance +15%)
+
+2012-05-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Runstat: optimize missing value handling (speedup)
+	* Runstat: OpenMP parallelization over parameter nts
+	* Runstat: added env. RUNSTAT_NOMISS
+
+2012-05-29  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* input: changed time axis to RELATIVE
+
+2012-05-15  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* using CDI library version 1.5.5
+	* Version 1.5.5 released
+
+2012-05-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Ensstat3: nvars undefined (bug fix)
+
+2012-05-08  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* remap_bilin: using fabs(src_lats[n]) for distance-weighted average (big fix) [report: Renate Brokopf]
+	* remap_bilic: using fabs(src_lats[n]) for distance-weighted average (big fix)
+
+2012-04-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* grid.c::gridCurvilinearToRegular: bug fix [report: Ag Stevens]
+	* remaplib: changed warning message for bilinear/bicubic interpolation
+
+2012-04-17  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* Yseasstat: changed timestamp of DJF season to last timestep of February
+
+2012-04-16  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* ml2pl: added support for GRIB2 parameter names [Bug #2252]
+
+2012-03-14  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* pipeInqVlist: changed init of time_to_wait [Bug #2133]
+
+2012-03-02  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* replace: removed debug output [report: K. Houchi]
+
+2012-03-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* eca_rr1: missing value not set correctly (bug fix) [report: Hans-Juergen Panitz]
+	* ecacore: fix all missing values
+
+2012-02-20  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* geopotheight: added support for WMO code table
+
+2012-02-06  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* New module: Yhourarith (yhouradd, yhoursub, yhourmul, yhourdiv) [request: Beate Gayer]
+
+2012-02-01  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
+
+	* mergetime: added env. SKIP_SAME_TIME to skip all double entries of the same timestamp [request: K. Houchi]
+	* Added operator rohpot - potential density for MPIOM (experimental) [request: Helmut Haak]
+
 2012-01-30  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
 	* using CDI library version 1.5.4
@@ -18,7 +160,7 @@
 
 2012-01-09  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 
-	* setgridtype: added support for grid type lonlat 
+	* setgridtype: added support for grid type lonlat
 
 2012-01-05  Uwe Schulzweida  <Uwe.Schulzweida@zmaw.de>
 

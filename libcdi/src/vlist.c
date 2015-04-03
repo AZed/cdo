@@ -275,7 +275,7 @@ and add a variable with @func{vlistDefVar}.
 int vlistID, varID;
    ...
 vlistID = vlistCreate();
-varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
    ...
 streamDefVlist(streamID, vlistID);
    ...
@@ -330,10 +330,12 @@ void vlistDestroy(int vlistID)
       if ( vlistptr->vars[varID].longname ) free(vlistptr->vars[varID].longname);
       if ( vlistptr->vars[varID].stdname )  free(vlistptr->vars[varID].stdname);
       if ( vlistptr->vars[varID].units )    free(vlistptr->vars[varID].units);
-      
+
+      if ( vlistptr->vars[varID].ensdata )  free(vlistptr->vars[varID].ensdata);
+
       vlistDelAtts(vlistID, varID);
     }
-  
+ 
   if ( vlistptr->vars ) free(vlistptr->vars);
 
   vlist_delete_entry(vlistptr);
@@ -394,6 +396,14 @@ void vlistCopy(int vlistID2, int vlistID1)
 	  vlistptr2->vars[varID].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
 	  memcpy(vlistptr2->vars[varID].levinfo,
 		 vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
+
+          if ( vlistptr2->vars[varID].ensdata ) free(vlistptr2->vars[varID].ensdata);
+          if ( vlistptr1->vars[varID].ensdata )
+            {
+              vlistptr2->vars[varID].ensdata = (ensinfo_t *) malloc(sizeof(ensinfo_t));
+              memcpy(vlistptr2->vars[varID].ensdata,
+                     vlistptr1->vars[varID].ensdata, sizeof(ensinfo_t));
+            }
 
 	  vlistptr2->vars[varID].atts.nelems = 0;
 	  vlistCopyVarAtts(vlistID1, varID, vlistID2, varID);
@@ -766,6 +776,12 @@ void vlistCat(int vlistID2, int vlistID1)
       vlistptr2->vars[varID2].levinfo = (levinfo_t *) malloc(nlevs*sizeof(levinfo_t));
       memcpy(vlistptr2->vars[varID2].levinfo, vlistptr1->vars[varID].levinfo, nlevs*sizeof(levinfo_t));
 
+      if ( vlistptr1->vars[varID].ensdata )
+        {
+          vlistptr2->vars[varID2].ensdata = (ensinfo_t *) malloc(sizeof(ensinfo_t));
+          memcpy(vlistptr2->vars[varID2].ensdata, vlistptr1->vars[varID].ensdata, sizeof(ensinfo_t));
+        }
+
       vlistptr2->vars[varID2].atts.nelems = 0;
       vlistCopyVarAtts(vlistID1, varID, vlistID2, varID2);
 
@@ -1090,7 +1106,7 @@ void vlistPrint(int vlistID)
 {
   int nvars, flag, index;
   int varID, fvarID, mvarID, flevID, mlevID, levID;
-  int param, gridID, zaxisID, timeID, nlevs;
+  int param, gridID, zaxisID, tsteptype, nlevs;
   int dtype;
   char paramstr[32];
   char *name, *longname, *units;
@@ -1117,13 +1133,13 @@ void vlistPrint(int vlistID)
 
   if ( nvars > 0 )
     {
-      printf(" varID param    gridID zaxisID timeID nlevel flag  name     longname\n");
+      printf(" varID param    gridID zaxisID tsteptype nlevel flag  name     longname\n");
       for ( varID = 0; varID < nvars; varID++ )
 	{
 	  param    = vlistptr->vars[varID].param;
 	  gridID   = vlistptr->vars[varID].gridID;
 	  zaxisID  = vlistptr->vars[varID].zaxisID;
-	  timeID   = vlistptr->vars[varID].timeID;
+	  tsteptype= vlistptr->vars[varID].tsteptype;
 	  nlevs    = vlistptr->vars[varID].nlevs;
 	  name     = vlistptr->vars[varID].name;
 	  longname = vlistptr->vars[varID].longname;
@@ -1132,7 +1148,7 @@ void vlistPrint(int vlistID)
 
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
 	  printf("%6d %-8s %6d %6d %6d %6d %5d  %-8s %s",
-		 varID, paramstr, gridID, zaxisID, timeID, nlevs, flag,
+		 varID, paramstr, gridID, zaxisID, tsteptype, nlevs, flag,
 		 name ? name : "", longname ? longname : "");
 	  if ( units ) printf("   [%s]", units);
 	  printf("\n");
@@ -1551,7 +1567,7 @@ int vlistHasTime(int vlistID)
   vlist_check_ptr(__func__, vlistptr);
 
   for ( varID = 0; varID <  vlistptr->nvars; varID++ )
-    if ( vlistptr->vars[varID].timeID == TIME_VARIABLE )
+    if ( vlistptr->vars[varID].tsteptype != TSTEP_CONSTANT )
       {
 	hastime = TRUE;
 	break;

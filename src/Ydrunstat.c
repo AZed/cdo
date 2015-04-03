@@ -106,6 +106,7 @@ void *Ydrunstat(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
+  if ( taxisHasBounds(taxisID2) ) taxisDeleteBounds(taxisID2);
   vlistDefTaxis(vlistID2, taxisID2);
 
   calendar = taxisInqCalendar(taxisID1);
@@ -277,7 +278,7 @@ void *Ydrunstat(void *argument)
 	    varID    = recVarID[recID];
 	    levelID  = recLevelID[recID];
 
-	    if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	    if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	    streamDefRecord(streamID2, varID, levelID);
 	    streamWriteRecord(streamID2, stats->vars1[dayoy][varID][levelID].ptr,
@@ -474,7 +475,7 @@ void ydstatUpdate(YDAY_STATS *stats, int vdate, int vtime,
 
   for ( varID = 0; varID  < nvars; varID++ )
     {
-      if ( vlistInqVarTime(stats->vlist, varID) == TIME_CONSTANT ) continue;
+      if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
         
       gridsize = gridInqSize(vlistInqVarGrid(stats->vlist, varID));
       nlevels  = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
@@ -526,7 +527,7 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 	    case func_avg: case func_mean:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
-	          if ( vlistInqVarTime(stats->vlist, varID) == TIME_CONSTANT ) continue;
+	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
 	          nlevels = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
 	          for ( levelID = 0; levelID < nlevels; levelID++ )
 		    farcmul(&stats->vars1[dayoy][varID][levelID], 1.0 / stats->nsets[dayoy]);
@@ -536,7 +537,7 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 	    case func_std:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
-	          if ( vlistInqVarTime(stats->vlist, varID) == TIME_CONSTANT ) continue;
+	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
 	          nlevels = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
 	          for ( levelID = 0; levelID < nlevels; levelID++ )
 		    farcstd(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],
@@ -547,7 +548,7 @@ void ydstatFinalize(YDAY_STATS *stats, int operfunc)
 	    case func_var:
 	      for ( varID = 0; varID < nvars; varID++ )
 	        {
-	          if ( vlistInqVarTime(stats->vlist, varID) == TIME_CONSTANT ) continue;
+	          if ( vlistInqVarTsteptype(stats->vlist, varID) == TSTEP_CONSTANT ) continue;
 	          nlevels = zaxisInqSize(vlistInqVarZaxis(stats->vlist, varID));
 	          for ( levelID = 0; levelID < nlevels; levelID++ )
 		    farcvar(&stats->vars1[dayoy][varID][levelID], stats->vars2[dayoy][varID][levelID],

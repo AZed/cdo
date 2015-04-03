@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -79,32 +79,33 @@ void *EOFs(void * argument)
   double sum_w;
   double sum;
   double missval=0;
-  double *xvals, *yvals;
+  double xvals, yvals;
   double **cov, *eigv;
 
   double *df1p, *df2p;
-  field_t *datafieldv;
-  field_t ***datafields;
-  field_t ***eigenvectors, ***eigenvalues;
-  field_t in;
+  double **datafieldv = NULL;
+  double ****datafields = NULL;
+  double ****eigenvectors = NULL, ****eigenvalues = NULL;
+  double *in = NULL;
 
   enum T_EIGEN_MODE eigen_mode = JACOBI;
 
-  if ( cdoTimer ) {
-    timer_init = timer_new("Timeof init");
-    timer_alloc= timer_new("Timeof alloc");
-    timer_read = timer_new("Timeof read");
-    timer_cov  = timer_new("Timeof cov");
-    timer_eig  = timer_new("Timeof eig");
-    timer_post = timer_new("Timeof post");
-    timer_write= timer_new("Timeof write");
-    timer_finish=timer_new("Timeof finish");
+  if ( cdoTimer )
+    {
+      timer_init = timer_new("Timeof init");
+      timer_alloc= timer_new("Timeof alloc");
+      timer_read = timer_new("Timeof read");
+      timer_cov  = timer_new("Timeof cov");
+      timer_eig  = timer_new("Timeof eig");
+      timer_post = timer_new("Timeof post");
+      timer_write= timer_new("Timeof write");
+      timer_finish=timer_new("Timeof finish");
 
-    timer_start(timer_init);
-  }
-
-
+      timer_start(timer_init);
+    }
+  
   cdoInitialize(argument);
+
   cdoOperatorAdd("eof",       EOF_,       0, NULL);
   cdoOperatorAdd("eoftime",   EOF_TIME,   0, NULL);
   cdoOperatorAdd("eofspatial",EOF_SPATIAL,0, NULL);
@@ -149,41 +150,6 @@ void *EOFs(void * argument)
     for(i=0;i<gridsize;i++) 
       weight[i]=1;
 
-
-  /* eigenvalues */
-  streamID2   = streamOpenWrite(cdoStreamName(1), cdoFiletype());
-
-  vlistID2    = vlistDuplicate(vlistID1);
-  taxisID2    = taxisDuplicate(taxisID1);
-  taxisDefRdate(taxisID2, 0);
-  taxisDefRtime(taxisID2, 0);
-  vlistDefTaxis(vlistID2, taxisID2);
-  gridID2     = gridCreate(GRID_LONLAT, 1);
-  gridDefXsize(gridID2, 1);
-  gridDefYsize(gridID2, 1);
-  xvals       = (double*) malloc(1*sizeof(double));
-  yvals       = (double*) malloc(1*sizeof(double));
-  xvals[0]    = 0;
-  yvals[0]    = 0;
-  gridDefXvals(gridID2, xvals);
-  gridDefYvals(gridID2, yvals);
-  ngrids      = vlistNgrids(vlistID2);
-  for ( i = 0; i < ngrids; i++ )
-    vlistChangeGridIndex(vlistID2, i, gridID2);
-
-  /*  eigenvectors */
-  streamID3   = streamOpenWrite(cdoStreamName(2), cdoFiletype());
-
-  vlistID3    = vlistDuplicate(vlistID1);
-  taxisID3    = taxisDuplicate(taxisID1);
-  gridID3     = gridDuplicate(gridID1);
-  taxisDefRdate(taxisID3, 0);
-  taxisDefRtime(taxisID3, 0);
-  vlistDefTaxis(vlistID3, taxisID3);
-
-
-  if ( cdoVerbose )
-    cdoPrint("Initialized streams");
   /*  eigenvalues */
 
   reached_eof = 0;
@@ -270,11 +236,11 @@ void *EOFs(void * argument)
   if ( cdoTimer ) timer_start(timer_alloc);
 
   /* allocation of temporary fields and output structures */
-  in.ptr       = (double    *) malloc(gridsize*sizeof(double));
-  datafields   = (field_t ***) malloc(nvars*sizeof(field_t**));
+  in           = (double    *) malloc(gridsize*sizeof(double));
+  datafields   = (double ****) malloc(nvars*sizeof(double ***));
   datacounts   = (int     ***) malloc(nvars*sizeof(int **));
-  eigenvectors = (field_t ***) malloc(nvars*sizeof(field_t**));
-  eigenvalues  = (field_t ***) malloc(nvars*sizeof(field_t**));
+  eigenvectors = (double ****) malloc(nvars*sizeof(double ***));
+  eigenvalues  = (double ****) malloc(nvars*sizeof(double ***));
 
   for ( varID = 0; varID < nvars; ++varID )
     {
@@ -283,72 +249,65 @@ void *EOFs(void * argument)
       nlevs               = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       missval             = vlistInqVarMissval(vlistID1, varID);
 
-      datafields[varID]   = (field_t **) malloc(nlevs*sizeof(field_t*));
+      datafields[varID]   = (double ***) malloc(nlevs*sizeof(double **));
       datacounts[varID]   = (int **)     malloc(nlevs*sizeof(int* ));
-      eigenvectors[varID] = (field_t **) malloc(nlevs*sizeof(field_t*));
-      eigenvalues[varID]  = (field_t **) malloc(nlevs*sizeof(field_t*));
+      eigenvectors[varID] = (double ***) malloc(nlevs*sizeof(double **));
+      eigenvalues[varID]  = (double ***) malloc(nlevs*sizeof(double **));
 
       for ( levelID = 0; levelID < nlevs; ++levelID )
         {
           if ( grid_space )
             {
-              datafields[varID][levelID]            = (field_t *) malloc(1*sizeof(field_t));
-              datafields[varID][levelID][0].grid    = gridID1;
-              datafields[varID][levelID][0].nmiss   = 0;
-              datafields[varID][levelID][0].missval = missval;
-              datafields[varID][levelID][0].ptr     = (double *) malloc(gridsize*gridsize*sizeof(double));
+              datafields[varID][levelID]            = (double **) malloc(1*sizeof(double *));
+              //datafields[varID][levelID][0].grid    = gridID1;
+              //datafields[varID][levelID][0].nmiss   = 0;
+              //datafields[varID][levelID][0].missval = missval;
+              datafields[varID][levelID][0]     = (double *) malloc(gridsize*gridsize*sizeof(double));
 
-              
               datacounts[varID][levelID]            = (int *) malloc(gridsize*gridsize*sizeof(int));
 	      for ( i = 0; i<gridsize*gridsize; i++ )
 		{
 		  datacounts[varID][levelID][i] = 0;
-		  datafields[varID][levelID][0].ptr[i] = 0;            
+		  datafields[varID][levelID][0][i] = 0;            
 		}
 	    }
           else if ( time_space )
             {
-              datafields[varID][levelID] = (field_t *) malloc(nts*sizeof(field_t));
+              datafields[varID][levelID] = (double **) malloc(nts*sizeof(double *));
               for ( tsID = 0; tsID < nts; tsID++ )
                 {
-                  datafields[varID][levelID][tsID].grid    = gridID1;
-                  datafields[varID][levelID][tsID].nmiss   = 0;
-                  datafields[varID][levelID][tsID].missval = missval;
-                  datafields[varID][levelID][tsID].ptr     = (double *) malloc(gridsize*sizeof(double));
+                  //datafields[varID][levelID][tsID].grid    = gridID1;
+                  //datafields[varID][levelID][tsID].nmiss   = 0;
+                  //datafields[varID][levelID][tsID].missval = missval;
+                  datafields[varID][levelID][tsID]    = (double *) malloc(gridsize*sizeof(double));
                   for ( i = 0; i < gridsize; ++i )
-                    datafields[varID][levelID][tsID].ptr[i] = 0;
+                    datafields[varID][levelID][tsID][i] = 0;
                 }
               datacounts[varID][levelID] = (int *) malloc(gridsize*sizeof(int));	      
 	      for(i=0;i<gridsize;i++)
 		datacounts[varID][levelID][i] = 0;
             }
 
-          eigenvectors[varID][levelID] = (field_t *) malloc(n_eig*sizeof(field_t));
-          eigenvalues[varID][levelID]  = (field_t *) malloc(n*sizeof(field_t));
+          eigenvectors[varID][levelID] = (double **) malloc(n_eig*sizeof(double *));
+          eigenvalues[varID][levelID]  = (double **) malloc(n*sizeof(double *));
 
           for ( i = 0; i < n; i++ )
             {
               if ( i < n_eig )
                 {
-                  eigenvectors[varID][levelID][i].grid    = gridID2;
-                  eigenvectors[varID][levelID][i].nmiss   = 0;
-                  eigenvectors[varID][levelID][i].missval = missval;
-                  eigenvectors[varID][levelID][i].ptr     = (double *) malloc(gridsize*sizeof(double));
+                  eigenvectors[varID][levelID][i] = (double *) malloc(gridsize*sizeof(double));
                   for ( ii = 0; ii < gridsize; ++ii )
-                    eigenvectors[varID][levelID][i].ptr[ii] = missval;
+                    eigenvectors[varID][levelID][i][ii] = missval;
                 }
 
-              eigenvalues[varID][levelID][i].grid    = gridID3;
-              eigenvalues[varID][levelID][i].nmiss   = 0;
-              eigenvalues[varID][levelID][i].missval = missval;
-              eigenvalues[varID][levelID][i].ptr     = (double *) malloc(1*sizeof(double));
-              eigenvalues[varID][levelID][i].ptr[0]  = missval;
+              eigenvalues[varID][levelID][i] = (double *) malloc(1*sizeof(double));
+              eigenvalues[varID][levelID][i][0]  = missval;
             }
         }
     }
 
   if ( cdoVerbose )
-    cdoPrint("Allocated eigenvalue/eigenvector structures with nts=%i gridsize=%i",nts,gridsize);
+    cdoPrint("Allocated eigenvalue/eigenvector structures with nts=%i gridsize=%i", nts, gridsize);
 
   if ( cdoTimer ) timer_stop(timer_alloc);
   if ( cdoTimer ) timer_start(timer_read);
@@ -375,8 +334,8 @@ void *EOFs(void * argument)
           streamInqRecord(streamID1, &varID, &levelID);
           gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
 
-          missval  = in.missval = vlistInqVarMissval(vlistID1, varID);
-          streamReadRecord(streamID1, in.ptr, &in.nmiss);
+          missval = vlistInqVarMissval(vlistID1, varID);
+          streamReadRecord(streamID1, in, &nmiss);
 
           if ( grid_space )
             {
@@ -388,10 +347,11 @@ void *EOFs(void * argument)
                 {
                   for ( i2 = i1; i2 < gridsize; i2++ )
                     {
-                      if ( ( ! DBL_IS_EQUAL(in.ptr[i1], missval) ) &&
-			   ( ! DBL_IS_EQUAL(in.ptr[i2], missval) ) )
+                      if ( nmiss == 0 ||
+			   (( ! DBL_IS_EQUAL(in[i1], missval) ) &&
+			    ( ! DBL_IS_EQUAL(in[i2], missval) )) )
                         {
-                          datafields[varID][levelID][0].ptr[i1*gridsize+i2] += in.ptr[i1]*in.ptr[i2];
+                          datafields[varID][levelID][0][i1*gridsize+i2] += in[i1]*in[i2];
                           datacounts[varID][levelID][i1*gridsize+i2]++;
                         }
                       else if ( missval_warning == 0 )
@@ -406,9 +366,9 @@ void *EOFs(void * argument)
 	    {
 	      for ( i=0; i<gridsize; ++i )
 		{
-		  if ( ! DBL_IS_EQUAL(in.ptr[i], missval ) )
+		  if ( ! DBL_IS_EQUAL(in[i], missval ) )
 		    {
-		      datafields[varID][levelID][tsID].ptr[i] = in.ptr[i];
+		      datafields[varID][levelID][tsID][i] = in[i];
 		      datacounts[varID][levelID][i]++;
 		    }
 		  else
@@ -419,7 +379,7 @@ void *EOFs(void * argument)
 			  cdoWarning("Does not work with changing locations of missing values in time.");
 			  missval_warning = 1;
 			}
-		      datafields[varID][levelID][tsID].ptr[i] = 0;
+		      datafields[varID][levelID][tsID][i] = 0;
 		    }
 		}
 	    }
@@ -427,12 +387,15 @@ void *EOFs(void * argument)
       tsID++;
     }
 
+  if ( tsID == 1 )
+    cdoAbort("File consists of only one timestep!");
+
   if ( grid_space )
     for ( i1 = 0; i1 < gridsize; ++i1 )
       for ( i2 = 0; i2 < i1; ++i2 )
         {
-          datafields[varID][levelID][0].ptr[i1*gridsize+i2] = datafields[varID][levelID][0].ptr[i2*gridsize+i1];
-          datacounts[varID][levelID][i1*gridsize+i2]        = datacounts[varID][levelID][i2*gridsize+i1];
+          datafields[varID][levelID][0][i1*gridsize+i2] = datafields[varID][levelID][0][i2*gridsize+i1];
+          datacounts[varID][levelID][i1*gridsize+i2]    = datacounts[varID][levelID][i2*gridsize+i1];
         }
 
   /*
@@ -444,19 +407,13 @@ void *EOFs(void * argument)
 
   for ( varID = 0; varID < nvars; varID++ )
     {
-      char vname[64];
-      vlistInqVarName(vlistID1,varID,&vname[0]);
+      char vname[256];
+      vlistInqVarName(vlistID1, varID, vname);
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
       nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 
-      if ( cdoVerbose )  {
-	char *vname;
-	vname = (char *) malloc ( 64*sizeof(char) );
-	vlistInqVarName(vlistID1,varID,vname);
-	cdoPrint("Calculating cov matrices for %i levels of var%i (%s)",nlevs,varID,vname);
-	free(vname);
-      }
-	
+      if ( cdoVerbose )
+	cdoPrint("Calculating cov matrices for %i levels of var%i (%s)", nlevs, varID, vname);
 
       for ( levelID = 0; levelID < nlevs; levelID++ )
         {
@@ -478,32 +435,34 @@ void *EOFs(void * argument)
 
           if ( grid_space )
             {
-	      pack = (int *) malloc ( gridsize * sizeof(int) );
-	      miss = (int *) malloc ( gridsize * sizeof(int) );
+	      pack = (int *) malloc(gridsize*sizeof(int));
+	      miss = (int *) malloc(gridsize*sizeof(int));
 
               for ( i1 = 0; i1 < gridsize; i1++ )
                 {
-		  if (datacountv[i1*gridsize + i1] > 1) 
+		  if ( datacountv[i1*gridsize + i1] > 1 ) 
 		    pack[npack++] = i1;
 		  else
 		    miss[i1] = 1;
                 }
 
-              for(i1 = 0;i1 < npack; i1++)
+              for ( i1 = 0; i1 < npack; i1++ )
                 sum_w += weight[pack[i1]];
 
-              cov = (double **) malloc(npack*sizeof(double *));
 	      n = npack;
-              for (i1 = 0; i1 < npack; i1++ )
-                cov[i1] = (double*) malloc(npack*sizeof(double));
-	      eigv = (double *) malloc ( npack * sizeof(double));
-
+	      if ( npack )
+		{
+		  cov = (double **) malloc(npack*sizeof(double *));
+		  for (i1 = 0; i1 < npack; i1++ )
+		    cov[i1] = (double*) malloc(npack*sizeof(double));
+		  eigv = (double *) malloc(npack*sizeof(double));
+		}
 
               for (i1 = 0; i1 < npack; i1++)
 		for (i2 = i1; i2 < npack; i2++ )
 		  if ( datacountv[pack[i1]*gridsize+pack[i2]] )
 		    cov[i2][i1] = cov[i1][i2] =
-		      datafieldv[0].ptr[pack[i1]*gridsize+pack[i2]]*   // covariance
+		      datafieldv[0][pack[i1]*gridsize+pack[i2]]*   // covariance
 		      sqrt(weight[pack[i1]]) * sqrt (weight[pack[i2]]) / sum_w /       // weights
 		      (datacountv[pack[i1]*gridsize+pack[i2]]);   // number of data contributing
             }
@@ -539,8 +498,8 @@ void *EOFs(void * argument)
 		for ( j2 = j1; j2 < nts; j2++ )
 		  {
 		    sum = 0;
-		    df1p = datafieldv[j1].ptr;
-		    df2p = datafieldv[j2].ptr;
+		    df1p = datafieldv[j1];
+		    df2p = datafieldv[j2];
 		    for ( i = 0; i < npack; i++ )
 		      {
 			sum += weight[pack[i]]*df1p[pack[i]]*df2p[pack[i]];
@@ -568,14 +527,14 @@ void *EOFs(void * argument)
 	  
 	  if ( cdoTimer ) timer_start(timer_post);
           for (i = 0; i < n; i++) 
-            eigenvalues[varID][levelID][i].ptr[0] = eigv[i]*sum_w;
+            eigenvalues[varID][levelID][i][0] = eigv[i]*sum_w;
 
           for (i = 0; i < n_eig; i++)
             {
               if ( grid_space )
 		{
 		  for(j = 0; j < npack; j++)
-		    eigenvectors[varID][levelID][i].ptr[pack[j]] = 
+		    eigenvectors[varID][levelID][i][pack[j]] = 
 #ifdef OLD_IMPLEMENTATION
 		      cov[i][j] / sqrt(weight[pack[j]]);
 #else
@@ -591,9 +550,9 @@ void *EOFs(void * argument)
                     {
                       sum = 0;
                       for ( j = 0; j < nts; j++ )
-                        sum += datafieldv[j].ptr[pack[i2]] * cov[i][j];
+                        sum += datafieldv[j][pack[i2]] * cov[i][j];
 
-                      eigenvectors[varID][levelID][i].ptr[pack[i2]] = sum;
+                      eigenvectors[varID][levelID][i][pack[i2]] = sum;
                     }
                   // NORMALIZING
                   sum = 0;
@@ -612,8 +571,8 @@ void *EOFs(void * argument)
 #else
 		      sum += /*weight[pack[i2]] **/
 #endif
-		      eigenvectors[varID][levelID][i].ptr[pack[i2]] *
-		      eigenvectors[varID][levelID][i].ptr[pack[i2]];
+		      eigenvectors[varID][levelID][i][pack[i2]] *
+		      eigenvectors[varID][levelID][i][pack[i2]];
 		    }
 
                   if ( sum > 0 )
@@ -624,7 +583,7 @@ void *EOFs(void * argument)
   shared(npack,varID,levelID,i,pack,sum,eigenvectors)
 #endif
                       for( i2 = 0; i2 < npack; i2++ )
-                        eigenvectors[varID][levelID][i].ptr[pack[i2]] /= sum;
+                        eigenvectors[varID][levelID][i][pack[i2]] /= sum;
                     }
                   else
 		    {
@@ -633,7 +592,7 @@ void *EOFs(void * argument)
   shared(npack,varID,levelID,i,pack,sum,eigenvectors,missval)
 #endif
 		      for( i2 = 0; i2 < npack; i2++ )
-			eigenvectors[varID][levelID][i].ptr[pack[i2]] = missval;
+			eigenvectors[varID][levelID][i][pack[i2]] = missval;
 		    }
                 } // else if ( time_space )
             } // for ( i = 0; i < n_eig; i++ )
@@ -649,7 +608,41 @@ void *EOFs(void * argument)
         } // for ( levelID = 0; levelID < nlevs; levelID++ )
     } // for ( varID = 0; varID < nvars; varID++ )
 
+
   /* write files with eigenvalues (ID3) and eigenvectors (ID2) */
+
+  /* eigenvalues */
+  streamID2   = streamOpenWrite(cdoStreamName(1), cdoFiletype());
+
+  vlistID2    = vlistDuplicate(vlistID1);
+  taxisID2    = taxisDuplicate(taxisID1);
+  taxisDefRdate(taxisID2, 0);
+  taxisDefRtime(taxisID2, 0);
+  vlistDefTaxis(vlistID2, taxisID2);
+  gridID2     = gridCreate(GRID_LONLAT, 1);
+  gridDefXsize(gridID2, 1);
+  gridDefYsize(gridID2, 1);
+  xvals    = 0;
+  yvals    = 0;
+  gridDefXvals(gridID2, &xvals);
+  gridDefYvals(gridID2, &yvals);
+  ngrids   = vlistNgrids(vlistID2);
+  for ( i = 0; i < ngrids; i++ )
+    vlistChangeGridIndex(vlistID2, i, gridID2);
+
+  /*  eigenvectors */
+  streamID3   = streamOpenWrite(cdoStreamName(2), cdoFiletype());
+
+  vlistID3    = vlistDuplicate(vlistID1);
+  taxisID3    = taxisDuplicate(taxisID1);
+  gridID3     = gridDuplicate(gridID1);
+  taxisDefRdate(taxisID3, 0);
+  taxisDefRtime(taxisID3, 0);
+  vlistDefTaxis(vlistID3, taxisID3);
+
+
+  if ( cdoVerbose )
+    cdoPrint("Initialized streams");
 
   if ( cdoTimer ) timer_start(timer_write);
 
@@ -686,16 +679,16 @@ void *EOFs(void * argument)
                 {
                   nmiss = 0;
                   for ( i = 0; i < gridsize; i++ )
-                    if ( DBL_IS_EQUAL(eigenvectors[varID][levelID][tsID].ptr[i], missval) ) nmiss++;
+                    if ( DBL_IS_EQUAL(eigenvectors[varID][levelID][tsID][i], missval) ) nmiss++;
 
                   streamDefRecord(streamID3, varID, levelID);
-                  streamWriteRecord(streamID3, eigenvectors[varID][levelID][tsID].ptr, nmiss);
+                  streamWriteRecord(streamID3, eigenvectors[varID][levelID][tsID], nmiss);
                 }
 
-              if ( DBL_IS_EQUAL(eigenvalues[varID][levelID][tsID].ptr[0], missval) ) nmiss = 1;
+              if ( DBL_IS_EQUAL(eigenvalues[varID][levelID][tsID][0], missval) ) nmiss = 1;
               else nmiss = 0;
               streamDefRecord(streamID2, varID, levelID);
-              streamWriteRecord(streamID2, eigenvalues[varID][levelID][tsID].ptr,nmiss);
+              streamWriteRecord(streamID2, eigenvalues[varID][levelID][tsID], nmiss);
 
             }
         }
@@ -711,8 +704,6 @@ void *EOFs(void * argument)
   
   for ( varID = 0; varID < nvars; varID++)
     {
-      char vname[64];
-      vlistInqVarName(vlistID1,varID,&vname[0]);
       nlevs    = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
       gridsize =  gridInqSize(vlistInqVarGrid(vlistID1, varID));
       
@@ -722,16 +713,16 @@ void *EOFs(void * argument)
           for(i = 0; i < n_use; i++)
             {
               if ( i < n_eig ) 
-                if (eigenvectors[varID][levelID][i].ptr)
-		  free(eigenvectors[varID][levelID][i].ptr);
-	      if (eigenvalues[varID][levelID][i].ptr)
-		free(eigenvalues[varID][levelID][i].ptr);
+                if (eigenvectors[varID][levelID][i])
+		  free(eigenvectors[varID][levelID][i]);
+	      if (eigenvalues[varID][levelID][i])
+		free(eigenvalues[varID][levelID][i]);
 	    }
 	  if ( grid_space ) 
-	    free(datafields[varID][levelID][0].ptr);
+	    free(datafields[varID][levelID][0]);
 	  else if ( time_space )
 	    for (tsID=0; tsID<nts; tsID++ )
-	      free(datafields[varID][levelID][tsID].ptr);
+	      free(datafields[varID][levelID][tsID]);
           free(eigenvectors[varID][levelID]);
           free(eigenvalues[varID][levelID]);
           free(datacounts[varID][levelID]);
@@ -748,10 +739,8 @@ void *EOFs(void * argument)
   free(eigenvalues);
   free(datafields);
   free(datacounts);
-  free(in.ptr);
+  free(in);
   free(weight);
-  free(xvals);
-  free(yvals);
 
 
   streamClose(streamID3);

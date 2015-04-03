@@ -142,7 +142,7 @@ void *Runpctl(void *argument)
     {
       for ( varID = 0; varID < nvars; varID++ )
         {
-          if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+          if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
           
           gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
           missval  = vlistInqVarMissval(vlistID1, varID);
@@ -185,7 +185,7 @@ void *Runpctl(void *argument)
           varID    = recVarID[recID];
           levelID  = recLevelID[recID];
 
-	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	  if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, vars1[0][varID][levelID].ptr, vars1[0][varID][levelID].nmiss);

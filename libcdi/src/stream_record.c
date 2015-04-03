@@ -360,7 +360,7 @@ void streamReadRecord(int streamID, double *data, int *nmiss)
 }
 
 
-void streamWriteRecord(int streamID, const double *data, int nmiss)
+void stream_write_record(int streamID, int memtype, const void *data, int nmiss)
 {
   int status = 0;
   int filetype;
@@ -380,6 +380,7 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
     case FILETYPE_GRB:
     case FILETYPE_GRB2:
       {
+        if ( memtype == MEMTYPE_FLOAT ) Error("grbWriteRecord not implemented for memtype float!");
         status = grbWriteRecord(streamID, data, nmiss);
 	break;
       }
@@ -387,6 +388,7 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
 #if  defined  (HAVE_LIBSERVICE)
     case FILETYPE_SRV:
       {
+        if ( memtype == MEMTYPE_FLOAT ) Error("srvWriteRecord not implemented for memtype float!");
         status = srvWriteRecord(streamID, data);
 	break;
       }
@@ -394,6 +396,7 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
 #if  defined  (HAVE_LIBEXTRA)
     case FILETYPE_EXT:
       {
+        if ( memtype == MEMTYPE_FLOAT ) Error("extWriteRecord not implemented for memtype float!");
         status = extWriteRecord(streamID, data);
 	break;
       }
@@ -401,6 +404,7 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
 #if  defined  (HAVE_LIBIEG)
     case FILETYPE_IEG:
       {
+        if ( memtype == MEMTYPE_FLOAT ) Error("iegWriteRecord not implemented for memtype float!");
         status = iegWriteRecord(streamID, data);
 	break;
       }
@@ -411,7 +415,7 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
     case FILETYPE_NC4:
     case FILETYPE_NC4C:
       {
-	cdfWriteRecord(streamID, data, nmiss);
+	cdf_write_record(streamID, memtype, data, nmiss);
 	break;
       }
 #endif
@@ -421,6 +425,17 @@ void streamWriteRecord(int streamID, const double *data, int nmiss)
 	break;
       }
     }
+}
+
+
+void streamWriteRecord(int streamID, const double *data, int nmiss)
+{
+  stream_write_record(streamID, MEMTYPE_DOUBLE, (const void *) data, nmiss);
+}
+
+void streamWriteRecordF(int streamID, const float *data, int nmiss)
+{
+  stream_write_record(streamID, MEMTYPE_FLOAT, (const void *) data, nmiss);
 }
 
 
@@ -523,7 +538,7 @@ void cdiCreateRecords(int streamID, int tsID)
 	{
 	  varID = streamptr->tsteps[0].records[recID].varID;
 	  if ( varID != -1 ) /* varID = -1 for write mode !!! */
-	    if ( vlistInqVarTime(vlistID, varID) == TIME_CONSTANT )
+	    if ( vlistInqVarTsteptype(vlistID, varID) == TSTEP_CONSTANT )
 	      continue;
 	  nrecords++;
 	}
@@ -555,7 +570,7 @@ void cdiCreateRecords(int streamID, int tsID)
 	{
 	  varID = streamptr->tsteps[0].records[recID].varID;
 	  if ( varID != -1 ) /* varID = -1 for write mode !!! */
-	    if ( vlistInqVarTime(vlistID, varID) == TIME_VARIABLE )
+	    if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
 	      {
 		streamptr->tsteps[tsID].records[recID].position = CDI_UNDEFID;
 		streamptr->tsteps[tsID].records[recID].size     = 0;

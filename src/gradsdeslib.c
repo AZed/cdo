@@ -5,8 +5,6 @@
 #include <math.h>
 
 #include <cdi.h>
-/* #include "cdo.h" */
-/* #include "cdo_int.h" */
 #include "gradsdeslib.h"
 
 extern int cdoDefaultDataType;
@@ -29,6 +27,7 @@ void dsets_init(dsets_t *pfi)
   pfi->seqflg     = 0;
   pfi->yrflg      = 0;
   pfi->zrflg      = 0;
+  pfi->flt64      = 0;
   pfi->tmplat     = 0;
   pfi->pa2mb      = 0;
   pfi->calendar   = 0;
@@ -1351,6 +1350,7 @@ int read_gradsdes(char *filename, dsets_t *pfi)
 		  else if (cmpwrd("yrev",ch)) pfi->yrflg = 1;
 		  else if (cmpwrd("zrev",ch)) pfi->zrflg = 1;
 		  else if (cmpwrd("template",ch)) pfi->tmplat = 1;
+		  else if (cmpwrd("flt64",ch)) pfi->flt64 = 1;
 		  else if (cmpwrd("byteswapped",ch)) pfi->bswap = 1;
 #if GRIB2
 		  else if (cmpwrd("pascals",ch)) pfi->pa2mb = 1;
@@ -1958,7 +1958,10 @@ int read_gradsdes(char *filename, dsets_t *pfi)
       } 
       else if (pvar->dfrm ==  2 || pvar->dfrm == -2 ) {
 	pfi->xyhdr = pfi->xyhdr*4/2;
-      } 
+      }
+      else if (pfi->flt64) {
+        pfi->xyhdr = pfi->xyhdr*4/8;
+      }
       pfi->gsiz = pfi->gsiz + pfi->xyhdr;
     }
 
@@ -1981,7 +1984,10 @@ int read_gradsdes(char *filename, dsets_t *pfi)
 	pfi->gsiz += 4;
       } 
       else {
-	pfi->gsiz += 2;             
+	if (pfi->flt64)
+	  pfi->gsiz += 1;
+	else
+	  pfi->gsiz += 2;             
       }
       /* pad the header with 2 4-byte chunks*/
       if (hdrb>0) {

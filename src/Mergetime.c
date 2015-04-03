@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -40,7 +40,10 @@ void *Mergetime(void *argument)
   int gridsize;
   int nmiss;
   int vdate, vtime;
+  int last_vdate = -1, last_vtime = -1;
   int next_fileID;
+  int skip_same_time = FALSE;
+  char *envstr;
   const char *ofilename;
   double *array = NULL;
   typedef struct
@@ -56,6 +59,19 @@ void *Mergetime(void *argument)
   sfile_t *sf = NULL;
 
   cdoInitialize(argument);
+
+  envstr = getenv("SKIP_SAME_TIME");
+  if ( envstr )
+    {
+      int ival;
+      ival = atoi(envstr);
+      if ( ival == 1 )
+	{
+	  skip_same_time = TRUE;
+	  if ( cdoVerbose )
+	    cdoPrint("Set SKIP_SAME_TIME to %d", ival);
+	}
+    }
 
   if ( UNCHANGED_RECORD ) lcopy = TRUE;
 
@@ -129,12 +145,22 @@ void *Mergetime(void *argument)
 	      }
 	}
 
+      fileID = next_fileID;
+
       if ( cdoVerbose )
 	cdoPrint("nextstep = %d  vdate = %d  vtime = %d", next_fileID, vdate, vtime);
 
       if ( next_fileID == -1 ) break;
 
-      fileID = next_fileID;
+      if ( skip_same_time )
+	if ( vdate == last_vdate && vtime == last_vtime )
+	  {
+	    char vdatestr[32], vtimestr[32];
+	    date2str(vdate, vdatestr, sizeof(vdatestr));
+	    time2str(vtime, vtimestr, sizeof(vtimestr));
+	    cdoPrint("Timestep %4d in stream %d (%s %s) already exist, skipped!", sf[fileID].tsID+1, sf[fileID].streamID, vdatestr, vtimestr);
+	    goto SKIP_TIMESTEP;
+	  }
 
       if ( tsID2 == 0 )
 	{
@@ -146,6 +172,9 @@ void *Mergetime(void *argument)
 	      
 	  streamDefVlist(streamID2, vlistID2);
 	}
+
+      last_vdate = vdate;
+      last_vtime = vtime;
 
       taxisCopyTimestep(taxisID2, sf[fileID].taxisID);
 
@@ -166,7 +195,10 @@ void *Mergetime(void *argument)
 	      streamWriteRecord(streamID2, array, nmiss);
 	    }
 	}
+
       tsID2++;
+
+    SKIP_TIMESTEP:
 
       sf[fileID].nrecs = streamInqTimestep(sf[fileID].streamID, ++sf[fileID].tsID);
       if ( sf[fileID].nrecs == 0 )

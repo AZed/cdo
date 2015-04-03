@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,7 @@ void *Runstat(void *argument)
 {
   int operatorID;
   int operfunc;
-  int gridsize;
+  int gridsize, gridsizemax;
   int i;
   int varID;
   int recID;
@@ -93,15 +93,25 @@ void *Runstat(void *argument)
   int nmiss;
   int nvars, nlevel;
   int *recVarID, *recLevelID;
+  int *imask;
   double missval;
   field_t ***vars1 = NULL, ***vars2 = NULL, ***samp1 = NULL;
   datetime_t *datetime;
   int taxisID1, taxisID2;
   int calendar;
+  int runstat_nomiss = 0;
   int runstat_date = DATE_MIDDLE;
   char *envstr;
 
   cdoInitialize(argument);
+
+  envstr = getenv("RUNSTAT_NOMISS");
+  if ( envstr )
+    {
+      char *endptr;
+      int envval = (int) strtol(envstr, &endptr, 10);
+      if ( envval == 1 ) runstat_nomiss = 1;
+    }
 
   envstr = getenv("RUNSTAT_DATE");
   if ( envstr )
@@ -164,14 +174,16 @@ void *Runstat(void *argument)
 
   datetime = (datetime_t *) malloc((ndates+1)*sizeof(datetime_t));
   vars1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
-  samp1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
+  if ( !runstat_nomiss )
+    samp1 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
   if ( operfunc == func_std || operfunc == func_var )
     vars2 = (field_t ***) malloc((ndates+1)*sizeof(field_t **));
 
   for ( its = 0; its < ndates; its++ )
     {
       vars1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
-      samp1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
+      if ( !runstat_nomiss )
+	samp1[its] = (field_t **) malloc(nvars*sizeof(field_t *));
       if ( operfunc == func_std || operfunc == func_var )
 	vars2[its] = (field_t **) malloc(nvars*sizeof(field_t *));
 
@@ -183,7 +195,8 @@ void *Runstat(void *argument)
 	  missval  = vlistInqVarMissval(vlistID1, varID);
 
 	  vars1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
-	  samp1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
+	  if ( !runstat_nomiss )
+	    samp1[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 	  if ( operfunc == func_std || operfunc == func_var )
 	    vars2[its][varID] = (field_t *)  malloc(nlevel*sizeof(field_t));
 
@@ -193,10 +206,14 @@ void *Runstat(void *argument)
 	      vars1[its][varID][levelID].nmiss   = 0;
 	      vars1[its][varID][levelID].missval = missval;
 	      vars1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
-	      samp1[its][varID][levelID].grid    = gridID;
-	      samp1[its][varID][levelID].nmiss   = 0;
-	      samp1[its][varID][levelID].missval = missval;
-	      samp1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
+	      if ( !runstat_nomiss )
+		{
+		  samp1[its][varID][levelID].grid    = gridID;
+		  samp1[its][varID][levelID].nmiss   = 0;
+		  samp1[its][varID][levelID].missval = missval;
+		  samp1[its][varID][levelID].ptr     = (double *) malloc(gridsize*sizeof(double));
+		}
+
 	      if ( operfunc == func_std || operfunc == func_var )
 		{
 		  vars2[its][varID][levelID].grid    = gridID;
@@ -207,6 +224,9 @@ void *Runstat(void *argument)
 	    }
 	}
     }
+
+  gridsizemax = vlistGridsizeMax(vlistID1);
+  imask = (int *) malloc(gridsizemax*sizeof(int));
 
   for ( tsID = 0; tsID < ndates; tsID++ )
     {
@@ -230,22 +250,39 @@ void *Runstat(void *argument)
 	  streamReadRecord(streamID1, vars1[tsID][varID][levelID].ptr, &nmiss);
 	  vars1[tsID][varID][levelID].nmiss = nmiss;
 
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
-	  missval = vars1[ndates-1][varID][levelID].missval;
+	  if ( runstat_nomiss && nmiss > 0 ) cdoAbort("Missing values supported swichted off!");
 
-	  for ( i = 0; i < gridsize; i++ )
-	    if ( DBL_IS_EQUAL(vars1[tsID][varID][levelID].ptr[i], missval) )
-	      samp1[tsID][varID][levelID].ptr[i] = 0;
-	    else
-	      {
-		samp1[tsID][varID][levelID].ptr[i] = 1;
-		for ( inp = 0; inp < tsID; inp++ )
-		  samp1[inp][varID][levelID].ptr[i]++;
-	      }
+	  if ( !runstat_nomiss )
+	    {
+	      gridsize = gridInqSize(vars1[0][varID][levelID].grid);
+	      missval  = vars1[0][varID][levelID].missval;
+
+	      for ( i = 0; i < gridsize; i++ )
+		if ( DBL_IS_EQUAL(vars1[tsID][varID][levelID].ptr[i], missval) )
+		  imask[i] = 0;
+		else
+		  imask[i] = 1;
+
+	      for ( i = 0; i < gridsize; i++ )
+		samp1[tsID][varID][levelID].ptr[i] = (double) imask[i];
+
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared) private(i, inp)
+#endif
+	      for ( inp = 0; inp < tsID; inp++ )
+		{
+		  double *ptr = samp1[inp][varID][levelID].ptr;
+		  for ( i = 0; i < gridsize; i++ )
+		    if ( imask[i] > 0 ) ptr[i]++;
+		}
+	    }
 
 	  if ( operfunc == func_std || operfunc == func_var )
 	    {
 	      farmoq(&vars2[tsID][varID][levelID], vars1[tsID][varID][levelID]);
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared)
+#endif
 	      for ( inp = 0; inp < tsID; inp++ )
 		{
 		  farsumq(&vars2[inp][varID][levelID], vars1[tsID][varID][levelID]);
@@ -254,6 +291,9 @@ void *Runstat(void *argument)
 	    }
 	  else
 	    {
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared)
+#endif
 	      for ( inp = 0; inp < tsID; inp++ )
 		{
 		  farfun(&vars1[inp][varID][levelID], vars1[tsID][varID][levelID], operfunc);
@@ -268,11 +308,11 @@ void *Runstat(void *argument)
       if ( operfunc == func_mean || operfunc == func_avg )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
-	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
+	    nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
 	      {
-		if ( samp1[0][varID][levelID].ptr == NULL )
+		if ( runstat_nomiss )
 		  farcmul(&vars1[0][varID][levelID], 1.0/ndates);
 		else
 		  fardiv(&vars1[0][varID][levelID], samp1[0][varID][levelID]);
@@ -281,11 +321,11 @@ void *Runstat(void *argument)
       else if ( operfunc == func_std || operfunc == func_var )
 	for ( varID = 0; varID < nvars; varID++ )
 	  {
-	    if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
-	    nlevel   = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
+	    if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
+	    nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID1, varID));
 	    for ( levelID = 0; levelID < nlevel; levelID++ )
 	      {
-		if ( samp1[0][varID][levelID].ptr == NULL )
+		if ( runstat_nomiss )
 		  {
 		    if ( operfunc == func_std )
 		      farcstd(&vars1[0][varID][levelID], vars2[0][varID][levelID], 1.0/ndates);
@@ -327,7 +367,7 @@ void *Runstat(void *argument)
 	  varID    = recVarID[recID];
 	  levelID  = recLevelID[recID];
 
-	  if ( otsID && vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT ) continue;
+	  if ( otsID && vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT ) continue;
 
 	  streamDefRecord(streamID2, varID, levelID);
 	  streamWriteRecord(streamID2, vars1[0][varID][levelID].ptr, vars1[0][varID][levelID].nmiss);
@@ -337,7 +377,8 @@ void *Runstat(void *argument)
 
       datetime[ndates] = datetime[0];
       vars1[ndates] = vars1[0];
-      samp1[ndates] = samp1[0];
+      if ( !runstat_nomiss )
+	samp1[ndates] = samp1[0];
       if ( operfunc == func_std || operfunc == func_var )
         vars2[ndates] = vars2[0];
 
@@ -345,7 +386,8 @@ void *Runstat(void *argument)
 	{
 	  datetime[inp] = datetime[inp+1];
 	  vars1[inp] = vars1[inp+1];
-	  samp1[inp] = samp1[inp+1];
+	  if ( !runstat_nomiss )
+	    samp1[inp] = samp1[inp+1];
 	  if ( operfunc == func_std || operfunc == func_var )
 	    vars2[inp] = vars2[inp+1];
 	}
@@ -363,30 +405,50 @@ void *Runstat(void *argument)
 	  streamReadRecord(streamID1, vars1[ndates-1][varID][levelID].ptr, &nmiss);
 	  vars1[ndates-1][varID][levelID].nmiss = nmiss;
 
-	  gridsize = gridInqSize(vlistInqVarGrid(vlistID1, varID));
-	  missval = vars1[ndates-1][varID][levelID].missval;
+	  if ( runstat_nomiss && nmiss > 0 ) cdoAbort("Missing values supported swichted off!");
 
-	  for ( i = 0; i < gridsize; i++ )
-	    if ( DBL_IS_EQUAL(vars1[ndates-1][varID][levelID].ptr[i], missval) )
-	      samp1[ndates-1][varID][levelID].ptr[i] = 0;
-	    else
-	      {
-		samp1[ndates-1][varID][levelID].ptr[i] = 1;
-		for ( inp = 0; inp < ndates-1; inp++ )
-		  samp1[inp][varID][levelID].ptr[i]++;
-	      }
+	  if ( !runstat_nomiss )
+	    {
+	      gridsize = gridInqSize(vars1[0][varID][levelID].grid);
+	      missval  = vars1[0][varID][levelID].missval;
+
+	      for ( i = 0; i < gridsize; i++ )
+		if ( DBL_IS_EQUAL(vars1[ndates-1][varID][levelID].ptr[i], missval) )
+		  imask[i] = 0;
+		else
+		  imask[i] = 1;
+
+	      for ( i = 0; i < gridsize; i++ )
+		samp1[ndates-1][varID][levelID].ptr[i] = (double) imask[i];
+
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared) private(i, inp)
+#endif
+	      for ( inp = 0; inp < ndates-1; inp++ )
+		{
+		  double *ptr = samp1[inp][varID][levelID].ptr;
+		  for ( i = 0; i < gridsize; i++ )
+		    if ( imask[i] > 0 ) ptr[i]++;
+		}
+	    }
 
 	  if ( operfunc == func_std || operfunc == func_var )
 	    {
+	      farmoq(&vars2[ndates-1][varID][levelID], vars1[ndates-1][varID][levelID]);
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared)
+#endif
 	      for ( inp = 0; inp < ndates-1; inp++ )
 		{
 		  farsumq(&vars2[inp][varID][levelID], vars1[ndates-1][varID][levelID]);
 		  farsum(&vars1[inp][varID][levelID], vars1[ndates-1][varID][levelID]);
 		}
-	      farmoq(&vars2[ndates-1][varID][levelID], vars1[ndates-1][varID][levelID]);
 	    }
 	  else
 	    {
+#if defined (_OPENMP)
+#pragma omp parallel for default(shared)
+#endif
 	      for ( inp = 0; inp < ndates-1; inp++ )
 		{
 		  farfun(&vars1[inp][varID][levelID], vars1[ndates-1][varID][levelID], operfunc);
@@ -405,27 +467,28 @@ void *Runstat(void *argument)
 	  for ( levelID = 0; levelID < nlevel; levelID++ )
 	    {
 	      free(vars1[its][varID][levelID].ptr);
-	      if ( samp1[its][varID][levelID].ptr ) free(samp1[its][varID][levelID].ptr);
+	      if ( !runstat_nomiss ) free(samp1[its][varID][levelID].ptr);
 	      if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID][levelID].ptr);
 	    }
 
 	  free(vars1[its][varID]);
-	  free(samp1[its][varID]);
+	  if ( !runstat_nomiss ) free(samp1[its][varID]);
 	  if ( operfunc == func_std || operfunc == func_var ) free(vars2[its][varID]);
 	}
 
       free(vars1[its]);
-      free(samp1[its]);
+      if ( !runstat_nomiss ) free(samp1[its]);
       if ( operfunc == func_std || operfunc == func_var ) free(vars2[its]);
     }
 
   free(datetime);
   free(vars1);
-  free(samp1);
+  if ( !runstat_nomiss ) free(samp1);
   if ( operfunc == func_std || operfunc == func_var ) free(vars2);
 
   if ( recVarID   ) free(recVarID);
   if ( recLevelID ) free(recLevelID);
+  if ( imask )      free(imask);
 
   streamClose(streamID2);
   streamClose(streamID1);

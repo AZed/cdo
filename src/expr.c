@@ -712,7 +712,7 @@ int exNode(nodeType *p, parse_parm_t *parse_arg)
 
 nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 {
-  int gridID1 = -1, zaxisID1 = -1, timeID1 = -1;
+  int gridID1 = -1, zaxisID1 = -1, tsteptype1 = -1;
   double missval = 0;
   char varname[256];
   int varID, nvars;
@@ -767,7 +767,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 
 	      gridID1  = vlistInqVarGrid(parse_arg->vlistID1, varID);
 	      zaxisID1 = vlistInqVarZaxis(parse_arg->vlistID1, varID);
-	      timeID1  = vlistInqVarTime(parse_arg->vlistID1, varID);
+	      tsteptype1  = vlistInqVarTsteptype(parse_arg->vlistID1, varID);
 	      missval  = vlistInqVarMissval(parse_arg->vlistID1, varID);
 
 	      parse_arg->missval2 = missval;
@@ -778,8 +778,8 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	      if ( parse_arg->zaxisID2 == -1 )
 		parse_arg->zaxisID2 = zaxisID1;
 
-	      if ( parse_arg->timeID2 == -1 || parse_arg->timeID2 == TIME_CONSTANT )
-		parse_arg->timeID2 = timeID1;
+	      if ( parse_arg->tsteptype2 == -1 || parse_arg->tsteptype2 == TSTEP_CONSTANT )
+		parse_arg->tsteptype2 = tsteptype1;
 	    }
 	}
 	/* else */
@@ -819,7 +819,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
         case '=':
 	  parse_arg->gridID2  = -1;
 	  parse_arg->zaxisID2 = -1;
-          parse_arg->timeID2  = -1;
+          parse_arg->tsteptype2  = -1;
 
 	  rnode = expr_run(p->u.opr.op[1], parse_arg);
 
@@ -831,10 +831,10 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 	      if ( p->u.opr.op[1]->type != typeVar )
 		cdoAbort("Operand not variable!");
 	      */
-	      if ( parse_arg->gridID2 == -1 || parse_arg->zaxisID2 == -1 || parse_arg->timeID2 == -1 )
+	      if ( parse_arg->gridID2 == -1 || parse_arg->zaxisID2 == -1 || parse_arg->tsteptype2 == -1 )
 		cdoAbort("Operand not variable!");
 
-	      varID = vlistDefVar(parse_arg->vlistID2, parse_arg->gridID2, parse_arg->zaxisID2, parse_arg->timeID2);
+	      varID = vlistDefVar(parse_arg->vlistID2, parse_arg->gridID2, parse_arg->zaxisID2, parse_arg->tsteptype2);
 	      vlistDefVarName(parse_arg->vlistID2, varID, p->u.opr.op[0]->u.var.nm);
 	      vlistDefVarMissval(parse_arg->vlistID2, varID, parse_arg->missval2);
 	    }
@@ -858,7 +858,7 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 		{
 		  parse_arg->gridID2  = vlistInqVarGrid(parse_arg->vlistID2, varID);
 		  parse_arg->zaxisID2 = vlistInqVarZaxis(parse_arg->vlistID2, varID);
-		  parse_arg->timeID2  = vlistInqVarTime(parse_arg->vlistID2, varID);
+		  parse_arg->tsteptype2  = vlistInqVarTsteptype(parse_arg->vlistID2, varID);
 		  missval  = vlistInqVarMissval(parse_arg->vlistID2, varID);
 	      
 		  p->gridID  = parse_arg->gridID2;

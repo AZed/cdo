@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -212,14 +212,14 @@ void *Trms(void *argument)
 	  single   = vardata1[varID] + offset;
 
 	  streamReadRecord(streamID1, single, &nmiss);
-	  if ( nmiss ) cdoAbort("missing values unsupported for this operator!");
+	  if ( nmiss ) cdoAbort("Missing values unsupported for this operator!");
 
 	  streamInqRecord(streamID2, &varID, &levelID);
 
 	  single   = vardata2[varID] + offset;
 
 	  streamReadRecord(streamID2, single, &nmiss);
-	  if ( nmiss ) cdoAbort("this operator does not work with missing values!");
+	  if ( nmiss ) cdoAbort("Missing values unsupported for this operator!");
 	}
 
       gridsize = gridInqSize(vlistInqVarGrid(vlistID1, pvarID));

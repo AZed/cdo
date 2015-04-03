@@ -5,7 +5,6 @@ includedir=@includedir@
 cflags=-I@includedir@
 fcflags=@FPP_INCOPT@@includedir@ @CDI_F90_INTERFACE_FCFLAGS@
 libs=-L@libdir@ -lcdi @GRIB_API_LIBS@ @JASPER_LIBS@ @NETCDF_LIBS@ @HDF5_LIBS@ @SZLIB_LIBS@ @ZLIB_LIBS@ @THREADS_LIBS@
-netcdf_root=@NETCDF_ROOT@
 threads_libs=@THREADS_LIBS@
 threads_cflags=@THREADS_INCLUDE@
 zlib_cflags=@ZLIB_INCLUDE@

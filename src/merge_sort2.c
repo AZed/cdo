@@ -53,14 +53,14 @@ void sort_par(long num_links, double *restrict add1, int parent, int par_depth)
                            the recursion depth and determine the actual position of the
 			   sub-array within the original array 
   */
-
-  const int nsplit = 2;                      /* (only 2 allowed) number of segments to split 
+#define NSPLIT 2
+  int nsplit = NSPLIT;                      /* (only 2 allowed) number of segments to split 
 						the data */
-  int nl[nsplit];                            /* number of links in each sub-array              */
+  int nl[NSPLIT];                            /* number of links in each sub-array              */
   int who_am_i,depth,my_depth;               /* current depth, depth of children and index
 						to be parent in next call to sort_par          */
-  int add_srt[nsplit], add_end[nsplit];      /* arrays for start and end index of sub array    */
-  double *add1s[nsplit];                     /* pointers to sub arrays for sort and merge step */
+  int add_srt[NSPLIT], add_end[NSPLIT];      /* arrays for start and end index of sub array    */
+  double *add1s[NSPLIT];                     /* pointers to sub arrays for sort and merge step */
   double *tmp;                               /* pointer to buffer for merging of address lists */
   long *idx;                                 /* index list to merge sub-arrays                 */
   long i;   
@@ -319,6 +319,10 @@ void sort_iter_single(long num_links, double *restrict add1, int parent)
 		     been called before
 		   + determines number of threads to use on first call of sort_iter(...)
   */
+
+  static int MERGE_SORT_LIMIT_SIZE = 16384; 
+  static int first_sort_iter_call = 1;
+  static double merge_time;
 
   int par_depth = 1;
               

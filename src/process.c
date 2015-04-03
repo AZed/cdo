@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2010 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -82,6 +82,7 @@ process_t;
 static process_t Process[MAX_PROCESS];
 
 static int NumProcess = 0;
+static int NumProcessActive = 0;
 
 #if  defined  (HAVE_LIBPTHREAD)
 pthread_mutex_t processMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -96,6 +97,7 @@ int processCreate(void)
   pthread_mutex_lock(&processMutex);
 #endif
   processID = NumProcess++;
+  NumProcessActive++;
 #if  defined  (HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
 #endif
@@ -161,6 +163,24 @@ int processNums(void)
 #endif
 
   pnums = NumProcess;
+
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_unlock(&processMutex);  
+#endif
+
+  return (pnums);
+}
+
+
+int processNumsActive(void)
+{
+  int pnums = 0;
+
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_lock(&processMutex);
+#endif
+
+  pnums = NumProcessActive;
 
 #if  defined  (HAVE_LIBPTHREAD)
   pthread_mutex_unlock(&processMutex);  
@@ -688,7 +708,14 @@ void processDelete(void)
 {
   int processID = processSelf();
 
-  /* printf("delete processID %d\n", processID); */
+  //fprintf(stderr, "delete processID %d\n", processID);
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_lock(&processMutex);
+#endif
+  NumProcessActive--;
+#if  defined  (HAVE_LIBPTHREAD)
+  pthread_mutex_unlock(&processMutex);  
+#endif
 }
 
 

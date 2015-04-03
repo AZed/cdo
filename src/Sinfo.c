@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 
 #include "printinfo.h"
 
+#define MAXCHARS 82
 
 void *Sinfo(void *argument)
 {
@@ -42,7 +43,7 @@ void *Sinfo(void *argument)
   int nrecs, nvars, nzaxis, ntsteps;
   int levelID, levelsize;
   int tsID, ntimeout;
-  int timeID, taxisID;
+  int tsteptype, taxisID;
   int nbyte, nbyte0;
   int index;
   char varname[CDI_MAX_NAME];
@@ -77,13 +78,13 @@ void *Sinfo(void *argument)
 
       if ( operatorID == SINFON )
 	fprintf(stdout,
-		"%6d : Institut Source   Name        Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source   Name        Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
       else if ( operatorID == SINFOC )
 	fprintf(stdout,
-		"%6d : Institut Source  Table Code   Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source  Table Code   Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
       else
 	fprintf(stdout,
-		"%6d : Institut Source   Param       Time Typ  Grid Size Num  Levels Num\n",  -(indf+1));
+		"%6d : Institut Source   Param       Ttype   Dtype  Gridsize Num  Levels Num\n",  -(indf+1));
 
       nvars = vlistNvars(vlistID);
 
@@ -105,13 +106,13 @@ void *Sinfo(void *argument)
 
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  if ( instptr )
-	    fprintf(stdout, "%-9s", instptr);
+	    fprintf(stdout, "%-8s ", instptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  if ( modelptr )
-	    fprintf(stdout, "%-9s", modelptr);
+	    fprintf(stdout, "%-8s ", modelptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
@@ -122,12 +123,13 @@ void *Sinfo(void *argument)
 	  else
 	    fprintf(stdout, "%-11s ", paramstr);
 
-	  timeID = vlistInqVarTime(vlistID, varID);
-
-	  if ( timeID == TIME_CONSTANT )
-	    fprintf(stdout, "con ");
-	  else
-	    fprintf(stdout, "var ");
+	  tsteptype = vlistInqVarTsteptype(vlistID, varID);
+	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s", "constant");
+	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s", "instant");
+	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s", "min");
+	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s", "max");
+	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s", "accum");
+	  else                                    fprintf(stdout, "%-8s", "unknown");
 
 	  datatype = vlistInqVarDatatype(vlistID, varID);
 
@@ -186,7 +188,7 @@ void *Sinfo(void *argument)
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {
-	      if ( nbyte > 80 )
+	      if ( nbyte > MAXCHARS )
 		{
 		  fprintf(stdout, "\n");
 		  fprintf(stdout, "%*s", nbyte0, "");
@@ -203,7 +205,7 @@ void *Sinfo(void *argument)
 	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
-		  if ( nbyte > 80 )
+		  if ( nbyte > MAXCHARS )
 		    {
 		      fprintf(stdout, "\n");
 		      fprintf(stdout, "%*s", nbyte0, "");
@@ -229,7 +231,7 @@ void *Sinfo(void *argument)
 
 	  if ( taxisID != CDI_UNDEFID )
 	    {
-	      int calendar, unit;
+	      int calendar, tunits;
 
 	      if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
 		{
@@ -241,26 +243,26 @@ void *Sinfo(void *argument)
 
 		  fprintf(stdout, "     RefTime = %s %s", vdatestr, vtimestr);
 		      
-		  unit = taxisInqTunit(taxisID);
-		  if ( unit != CDI_UNDEFID )
+		  tunits = taxisInqTunit(taxisID);
+		  if ( tunits != CDI_UNDEFID )
 		    {
-		      if ( unit == TUNIT_YEAR )
+		      if ( tunits == TUNIT_YEAR )
 			fprintf(stdout, "  Units = years");
-		      else if ( unit == TUNIT_MONTH )
+		      else if ( tunits == TUNIT_MONTH )
 			fprintf(stdout, "  Units = months");
-		      else if ( unit == TUNIT_DAY )
+		      else if ( tunits == TUNIT_DAY )
 			fprintf(stdout, "  Units = days");
-		      else if ( unit == TUNIT_12HOURS )
+		      else if ( tunits == TUNIT_12HOURS )
 			fprintf(stdout, "  Units = 12hours");
-		      else if ( unit == TUNIT_6HOURS )
+		      else if ( tunits == TUNIT_6HOURS )
 			fprintf(stdout, "  Units = 6hours");
-		      else if ( unit == TUNIT_3HOURS )
+		      else if ( tunits == TUNIT_3HOURS )
 			fprintf(stdout, "  Units = 3hours");
-		      else if ( unit == TUNIT_HOUR )
+		      else if ( tunits == TUNIT_HOUR )
 			fprintf(stdout, "  Units = hours");
-		      else if ( unit == TUNIT_MINUTE )
+		      else if ( tunits == TUNIT_MINUTE )
 			fprintf(stdout, "  Units = minutes");
-		      else if ( unit == TUNIT_SECOND )
+		      else if ( tunits == TUNIT_SECOND )
 			fprintf(stdout, "  Units = seconds");
 		      else
 			fprintf(stdout, "  Units = unknown");

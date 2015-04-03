@@ -1,11 +1,26 @@
 CDI NEWS
 --------
 
+Version 1.5.6 (27 July 2012):
+
+   New features:
+     * netCDF: added support for environment variable NC_CHUNKSIZEHINT
+     * GRIB2: added support for level type HYBRID_HALF
+     * GRIB2: added support for grib_api key stepType with TSTEP_<type> in vlistDefVar()
+   Fixed bugs:
+     * wrong netCDF output for unscaled uint8, int8, int16, int32 variables (bug introduced in 1.5.5)
+
+Version 1.5.5 (15 May 2012):
+
+   New features:
+     * Added single precision support: streamWriteVarF, streamWriteVarSliceF
+     * Added support for ZAXIS_DEPTH_BELOW_LAND units "mm",  "cm", "dm" and "m"
+
 Version 1.5.4 (30 January 2012):
 
    New features:
      * Added support for GRIB2 packing type grid_ieee
-     * Added suppport for GRIB2 level type 150
+     * Added support for GRIB2 level type 150
 
 Version 1.5.3 (17 October 2011):
 

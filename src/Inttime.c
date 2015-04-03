@@ -133,11 +133,7 @@ void *Inttime(void *argument)
 
   taxisID1 = vlistInqTaxis(vlistID1);
   taxisID2 = taxisDuplicate(taxisID1);
-  if ( taxisHasBounds(taxisID2) )
-    {
-      cdoWarning("Time bounds unsupported by this operator, removed!");
-      taxisDeleteBounds(taxisID2);
-    }
+  if ( taxisHasBounds(taxisID2) ) taxisDeleteBounds(taxisID2);
   vlistDefTaxis(vlistID2, taxisID2);
 
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());

@@ -256,6 +256,7 @@ void printInfo(int gridtype, int vdate, int vtime, char *varname, double level,
     fprintf(stdout, "Found %d of %d missing values!\n", imiss, nmiss);
 }
 
+#define MAXCHARS 82
 
 static
 void printShortinfo(int streamID, int vlistID, int vardis)
@@ -268,7 +269,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
   int nrecs, nvars, nzaxis, ntsteps;
   int levelID, levelsize;
   int tsID, ntimeout;
-  int timeID, taxisID;
+  int tsteptype, taxisID;
   int nbyte, nbyte0;
   int index;
   char varname[CDI_MAX_NAME];
@@ -286,10 +287,10 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
       if ( vardis )
 	fprintf(stdout,
-		"   Var : Institut Source   Varname     Time Typ  Grid Size Num  Levels Num\n");
+		"   Var : Institut Source   Varname     Ttype   Dtype  Gridsize Num  Levels Num\n");
       else
 	fprintf(stdout,
-		"   Var : Institut Source   Param       Time Typ  Grid Size Num  Levels Num\n");
+		"   Var : Institut Source   Param       Ttype   Dtype  Gridsize Num  Levels Num\n");
 
       nvars = vlistNvars(vlistID);
 
@@ -309,26 +310,28 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  instptr = institutInqNamePtr(vlistInqVarInstitut(vlistID, varID));
 	  if ( instptr )
-	    fprintf(stdout, "%-9s", instptr);
+	    fprintf(stdout, "%-8s ", instptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
 	  modelptr = modelInqNamePtr(vlistInqVarModel(vlistID, varID));
 	  if ( modelptr )
-	    fprintf(stdout, "%-9s", modelptr);
+	    fprintf(stdout, "%-8s ", modelptr);
 	  else
 	    fprintf(stdout, "unknown  ");
 
 	  if ( vardis )
-	    fprintf(stdout, "%-12s", varname);
+	    fprintf(stdout, "%-11s ", varname);
 	  else
-	    fprintf(stdout, "%-12s", paramstr);
+	    fprintf(stdout, "%-11s ", paramstr);
 
-	  timeID = vlistInqVarTime(vlistID, varID);
-	  if ( timeID == TIME_CONSTANT )
-	    fprintf(stdout, "con ");
-	  else
-	    fprintf(stdout, "var ");
+	  tsteptype = vlistInqVarTsteptype(vlistID, varID);
+	  if      ( tsteptype == TSTEP_CONSTANT ) fprintf(stdout, "%-8s", "constant");
+	  else if ( tsteptype == TSTEP_INSTANT  ) fprintf(stdout, "%-8s", "instant");
+	  else if ( tsteptype == TSTEP_MIN      ) fprintf(stdout, "%-8s", "min");
+	  else if ( tsteptype == TSTEP_MAX      ) fprintf(stdout, "%-8s", "max");
+	  else if ( tsteptype == TSTEP_ACCUM    ) fprintf(stdout, "%-8s", "accum");
+	  else                                    fprintf(stdout, "%-8s", "unknown");
 
 	  datatype = vlistInqVarDatatype(vlistID, varID);
 
@@ -387,7 +390,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	  nbyte = nbyte0;
 	  for ( levelID = 0; levelID < levelsize; levelID++ )
 	    {
-	      if ( nbyte > 80 )
+	      if ( nbyte > MAXCHARS )
 		{
 		  fprintf(stdout, "\n");
 		  fprintf(stdout, "%*s", nbyte0, "");
@@ -404,7 +407,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 	      nbyte0 = fprintf(stdout, "%33s : ", "bounds");
 	      for ( levelID = 0; levelID < levelsize; levelID++ )
 		{
-		  if ( nbyte > 80 )
+		  if ( nbyte > MAXCHARS )
 		    {
 		      fprintf(stdout, "\n");
 		      fprintf(stdout, "%*s", nbyte0, "");
@@ -430,7 +433,7 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 
 	  if ( taxisID != CDI_UNDEFID )
 	    {
-	      int calendar, unit;
+	      int calendar, tunits;
 
 	      if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
 		{
@@ -443,20 +446,26 @@ void printShortinfo(int streamID, int vlistID, int vardis)
 		  fprintf(stdout, "     RefTime = %4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
 			  year, month, day, hour, minute, second);
 
-		  unit = taxisInqTunit(taxisID);
-		  if ( unit != CDI_UNDEFID )
+		  tunits = taxisInqTunit(taxisID);
+		  if ( tunits != CDI_UNDEFID )
 		    {
-		      if ( unit == TUNIT_YEAR )
+		      if ( tunits == TUNIT_YEAR )
 			fprintf(stdout, "  Units = years");
-		      else if ( unit == TUNIT_MONTH )
+		      else if ( tunits == TUNIT_MONTH )
 			fprintf(stdout, "  Units = months");
-		      else if ( unit == TUNIT_DAY )
+		      else if ( tunits == TUNIT_DAY )
 			fprintf(stdout, "  Units = days");
-		      else if ( unit == TUNIT_HOUR )
+		      else if ( tunits == TUNIT_12HOURS )
+			fprintf(stdout, "  Units = 12hours");
+		      else if ( tunits == TUNIT_6HOURS )
+			fprintf(stdout, "  Units = 6hours");
+		      else if ( tunits == TUNIT_3HOURS )
+			fprintf(stdout, "  Units = 3hours");
+		      else if ( tunits == TUNIT_HOUR )
 			fprintf(stdout, "  Units = hours");
-		      else if ( unit == TUNIT_MINUTE )
+		      else if ( tunits == TUNIT_MINUTE )
 			fprintf(stdout, "  Units = minutes");
-		      else if ( unit == TUNIT_SECOND )
+		      else if ( tunits == TUNIT_SECOND )
 			fprintf(stdout, "  Units = seconds");
 		      else
 			fprintf(stdout, "  Units = unknown");
@@ -993,7 +1002,7 @@ int main(int argc, char *argv[])
 	    {
 	      for ( varID = 0; varID < nvars; varID++ )
 		{
-		  if ( vlistInqVarTime(vlistID1, varID) == TIME_CONSTANT && tsID > 0 ) continue;
+		  if ( vlistInqVarTsteptype(vlistID1, varID) == TSTEP_CONSTANT && tsID > 0 ) continue;
 
 		  number   = vlistInqVarNumber(vlistID1, varID);
 		  gridID   = vlistInqVarGrid(vlistID1, varID);

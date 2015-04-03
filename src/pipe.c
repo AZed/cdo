@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -162,26 +162,36 @@ void pipeDefVlist(pstream_t *pstreamptr, int vlistID)
   pthread_cond_signal(pipe->vlistDef);
 }
 
-#define TIMEOUT  30 // wait 30 seconds
+#define TIMEOUT  1 // wait 1 seconds
+#define MAX_WAIT_CYCLES 1000
+int processNumsActive(void);
 
 int pipeInqVlist(pstream_t *pstreamptr)
 {
   char *pname = pstreamptr->name;
   pipe_t *pipe = pstreamptr->pipe;
   int vlistID = -1;
-  struct timespec time_to_wait = {0, 0};
+  struct timespec time_to_wait;
   int retcode = 0;
+  int nwaitcycles = 0;
+
+  time_to_wait.tv_sec  = 0;
+  time_to_wait.tv_nsec = 0;
 
   if ( PipeDebug ) Message("%s pstreamID %d", pname, pstreamptr->self);
 
   // LOCK
   pthread_mutex_lock(pipe->mutex);
-  time_to_wait.tv_sec = time(NULL) + TIMEOUT;
+  time_to_wait.tv_sec = time(NULL);
   while ( pstreamptr->vlistID == -1 && retcode == 0 )
     {
+      time_to_wait.tv_sec += TIMEOUT;
+      // fprintf(stderr, "tvsec %g\n", (double) time_to_wait.tv_sec);
       if ( PipeDebug ) Message("%s wait of vlistDef", pname);
-      //      pthread_cond_wait(pipe->vlistDef, pipe->mutex);
+      // pthread_cond_wait(pipe->vlistDef, pipe->mutex);
       retcode = pthread_cond_timedwait(pipe->vlistDef, pipe->mutex, &time_to_wait);
+      // fprintf(stderr, "retcode %d %d\n", retcode, processNumsActive());
+      if ( retcode != 0 && processNumsActive() > 1 && nwaitcycles++ < MAX_WAIT_CYCLES ) retcode = 0;
     }
 
   if ( retcode == 0 )
@@ -275,7 +285,7 @@ void pipeDefTimestep(pstream_t *pstreamptr, int tsID)
       vlistID = pstreamptr->vlistID;
       nrecs = 0;
       for ( varID = 0; varID < vlistNvars(vlistID); varID++ )
-	if ( vlistInqVarTime(vlistID, varID) == TIME_VARIABLE )
+	if ( vlistInqVarTsteptype(vlistID, varID) != TSTEP_CONSTANT )
 	  nrecs += zaxisInqSize(vlistInqVarZaxis(vlistID, varID));
       // Message("nrecs = %d nvars = %d", nrecs, vlistNvars(vlistID));
     }

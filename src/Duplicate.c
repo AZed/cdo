@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +23,6 @@
 
 #define  NALLOC_INC  1024
 
-void    vlistDefVarTime(int vlistID, int varID, int timeID);
 
 void *Duplicate(void *argument)
 {
@@ -65,7 +64,7 @@ void *Duplicate(void *argument)
   if ( ntsteps == 1 )
     {
       for ( varID = 0; varID < nvars; ++varID )
-	if ( vlistInqVarTime(vlistID1, varID) == TIME_VARIABLE ) break;
+	if ( vlistInqVarTsteptype(vlistID1, varID) != TSTEP_CONSTANT ) break;
 
       if ( varID == nvars ) ntsteps = 0;
     }
@@ -73,7 +72,7 @@ void *Duplicate(void *argument)
   if ( ntsteps == 0 )
     {
       for ( varID = 0; varID < nvars; ++varID )
-	vlistDefVarTime(vlistID2, varID, TIME_VARIABLE);
+	vlistDefVarTsteptype(vlistID2, varID, TSTEP_INSTANT);
     }
  
   streamID2 = streamOpenWrite(cdoStreamName(1), cdoFiletype());

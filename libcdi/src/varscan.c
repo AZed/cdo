@@ -282,7 +282,7 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
       vartable[varID].zaxistype = zaxistype;
       vartable[varID].ltype     = ltype;
       vartable[varID].lbounds   = lbounds;
-      if ( tsteptype > 0 ) vartable[varID].tsteptype = tsteptype;
+      if ( tsteptype != UNDEFID ) vartable[varID].tsteptype = tsteptype;
       if ( numavg ) vartable[varID].timave = 1;
 
       if ( name )     if ( name[0] )     vartable[varID].name     = strdup(name);
@@ -527,11 +527,10 @@ void cdiGenVars(int streamID)
       free(dlevels);
 
       varID = streamNewVar(streamID, gridID, zaxisID);
-      varID = vlistDefVar(vlistID, gridID, zaxisID, TIME_VARIABLE);
+      varID = vlistDefVar(vlistID, gridID, zaxisID, tsteptype);
 
       vlistDefVarParam(vlistID, varID, param);
       vlistDefVarDatatype(vlistID, varID, prec);
-      vlistDefVarTsteptype(vlistID, varID, tsteptype);
       vlistDefVarTimave(vlistID, varID, timave);
       vlistDefVarTimaccu(vlistID, varID, timaccu);
       vlistDefVarCompType(vlistID, varID, comptype);

@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2011 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2012 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -257,12 +257,16 @@ void *Setgrid(void *argument)
 	      else if ( gridtype == GRID_REFERENCE    )
 		{
 		  gridID2 = referenceToGrid(gridID1);
-		  if ( gridID2 == -1 ) cdoAbort("grid reference not found!");
+		  if ( gridID2 == -1 ) cdoAbort("Grid reference not found!");
  		}
 	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_CURVILINEAR )
 		{
 		  gridID2 = gridCurvilinearToRegular(gridID1);
 		  if ( gridID2 == -1 ) cdoAbort("No regular grid found!");
+ 		}
+	      else if ( gridtype == GRID_LONLAT && gridInqType(gridID1) == GRID_LONLAT )
+		{
+		  gridID2 = gridID1;
 		}
 	      else cdoAbort("Unsupported grid name: %s", gridname);
 	    }
