@@ -98,21 +98,16 @@ void cdiInitRecord(stream_t *streamptr)
 {
   streamptr->record = (Record *) malloc(sizeof(Record));
 
-  streamptr->record->used       = 0;
-  streamptr->record->nrec       = 0;
-  streamptr->record->dataread   = 1;
   streamptr->record->param      = 0;
   streamptr->record->level      = 0;
   streamptr->record->date       = 0;
   streamptr->record->time       = 0;
   streamptr->record->gridID     = 0;
-  streamptr->record->zaxisID    = 0;
   streamptr->record->buffer     = NULL;
   streamptr->record->buffersize = 0;
   streamptr->record->position   = 0;
   streamptr->record->varID      = 0;
   streamptr->record->levelID    = CDI_UNDEFID;
-  streamptr->record->recid      = 0;
 }
 
 
@@ -193,7 +188,6 @@ void streamDefRecord(int streamID, int varID, int levelID)
   streamptr->record->date     = streamptr->tsteps[tsID].taxis.vdate;
   streamptr->record->time     = streamptr->tsteps[tsID].taxis.vtime;
   streamptr->record->gridID   = gridID;
-  streamptr->record->zaxisID  = zaxisID;
   streamptr->record->prec     = vlistInqVarDatatype(vlistID, varID);
 
   switch (streamptr->filetype)

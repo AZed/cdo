@@ -135,10 +135,12 @@ AC_SUBST([HDF5_INCLUDE])
 AC_SUBST([HDF5_LIBS])
 #  ----------------------------------------------------------------------
 #  Compile application with netcdf
-ENABLE_NETCDF=no
 NETCDF_ROOT=''
 NETCDF_INCLUDE=''
 NETCDF_LIBS=''
+ENABLE_NETCDF=no
+ENABLE_NC2=no
+ENABLE_NC4=no
 AC_ARG_WITH([netcdf],
             [AS_HELP_STRING([--with-netcdf=<yes|no|directory> (default=no)],[location of netcdf library (lib and include subdirs)])],
             [AS_CASE(["$with_netcdf"],
@@ -156,10 +158,12 @@ AC_ARG_WITH([netcdf],
                                   [AC_MSG_CHECKING([netcdf's nc2 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc2)" = "xyes"],
                                          [AC_DEFINE([HAVE_NETCDF2],[1],[Define to 1 for NETCDF2 support])
+                                          ENABLE_NC2=yes
                                           AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
                                    AC_MSG_CHECKING([netcdf's nc4 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc4)" = "xyes"],
                                          [AC_DEFINE([HAVE_NETCDF4],[1],[Define to 1 for NETCDF4 support])
+                                          ENABLE_NC4=yes
                                           AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])],
                                   [AS_ECHO([Could not find nc-config! go on with default configuration])])],
                      [*],[AS_IF([test -d "$with_netcdf"],
@@ -185,16 +189,20 @@ AC_ARG_WITH([netcdf],
                                    [AC_MSG_CHECKING([netcdf's nc2 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc2)" = "xyes"],
                                          [AC_DEFINE([HAVE_NETCDF2],[1],[Define to 1 for NETCDF2 support])
+                                          ENABLE_NC2=yes
                                           AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
                                    AC_MSG_CHECKING([netcdf's nc4 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc4)" = "xyes"],
                                          [AC_DEFINE([HAVE_NETCDF4],[1],[Define to 1 for NETCDF4 support])
+                                          ENABLE_NC4=yes
                                           AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])],
                                    [AC_MSG_RESULT([Could not find nc-config! go on with default configuration])])],
                                 [AC_MSG_NOTICE([$with_netcdf is not a directory! NETCDF suppressed])])])],
             [AC_MSG_CHECKING([for NETCDF library])
              AC_MSG_RESULT([suppressed])])
 AC_SUBST([ENABLE_NETCDF])
+AC_SUBST([ENABLE_NC2])
+AC_SUBST([ENABLE_NC4])
 AC_SUBST([NETCDF_ROOT])
 AC_SUBST([NETCDF_INCLUDE])
 AC_SUBST([NETCDF_LIBS])
@@ -228,6 +236,7 @@ AC_SUBST([JASPER_LIBS])
 #  Compile application with GRIB_API library (for GRIB2 support)
 GRIB_API_INCLUDE=''
 GRIB_API_LIBS=''
+ENABLE_GRIBAPI=no
 AC_ARG_WITH([grib_api],
             [AS_HELP_STRING([--with-grib_api=<yes|no|directory>],
                             [library for grib2 compression; if a directory is given, it will be used as a value for --with-jasper-root])],
@@ -237,7 +246,8 @@ AC_ARG_WITH([grib_api],
                      [yes],[AC_CHECK_HEADERS([grib_api.h])
                             AC_SEARCH_LIBS([grib_get_message],
                                            [grib_api],
-                                           [AC_DEFINE([HAVE_LIBGRIB_API],[1],[GRIB_API library is present if defined to 1])],
+                                           [AC_DEFINE([HAVE_LIBGRIB_API],[1],[GRIB_API library is present if defined to 1])
+                                            ENABLE_GRIBAPI=yes],
                                            [AC_MSG_ERROR([Could not link to grib_api library])])],
                      [*],[GRIB_API_ROOT=$with_grib_api
                           AS_IF([test -d "$GRIB_API_ROOT"],
@@ -246,7 +256,8 @@ AC_ARG_WITH([grib_api],
                                  AC_CHECK_HEADERS([grib_api.h])
                                  AC_SEARCH_LIBS([grib_get_message],
                                                 [grib_api],
-                                                [AC_DEFINE([HAVE_LIBGRIB_API],[1],[GRIB_API library is present if defined to 1])],
+                                                [AC_DEFINE([HAVE_LIBGRIB_API],[1],[GRIB_API library is present if defined to 1])
+                                                 ENABLE_GRIBAPI=yes],
                                                 [AC_MSG_ERROR([Could not link to grib_api library])])
                                  GRIB_API_LIBS=" -L$GRIB_API_ROOT/lib -lgrib_api"
                                  GRIB_API_INCLUDE=" -I$GRIB_API_ROOT/include"],
@@ -255,6 +266,7 @@ AC_ARG_WITH([grib_api],
              AC_MSG_RESULT([suppressed])])
 AC_SUBST([GRIB_API_INCLUDE])
 AC_SUBST([GRIB_API_LIBS])
+AC_SUBST([ENABLE_GRIBAPI])
 #  ----------------------------------------------------------------------
 #  Enable GRIB support
 AC_MSG_CHECKING([for GRIB support])
@@ -513,3 +525,7 @@ AC_ARG_ENABLE([all-static],
 AC_MSG_RESULT([$enable_all_static])
 AM_CONDITIONAL([ENABLE_ALL_STATIC],[test x$enable_all_static = 'xyes'])
 ])
+dnl
+dnl Local Variables:
+dnl mode: autoconf
+dnl End:

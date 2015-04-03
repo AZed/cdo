@@ -4,7 +4,7 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdo], [1.6.6], [http://code.zmaw.de/projects/cdo])
+AC_INIT([cdo], [1.6.7], [https://code.zmaw.de/projects/cdo])
 
 CONFIG_ABORT=yes
 AC_CONFIG_AUX_DIR(config)
@@ -214,7 +214,7 @@ AC_DEFINE_UNQUOTED(COMPILER, ["$COMPILER"], [Compiler])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
 
-AC_CONFIG_FILES([test/Read_grib.test test/Read_netcdf.test test/Copy_netcdf.test],[chmod a+x "$ac_file"])
+AC_CONFIG_FILES([test/File.test test/Read_grib.test test/Read_netcdf.test test/Copy_netcdf.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([test/Cat.test test/Gridarea.test test/Genweights.test test/Remap.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([test/Select.test test/Spectral.test test/Timstat.test test/Vertint.test],[chmod a+x "$ac_file"])
 AC_CONFIG_FILES([test/Detrend.test test/Arith.test],[chmod a+x "$ac_file"])

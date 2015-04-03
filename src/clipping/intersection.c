@@ -231,9 +231,9 @@ static int vector_is_between_lat (double a[], double b[], double p[]) {
 
             if (vector_is_between(c, d, a, &angle_cd, dot_cd))
                result |= 1 << 2;
-	    double tvec[] = {-a[0], -a[1], -a[2]};
-            if (vector_is_between(c, d, tvec, &angle_cd,
-                                  dot_cd)) result |= 1 << 3;
+            double tvec[] = {-a[0], -a[1], -a[2]};
+            if (vector_is_between(c, d, tvec, &angle_cd, dot_cd))
+	       result |= 1 << 3;
 
             return result;
          }
@@ -265,8 +265,8 @@ static int vector_is_between_lat (double a[], double b[], double p[]) {
             if (vector_is_between(a, b, c, &angle_ab, dot_ab))
                result |= 1 << 0;
 	    double tvec[] = {-c[0], -c[1], -c[2]};
-            if (vector_is_between(a, b, tvec, &angle_ab,
-                                  dot_ab)) result |= 1 << 1;
+            if (vector_is_between(a, b, tvec, &angle_ab, dot_ab))
+	       result |= 1 << 1;
 
             return result;
          }
@@ -1539,9 +1539,6 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
       s[1] = a[1] - scale * b[1];
    }
 
-   if (fabs(s[0]) < tol && fabs(s[1]) < tol)
-      abort_message("internal error", __FILE__, __LINE__);
-
    {
       // the intersection of the planes of both circles is defined by:
       // x = t + n * s
@@ -1552,6 +1549,9 @@ int gcxlatc_vec(double a[3], double b[3], double c[3], double d[3],
       double a_ = s[0] * s[0] + s[1] * s[1];
       double b_ = 2.0 * (t[0] * s[0] + t[1] * s[1]);
       double c_ = t[0] * t[0] + t[1] * t[1] + c[2] * c[2] - 1.0;
+
+      if (a_ == 0.0)
+         abort_message("internal error", __FILE__, __LINE__);
 
       double temp = b_ * b_ - 4.0 * a_ * c_;
 

@@ -83,7 +83,11 @@ void grid_init(grid_t *gridptr)
   gridptr->ybounds      = NULL;
   gridptr->rowlon       = NULL;
   gridptr->nrowlon      = 0;
+  gridptr->xfirst       = 0.0;
+  gridptr->xlast        = 0.0;
   gridptr->xinc         = 0.0;
+  gridptr->yfirst       = 0.0;
+  gridptr->ylast        = 0.0;
   gridptr->yinc         = 0.0;
   gridptr->lcc_originLon = 0.0;
   gridptr->lcc_originLat = 0.0;
@@ -225,7 +229,7 @@ void gridGenXvals(int xsize, double xfirst, double xlast, double xinc, double *x
 static
 void calc_gaussgrid(double *yvals, int ysize, double yfirst, double ylast)
 {
-  double *yw = (double *)xmalloc((size_t)ysize * sizeof(double));
+  double *restrict yw = (double *)xmalloc((size_t)ysize * sizeof(double));
   gaussaw(yvals, yw, (size_t)ysize);
   free(yw);
   for (int i = 0; i < ysize; i++ )
@@ -258,7 +262,7 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
 	    if ( fabs(yvals[0] - yfirst) > deleps || fabs(yvals[ysize-1] - ylast) > deleps )
 	      {
 		double yinc = fabs(ylast-yfirst)/(ysize-1);
-		double *ytmp = NULL;
+		double *restrict ytmp = NULL;
 		int nstart, lfound = 0;
 		int ny = (int) (180./yinc + 0.5);
 		ny -= ny%2;
@@ -273,8 +277,8 @@ void gridGenYvals(int gridtype, int ysize, double yfirst, double ylast, double y
 
 		    nstart = i;
 
-		    if ( (nstart+ysize-1) < ny )
-		      if ( fabs(ytmp[nstart+ysize-1] - ylast) < deleps ) lfound = 1;
+		    lfound = (nstart+ysize-1) < ny
+                      && fabs(ytmp[nstart+ysize-1] - ylast) < deleps;
 		  }
 
 		if ( lfound )
@@ -2206,8 +2210,8 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
 {
   grid_t * g1 = ( grid_t * ) gridptr1;
   grid_t * g2 = ( grid_t * ) gridptr2;
-  int differ = -1;
-  int equal  = 0;
+  enum { equal = 0,
+         differ = -1 };
   int i, size;
 
   xassert ( g1 );
@@ -2350,14 +2354,14 @@ int gridCompareP ( void * gridptr1, void * gridptr2 )
   else if ( g2->ybounds )
     return differ;
 
-  if ( memcmp ( &g1->xname    ,&g2->xname    ,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->yname    ,&g2->yname    ,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->xlongname,&g2->xlongname,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->ylongname,&g2->ylongname,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->xstdname ,&g2->xstdname ,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->ystdname ,&g2->ystdname ,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->xunits   ,&g2->xunits   ,CDI_MAX_NAME ) ) return differ;
-  if ( memcmp ( &g1->yunits   ,&g2->yunits   ,CDI_MAX_NAME ) ) return differ;
+  if (strcmp(g1->xname, g2->xname)) return differ;
+  if (strcmp(g1->yname, g2->yname)) return differ;
+  if (strcmp(g1->xlongname, g2->xlongname)) return differ;
+  if (strcmp(g1->ylongname, g2->ylongname)) return differ;
+  if (strcmp(g1->xstdname, g2->xstdname)) return differ;
+  if (strcmp(g1->ystdname, g2->ystdname)) return differ;
+  if (strcmp(g1->xunits, g2->xunits)) return differ;
+  if (strcmp(g1->yunits, g2->yunits)) return differ;
 
   if ( g1->reference )
     {
@@ -2780,7 +2784,7 @@ void gridDefArea(int gridID, const double *area)
 {
   grid_t *gridptr = gridID2Ptr(gridID);
 
-  size_t size = gridptr->size;
+  size_t size = (size_t)gridptr->size;
 
   if ( size == 0 )
     Error("size undefined for gridID = %d", gridID);
@@ -3870,7 +3874,6 @@ gridTxCode ()
 
 enum { gridNint    = 27,
        gridNdouble = 24,
-       gridNstrings= 8,
        gridHasMaskFlag = 1 << 0,
        gridHasGMEMaskFlag = 1 << 1,
        gridHasXValsFlag = 1 << 2,
@@ -3899,6 +3902,11 @@ static int gridGetComponentFlags(const grid_t * gridP)
   return flags;
 }
 
+
+#define GRID_STR_SERIALIZE { gridP->xname, gridP->yname, \
+    gridP->xlongname, gridP->ylongname, \
+    gridP->xstdname, gridP->ystdname, \
+    gridP->xunits, gridP->yunits }
 
 static int
 gridGetPackSize(void * voidP, void *context)
@@ -3974,9 +3982,12 @@ gridGetPackSize(void * voidP, void *context)
             + serializeGetSize(1, DATATYPE_UINT32, context));
     }
 
-  packBuffSize +=
-    serializeGetSize(gridNstrings * CDI_MAX_NAME , DATATYPE_TXT, context)
-    + serializeGetSize(1, DATATYPE_UINT32, context);
+  {
+    const char *strTab[] = GRID_STR_SERIALIZE;
+    int numStr = (int)(sizeof (strTab) / sizeof (strTab[0]));
+    packBuffSize
+      += serializeStrTabGetPackSize(strTab, numStr, context);
+  }
 
   if (gridP->reference)
     {
@@ -4007,11 +4018,6 @@ gridGetPackSize(void * voidP, void *context)
   return packBuffSize;
 }
 
-#define GRID_STR_SERIALIZE { gridP->xname, gridP->yname, \
-    gridP->xlongname, gridP->ylongname, \
-    gridP->xstdname, gridP->ystdname, \
-    gridP->xunits, gridP->yunits }
-
 void
 gridUnpack(char * unpackBuffer, int unpackBufferSize,
            int * unpackBufferPos, int originNamespace, void *context,
@@ -4020,7 +4026,6 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
   grid_t * gridP;
   uint32_t d;
   int memberMask, size;
-  char charBuffer[gridNstrings * CDI_MAX_NAME];
 
   gridInit();
 
@@ -4174,17 +4179,11 @@ gridUnpack(char * unpackBuffer, int unpackBufferSize,
       xassert(cdiCheckSum(DATATYPE_FLT, size, gridP->ybounds) == d);
     }
 
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  charBuffer, gridNstrings * CDI_MAX_NAME, DATATYPE_TXT, context);
-  serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
-                  &d, 1, DATATYPE_UINT32, context);
-
-  xassert(d == cdiCheckSum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer));
   {
     char *strTab[] = GRID_STR_SERIALIZE;
-    size_t numStr = sizeof (strTab) / sizeof (strTab[0]);
-    for (size_t i = 0; i < numStr; ++i)
-      memcpy(strTab[i], charBuffer + CDI_MAX_NAME * i, CDI_MAX_NAME);
+    int numStr = sizeof (strTab) / sizeof (strTab[0]);
+    serializeStrTabUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
+                          strTab, numStr, context);
   }
 
   if (memberMask & gridHasReferenceFlag)
@@ -4237,7 +4236,6 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
   int size;
   uint32_t d;
   int memberMask;
-  char charBuffer[gridNstrings * CDI_MAX_NAME];
 
   {
     int intBuffer[gridNint];
@@ -4279,7 +4277,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
 
   if (memberMask & gridHasRowLonFlag)
     {
-      xassert((size = gridP->nrowlon));
+      size = gridP->nrowlon;
+      xassert(size > 0);
       serializePack(gridP->rowlon, size, DATATYPE_INT,
                     packBuffer, packBufferSize, packBufferPos, context);
       d = cdiCheckSum(DATATYPE_INT , size, gridP->rowlon);
@@ -4395,17 +4394,11 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
     }
 
   {
-    char *strTab[] = GRID_STR_SERIALIZE;
-    size_t numStr = sizeof (strTab) / sizeof (strTab[0]);
-    for (size_t i = 0; i < numStr; ++i)
-      memcpy(charBuffer + CDI_MAX_NAME * i, strTab[i], CDI_MAX_NAME);
+    const char *strTab[] = GRID_STR_SERIALIZE;
+    int numStr = sizeof (strTab) / sizeof (strTab[0]);
+    serializeStrTabPack(strTab, numStr,
+                        packBuffer, packBufferSize, packBufferPos, context);
   }
-
-  serializePack( charBuffer, gridNstrings * CDI_MAX_NAME, DATATYPE_TXT,
-		    packBuffer, packBufferSize, packBufferPos, context);
-  d = cdiCheckSum(DATATYPE_TXT, gridNstrings * CDI_MAX_NAME, charBuffer);
-  serializePack(&d, 1, DATATYPE_UINT32,
-                packBuffer, packBufferSize, packBufferPos, context);
 
   if (memberMask & gridHasReferenceFlag)
     {
@@ -4444,6 +4437,8 @@ gridPack(void * voidP, void * packBuffer, int packBufferSize,
     serializePack(gridP->uuid, CDI_UUID_SIZE, DATATYPE_UCHAR,
                   packBuffer, packBufferSize, packBufferPos, context);
 }
+
+#undef GRID_STR_SERIALIZE
 
 /*
  * Local Variables:

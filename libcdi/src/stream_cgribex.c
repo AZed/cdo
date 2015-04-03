@@ -521,25 +521,19 @@ compvar_t cgribexVarSet(int param, int level1, int level2, int leveltype, int tr
   return (compVar);
 }
 
-static
-int cgribexVarCompare(compvar_t compVar, record_t record, int flag)
+static inline int
+cgribexVarCompare(compvar_t compVar, record_t record, int flag)
 {
-  compvar_t compVar0;
-
-  compVar0.param     = record.param;
-  compVar0.level1    = record.ilevel;
-  compVar0.level2    = record.ilevel2;
-  compVar0.ltype     = record.ltype;
-  compVar0.tsteptype = record.tsteptype;
-
-  if ( flag == 0 )
-    {
-      if ( compVar0.tsteptype == TSTEP_INSTANT  && compVar.tsteptype == TSTEP_INSTANT3 ) compVar0.tsteptype = TSTEP_INSTANT3;
-      if ( compVar0.tsteptype == TSTEP_INSTANT3 && compVar.tsteptype == TSTEP_INSTANT  ) compVar0.tsteptype = TSTEP_INSTANT;
-    }
-
-  int rstatus = memcmp(&compVar0, &compVar, sizeof(compvar_t));
-
+  int tstepDiff = (!((flag == 0) & (((compVar.tsteptype == TSTEP_INSTANT)
+                                     & (record.tsteptype == TSTEP_INSTANT3))
+                                    |((compVar.tsteptype == TSTEP_INSTANT3)
+                                      & (record.tsteptype == TSTEP_INSTANT)))))
+    & (compVar.tsteptype != record.tsteptype);
+  int rstatus = (compVar.param != record.param)
+    |           (compVar.level1 != record.ilevel)
+    |           (compVar.level2 != record.ilevel2)
+    |           (compVar.ltype != record.ltype)
+    |           tstepDiff;
   return (rstatus);
 }
 #endif
@@ -547,9 +541,42 @@ int cgribexVarCompare(compvar_t compVar, record_t record, int flag)
 #define gribWarning(text, nrecs, timestep, paramstr, level1, level2) \
             Warning("Record %2d (id=%s lev1=%d lev2=%d) timestep %d: %s", nrecs, paramstr, level1, level2, timestep, text)
 
+#if  defined  (HAVE_LIBCGRIBEX)
+
+static inline void
+cgribexScanTsFixNtsteps(stream_t *streamptr, off_t recpos)
+{
+  if ( streamptr->ntsteps == -1 )
+    {
+      int tsID = tstepsNewEntry(streamptr);
+      if ( tsID != streamptr->rtsteps )
+	Error("Internal error. tsID = %d", tsID);
+
+      streamptr->tsteps[tsID-1].next   = TRUE;
+      streamptr->tsteps[tsID].position = recpos;
+    }
+}
+
+static inline void
+cgribexScanTsConstAdjust(stream_t *streamptr, taxis_t *taxis)
+{
+  int vlistID = streamptr->vlistID;
+  if ( streamptr->ntsteps == 1 )
+    {
+      if ( taxis->vdate == 0 && taxis->vtime == 0 )
+	{
+	  streamptr->ntsteps = 0;
+	  for (int varID = 0; varID < streamptr->nvars; varID++ )
+	    {
+	      vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
+	    }
+	}
+    }
+}
+
+
 int cgribexScanTimestep1(stream_t * streamptr)
 {
-#if  defined  (HAVE_LIBCGRIBEX)
   int *isec0, *isec1, *isec2, *isec3, *isec4;
   double fsec2[512], fsec3[2], *fsec4 = NULL;
   int lmv = 0, iret = 0;
@@ -562,7 +589,6 @@ int cgribexScanTimestep1(stream_t * streamptr)
   int level1 = 0, level2 = 0, vdate = 0, vtime = 0;
   DateTime datetime, datetime0;
   int tsID;
-  int varID;
   size_t readsize;
   unsigned nrecords, recID;
   int nrecs_scanned = 0;
@@ -576,7 +602,6 @@ int cgribexScanTimestep1(stream_t * streamptr)
   int vlistID;
   int comptype;
   long unzipsize;
-  compvar_t compVar;
   char paramstr[32];
   extern int cdiSkipRecords;
   int nskip = cdiSkipRecords;
@@ -624,7 +649,7 @@ int cgribexScanTimestep1(stream_t * streamptr)
       if ( (size_t)recsize > buffersize )
 	{
 	  buffersize = (size_t)recsize;
-	  gribbuffer = (unsigned char *) realloc(gribbuffer, buffersize);
+	  gribbuffer = (unsigned char *)xrealloc(gribbuffer, buffersize);
 	}
 
       readsize = (size_t)recsize;
@@ -676,7 +701,7 @@ int cgribexScanTimestep1(stream_t * streamptr)
 	  datetime.date  = vdate;
 	  datetime.time  = vtime;
 
-	  compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
+	  compvar_t compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
@@ -770,30 +795,8 @@ int cgribexScanTimestep1(stream_t * streamptr)
   streamptr->record->buffer     = gribbuffer;
   streamptr->record->buffersize = (size_t)buffersize;
 
-  if ( streamptr->ntsteps == -1 )
-    {
-      tsID = tstepsNewEntry(streamptr);
-      if ( tsID != streamptr->rtsteps )
-	Error("Internal error. tsID = %d", tsID);
-
-      streamptr->tsteps[tsID-1].next   = TRUE;
-      streamptr->tsteps[tsID].position = recpos;
-    }
-
-  if ( streamptr->ntsteps == 1 )
-    {
-      if ( taxis->vdate == 0 && taxis->vtime == 0 )
-	{
-	  streamptr->ntsteps = 0;
-	  for ( varID = 0; varID < streamptr->nvars; varID++ )
-	    {
-	      vlistDefVarTsteptype(vlistID, varID, TSTEP_CONSTANT);
-	    }
-	}
-    }
-#else
-  Error("CGRIBEX support not compiled in!");
-#endif
+  cgribexScanTsFixNtsteps(streamptr, recpos);
+  cgribexScanTsConstAdjust(streamptr, taxis);
 
   return (0);
 }
@@ -802,7 +805,6 @@ int cgribexScanTimestep1(stream_t * streamptr)
 int cgribexScanTimestep2(stream_t * streamptr)
 {
   int rstatus = 0;
-#if  defined  (HAVE_LIBCGRIBEX)
   int *isec0, *isec1, *isec2, *isec3, *isec4;
   double fsec2[512], fsec3[2], *fsec4 = NULL;
   int lmv = 0, iret = 0;
@@ -825,7 +827,6 @@ int cgribexScanTimestep2(stream_t * streamptr)
   taxis_t *taxis;
   int vlistID;
   long unzipsize;
-  compvar_t compVar;
   char paramstr[32];
 
   streamptr->curTsID = 1;
@@ -845,7 +846,7 @@ int cgribexScanTimestep2(stream_t * streamptr)
 
   tsID = streamptr->rtsteps;
   if ( tsID != 1 )
-    Error("Internal problem! unexpeceted timestep %d", tsID+1);
+    Error("Internal problem! unexpected timestep %d", tsID+1);
 
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -882,7 +883,7 @@ int cgribexScanTimestep2(stream_t * streamptr)
       if ( (size_t)recsize > buffersize )
 	{
 	  buffersize = (size_t)recsize;
-	  gribbuffer = (unsigned char *) realloc(gribbuffer, buffersize);
+	  gribbuffer = (unsigned char *)xrealloc(gribbuffer, buffersize);
 	}
 
       readsize = (size_t)recsize;
@@ -955,7 +956,7 @@ int cgribexScanTimestep2(stream_t * streamptr)
       datetime.date  = vdate;
       datetime.time  = vtime;
 
-      compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
+      compvar_t compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
 
       for ( recID = 0; recID < nrecords; recID++ )
 	{
@@ -1043,28 +1044,20 @@ int cgribexScanTimestep2(stream_t * streamptr)
 
   streamptr->rtsteps = 2;
 
-  if ( streamptr->ntsteps == -1 )
-    {
-      tsID = tstepsNewEntry(streamptr);
-      if ( tsID != streamptr->rtsteps )
-	Error("Internal error. tsID = %d", tsID);
-
-      streamptr->tsteps[tsID-1].next   = TRUE;
-      streamptr->tsteps[tsID].position = recpos;
-    }
+  cgribexScanTsFixNtsteps(streamptr, recpos);
 
   streamptr->record->buffer     = gribbuffer;
   streamptr->record->buffersize = buffersize;
-#endif
 
   return (rstatus);
 }
+#endif
 
 
+#if  defined  (HAVE_LIBCGRIBEX)
 int cgribexScanTimestep(stream_t * streamptr)
 {
   int rstatus = 0;
-#if  defined  (HAVE_LIBCGRIBEX)
   double fsec2[512], fsec3[2], *fsec4 = NULL;
   int lmv = 0, iret = 0;
   long recsize = 0;
@@ -1082,7 +1075,6 @@ int cgribexScanTimestep(stream_t * streamptr)
   int rindex, nrecs = 0;
   int nrecs_scanned;
   long unzipsize;
-  compvar_t compVar;
   char paramstr[32];
 
   /*
@@ -1219,7 +1211,7 @@ int cgribexScanTimestep(stream_t * streamptr)
 	  datetime.date  = vdate;
 	  datetime.time  = vtime;
 
-	  compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
+	  compvar_t compVar = cgribexVarSet(param, level1, level2, ISEC1_LevelType, ISEC1_TimeRange);
 
 	  for ( vrecID = 0; vrecID < nrecs; vrecID++ )
 	    {
@@ -1321,20 +1313,20 @@ int cgribexScanTimestep(stream_t * streamptr)
     }
 
   rstatus = (int)streamptr->ntsteps;
-#endif
 
   return (rstatus);
 }
+#endif
 
 #ifdef gribWarning
 #undef gribWarning
 #endif
 
+#if  defined  (HAVE_LIBCGRIBEX)
 int cgribexDecode(unsigned char *gribbuffer, int gribsize, double *data, int gridsize,
 		  int unreduced, int *nmiss, double missval)
 {
   int status = 0;
-#if  defined  (HAVE_LIBCGRIBEX)
   int iret = 0, iword = 0;
   int isec0[2], isec1[4096], isec2[4096], isec3[2], isec4[512];
   double fsec2[512], fsec3[2];
@@ -1367,12 +1359,11 @@ int cgribexDecode(unsigned char *gribbuffer, int gribsize, double *data, int gri
           (*nmiss)++;
         }
     }
-#else
-  Error("CGRIBEX support not compiled in!");
-#endif
 
   return (status);
 }
+#endif
+
 
 #if  defined  (HAVE_LIBCGRIBEX)
 static
@@ -1728,19 +1719,19 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 
 	ISEC2_NumLon   = nlon;
 	ISEC2_NumLat   = nlat;
-	ISEC2_FirstLat = lround(yfirst*1000);
-	ISEC2_LastLat  = lround(ylast*1000);
+	ISEC2_FirstLat = (int)lround(yfirst*1000);
+	ISEC2_LastLat  = (int)lround(ylast*1000);
 	if ( gridtype == GRID_GAUSSIAN_REDUCED )
 	  {
 	    ISEC2_FirstLon = 0;
-	    ISEC2_LastLon  = lround(1000*(360.-360./(nlat*2)));
-	    ISEC2_LonIncr  = lround(1000*360./(nlat*2));
+	    ISEC2_LastLon  = (int)lround(1000*(360.-360./(nlat*2)));
+	    ISEC2_LonIncr  = (int)lround(1000*360./(nlat*2));
 	  }
 	else
 	  {
-	    ISEC2_FirstLon = lround(xfirst*1000);
-	    ISEC2_LastLon  = lround(xlast*1000);
-	    ISEC2_LonIncr  = lround(xinc*1000);
+	    ISEC2_FirstLon = (int)lround(xfirst*1000);
+	    ISEC2_LastLon  = (int)lround(xlast*1000);
+	    ISEC2_LonIncr  = (int)lround(xinc*1000);
 	  }
 
 	// if ( fabs(xinc*1000 - ISEC2_LonIncr) > FLT_EPSILON ) ISEC2_LonIncr = 0;
@@ -1753,7 +1744,7 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
           }
 	else
 	  {
-	    ISEC2_LatIncr = lround(yinc*1000);
+	    ISEC2_LatIncr = (int)lround(yinc*1000);
 	    // if ( fabs(yinc*1000 - ISEC2_LatIncr) > FLT_EPSILON ) ISEC2_LatIncr = 0;
 
 	    if ( ISEC2_LatIncr < 0 ) ISEC2_LatIncr = -ISEC2_LatIncr;
@@ -1772,8 +1763,8 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 
 	if ( gridIsRotated(gridID) )
 	  {
-	    ISEC2_LatSP = - lround(gridInqYpole(gridID) * 1000);
-	    ISEC2_LonSP =   lround((gridInqXpole(gridID) + 180) * 1000);
+	    ISEC2_LatSP = - (int)lround(gridInqYpole(gridID) * 1000);
+	    ISEC2_LonSP =   (int)lround((gridInqXpole(gridID) + 180) * 1000);
 	  }
 
 	/* East -> West */
@@ -1799,13 +1790,13 @@ void cgribexDefGrid(int *isec1, int *isec2, int *isec4, int gridID)
 	ISEC2_GridType = GRIB1_GTYPE_LCC;
 	ISEC2_NumLon   = xsize;
 	ISEC2_NumLat   = ysize;
-	ISEC2_FirstLon = lround(originLon * 1000);
-	ISEC2_FirstLat = lround(originLat * 1000);
-	ISEC2_Lambert_Lov    = lround(lonParY * 1000);
-	ISEC2_Lambert_LatS1  = lround(lat1 * 1000);
-	ISEC2_Lambert_LatS2  = lround(lat2 * 1000);
-	ISEC2_Lambert_dx     = lround(xincm);
-	ISEC2_Lambert_dy     = lround(yincm);
+	ISEC2_FirstLon = (int)lround(originLon * 1000);
+	ISEC2_FirstLat = (int)lround(originLat * 1000);
+	ISEC2_Lambert_Lov    = (int)lround(lonParY * 1000);
+	ISEC2_Lambert_LatS1  = (int)lround(lat1 * 1000);
+	ISEC2_Lambert_LatS2  = (int)lround(lat2 * 1000);
+	ISEC2_Lambert_dx     = (int)lround(xincm);
+	ISEC2_Lambert_dy     = (int)lround(yincm);
 	ISEC2_Lambert_LatSP  = 0;
 	ISEC2_Lambert_LatSP  = 0;
 	ISEC2_Lambert_ProjFlag = projflag;
@@ -2176,12 +2167,12 @@ void cgribexDefEnsembleVar(int *isec1, int vlistID, int varID)
 #endif
 
 
+#if  defined  (HAVE_LIBCGRIBEX)
 size_t cgribexEncode(int memtype, int varID, int levelID, int vlistID, int gridID, int zaxisID,
 		     int vdate, int vtime, int tsteptype, int numavg,
 		     long datasize, const double *data, int nmiss, unsigned char *gribbuffer, size_t gribbuffersize)
 {
   size_t nbytes = 0;
-#if  defined  (HAVE_LIBCGRIBEX)
   int gribsize;
   int iret = 0, iword = 0;
   int isec0[2], isec1[4096], isec2[4096], isec3[2], isec4[512];
@@ -2232,8 +2223,9 @@ size_t cgribexEncode(int memtype, int varID, int levelID, int vlistID, int gridI
 
   if ( memtype == MEMTYPE_FLOAT )
     {
-      for ( int i = 0; i < ISEC2_NumVCP; ++i ) fsec2f[10+i] = fsec2[10+i];
-      fsec3f[ 1] = fsec3[ 1];
+      size_t numVCP = ISEC2_NumVCP > 0 ? (size_t)ISEC2_NumVCP : (size_t)0;
+      for ( size_t i = 0; i < numVCP; ++i ) fsec2f[10+i] = (float)fsec2[10+i];
+      fsec3f[ 1] = (float)fsec3[ 1];
     }
 
   if ( memtype == MEMTYPE_FLOAT )
@@ -2246,12 +2238,9 @@ size_t cgribexEncode(int memtype, int varID, int levelID, int vlistID, int gridI
   if ( iret ) Error("Problem during GRIB encode (errno = %d)!", iret);
 
   nbytes = (size_t)iword * sizeof (int);
-#else
-  Error("CGRIBEX support not compiled in!");
-#endif
-
   return (nbytes);
 }
+#endif
 /*
  * Local Variables:
  * c-file-style: "Java"

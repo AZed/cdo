@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -71,7 +71,7 @@ extern char *CDO_optarg;
 #  define  VERSION  "0.0.1"
 #endif
 
-char CDO_Version[] = "Climate Data Operators version "VERSION" (http://code.zmaw.de/projects/cdo)";
+char CDO_Version[] = "Climate Data Operators version "VERSION" (https://code.zmaw.de/projects/cdo)";
 
 char *Progname;
 
@@ -228,6 +228,7 @@ void cdo_usage(void)
   fprintf(stderr, "    -L             Lock IO (sequential access)\n");
   fprintf(stderr, "    -M             Switch to indicate that the I/O streams have missing values\n");
   fprintf(stderr, "    -m <missval>   Set the default missing value (default: %g)\n", cdiInqMissval());
+  fprintf(stderr, "    --no_warnings  Inhibit warning messages\n");
   fprintf(stderr, "    -O             Overwrite existing output file, if checked\n");
 #if defined(_OPENMP)
   fprintf(stderr, "    -P <nthreads>  Set number of OpenMP threads\n");
@@ -261,9 +262,9 @@ void cdo_usage(void)
 
   fprintf(stderr, "\n");
   fprintf(stderr, "  CDO version %s, Copyright (C) 2003-2014 Uwe Schulzweida\n", VERSION);
-  //  fprintf(stderr, "  Available from <http://code.zmaw.de/projects/cdo>\n");
+  //  fprintf(stderr, "  Available from <https://code.zmaw.de/projects/cdo>\n");
   fprintf(stderr, "  This is free software and comes with ABSOLUTELY NO WARRANTY\n");
-  fprintf(stderr, "  Report bugs to <http://code.zmaw.de/projects/cdo>\n");
+  fprintf(stderr, "  Report bugs to <https://code.zmaw.de/projects/cdo>\n");
 }
 
 static
@@ -1129,6 +1130,7 @@ int parse_options_long(int argc, char *argv[])
       { "hdr_pad",           required_argument,    &lnetcdf_hdr_pad,  1 },
       { "use_fftw",          required_argument,          &luse_fftw,  1 },
       { "remap_genweights",  required_argument,  &lremap_genweights,  1 },
+      { "no_warnings",             no_argument,           &_Verbose,  0 },
       { "format",            required_argument,                NULL, 'f' },
       { "help",                    no_argument,                NULL, 'h' },
       { "history",                 no_argument,                NULL, 'H' },

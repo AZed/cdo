@@ -1,3 +1,24 @@
+2014-12-11  Uwe Schulzweida
+
+	* Version 1.6.7 released
+
+2014-12-10  Uwe Schulzweida
+
+	* vlistDefAttXXX: limit length of attribute name to CDI_MAX_NAME
+
+2014-12-05  Uwe Schulzweida
+
+	* netCDF absolute time axis with units month: change day from 00 to 01
+	* netCDF absolute time axis with units year: change month/day from 0000 to 0101
+
+2014-12-03  Uwe Schulzweida
+
+	* gribapi: time dependent metadata [Feature #4720]
+
+2014-12-01  Uwe Schulzweida
+
+	* GRIB_API output does not work (bug fix)
+
 2014-11-27  Uwe Schulzweida
 
 	* Version 1.6.6 released

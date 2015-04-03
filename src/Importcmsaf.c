@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -98,8 +98,7 @@ void print_filter(hid_t dset_id, char *varname)
 }
 
 static
-void get_grid_info(double c0, double re, int *nrxp, int *nryp,
-		   double *r0p, double *s0p, double *cp)
+void get_grid_info(double c0, double re, int *nrxp, int *nryp, double *r0p, double *s0p, double *cp)
 {
   const double pi = M_PI;
   double git, phi, s90;
@@ -108,7 +107,7 @@ void get_grid_info(double c0, double re, int *nrxp, int *nryp,
 
   git=2.*pi*re*cos(pi/6.)/c0;
   /* number of longitude pixels */
-  nrx=2*lround(0.5*git);
+  nrx=2*(int)lround(0.5*git);
 
   /* central index in longitude */
   r0=nrx/2+0.5;
@@ -475,8 +474,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
   H5Gclose(grp_id);
 
   /* check region */
-  xsize = lround((region.xmax-region.xmin)/region.dx);
-  ysize = lround((region.ymax-region.ymin)/region.dy);
+  xsize = (int)lround((region.xmax-region.xmin)/region.dx);
+  ysize = (int)lround((region.ymax-region.ymin)/region.dy);
 
   if ( cdoVerbose ) cdoPrint("  Size: xsize=%d  ysize=%d", xsize, ysize);
 
@@ -495,8 +494,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
          cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
                 region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
 
-       xsize = lround((region.xmax-region.xmin)/region.dx);
-       ysize = lround((region.ymax-region.ymin)/region.dy);
+       xsize = (int)lround((region.xmax-region.xmin)/region.dx);
+       ysize = (int)lround((region.ymax-region.ymin)/region.dy);
        if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
     }
 
@@ -512,8 +511,8 @@ int read_geolocation(hid_t loc_id, int nx, int ny, int lprojtype)
         cdoPrint("  Corrected region: xmin=%g xmax=%g ymin=%g ymax=%g dx=%g dy=%g",
                region.xmin, region.xmax, region.ymin, region.ymax, region.dx, region.dy);
 
-        xsize = lround((region.xmax-region.xmin)/region.dx);
-        ysize = lround((region.ymax-region.ymin)/region.dy);
+        xsize = (int)lround((region.xmax-region.xmin)/region.dx);
+        ysize = (int)lround((region.ymax-region.ymin)/region.dy);
         if ( cdoVerbose ) cdoPrint("  Corrected size: xsize=%d  ysize=%d", xsize, ysize);
     }
 
@@ -736,8 +735,8 @@ int read_region(hid_t loc_id, int nx, int ny)
   dx = (xmax-xmin) / nx;
   dy = (ymax-ymin) / ny;
   /*
-  xsize = lround((region.xmax-region.xmin)/region.dx);
-  ysize = lround((region.ymax-region.ymin)/region.dy);
+  xsize = (int)lround((region.xmax-region.xmin)/region.dx);
+  ysize = (int)lround((region.ymax-region.ymin)/region.dy);
 
   if ( cdoVerbose ) cdoPrint("  Size: xsize=%d  ysize=%d", xsize, ysize);
   */

@@ -1,6 +1,11 @@
 CDI NEWS
 --------
 
+Version 1.6.7 (5 December 2014):
+
+   Fixed bugs:
+     * GRIB2 output does not work
+
 Version 1.6.6 (27 November 2014):
 
    New features:

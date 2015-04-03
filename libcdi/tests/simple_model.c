@@ -51,11 +51,10 @@ modelRegionCompute(double region[], size_t offset, size_t len,
       int j = (int)(global_pos % (size_t)(nlon * nlat) / (size_t)nlon);
       int i = (int)(global_pos % (size_t)nlon);
       region[local_pos]
-        = sign_flat(round((cos(2.0 * M_PI * (lons[(i + tsID)%nlon] - lons[0])
-                               / (lons[nlon-1] - lons[0]))
-                           * sin(2.0 * M_PI * (lats[(j + k)%nlat] - lats[0])
-                                 / (lats[nlat-1] - lats[0]))
-                           ) * mscale)) * mrscale;
+        = dg_wobble((lons[(i + tsID)%nlon] - lons[0])
+                    / (lons[nlon-1] - lons[0]),
+                    (lats[(j + k)%nlat] - lats[0])
+                    / (lats[nlat-1] - lats[0]), mscale, mrscale);
     }
 }
 
@@ -125,10 +124,11 @@ modelRun(struct model_config setup, MPI_Comm comm)
     gridDefUUID(gridID, uuid);
   }
   levs = xmalloc((size_t)setup.max_nlev * sizeof (levs[0]));
-  for (i = 0; i < setup.max_nlev; ++i)
-    levs[i] = 101300.0
-      - 3940.3 * (exp(1.3579 * (double)(i)/(setup.max_nlev - 1)) - 1.0);
-
+  {
+    double lscale = 1.0/(double)(setup.max_nlev - 1);
+    for (i = 0; i < setup.max_nlev; ++i)
+      levs[i] = 101300.0 - 13000.0 * expm1(2.173 * (double)i * lscale);
+  }
   vlistID = vlistCreate ();
 
   varDesc = xmalloc((size_t)nVars * sizeof (varDesc[0]));
@@ -184,14 +184,12 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 (int32_t)varDesc[varIdx].size }, comm_size, rank);
         int start = range.first;
         int chunkSize = range.size;
-         fprintf(stderr, "%d: start=%d, chunkSize = %d\n", rank,
-                 start, chunkSize);
-         Xt_idxlist idxlist
-           = xt_idxstripes_new(&(struct Xt_stripe){ .start = start,
-                 .nstrides = chunkSize, .stride = 1 }, 1);
-         varDesc[varIdx].start = start;
-         varDesc[varIdx].chunkSize = chunkSize;
-         varDesc[varIdx].partDesc = idxlist;
+        Xt_idxlist idxlist
+          = xt_idxstripes_new(&(struct Xt_stripe){ .start = start,
+                .nstrides = chunkSize, .stride = 1 }, 1);
+        varDesc[varIdx].start = start;
+        varDesc[varIdx].chunkSize = chunkSize;
+        varDesc[varIdx].partDesc = idxlist;
       }
 #endif
       varDesc[varIdx].code = 129 + varIdx;

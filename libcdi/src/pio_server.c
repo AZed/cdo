@@ -39,8 +39,6 @@
 #include "vlist_var.h"
 
 
-extern void arrayDestroy ( void );
-
 static struct
 {
   size_t size;
@@ -426,7 +424,9 @@ int cdiPioSerialOpenFileMap(int streamID)
 /* for load-balancing purposes, count number of files per process */
 /* cdiOpenFileCounts[rank] gives number of open files rank has to himself */
 static int *cdiSerialOpenFileCount = NULL;
-int cdiPioNextOpenRank()
+
+static int
+cdiPioNextOpenRank()
 {
   xassert(cdiSerialOpenFileCount != NULL);
   int commCollSize = commInqSizeColl();
@@ -440,15 +440,16 @@ int cdiPioNextOpenRank()
   return minRank;
 }
 
-void cdiPioOpenFileOnRank(int rank)
+static void
+cdiPioOpenFileOnRank(int rank)
 {
   xassert(cdiSerialOpenFileCount != NULL
-          && rank >= 0 && rank < commInqSizeColl());
+          && (unsigned)rank < (unsigned)commInqSizeColl());
   ++(cdiSerialOpenFileCount[rank]);
 }
 
-
-void cdiPioCloseFileOnRank(int rank)
+static void
+cdiPioCloseFileOnRank(int rank)
 {
   xassert(cdiSerialOpenFileCount != NULL
           && rank >= 0 && rank < commInqSizeColl());
@@ -989,6 +990,7 @@ cdiPioStreamCDFOpenWrap(const char *filename, const char *filemode,
         if (ioMode != PIO_NONE)
           xmpi(MPI_Bcast(&fileID, 1, MPI_INT, rank, commInqCommColl()));
         streamptr->ownerRank = rank;
+        cdiPioOpenFileOnRank(rank);
         return fileID;
       }
     default:
@@ -1012,11 +1014,11 @@ cdiPioStreamCDFCloseWrap(stream_t *streamptr, int recordBufIsToBeDeleted)
       case FILETYPE_NC4:
       case FILETYPE_NC4C:
         {
-          int rank, rankOpen;
+          int rank, rankOpen = cdiPioSerialOpenFileMap(streamptr->self);
           if (commInqIOMode() == PIO_NONE
-              || ((rank = commInqRankColl())
-                  == (rankOpen = cdiPioSerialOpenFileMap(streamptr->self))))
+              || ((rank = commInqRankColl()) == rankOpen))
             cdiStreamCloseDefaultDelegate(streamptr, recordBufIsToBeDeleted);
+          cdiPioCloseFileOnRank(rankOpen);
           break;
         }
       default:
@@ -1086,12 +1088,8 @@ void cdiPioServer(void (*postCommSetupActions)(void))
       switch ( tag )
         {
         case FINALIZE:
-          {
-            int i;
-            xdebugMsg(tag, source, nfinished);
-            xmpi(MPI_Recv(&i, 1, MPI_INTEGER, source,
-                          tag, commCalc, &status));
-          }
+          xdebugMsg(tag, source, nfinished);
+          xmpi(MPI_Recv(NULL, 0, MPI_INT, source, tag, commCalc, &status));
           xdebug("%s", "RECEIVED MESSAGE WITH TAG \"FINALIZE\"");
           nfinished++;
           xdebug("nfinished=%d, nProcsModel=%d", nfinished, nProcsModel);

@@ -3,6 +3,6 @@
 
 #include <inttypes.h>
 
-uint32_t cdiCheckSum(int type, int count, void *data);
+uint32_t cdiCheckSum(int type, int count, const void *data);
 
 #endif

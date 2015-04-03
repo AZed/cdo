@@ -4,7 +4,7 @@
 
 #include "cdi.h"
 
-int main(int argc, char *argv[])
+int main(void)
 {
   char fname[] = "test_ens.grb2";
   int filetype = FILETYPE_GRB2;

@@ -79,13 +79,14 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = test
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/config/mkinstalldirs $(srcdir)/Read_grib.test.in \
-	$(srcdir)/Read_netcdf.test.in $(srcdir)/Copy_netcdf.test.in \
-	$(srcdir)/Cat.test.in $(srcdir)/Gridarea.test.in \
-	$(srcdir)/Genweights.test.in $(srcdir)/Remap.test.in \
-	$(srcdir)/Select.test.in $(srcdir)/Spectral.test.in \
-	$(srcdir)/Timstat.test.in $(srcdir)/Vertint.test.in \
-	$(srcdir)/Detrend.test.in $(srcdir)/Arith.test.in README
+	$(top_srcdir)/config/mkinstalldirs $(srcdir)/File.test.in \
+	$(srcdir)/Read_grib.test.in $(srcdir)/Read_netcdf.test.in \
+	$(srcdir)/Copy_netcdf.test.in $(srcdir)/Cat.test.in \
+	$(srcdir)/Gridarea.test.in $(srcdir)/Genweights.test.in \
+	$(srcdir)/Remap.test.in $(srcdir)/Select.test.in \
+	$(srcdir)/Spectral.test.in $(srcdir)/Timstat.test.in \
+	$(srcdir)/Vertint.test.in $(srcdir)/Detrend.test.in \
+	$(srcdir)/Arith.test.in README
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 $(top_srcdir)/m4/libtool.m4 \
@@ -96,10 +97,10 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = Read_grib.test Read_netcdf.test Copy_netcdf.test \
-	Cat.test Gridarea.test Genweights.test Remap.test Select.test \
-	Spectral.test Timstat.test Vertint.test Detrend.test \
-	Arith.test
+CONFIG_CLEAN_FILES = File.test Read_grib.test Read_netcdf.test \
+	Copy_netcdf.test Cat.test Gridarea.test Genweights.test \
+	Remap.test Select.test Spectral.test Timstat.test Vertint.test \
+	Detrend.test Arith.test
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -361,7 +362,10 @@ ENABLE_CGRIBEX = @ENABLE_CGRIBEX@
 ENABLE_DATA = @ENABLE_DATA@
 ENABLE_EXTRA = @ENABLE_EXTRA@
 ENABLE_GRIB = @ENABLE_GRIB@
+ENABLE_GRIBAPI = @ENABLE_GRIBAPI@
 ENABLE_IEG = @ENABLE_IEG@
+ENABLE_NC2 = @ENABLE_NC2@
+ENABLE_NC4 = @ENABLE_NC4@
 ENABLE_NETCDF = @ENABLE_NETCDF@
 ENABLE_SERVICE = @ENABLE_SERVICE@
 EXEEXT = @EXEEXT@
@@ -497,8 +501,8 @@ CLEANFILES = `ls *.pyc`
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/config/tap-driver.sh
 
-TESTS = Read_grib.test Read_netcdf.test Copy_netcdf.test Cat.test Gridarea.test Detrend.test Genweights.test Remap.test \
-        Select.test Spectral.test Timstat.test Vertint.test Arith.test
+TESTS = File.test Read_grib.test Read_netcdf.test Copy_netcdf.test Cat.test Gridarea.test Detrend.test \
+        Genweights.test Remap.test Select.test Spectral.test Timstat.test Vertint.test Arith.test
 
 
 #        $(top_srcdir)/test/test_Remap.sh \
@@ -547,6 +551,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+File.test: $(top_builddir)/config.status $(srcdir)/File.test.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 Read_grib.test: $(top_builddir)/config.status $(srcdir)/Read_grib.test.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 Read_netcdf.test: $(top_builddir)/config.status $(srcdir)/Read_netcdf.test.in

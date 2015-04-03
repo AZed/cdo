@@ -27,7 +27,7 @@ int main(int argc, const char **argv)
 {
   /* todo: handle optional arguments here to increase test coverage */
   const char *fname = "test.nc";
-  if (argc)
+  if (argc > 1)
     fname = argv[1];
   int streamID = streamOpenWrite(fname, FILETYPE_NC);
 
@@ -73,6 +73,11 @@ int main(int argc, const char **argv)
   int vlistID = vlistCreate();
   int varID = vlistDefVar(vlistID, gridID, zaxisID, TSTEP_INSTANT);
   vlistDefVarMissval(vlistID, varID, missValue);
+  {
+    static const char creatorText[] = "CDI test_cdf_write";
+    vlistDefAttTxt(vlistID, varID, "CDI Text Attribute test, created by",
+                   sizeof (creatorText) - 1, creatorText);
+  }
 
   int taxisID = taxisCreate(TAXIS_ABSOLUTE);
   vlistDefTaxis(vlistID, taxisID);

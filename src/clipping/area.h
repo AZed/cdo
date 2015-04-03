@@ -42,9 +42,9 @@
   *
   **/
 
-extern const double area_tol;
+double area_tol();
 
-/** \brief Calculate the area of a cell on a sphere
+/** \brief Calculate the area of a cell on a unit sphere
   *
   * Taken from:
   *
@@ -98,7 +98,7 @@ extern const double area_tol;
 
 double cell_approx_area ( struct grid_cell cell );
 
-/** \brief Calculate the area of a triangle on a sphere
+/** \brief Calculate the area of a triangle on a unit sphere
   *
   * Adopted from the ICON code, mo_base_geometry.f90
   * provided by Luis Kornblueh, MPI-M. 
@@ -132,7 +132,7 @@ double cell_approx_area ( struct grid_cell cell );
 
 double triangle_area ( struct grid_cell cell );
 
-/** \brief Calculate the area of a cell on a sphere
+/** \brief Calculate the area of a cell on a unit sphere
   *
   * Generalized version of triangle_area
   *
@@ -161,7 +161,7 @@ double triangle_area ( struct grid_cell cell );
 
 double cell_area ( struct grid_cell cell );
 
-/** \brief Calculate the area of a cell on a sphere
+/** \brief Calculate the area of a cell on a unit sphere
   *
   * Following M. Bevis and G. Cambareri, 1987: Computing the Area
   *   of a Spherical Polygon of Arbitray Shape. Math. Geology,
@@ -203,7 +203,7 @@ double cell_area ( struct grid_cell cell );
   **/
 double girards_area ( struct grid_cell cell );
 
-/** \brief Calculate the area of a cell in a 3d plane
+/** \brief Calculate the area of a cell in a 3d plane on a unit sphere
   *
   *  see http://geomalgorithms.com/a01-_area.html
   *
@@ -221,7 +221,7 @@ double girards_area ( struct grid_cell cell );
 
 double cell3d_area( struct grid_cell cell );
 
-/** \brief Calculate the area of a cell on a sphere
+/** \brief Calculate the area of a cell on a unit sphere
   *
   * based on:
   *
@@ -239,7 +239,7 @@ double cell3d_area( struct grid_cell cell );
 double pole_area ( struct grid_cell cell );
 
 /**
-  * \brief Area calculation taken from ESMF based on L'Huilier's Theorem
+  * \brief Area calculation on a unit sphere taken from ESMF based on L'Huilier's Theorem
   *
   * (http://mathworld.wolfram.com/LHuiliersTheorem.html)\n
   * (http://mathforum.org/library/drmath/view/65316.html)\n

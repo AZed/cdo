@@ -18,6 +18,11 @@ if [ "$missValueCount" -ne 1 ]; then
   echo "Mismatch in expected number of missing values!" >&2
   exit 1
 fi
+if ! echo "$digest" | grep 'variable 1 attribute "CDI Text Attribute test, created by", value: "CDI test_cdf_write"' >/dev/null; then
+  echo "Expected attribute not found" >&2
+  exit 1
+fi
+
 #
 # Local Variables:
 # mode: sh

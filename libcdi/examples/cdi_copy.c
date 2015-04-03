@@ -1,51 +1,46 @@
 #include <stdio.h>
 #include "cdi.h"
 
-int nlon = 12; // Number of longitudes
-int nlat =  6; // Number of latitudes 
-int nlev =  5; // Number of levels    
-int nts  =  3; // Number of time steps
-
 int main(void)
 {
-  int taxisID, vlistID1, vlistID2, varID1, varID2, streamID1, streamID2, tsID;
+  const int nlon = 12; // Number of longitudes
+  const int nlat =  6; // Number of latitudes 
+  const int nlev =  5; // Number of levels    
+  const int nts  =  3; // Number of time steps
   int nmiss;
   double var1[nlon*nlat];
   double var2[nlon*nlat*nlev];
 
 
   // Open the input dataset
-  streamID1  = streamOpenRead("example.nc");
+  int streamID1  = streamOpenRead("example.nc");
   if ( streamID1 < 0 )
     {
       fprintf(stderr, "%s\n", cdiStringError(streamID1));
-      return(1);
+      return 1;
     }
 
   // Get the variable list of the dataset
-  vlistID1 = streamInqVlist(streamID1);
+  int vlistID1 = streamInqVlist(streamID1);
 
   // Set the variable IDs
-  varID1 = 0;
-  varID2 = 1;
-
-  // Get the Time axis from the variable list
-  taxisID = vlistInqTaxis(vlistID1);
+  int varID1 = 0;
+  int varID2 = 1;
 
   // Open the output dataset (GRIB format)
-  streamID2  = streamOpenWrite("example.grb", FILETYPE_GRB);
+  int streamID2  = streamOpenWrite("example.grb", FILETYPE_GRB);
   if ( streamID2 < 0 )
     {
       fprintf(stderr, "%s\n", cdiStringError(streamID2));
-      return(1);
+      return 1;
     }
 
-  vlistID2 = vlistDuplicate(vlistID1);
+  int vlistID2 = vlistDuplicate(vlistID1);
 
   streamDefVlist(streamID2, vlistID2);
 
   // Loop over the number of time steps
-  for ( tsID = 0; tsID < nts; tsID++ )
+  for ( int tsID = 0; tsID < nts; tsID++ )
     {
       // Inquire the input time step
       streamInqTimestep(streamID1, tsID);

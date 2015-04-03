@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -85,55 +85,5 @@ extern char **cdoVarnames;
 int cdo_omp_get_thread_num(void);
 
 
-void    cdiOpenError(int cdiErrno, const char *fmt, const char *path);
-void    cdoAbort(const char *fmt, ...);
-void    cdoWarning(const char *fmt, ...);
-void    cdoPrint(const char *fmt, ...);
-
-int  timer_new(const char *text);
-void timer_report(void);
-void timer_start(int it);
-void timer_stop(int it);
-double timer_val(int it);
-
-
-void    operatorInputArg(const char *enter);
-int     operatorArgc(void);
-char  **operatorArgv(void);
-void    operatorCheckArgc(int numargs);
-
-const argument_t *cdoStreamName(int cnt);
-
-void    cdoInitialize(void *argument);
-void    cdoFinish(void);
-
-int     cdoStreamNumber(void);
-int     cdoStreamCnt(void);
-int     cdoOperatorAdd(const char *name, int func, int intval, const char *enter);
-int     cdoOperatorID(void);
-int     cdoOperatorF1(int operID);
-int     cdoOperatorF2(int operID);
-const char *cdoOperatorName(int operID);
-const char *cdoOperatorEnter(int operID);
-
-int     cdoFiletype(void);
-
-void    cdoInqHistory(int fileID);
-void    cdoDefHistory(int fileID, char *histstring);
-
-int     cdoDefineGrid(const char *gridfile);
-int     cdoDefineZaxis(const char *zaxisfile);
-
-int     vlistInqNWPV(int vlistID, int varID);
-int     vlistIsSzipped(int vlistID);
-
-void cdoGenFileSuffix(char *filesuffix, size_t maxlen, int filetype, int vlistID, const char *refname);
-
-void writeNCgrid(const char *gridfile, int gridID, int *imask);
-void defineZaxis(const char *zaxisarg);
-void cdiDefTableID(int tableID);
-
-int gridFromName(const char *gridname);
-int zaxisFromName(const char *zaxisname);
 
 #endif  /* _CDO_H */

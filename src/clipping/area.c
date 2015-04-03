@@ -42,7 +42,13 @@
 #include "ensure_array_size.h"
 
 // area tolerance (10 m^2 = 0.0001 km^2)
-const double area_tol = 0.02*0.02; // 20m*20m
+// const double area_tol = 0.02*0.02; // 20m*20m
+
+// an area of 20m x 20m on the Earth Surface is equivalent to an area on the unit sphere:
+
+double area_tol () {
+  return 0.02 / EarthRadius;
+}
 
 static inline double scalar_product(double a[], double b[]);
 
@@ -60,16 +66,16 @@ double cell_approx_area ( struct grid_cell cell ) {
   /* adopted from Robert.G. Chamberlain and William.H. Duquette */
 
   int m, M;
-  double SUM = 0.0;
-  double area;
+  // double SUM = 0.0;
+  double area = 0.0;
 
   M = cell.num_corners;
 
   for ( m = 0; m < M; m++ )
-    SUM += ( cell.coordinates_x[(m+2)%M] - cell.coordinates_x[m] ) *
-             sin(cell.coordinates_y[(m+1)%M]);
+    area += ( cell.coordinates_x[m] - cell.coordinates_x[(m+2)%M] ) *
+              sin(cell.coordinates_y[(m+1)%M]);
 
-  area = -EarthRadius2 * SUM;
+  // area = EarthRadius2 * SUM;
 
   return area;
 }
@@ -153,7 +159,8 @@ double triangle_area ( struct grid_cell cell ) {
 
       here for a unit sphere: */
 
-  return MAX(( a1+a2+a3-M_PI ) * EarthRadius * EarthRadius, 0.0);
+  // return MAX(( a1+a2+a3-M_PI ) * EarthRadius * EarthRadius, 0.0);
+  return MAX( (a1+a2+a3-M_PI) , 0.0 );
 }
 
 /* ----------------------------------- */
@@ -233,7 +240,8 @@ double cell_area ( struct grid_cell cell ) {
       area += a[m];
   }
 
-  return MAX(area * EarthRadius * EarthRadius, 0.0);
+  // return MAX(area * EarthRadius * EarthRadius, 0.0);
+  return MAX(area,0.0);
 }
 
 /* ----------------------------------- */
@@ -276,7 +284,7 @@ double girards_area ( struct grid_cell cell  ) {
 
   /* Area on Sphere with radius EarthRadius */
 
-  area *= EarthRadius * EarthRadius;
+  // area *= EarthRadius * EarthRadius;
 
   free ( theta );
 
@@ -381,7 +389,8 @@ double cell3d_area( struct grid_cell cell ) {
         break;
     }
 
-    return area * EarthRadius * EarthRadius;
+    // return area * EarthRadius * EarthRadius;
+    return area;
 }
 
 /** area of a spherical triangle based on L'Huilier's Theorem
@@ -598,7 +607,8 @@ double pole_area ( struct grid_cell cell ) {
       abort_message("ERROR: unsupported edge type\n", __FILE__, __LINE__);
     }
   }
-  return fabs(area * EarthRadius * EarthRadius);
+  // return fabs(area) * EarthRadius * EarthRadius;
+  return fabs(area);
 }
 
  /*
@@ -621,11 +631,11 @@ double huiliers_area(struct grid_cell cell) {
   if (cell.num_corners == 3 && !lat_flag)
     return fabs(tri_area(cell.coordinates_xyz + 0*3,
                          cell.coordinates_xyz + 1*3,
-                         cell.coordinates_xyz + 2*3) *
-                EarthRadius * EarthRadius);
+                         cell.coordinates_xyz + 2*3));
+    //         * EarthRadius * EarthRadius;
 
   // sum areas around cell
-  double sum = 0.0;
+  double area = 0.0;
 
   for (int i = 2; i < cell.num_corners; ++i) {
 
@@ -641,12 +651,12 @@ double huiliers_area(struct grid_cell cell) {
     double scalar_base = scalar_product(norm, cell.coordinates_xyz + 0*3);
 
     if (scalar_base > 0)
-      sum += tmp_area;
+      area += tmp_area;
     else
-      sum -= tmp_area;
+      area -= tmp_area;
   }
 
-  // if there is at least on latitude circle edge
+  // if there is at least one latitude circle edge
   if (lat_flag) {
 
     for (int i = 0; i < cell.num_corners; ++i) {
@@ -655,17 +665,17 @@ double huiliers_area(struct grid_cell cell) {
 
         int i_ = (i+1)%cell.num_corners;
 
-        sum += lat_edge_correction(cell.coordinates_xyz + 0 * 3,
-                                   cell.coordinates_xyz + i * 3,
-                                   cell.coordinates_xyz + i_ * 3,
-                                   cell.coordinates_x[i],
-                                   cell.coordinates_x[i_]);
+        area += lat_edge_correction(cell.coordinates_xyz + 0 * 3,
+                                    cell.coordinates_xyz + i * 3,
+                                    cell.coordinates_xyz + i_ * 3,
+                                    cell.coordinates_x[i],
+                                    cell.coordinates_x[i_]);
       }
     }
   }
 
-  // return area
-  return fabs(sum * EarthRadius * EarthRadius);
+  return fabs(area);
+  // return fabs(area) * EarthRadius * EarthRadius;
 }
 
 /* ----------------------------------- */

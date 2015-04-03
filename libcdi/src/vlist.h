@@ -133,7 +133,7 @@ typedef struct
   int         nvars;        /* number of variables                */
   int         ngrids;
   int         nzaxis;
-  int         ntsteps;
+  long        ntsteps;
   int         taxisID;
   int         tableID;
   int         instID;
@@ -214,6 +214,12 @@ vlistAdd2ZaxisIDs(vlist_t *vlistptr, int zaxisID)
 extern int   cdiNAdditionalGRIBKeys;
 extern char* cdiAdditionalGRIBKeys[];
 #endif
+
+extern
+#ifndef __cplusplus
+const
+#endif
+resOps vlistOps;
 
 #endif  /* _VLIST_H */
 /*

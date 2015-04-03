@@ -217,13 +217,6 @@ void taxis_copy(taxis_t *taxisptr2, taxis_t *taxisptr1)
 }
 #endif
 
-static
-void taxis_check_ptr(const char *caller, taxis_t *taxisptr)
-{
-  if ( taxisptr == NULL )
-    Errorc("taxis undefined!");
-}
-
 /*
 @Function  taxisCreate
 @Title     Create a Time axis
@@ -276,7 +269,6 @@ int taxisCreate(int taxistype)
 
 void taxisDestroyKernel(taxis_t *taxisptr)
 {
-  taxis_check_ptr(__func__, taxisptr);
   int id = taxisptr->self;
   delete_refcount_string(taxisptr->name);
   delete_refcount_string(taxisptr->longname);
@@ -328,8 +320,6 @@ void taxisDefType(int taxisID, int type)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->type != type)
     {
       taxisptr->type = type;
@@ -354,8 +344,6 @@ The function @func{taxisDefVdate} defines the verification date of a Time axis.
 void taxisDefVdate(int taxisID, int vdate)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->vdate != vdate)
     {
@@ -382,8 +370,6 @@ void taxisDefVtime(int taxisID, int vtime)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->vtime != vtime)
     {
       taxisptr->vtime = vtime;
@@ -408,8 +394,6 @@ The function @func{taxisDefRdate} defines the reference date of a Time axis.
 void taxisDefRdate(int taxisID, int rdate)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->rdate != rdate)
     {
@@ -436,8 +420,6 @@ void taxisDefRtime(int taxisID, int rtime)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->rtime != rtime)
     {
       taxisptr->rtime = rtime;
@@ -463,8 +445,6 @@ void taxisDefFdate(int taxisID, int fdate)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->fdate != fdate)
     {
       taxisptr->fdate = fdate;
@@ -489,8 +469,6 @@ The function @func{taxisDefFtime} defines the forecast reference time of a Time 
 void taxisDefFtime(int taxisID, int ftime)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->ftime != ftime)
     {
@@ -519,8 +497,6 @@ void taxisDefCalendar(int taxisID, int calendar)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->calendar != calendar)
     {
       taxisptr->calendar = calendar;
@@ -532,8 +508,6 @@ void taxisDefCalendar(int taxisID, int calendar)
 void taxisDefTunit(int taxisID, int unit)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->unit != unit)
     {
@@ -547,8 +521,6 @@ void taxisDefForecastTunit(int taxisID, int unit)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->fc_unit != unit)
     {
       taxisptr->fc_unit = unit;
@@ -561,8 +533,6 @@ void taxisDefForecastPeriod(int taxisID, double fc_period)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   if (taxisptr->fc_period != fc_period)
     {
       taxisptr->fc_period = fc_period;
@@ -574,8 +544,6 @@ void taxisDefForecastPeriod(int taxisID, double fc_period)
 void taxisDefNumavg(int taxisID, int numavg)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->numavg != numavg)
     {
@@ -592,8 +560,6 @@ int taxisInqType(int taxisID)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->type);
 }
 
@@ -602,8 +568,6 @@ int taxisHasBounds(int taxisID)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->has_bounds);
 }
 
@@ -611,8 +575,6 @@ int taxisHasBounds(int taxisID)
 void taxisDeleteBounds(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->has_bounds != FALSE)
     {
@@ -626,9 +588,6 @@ void taxisCopyTimestep(int taxisID2, int taxisID1)
 {
   taxis_t *taxisptr1 = (taxis_t *)reshGetVal(taxisID1, &taxisOps),
     *taxisptr2 = (taxis_t *)reshGetVal(taxisID2, &taxisOps);
-
-  taxis_check_ptr(__func__, taxisptr1);
-  taxis_check_ptr(__func__, taxisptr2);
 
   reshLock();
 
@@ -676,8 +635,6 @@ int taxisInqVdate(int taxisID)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->vdate);
 }
 
@@ -685,8 +642,6 @@ int taxisInqVdate(int taxisID)
 void taxisInqVdateBounds(int taxisID, int *vdate_lb, int *vdate_ub)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
-
-  taxis_check_ptr(__func__, taxisptr);
 
   *vdate_lb = taxisptr->vdate_lb;
   *vdate_ub = taxisptr->vdate_ub;
@@ -696,8 +651,6 @@ void taxisInqVdateBounds(int taxisID, int *vdate_lb, int *vdate_ub)
 void taxisDefVdateBounds(int taxisID, int vdate_lb, int vdate_ub)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->vdate_lb != vdate_lb
       || taxisptr->vdate_ub != vdate_ub
@@ -730,8 +683,6 @@ int taxisInqVtime(int taxisID)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->vtime);
 }
 
@@ -739,8 +690,6 @@ int taxisInqVtime(int taxisID)
 void taxisInqVtimeBounds(int taxisID, int *vtime_lb, int *vtime_ub)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
-
-  taxis_check_ptr(__func__, taxisptr);
 
   *vtime_lb = taxisptr->vtime_lb;
   *vtime_ub = taxisptr->vtime_ub;
@@ -750,8 +699,6 @@ void taxisInqVtimeBounds(int taxisID, int *vtime_lb, int *vtime_ub)
 void taxisDefVtimeBounds(int taxisID, int vtime_lb, int vtime_ub)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   if (taxisptr->vtime_lb != vtime_lb
       || taxisptr->vtime_ub != vtime_ub
@@ -782,9 +729,7 @@ The function @func{taxisInqRdate} returns the reference date of a Time axis.
 */
 int taxisInqRdate(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   if ( taxisptr->rdate == -1 )
     {
@@ -814,9 +759,7 @@ The function @func{taxisInqRtime} returns the reference time of a Time axis.
 */
 int taxisInqRtime(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   if ( taxisptr->rdate == -1 )
     {
@@ -846,9 +789,7 @@ The function @func{taxisInqFdate} returns the forecast reference date of a Time 
 */
 int taxisInqFdate(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   if ( taxisptr->fdate == -1 )
     {
@@ -877,9 +818,7 @@ The function @func{taxisInqFtime} returns the forecast reference time of a Time 
 */
 int taxisInqFtime(int taxisID)
 {
-  taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
+  taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
 
   if ( taxisptr->fdate == -1 )
     {
@@ -913,8 +852,6 @@ int taxisInqCalendar(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->calendar);
 }
 
@@ -922,8 +859,6 @@ int taxisInqCalendar(int taxisID)
 int taxisInqTunit(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   return (taxisptr->unit);
 }
@@ -933,8 +868,6 @@ int taxisInqForecastTunit(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->fc_unit);
 }
 
@@ -942,8 +875,6 @@ int taxisInqForecastTunit(int taxisID)
 double taxisInqForecastPeriod(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
-
-  taxis_check_ptr(__func__, taxisptr);
 
   return (taxisptr->fc_period);
 }
@@ -953,8 +884,6 @@ int taxisInqNumavg(int taxisID)
 {
   taxis_t *taxisptr = ( taxis_t * ) reshGetVal ( taxisID, &taxisOps );
 
-  taxis_check_ptr(__func__, taxisptr);
-
   return (taxisptr->numavg);
 }
 
@@ -962,8 +891,6 @@ int taxisInqNumavg(int taxisID)
 taxis_t *taxisPtr(int taxisID)
 {
   taxis_t *taxisptr = (taxis_t *)reshGetVal(taxisID, &taxisOps);
-
-  taxis_check_ptr(__func__, taxisptr);
 
   return (taxisptr);
 }
@@ -973,7 +900,6 @@ ptaxisDefName(taxis_t *taxisptr, const char *name)
 {
   if (name)
     {
-      taxis_check_ptr(__func__, taxisptr);
       size_t len = strlen(name);
       delete_refcount_string(taxisptr->name);
       char *taxisname = taxisptr->name = new_refcount_string(len);
@@ -986,7 +912,6 @@ ptaxisDefLongname(taxis_t *taxisptr, const char *longname)
 {
   if (longname)
     {
-      taxis_check_ptr(__func__, taxisptr);
       size_t len = strlen(longname);
       delete_refcount_string(taxisptr->longname);
       char *taxislongname = taxisptr->longname = new_refcount_string(len);
@@ -1269,6 +1194,7 @@ void splitTimevalue(double timevalue, int timeunit, int *date, int *time)
   else if ( timeunit == TUNIT_MONTH )
     {
       vdate = (int) timevalue*100;
+      vdate += 1;
       vtime = 0;
     }
   else if ( timeunit == TUNIT_YEAR )
@@ -1285,6 +1211,7 @@ void splitTimevalue(double timevalue, int timeunit, int *date, int *time)
 	}
 
       vdate = (int) timevalue*10000;
+      vdate += 101;
       vtime = 0;
     }
   else
@@ -1482,8 +1409,6 @@ taxisPrintKernel(taxis_t * taxisptr, FILE * fp)
   int vdate_lb, vdate_ub;
   int vtime_lb, vtime_ub;
 
-  taxis_check_ptr ( __func__, taxisptr );
-
   taxisInqVdateBounds ( taxisptr->self, &vdate_lb, &vdate_ub);
   taxisInqVtimeBounds ( taxisptr->self, &vtime_lb, &vtime_ub);
 
@@ -1670,8 +1595,8 @@ taxisPack(void * voidP, void * packBuffer, int packBufferSize, int * packBufferP
   intBuffer[idx++] = taxisP->vtime_lb;
   intBuffer[idx++] = taxisP->vdate_ub;
   intBuffer[idx++] = taxisP->vtime_ub;
-  intBuffer[idx++] = taxisP->name ? strlen(taxisP->name) : 0;
-  intBuffer[idx++] = taxisP->longname ? strlen(taxisP->longname) : 0;
+  intBuffer[idx++] = taxisP->name ? (int)strlen(taxisP->name) : 0;
+  intBuffer[idx++] = taxisP->longname ? (int)strlen(taxisP->longname) : 0;
 
   serializePack(intBuffer, taxisNint, DATATYPE_INT,
                 packBuffer, packBufferSize, packBufferPos, context);

@@ -19,22 +19,14 @@
 #include "pio_rpc.h"
 #include "pio_util.h"
 
-char * command2charP[6] = {"IO_Open_file", "IO_Close_file",
-                           "IO_Get_fp","IO_Set_fp",
-                           "IO_Send_buffer", "IO_Finalize"};
-
-long initial_buffersize = 16 * 1024 * 1024;
-/*  4 KB <= x < 256 MB */
-/* 16 * 1024 * 1024; */
-/* 16 * 1024; */
-/* 4 * 1024; */
-
-double accumProbe   = 0.0;
-double accumRecv    = 0.0;
-double accumSend    = 0.0;
-double accumSuspend = 0.0;
-double accumWait    = 0.0;
-double accumWrite   = 0.0;
+const char *const cdiPioCmdStrTab[] = {
+  "IO_Open_file",
+  "IO_Close_file",
+  "IO_Get_fp",
+  "IO_Set_fp",
+  "IO_Send_buffer",
+  "IO_Finalize"
+};
 
 char *token = "%";
 

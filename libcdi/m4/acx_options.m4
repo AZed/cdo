@@ -158,14 +158,13 @@ AC_ARG_WITH([netcdf],
                                   [AC_MSG_CHECKING([netcdf's nc2 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc2)" = "xyes"],
                                          [AC_DEFINE([HAVE_NETCDF2],[1],[Define to 1 for NETCDF2 support])
-                                          AC_MSG_RESULT([yes])
-                                          ENABLE_NC2=yes],
-                                         [AC_MSG_RESULT([no])])
+                                          ENABLE_NC2=yes
+                                          AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
                                    AC_MSG_CHECKING([netcdf's nc4 support])
                                    AS_IF([test "x$($NC_CONFIG --has-nc4)" = "xyes"],
-                                   [AC_DEFINE([HAVE_NETCDF4],[1],[Define to 1 for NETCDF4 support])
-                                    ENABLE_NC4=yes
-                                    AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])],
+                                         [AC_DEFINE([HAVE_NETCDF4],[1],[Define to 1 for NETCDF4 support])
+                                          ENABLE_NC4=yes
+                                          AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])],
                                   [AS_ECHO([Could not find nc-config! go on with default configuration])])],
                      [*],[AS_IF([test -d "$with_netcdf"],
                                 [NETCDF_ROOT=$with_netcdf

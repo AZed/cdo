@@ -4,7 +4,7 @@
 #  autoconf 2.68
 #  libtool  2.4.2
 
-AC_INIT([cdi], [1.6.6], [http://code.zmaw.de/projects/cdi])
+AC_INIT([cdi], [1.6.7], [https://code.zmaw.de/projects/cdi])
 
 echo "configuring ${PACKAGE_NAME} ${PACKAGE_VERSION}"
 
@@ -64,7 +64,8 @@ AC_CHECK_LIB(malloc, malloc)
 AC_CHECK_MEMBERS([struct stat.st_blksize])
 #  ----------------------------------------------------------------------
 # Checks for header files
-AC_CHECK_HEADERS([malloc.h execinfo.h uuid.h uuid/uuid.h])
+AC_CHECK_HEADERS([malloc.h uuid.h uuid/uuid.h])
+AX_EXECINFO
 #  ----------------------------------------------------------------------
 # Checks for the availability of functions
 AC_CHECK_FUNCS([mallinfo])

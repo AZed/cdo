@@ -154,25 +154,13 @@ void compute_concave_overlap_areas (unsigned N,
     abort_message("ERROR: missing target point coordinates "
 		  "(x_coordinates == NULL || y_coordinates == NULL)",
 		  __FILE__, __LINE__);
-  /*
+
   struct grid_cell target_partial_cell =
     {.coordinates_x   = (double[3]){-1},
      .coordinates_y   = (double[3]){-1},
      .coordinates_xyz = (double[3*3]){-1},
      .edge_type       = (enum edge_type[3]) {GREAT_CIRCLE},
      .num_corners     = 3};
-  */
-  double coordinates_x[3] = {-1, -1, -1};
-  double coordinates_y[3] = {-1, -1, -1};
-  double coordinates_xyz[9] = {-1, -1, -1};
-  enum edge_type edge_types[3] = {GREAT_CIRCLE, GREAT_CIRCLE, GREAT_CIRCLE};
-  struct grid_cell target_partial_cell =
-    {.coordinates_x   = coordinates_x,
-     .coordinates_y   = coordinates_y,
-     .coordinates_xyz = coordinates_xyz,
-     .edge_type       = edge_types,
-     .num_corners     = 3};
-
 
   static struct grid_cell * overlap_buffer = NULL;
   static unsigned overlap_buffer_size = 0;
@@ -460,9 +448,6 @@ static void get_edge_middle_point(double a[3], double b[3],
       middle[2] = -1;
   };
 }
-
-//static struct grid_cell curr_target_cell;
-//static struct grid_cell curr_source_cell;
 
 /**
  * cell clipping using Sutherland–Hodgman algorithm;
@@ -879,22 +864,22 @@ static void copy_point_list(struct point_list in, struct point_list * out) {
 
   if (curr == NULL) return;
 
-  struct point_list_element * xnew = get_free_point_list_element(out);
-  out->first = xnew;
-  *xnew = *curr;
+  struct point_list_element * new = get_free_point_list_element(out);
+  out->first = new;
+  *new = *curr;
   curr = curr->next;
 
   do {
 
-    xnew->next = get_free_point_list_element(out);
-    xnew = xnew->next;
-    *xnew = *curr;
+    new->next = get_free_point_list_element(out);
+    new = new->next;
+    *new = *curr;
     curr = curr->next;
 
   } while (curr != in.first);
 
-  xnew->next = out->first;
-  out->last = xnew;
+  new->next = out->first;
+  out->last = new;
 }
 
 void cell_clipping(unsigned N,
@@ -1015,9 +1000,6 @@ void cell_clipping(unsigned N,
          (fabs(target_cell.coordinates_y[0]) >
           fabs(source_cell[n].coordinates_y[0])))) {
 
-      // curr_target_cell = source_cell[n];
-      //  curr_source_cell = target_cell;
-
       copy_point_list(target_list, &temp_list);
 
       double temp_norm_vec[3*ncs];
@@ -1050,9 +1032,6 @@ void cell_clipping(unsigned N,
       overlap = &temp_list;
 
     } else {
-
-      // curr_target_cell = target_cell;
-      //  curr_source_cell = source_cell[n];
 
       point_list_clipping(&source_list, source_ordering,
                           target_list, target_ordering, nct, norm_vec);

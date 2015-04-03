@@ -7,14 +7,14 @@
 #include <errno.h>
 #include "cdi.h"
 
-char *cdiStringError(int cdiErrno)
+const char *cdiStringError(int cdiErrno)
 {
-  static char UnknownError[] = "Unknown Error";
-  static char _EUFTYPE[]     = "Unsupported file type";
-  static char _ELIBNAVAIL[]  = "Unsupported file type (library support not compiled in)";
-  static char _EUFSTRUCT[]   = "Unsupported file structure";
-  static char _EUNC4[]       = "Unsupported netCDF4 structure";
-  static char _ELIMIT[]      = "Internal limits exceeded";
+  static const char UnknownError[] = "Unknown Error";
+  static const char _EUFTYPE[]     = "Unsupported file type";
+  static const char _ELIBNAVAIL[]  = "Unsupported file type (library support not compiled in)";
+  static const char _EUFSTRUCT[]   = "Unsupported file structure";
+  static const char _EUNC4[]       = "Unsupported netCDF4 structure";
+  static const char _ELIMIT[]      = "Internal limits exceeded";
 
   switch (cdiErrno) {
   case CDI_ESYSTEM:

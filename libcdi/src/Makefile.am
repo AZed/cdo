@@ -179,7 +179,7 @@ if CREATE_ISOC
 LOCALTARGETS += mo_cdi.$(OBJEXT)
 endif
 #
-mo_cdi.f90: $(top_srcdir)/src/cdi.h
+mo_cdi.f90: $(top_srcdir)/src/cdi.h $(top_srcdir)/interfaces/f2003/bindGen.rb
 	ruby $(top_srcdir)/interfaces/f2003/bindGen.rb $(top_srcdir)/src/cdi.h $@
 #
 mo_cdi.$(OBJEXT): mo_cdi.f90

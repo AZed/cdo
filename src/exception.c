@@ -5,8 +5,9 @@
 #include <cdi.h>
 #include "cdo.h"
 #include "process.h"
+#include "error.h"
 
-static int _ExitOnError   = 1;	/* If set to 1, exit on error       */
+#include "config.h"
 
 void cdiOpenError(int cdiErrno, const char *fmt, const char *path)
 {	
@@ -51,14 +52,15 @@ void cdiOpenError(int cdiErrno, const char *fmt, const char *path)
 	  }
 	case FILETYPE_NC:
 	case FILETYPE_NC2:
-	  {
-	    fprintf(stderr, "To create a CDO application with netCDF support use: ./configure --with-netcdf=<netCDF root directory> ...\n");
-	    break;
-	  }
 	case FILETYPE_NC4:
 	case FILETYPE_NC4C:
 	  {
-	    fprintf(stderr, "To create a CDO application with netCDF4 support use: ./configure --with-netcdf=<netCDF4 root directory> ...\n");
+	    const char *ncv = (filetype == FILETYPE_NC4 || filetype == FILETYPE_NC4C) ? "4" : ((filetype == FILETYPE_NC2) ? "2" : "");
+#if defined HAVE_LIBNETCDF
+	    fprintf(stderr, "CDO was build with a netCDF version which doesn't support netCDF%s data!\n", ncv);
+#else
+	    fprintf(stderr, "To create a CDO application with netCDF%s support use: ./configure --with-netcdf=<netCDF%s root directory> ...\n", ncv, ncv);
+#endif
 	    break;
 	  }
 	default:
@@ -96,19 +98,22 @@ void cdoAbort(const char *fmt, ...)
 
 void cdoWarning(const char *fmt, ...)
 {
-  va_list args;
+  if ( _Verbose )
+    {
+      va_list args;
 
-  va_start(args, fmt);
+      va_start(args, fmt);
 
-  set_text_color(stderr, BRIGHT, YELLOW);
-   fprintf(stderr, "%s (Warning): ", processInqPrompt());
-  reset_text_color(stderr);
-  set_text_color(stderr, RESET, BLACK);
-  vfprintf(stderr, fmt, args);
-  reset_text_color(stderr);
-   fprintf(stderr, "\n");
+      set_text_color(stderr, BRIGHT, YELLOW);
+      fprintf(stderr, "%s (Warning): ", processInqPrompt());
+      reset_text_color(stderr);
+      set_text_color(stderr, RESET, BLACK);
+      vfprintf(stderr, fmt, args);
+      reset_text_color(stderr);
+      fprintf(stderr, "\n");
 
-  va_end(args);
+      va_end(args);
+    }
 }
 
 
