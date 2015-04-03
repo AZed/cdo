@@ -9,7 +9,7 @@
 #include "cdi.h"
 #include "dmemory.h"
 
-int main(int argc, char *argv[])
+int main()
 {
   char fname[] = "test.grb";
   int filetype = FILETYPE_GRB;

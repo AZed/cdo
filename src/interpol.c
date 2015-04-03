@@ -262,7 +262,7 @@ void intlinarr2(double missval, int lon_is_circular,
       field[i] = missval;
 
 #if defined(_OPENMP)
-#pragma omp atomic
+#include "pragma_omp_atomic_update.h"
 #endif
       findex++;
       if ( lprogress ) progressStatus(0, 1, findex/gridsize2);
@@ -470,7 +470,7 @@ void intconarr2(double missval, int lon_is_circular,
       //printf("bound_box %ld  lon: %g %g lat: %g %g\n", i, bound_box[2]*RAD2DEG, bound_box[3]*RAD2DEG, bound_box[0]*RAD2DEG, bound_box[1]*RAD2DEG);
       /*
 #if defined(_OPENMP)
-#pragma omp atomic
+#include "pragma_omp_atomic_update.h"
 #endif
       */
       findex++;

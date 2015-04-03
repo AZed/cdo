@@ -29,6 +29,7 @@ typedef int MPI_Comm;
 #include "pio_write.h"
 
 #include "simple_model_helper.h"
+#include "create_uuid.h"
 
 enum {
   ntfiles     = 2,
@@ -42,6 +43,7 @@ modelRegionCompute(double region[], size_t offset, size_t len,
                    double mscale, double mrscale)
 {
   size_t local_pos;
+  (void)nlev;
   for (local_pos = 0; local_pos < len; ++local_pos)
     {
       size_t global_pos = offset + local_pos;
@@ -93,8 +95,8 @@ modelRun(struct model_config setup, MPI_Comm comm)
   xmpi ( MPI_Comm_size ( comm, &comm_size ));
   if (rank == 0 && setup.compute_checksum)
     {
-      chunks = xmalloc(comm_size * sizeof (chunks[0]));
-      displs = xmalloc(comm_size * sizeof (displs[0]));
+      chunks = xmalloc((size_t)comm_size * sizeof (chunks[0]));
+      displs = xmalloc((size_t)comm_size * sizeof (displs[0]));
       var = xmalloc((size_t)nlon * (size_t)nlat
                     * (size_t)setup.max_nlev * sizeof(var[0]));
     }
@@ -113,7 +115,15 @@ modelRun(struct model_config setup, MPI_Comm comm)
     lats[i] = ((double)(i * 180))/nlat - 90.0;
   gridDefXvals ( gridID, lons );
   gridDefYvals ( gridID, lats );
-
+  {
+    unsigned char uuid[CDI_UUID_SIZE];
+    if (rank == 0)
+      create_uuid(uuid);
+#if USE_MPI
+    MPI_Bcast(uuid, CDI_UUID_SIZE, MPI_UNSIGNED_CHAR, 0, comm);
+#endif
+    gridDefUUID(gridID, uuid);
+  }
   levs = xmalloc((size_t)setup.max_nlev * sizeof (levs[0]));
   for (i = 0; i < setup.max_nlev; ++i)
     levs[i] = 101300.0
@@ -139,15 +149,29 @@ modelRun(struct model_config setup, MPI_Comm comm)
         }
       ++varLevs;
       varDesc[varIdx].nlev = varLevs;
-      for (i = 0; i < varIdx; ++i)
+      for (size_t i = 0; i < (size_t)varIdx; ++i)
         if (varDesc[i].nlev == varLevs)
           {
             varDesc[varIdx].zaxisID = varDesc[i].zaxisID;
             goto zaxisIDset;
           }
-      varDesc[varIdx].zaxisID
-        = zaxisCreate(ZAXIS_PRESSURE, varDesc[varIdx].nlev);
-      zaxisDefLevels(varDesc[varIdx].zaxisID, levs);
+      if (varLevs == 1)
+        varDesc[varIdx].zaxisID = zaxisCreate(ZAXIS_SURFACE, 1);
+      else
+        {
+          varDesc[varIdx].zaxisID
+            = zaxisCreate(ZAXIS_PRESSURE, varDesc[varIdx].nlev);
+          zaxisDefLevels(varDesc[varIdx].zaxisID, levs);
+        }
+      {
+        unsigned char uuid[16];
+        if (rank == 0)
+          create_uuid(uuid);
+#if USE_MPI
+        MPI_Bcast(uuid, CDI_UUID_SIZE, MPI_UNSIGNED_CHAR, 0, comm);
+#endif
+        zaxisDefUUID(varDesc[varIdx].zaxisID, uuid);
+      }
       zaxisIDset:
       varDesc[varIdx].id
         = vlistDefVar(vlistID, gridID, varDesc[varIdx].zaxisID, TIME_VARIABLE);
@@ -204,10 +228,19 @@ modelRun(struct model_config setup, MPI_Comm comm)
       current_time = cditime2time_t(vdate, vtime);
       for ( tsID = 0; tsID < setup.nts; tsID++ )
 	{
-          time_t2cditime(current_time, &vdate, &vtime);
-	  taxisDefVdate ( taxisID, vdate );
-	  taxisDefVtime ( taxisID, vtime );
+          int vdatetime[2];
+          time_t2cditime(current_time, &vdatetime[1], &vdatetime[0]);
+	  taxisDefVdate(taxisID, vdatetime[1]);
+	  taxisDefVtime(taxisID, vdatetime[0]);
 	  streamDefTimestep ( streamID, tsID );
+          if (setup.filetype == FILETYPE_EXT)
+            {
+              /* EXTRA doesn't store time, only date
+               * set the value to 0 before checksumming, because a
+               * time field of 0 is what reading an EXTRA file will
+               * return */
+              vdatetime[0] = 0;
+            }
 	  for (int varID = 0; varID < nVars; ++varID)
 	    {
 #ifdef USE_MPI
@@ -217,7 +250,7 @@ modelRun(struct model_config setup, MPI_Comm comm)
               int chunk = (int)varDesc[varID].size;
               int start = 0;
 #endif
-              if (varslice_size < chunk)
+              if (varslice_size < (size_t)chunk)
                 {
                   varslice = xrealloc(varslice, (size_t)chunk * sizeof (var[0]));
                   varslice_size = (size_t)chunk;
@@ -245,6 +278,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 }
               if (rank == 0 && setup.compute_checksum)
                 {
+                  memcrc_r(&varDesc[varID].checksum_state,
+                           (const unsigned char *)vdatetime,
+                           sizeof (vdatetime));
                   memcrc_r(&varDesc[varID].checksum_state,
                            (const unsigned char *)var,
                            varDesc[varID].size * sizeof (var[0]));
@@ -277,8 +313,9 @@ modelRun(struct model_config setup, MPI_Comm comm)
                 uint32_t cksum;
                 int code;
                 cksum = memcrc_finish(&varDesc[i].checksum_state,
-                                      (off_t)(varDesc[i].size
-                                              * sizeof (var[0])
+                                      (off_t)((varDesc[i].size
+                                               * sizeof (var[0])
+                                               + sizeof (int) * 2)
                                               * (size_t)setup.nts));
                 code = vlistInqVarCode(vlistID, varDesc[i].id);
                 if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum,
@@ -299,13 +336,13 @@ modelRun(struct model_config setup, MPI_Comm comm)
   streamClose ( streamID );
   vlistDestroy ( vlistID );
   taxisDestroy ( taxisID );
-  for ( i = 0; i < nVars; i++ )
+  for (int varID = 0; varID < nVars; varID++ )
     {
-      int zID = varDesc[i].zaxisID;
+      int zID = varDesc[varID].zaxisID;
       if (zID != CDI_UNDEFID)
         {
           zaxisDestroy(zID);
-          for (int j = i + 1; j < nVars; ++j)
+          for (int j = varID + 1; j < nVars; ++j)
             if (zID == varDesc[j].zaxisID)
               varDesc[j].zaxisID = CDI_UNDEFID;
         }

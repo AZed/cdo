@@ -402,7 +402,6 @@ int extRead(int fileID, void *ext)
   extrec_t *extp = (extrec_t *) ext;
   size_t blocklen, blocklen2;
   size_t i;
-  char tempheader[32];
   void *buffer;
   int byteswap;
   int status;
@@ -432,19 +431,21 @@ int extRead(int fileID, void *ext)
     {
     case SINGLE_PRECISION:
       {
-	binReadInt32(fileID, byteswap, EXT_HEADER_LEN, (INT32 *) tempheader);
+        INT32 tempheader[4];
+	binReadInt32(fileID, byteswap, EXT_HEADER_LEN, tempheader);
 
 	for ( i = 0; i < EXT_HEADER_LEN; i++ )
-          extp->header[i] = (int) ((INT32 *) tempheader)[i];
+          extp->header[i] = (int)tempheader[i];
 
 	break;
       }
     case DOUBLE_PRECISION:
       {
-	binReadInt64(fileID, byteswap, EXT_HEADER_LEN, (INT64 *) tempheader);
+        INT64 tempheader[4];
+	binReadInt64(fileID, byteswap, EXT_HEADER_LEN, tempheader);
 
 	for ( i = 0; i < EXT_HEADER_LEN; i++ )
-          extp->header[i] = (int) ((INT64 *) tempheader)[i];
+          extp->header[i] = (int)tempheader[i];
 
 	break;
       }

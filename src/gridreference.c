@@ -228,45 +228,42 @@ int referenceToGrid(int gridID1)
 	  position = gridInqPosition(gridID1);
 
 	  streamID = streamOpenRead(gridpath);
-	  if ( streamID >= 0 )
+	  if ( streamID < 0 ) cdiOpenError(streamID, "Open failed on horizontal grid file >%s<", gridpath);
+
+	  int vlistID, gridID = -1;
+	  int ngrids;
+	  vlistID = streamInqVlist(streamID);
+	  ngrids = vlistNgrids(vlistID);
+	  if ( position > 0 && position <= ngrids )
 	    {
-	      int vlistID, gridID = -1;
-	      int ngrids;
-	      vlistID = streamInqVlist(streamID);
-	      ngrids = vlistNgrids(vlistID);
-	      if ( position > 0 && position <= ngrids )
-		{
-		  gridID = vlistGrid(vlistID, position-1);
-		  if ( gridInqSize(gridID) == gridsize )
-		    gridID2 = gridDuplicate(gridID);
-		  else
-		    cdoWarning("Grid size %d on position %d do not match! Reference=%s", gridsize, position, gridpath);
-		}
-	      else if ( position == 0 )
-		{
-		  for ( int grididx = 0; grididx < ngrids; ++grididx )
-		    {
-		      gridID = vlistGrid(vlistID, grididx);
-		      if ( gridInqSize(gridID) == gridsize )
-			{
-			  gridID2 = gridDuplicate(gridID);
-			  break;
-			}
-		    }
-		}
+	      gridID = vlistGrid(vlistID, position-1);
+	      if ( gridInqSize(gridID) == gridsize )
+		gridID2 = gridDuplicate(gridID);
 	      else
-		cdoWarning("Number of grid in reference %d not available! Reference=%s", position, gridpath);
-	      
-	      streamClose(streamID);
+		cdoWarning("Grid size %d on position %d do not match! Reference=%s", gridsize, position, gridpath);
+	    }
+	  else if ( position == 0 )
+	    {
+	      for ( int grididx = 0; grididx < ngrids; ++grididx )
+		{
+		  gridID = vlistGrid(vlistID, grididx);
+		  if ( gridInqSize(gridID) == gridsize )
+		    {
+		      gridID2 = gridDuplicate(gridID);
+		      break;
+			}
+		}
 	    }
 	  else
-	    cdiError(streamID, "Open failed on horizontal grid file >%s<", gridpath);
+	    cdoWarning("Number of grid in reference %d not available! Reference=%s", position, gridpath);
+	  
+	  streamClose(streamID);
 	}
 
       if ( gridID2 != -1 )
 	{
-	  char uuidOfHGrid1[16];
-	  char uuidOfHGrid2[16];
+	  unsigned char uuidOfHGrid1[CDI_UUID_SIZE];
+	  unsigned char uuidOfHGrid2[CDI_UUID_SIZE];
 
 	  memset(uuidOfHGrid1, 0, 16);
 	  memset(uuidOfHGrid2, 0, 16);

@@ -160,7 +160,7 @@ void cdiDebug(int level)
 
   if ( level == 1 || (level & 16) )
     {
-#if  defined  (HAVE_LIBGRIB)
+#if  defined  (HAVE_LIBCGRIBEX)
       gribSetDebug(1);
 #endif
 #if  defined  (HAVE_LIBNETCDF)

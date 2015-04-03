@@ -21,6 +21,7 @@
 static void
 nullPackFunc(void *obj, void *buf, int size, int *pos, void *context)
 {
+  (void)obj; (void)buf; (void)size; (void)pos; (void)context;
 }
 
 
@@ -31,6 +32,7 @@ cdiPioClientStreamOpen(const char *filename, const char *filemode,
 {
   struct winHeaderEntry header;
   size_t filename_len;
+  (void)streamptr; (void)recordBufIsToBeCreated;
   if ( tolower ( * filemode ) == 'w' )
     {
       statusCode nspStatus = namespaceInqResStatus ();
@@ -98,6 +100,7 @@ static void
 cdiPioClientStreamWriteVar_(int streamID, int varID, int memtype,
                             const void *data, int nmiss)
 {
+  (void)streamID; (void)varID; (void)memtype; (void)data; (void)nmiss;
   xabort("parallel writing requires explicit partition information,"
          " use streamWriteVarPart!");
 }
@@ -107,6 +110,9 @@ cdiPioClientStreamWriteVarChunk_(int streamID, int varID, int memtype,
                                  const int rect[][2],
                                  const void *data, int nmiss)
 {
+  /* todo: handle transmission of float data */
+  if (memtype != MEMTYPE_DOUBLE)
+    Error("Writing of non-double type data not implemented!");
   int vlistID = streamInqVlist(streamID);
   int size = vlistInqVarSize(vlistID, varID),
     varShape[3];
@@ -121,7 +127,7 @@ cdiPioClientStreamWriteVarChunk_(int streamID, int varID, int memtype,
   int varSize = varShape[0] * varShape[1] * varShape[2];
   xassert(varSize == size);
   Xt_idxlist chunkDesc
-    = xt_idxsection_new(0, ndims, varShapeXt, chunkShape, origin);
+    = xt_idxsection_new(0, (int)ndims, varShapeXt, chunkShape, origin);
   pioBufferPartData(streamID, varID, data, nmiss, chunkDesc);
   xt_idxlist_delete(chunkDesc);
 }
@@ -174,12 +180,14 @@ cdiPioClientStreamWriteScatteredVarPart(int streamID, int varID,
 static void
 cdiPioCdfDefTimestepNOP(stream_t *streamptr, int tsID)
 {
+  (void)streamptr; (void)tsID;
 }
 #endif
 
 static void
 cdiPioClientStreamNOP(stream_t *streamptr)
 {
+  (void)streamptr;
 }
 
 
@@ -188,6 +196,7 @@ cdiPioClientStreamClose(stream_t *streamptr, int recordBufIsToBeDeleted)
 {
   struct winHeaderEntry header;
   statusCode nspStatus = namespaceInqResStatus ();
+  (void)recordBufIsToBeDeleted;
   switch ( nspStatus )
     {
     case STAGE_DEFINITION:

@@ -1,7 +1,7 @@
 #define DATE_FORMAT "%5.4d-%2.2d-%2.2d"
 #define TIME_FORMAT "%2.2d:%2.2d:%2.2d"
 
-void uuid2str(const char *uuid, char *uuidstr);
+void uuid2str(const unsigned char uuid[CDI_UUID_SIZE], char *uuidstr);
 
 void date2str(int date, char *datestr, int maxlen)
 {
@@ -135,7 +135,7 @@ void printGridInfo(int vlistID)
   int ngrids, index;
   int gridID, gridtype, trunc, gridsize, xsize, ysize, xysize;
   char xname[CDI_MAX_NAME], yname[CDI_MAX_NAME], xunits[CDI_MAX_NAME], yunits[CDI_MAX_NAME];
-  char uuidOfHGrid[17];
+  unsigned char uuidOfHGrid[CDI_UUID_SIZE];
 
   ngrids = vlistNgrids(vlistID);
   for ( index = 0; index < ngrids; index++ )
@@ -302,8 +302,8 @@ void printGridInfo(int vlistID)
 	      int i;
 	      double *xvals, *yvals;
 	      double xfirst, xlast, yfirst, ylast;
-	      xvals = (double*) malloc(gridsize*sizeof(double));
-	      yvals = (double*) malloc(gridsize*sizeof(double));
+	      xvals = (double*) malloc((size_t)gridsize*sizeof(double));
+	      yvals = (double*) malloc((size_t)gridsize*sizeof(double));
 
 	      gridInqXvals(gridID, xvals);
 	      gridInqYvals(gridID, yvals);
@@ -410,7 +410,7 @@ void printZaxisInfo(int vlistID)
       fprintf(stdout, " levels=%d", levelsize);
       fprintf(stdout, "\n");
 
-      levels = (double*) malloc(levelsize*sizeof(double));
+      levels = (double*) malloc((size_t)levelsize*sizeof(double));
       zaxisInqLevels(zaxisID, levels);
 
       if ( !(zaxistype == ZAXIS_SURFACE && levelsize == 1 && !(fabs(levels[0]) > 0)) )
@@ -469,7 +469,7 @@ void printZaxisInfo(int vlistID)
               fprintf(stdout, "number = %d\n", number);
             }
 
-          char uuidOfVGrid[17];
+          unsigned char uuidOfVGrid[CDI_UUID_SIZE];
           zaxisInqUUID(zaxisID, uuidOfVGrid);
           if ( uuidOfVGrid[0] != 0 )
             {

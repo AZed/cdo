@@ -36,7 +36,7 @@
 #include "namespace.h"
 
 
-static stream_t *stream_new_entry(void);
+static stream_t *stream_new_entry(int resH);
 static void stream_delete_entry(stream_t *streamptr);
 static int streamCompareP(void * streamptr1, void * streamptr2);
 static void streamDestroyP(void * streamptr);
@@ -81,8 +81,8 @@ int getByteorder(int byteswap)
   return (byteorder);
 }
 
-static
-int getFiletype(const char *filename, int *byteorder)
+// used also in CDO
+int cdiGetFiletype(const char *filename, int *byteorder)
 {
   int filetype = CDI_EUFTYPE;
   int swap = 0;
@@ -514,17 +514,21 @@ int cdiStreamOpenDefaultDelegate(const char *filename, const char *filemode,
 }
 
 
-int streamOpen(const char *filename, const char *filemode, int filetype)
+static int
+streamOpenID(const char *filename, const char *filemode, int filetype,
+             int resH)
 {
   int fileID = CDI_UNDEFID;
-  int streamID = CDI_ESYSTEM;
   int status;
-  stream_t *streamptr = stream_new_entry();
 
   if ( CDI_Debug )
-    Message("Open %s mode %c file %s", strfiletype(filetype), (int) *filemode, filename);
+    Message("Open %s mode %c file %s", strfiletype(filetype), (int) *filemode,
+            filename?filename:"(NUL)");
 
   if ( ! filename || ! filemode || filetype < 0 ) return (CDI_EINVAL);
+
+  stream_t *streamptr = stream_new_entry(resH);
+  int streamID = CDI_ESYSTEM;
 
   {
     int (*streamOpenDelegate)(const char *filename, const char *filemode,
@@ -561,20 +565,24 @@ int streamOpen(const char *filename, const char *filemode, int filetype)
 	  status = cdiInqContents(streamptr);
 	  if ( status < 0 ) return (status);
 	  vlist_t *vlistptr = vlist_to_pointer(streamptr->vlistID);
-	  vlistptr->ntsteps = streamNtsteps(streamID);
+	  vlistptr->ntsteps = streamptr->ntsteps;
 	}
     }
 
   return (streamID);
 }
 
+int streamOpen(const char *filename, const char *filemode, int filetype)
+{
+  return streamOpenID(filename, filemode, filetype, CDI_UNDEFID);
+}
 
 static int streamOpenA(const char *filename, const char *filemode, int filetype)
 {
   int fileID = CDI_UNDEFID;
   int streamID = CDI_ESYSTEM;
   int status;
-  stream_t *streamptr = stream_new_entry();
+  stream_t *streamptr = stream_new_entry(CDI_UNDEFID);
   vlist_t *vlistptr;
 
   if ( CDI_Debug )
@@ -725,7 +733,7 @@ int streamOpenRead(const char *filename)
   cdiInitialize();
 
   int byteorder = 0;
-  int filetype = getFiletype(filename, &byteorder);
+  int filetype = cdiGetFiletype(filename, &byteorder);
 
   if ( filetype < 0 ) return (filetype);
 
@@ -746,7 +754,7 @@ int streamOpenAppend(const char *filename)
   cdiInitialize();
 
   int byteorder = 0;
-  int filetype = getFiletype(filename, &byteorder);
+  int filetype = cdiGetFiletype(filename, &byteorder);
 
   if ( filetype < 0 ) return (filetype);
 
@@ -870,7 +878,7 @@ void streamDefaultValue ( stream_t * streamptr )
 }
 
 
-static stream_t *stream_new_entry(void)
+static stream_t *stream_new_entry(int resH)
 {
   stream_t *streamptr;
 
@@ -878,7 +886,13 @@ static stream_t *stream_new_entry(void)
 
   streamptr = (stream_t *) xmalloc(sizeof(stream_t));
   streamDefaultValue ( streamptr );
-  streamptr->self = reshPut (( void * ) streamptr, &streamOps );
+  if (resH == CDI_UNDEFID)
+    streamptr->self = reshPut(streamptr, &streamOps);
+  else
+    {
+      streamptr->self = resH;
+      reshReplace(resH, streamptr, &streamOps);
+    }
 
   return streamptr;
 }
@@ -1966,16 +1980,6 @@ void streamWriteContents(int streamID, char *cname)
   fclose(cnp);
 }
 
-
-int streamNtsteps(int streamID)
-{
-  stream_t *streamptr = stream_to_pointer(streamID);
-
-  stream_check_ptr(__func__, streamptr);
-
-  return (int)streamptr->ntsteps;
-}
-
 // This function is used in CDO!
 off_t streamNvals(int streamID)
 {
@@ -2393,9 +2397,9 @@ streamUnpack(char * unpackBuffer, int unpackBufferSize,
   serializeUnpack(unpackBuffer, unpackBufferSize, unpackBufferPos,
                   &d, 1, DATATYPE_UINT32, context);
   xassert(d == cdiCheckSum(DATATYPE_TXT, intBuffer[2], filename));
-  streamID = streamOpenWrite ( filename, intBuffer[1] );
-  xassert ( streamID >= 0 &&
-            namespaceAdaptKey ( intBuffer[0], originNamespace ) == streamID );
+  int targetStreamID = namespaceAdaptKey(intBuffer[0], originNamespace);
+  streamID = streamOpenID(filename, "w", intBuffer[1], targetStreamID);
+  xassert(streamID >= 0 && targetStreamID == streamID);
   streamDefByteorder(streamID, intBuffer[5]);
   streamDefCompType(streamID, intBuffer[6]);
   streamDefCompLevel(streamID, intBuffer[7]);

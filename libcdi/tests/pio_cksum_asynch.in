@@ -7,3 +7,8 @@ if [ "@USE_MPI@" = yes ]; then
 else
   exit 77
 fi
+#
+# Local Variables:
+# mode: sh
+# End:
+#

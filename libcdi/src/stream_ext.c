@@ -230,7 +230,7 @@ void extAddRecord(stream_t *streamptr, int param, int level, int xysize,
   grid.ysize = 0;
   grid.xvals = NULL;
   grid.yvals = NULL;
-  gridID = varDefGrid(vlistID, grid, 0);
+  gridID = varDefGrid(vlistID, &grid, 0);
   /*
   if ( level == 0 ) leveltype = ZAXIS_SURFACE;
   else              leveltype = ZAXIS_GENERIC;
@@ -249,33 +249,6 @@ void extAddRecord(stream_t *streamptr, int param, int level, int xysize,
   if ( CDI_Debug )
     Message("varID = %d gridID = %d levelID = %d",
 	    varID, gridID, levelID);
-}
-
-
-void extCmpRecord(stream_t *streamptr, int tsID, int recID, off_t position, int param,
-		  int level, int xysize)
-{
-  int varID = 0;
-  int levelID = 0;
-  record_t *record;
-
-  record  = &streamptr->tsteps[tsID].records[recID];
-
-  if ( param != (*record).param || level != (*record).ilevel )
-    Error("inconsistent timestep");
-
-  (*record).position = position;
-  /*
-  varID   = (*record).varID;
-  levelID = (*record).levelID;
-
-  streamptr->vars[varID].level[levelID] = recID;
-
-  streamptr->tsteps[tsID].nallrecs++;
-  streamptr->nrecs++;
-  */
-  if ( CDI_Debug )
-    Message("varID = %d levelID = %d", varID, levelID);
 }
 
 static
@@ -494,7 +467,7 @@ int extScanTimestep2(stream_t *streamptr)
       nextstep = FALSE;
       for ( recID = 0; recID < nrecords; recID++ )
 	{
-	  compVar0.param  = streamptr->tsteps[tsID].records[recID].param;
+	  compVar0.param = streamptr->tsteps[tsID].records[recID].param;
 	  compVar0.level = streamptr->tsteps[tsID].records[recID].ilevel;
 
 	  if ( memcmp(&compVar0, &compVar, sizeof(extcompvar_t)) == 0 )
@@ -594,17 +567,15 @@ long extScanTimestep(stream_t *streamptr)
   int header[4];
   int status;
   int fileID;
-  int tsID;
   // int rxysize = 0;
   int param = 0;
   int rcode = 0, rlevel = 0, vdate = 0, vtime = 0;
   off_t recpos = 0;
   int recID;
-  taxis_t *taxis;
   int rindex, nrecs = 0;
   extcompvar_t compVar, compVar0;
   extrec_t *extp = (extrec_t*) streamptr->record->exsep;
-
+  /*
   if ( CDI_Debug )
     {
       Message("streamID = %d", streamptr->self);
@@ -612,12 +583,10 @@ long extScanTimestep(stream_t *streamptr)
       Message("rts = %d", streamptr->rtsteps);
       Message("nts = %d", streamptr->ntsteps);
     }
+  */
 
-  if ( streamptr->rtsteps == 0 )
-    Error("Internal problem! Missing contents.");
-
-  tsID  = streamptr->rtsteps;
-  taxis = &streamptr->tsteps[tsID].taxis;
+  int tsID  = streamptr->rtsteps;
+  taxis_t *taxis = &streamptr->tsteps[tsID].taxis;
 
   if ( streamptr->tsteps[tsID].recordSize == 0 )
     {
@@ -626,8 +595,7 @@ long extScanTimestep(stream_t *streamptr)
       nrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->tsteps[tsID].nrecs = nrecs;
-      streamptr->tsteps[tsID].recIDs
-        = (int *)xmalloc((size_t)nrecs * sizeof (int));
+      streamptr->tsteps[tsID].recIDs = (int *)xmalloc((size_t)nrecs * sizeof (int));
       for ( recID = 0; recID < nrecs; recID++ )
 	streamptr->tsteps[tsID].recIDs[recID] = streamptr->tsteps[1].recIDs[recID];
 
@@ -666,9 +634,7 @@ long extScanTimestep(stream_t *streamptr)
 	      taxis->vdate = vdate;
 	      taxis->vtime = vtime;
 	    }
-	  /*
-	  extCmpRecord(streamptr, tsID, nrecs, recpos, param, rlevel, rxysize);
-	  */
+
 	  compVar.param  = param;
           compVar.level  = rlevel;
 	  compVar0.param = streamptr->tsteps[tsID].records[recID].param;
@@ -680,7 +646,7 @@ long extScanTimestep(stream_t *streamptr)
 		      tsID, recID,
 		      streamptr->tsteps[tsID].records[recID].param, param,
 		      streamptr->tsteps[tsID].records[recID].ilevel, rlevel);
-	      Error("Invalid, unsupported or inconsistent record structure");
+	      Error("Invalid, unsupported or inconsistent record structure!");
 	    }
 
 	  streamptr->tsteps[tsID].records[recID].position = recpos;

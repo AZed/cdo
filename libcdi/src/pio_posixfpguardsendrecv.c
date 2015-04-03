@@ -104,7 +104,7 @@ static bFiledataPF *
 initBFiledataPF(int fileID, int nc)
 {
   bFiledataPF *bfd;
-  size_t bfdSize = sizeof (bFiledataPF) + nc * sizeof (bool);
+  size_t bfdSize = sizeof (bFiledataPF) + (size_t)nc * sizeof (bool);
   bfd = xcalloc(1, bfdSize);
   bfd->offset = 0;
   bfd->finished = false;
@@ -176,7 +176,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
   xdebug ( "ncollectors=%d on this node", nProcsCollNode );
   
   bibBFiledataPF = listSetNew( destroyBFiledataPF, fileIDCmpB);
-  sentFinalize = xmalloc ( nProcsCollNode * sizeof ( sentFinalize[0] ));
+  sentFinalize = xmalloc((size_t)nProcsCollNode * sizeof (sentFinalize[0]));
 
   for ( ;; )
     {
@@ -476,7 +476,7 @@ int fowPOSIXFPGUARDSENDRECV ( const char *filename )
   /* init and add file element */
   listSetForeach(bibAFiledataPF, elemCheck, (void *)filename);
 
-  afd = initAFiledataPF ( filename, buffersize );
+  afd = initAFiledataPF(filename, (size_t)buffersize);
 
   if ((id = listSetAdd(bibAFiledataPF, afd)) < 0)
     xabort("filename %s not unique", afd->name);

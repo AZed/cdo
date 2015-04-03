@@ -1,6 +1,8 @@
 #ifndef _GRID_H
 #define _GRID_H
 
+#include "cdi.h"
+
 typedef unsigned char mask_t;
 
 typedef struct {
@@ -46,7 +48,7 @@ typedef struct {
   int     nd, ni, ni2, ni3;       /* parameter for GRID_GME         */
   int     number, position;       /* parameter for GRID_REFERENCE   */
   char   *reference;
-  char    uuid[17];               /* uuid for grid reference        */
+  unsigned char uuid[CDI_UUID_SIZE]; /* uuid for grid reference        */
   int     trunc;                  /* parameter for GRID_SPECTEAL    */
   int     nvertex;
   int    *rowlon;
@@ -83,8 +85,8 @@ const double *gridInqXboundsPtr(int gridID);
 const double *gridInqYboundsPtr(int gridID);
 const double *gridInqAreaPtr(int gridID);
 
-int gridCompare(int gridID, grid_t grid);
-int gridGenerate(grid_t grid);
+int gridCompare(int gridID, const grid_t *grid);
+int gridGenerate(const grid_t *grid);
 
 void gridGetIndexList( int, int * );
 

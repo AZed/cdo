@@ -88,7 +88,7 @@ collDefBufferSizes()
   xassert(rxWin != NULL);
 
   nstreams = reshCountType ( &streamOps );
-  streamIndexList = (int*) xmalloc( nstreams * sizeof ( streamIndexList[0] ));
+  streamIndexList = xmalloc((size_t)nstreams * sizeof (streamIndexList[0]));
   reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
   for ( streamNo = 0; streamNo < nstreams; streamNo++ )
     {
@@ -109,17 +109,18 @@ collDefBufferSizes()
                     int nProcsModel = commInqNProcsModel();
                     decoChunk =
                       (int)ceilf(cdiPIOpartInflate_
-                                 * (varSize + nProcsModel - 1)/nProcsModel);
+                                 * (float)(varSize + nProcsModel - 1)
+                                 / (float)nProcsModel);
                   }
                   xassert ( decoChunk > 0 );
-                  rxWin[modelID].size += decoChunk * sizeof (double)
+                  rxWin[modelID].size += (size_t)decoChunk * sizeof (double)
                     /* re-align chunks to multiple of double size */
                     + sizeof (double) - 1
                     /* one header for data record, one for
                      * corresponding part descriptor*/
                     + 2 * sizeof (struct winHeaderEntry)
                     /* FIXME: heuristic for size of packed Xt_idxlist */
-                    + sizeof (Xt_int) * decoChunk * 3;
+                    + sizeof (Xt_int) * (size_t)decoChunk * 3;
                   rxWin[modelID].dictSize += 2;
                 }
             }
@@ -168,7 +169,7 @@ serverWinCreate(void)
   xmpi ( MPI_Comm_group ( commCalc, &groupCalc ));
   xmpi ( MPI_Group_excl ( groupCalc, 1, ranks, &groupModel ));
 
-  rxWin = xcalloc(nProcsModel, sizeof (rxWin[0]));
+  rxWin = xcalloc((size_t)nProcsModel, sizeof (rxWin[0]));
   size_t totalBufferSize = collDefBufferSizes();
   rxWin[0].buffer = (unsigned char*) xmalloc(totalBufferSize);
   size_t ofs = 0;
@@ -207,7 +208,7 @@ readFuncCall(struct winHeaderEntry *header)
       break;
     case STREAMOPEN:
       {
-        size_t filenamesz = funcArgs->newFile.fnamelen;
+        size_t filenamesz = (size_t)funcArgs->newFile.fnamelen;
         xassert ( filenamesz > 0 && filenamesz < MAXDATAFILENAME );
         const char *filename
           = (const char *)(rxWin[root].buffer + header->offset);
@@ -263,7 +264,7 @@ resizeVarGatherBuf(int vlistID, int varID, double **buf, int *bufSize)
 {
   int size = vlistInqVarSize(vlistID, varID);
   if (size <= *bufSize) ; else
-    *buf = (double*) xrealloc(*buf, (*bufSize = size) * sizeof (buf[0][0]));
+    *buf = xrealloc(*buf, (size_t)(*bufSize = size) * sizeof (buf[0][0]));
 }
 
 static void
@@ -282,8 +283,9 @@ gatherArray(int root, int nProcsModel, int headerIdx,
   for (unsigned i = 0; i < 3; ++i)
     varShapeXt[i] = varShape[i];
   int varSize = varShape[0] * varShape[1] * varShape[2];
-  struct Xt_offset_ext *partExts = (struct Xt_offset_ext*) xmalloc(nProcsModel * sizeof (partExts[0]));
-  Xt_idxlist *part = (Xt_idxlist*) xmalloc(nProcsModel * sizeof (part[0]));
+  struct Xt_offset_ext *partExts
+    = xmalloc((size_t)nProcsModel * sizeof (partExts[0]));
+  Xt_idxlist *part = xmalloc((size_t)nProcsModel * sizeof (part[0]));
   MPI_Comm commCalc = commInqCommCalc();
   {
     int nmiss_ = 0;
@@ -302,21 +304,21 @@ gatherArray(int root, int nProcsModel, int headerIdx,
                     rxWin[modelID].buffer)[headerIdx + 1].id == PARTDESCMARKER
                 && position > 0
                 && ((size_t)position
-                    >= sizeof (struct winHeaderEntry) * rxWin[modelID].dictSize)
+                    >= sizeof (struct winHeaderEntry) * (size_t)rxWin[modelID].dictSize)
                 && ((size_t)position < rxWin[modelID].size));
         part[modelID] = xt_idxlist_unpack(rxWin[modelID].buffer,
                                           (int)rxWin[modelID].size,
                                           &position, commCalc);
-        int partSize = xt_idxlist_get_num_indices(part[modelID]);
-        size_t charOfs = (rxWin[modelID].buffer
-                          + ((struct winHeaderEntry *)
-                             rxWin[modelID].buffer)[headerIdx].offset)
-          - rxWin[0].buffer;
+        unsigned partSize = (unsigned)xt_idxlist_get_num_indices(part[modelID]);
+        size_t charOfs = (size_t)((rxWin[modelID].buffer
+                                   + ((struct winHeaderEntry *)
+                                      rxWin[modelID].buffer)[headerIdx].offset)
+                                  - rxWin[0].buffer);
         xassert(charOfs % sizeof (double) == 0
                 && charOfs / sizeof (double) + partSize <= INT_MAX);
-        int elemOfs = charOfs / sizeof (double);
+        int elemOfs = (int)(charOfs / sizeof (double));
         partExts[modelID].start = elemOfs;
-        partExts[modelID].size = partSize;
+        partExts[modelID].size = (int)partSize;
         partExts[modelID].stride = 1;
         nmiss_ += dataHeader->nmiss;
       }
@@ -493,9 +495,9 @@ inventorizeStream(struct streamMapping *streamMap, int numStreamIDs,
   int sizeStreamMap = *sizeStreamMap_;
   if (numStreamIDs < sizeStreamMap) ; else
     {
-      streamMap = (struct streamMapping*) xrealloc(streamMap,
-                                                   (sizeStreamMap *= 2)
-                                                   * sizeof (streamMap[0]));
+      streamMap = xrealloc(streamMap,
+                           (size_t)(sizeStreamMap *= 2)
+                           * sizeof (streamMap[0]));
       *sizeStreamMap_ = sizeStreamMap;
     }
   streamMap[numStreamIDs].streamID = streamID;
@@ -510,7 +512,8 @@ inventorizeStream(struct streamMapping *streamMap, int numStreamIDs,
       int vlistID = streamInqVlist(streamID);
       int nvars = vlistNvars(vlistID);
       streamMap[numStreamIDs].numVars = nvars;
-      streamMap[numStreamIDs].varMap = (int*) xmalloc(sizeof (streamMap[numStreamIDs].varMap[0]) * nvars);
+      streamMap[numStreamIDs].varMap
+        = xmalloc(sizeof (streamMap[numStreamIDs].varMap[0]) * (size_t)nvars);
       for (int i = 0; i < nvars; ++i)
         streamMap[numStreamIDs].varMap[i] = -1;
     }
@@ -534,7 +537,8 @@ buildStreamMap(struct winHeaderEntry *winDict)
   int oldStreamIdx = CDI_UNDEFID;
   int filetype = FILETYPE_UNDEF;
   int sizeStreamMap = 16;
-  struct streamMapping *streamMap = (struct streamMapping *) xmalloc(sizeStreamMap * sizeof (streamMap[0]));
+  struct streamMapping *streamMap
+    = xmalloc((size_t)sizeStreamMap * sizeof (streamMap[0]));
   int numDataEntries = winDict[0].specific.headerSize.numDataEntries;
   int numStreamIDs = 0;
   /* find streams written on this process */
@@ -590,8 +594,8 @@ buildStreamMap(struct winHeaderEntry *winDict)
     free(streamIDs);
   }
   /* sort written streams by streamID */
-  streamMap = (struct streamMapping*) xrealloc(streamMap, sizeof (streamMap[0]) * numStreamIDs);
-  qsort(streamMap, numStreamIDs, sizeof (streamMap[0]), smCmpStreamID);
+  streamMap = xrealloc(streamMap, sizeof (streamMap[0]) * (size_t)numStreamIDs);
+  qsort(streamMap, (size_t)numStreamIDs, sizeof (streamMap[0]), smCmpStreamID);
   return (struct streamMap){ .entries = streamMap, .numEntries = numStreamIDs };
 }
 
@@ -640,7 +644,8 @@ buildWrittenVars(struct streamMapping *mapping, int **varIsWritten_,
 {
   int nvars = mapping->numVars;
   int *varMap = mapping->varMap;
-  int *varIsWritten = *varIsWritten_ = (int*) xrealloc(*varIsWritten_, sizeof (*varIsWritten) * nvars);
+  int *varIsWritten = *varIsWritten_
+    = xrealloc(*varIsWritten_, sizeof (*varIsWritten) * (size_t)nvars);
   for (int varID = 0; varID < nvars; ++varID)
     varIsWritten[varID] = ((varMap[varID] != -1)
                            ?myCollRank+1 : 0);
@@ -903,11 +908,10 @@ void clearModelWinBuffer(int modelID)
 {
   int nProcsModel = commInqNProcsModel ();
 
-  xassert ( modelID                >= 0           &&
-            modelID                 < nProcsModel &&
-            rxWin != NULL && rxWin[modelID].buffer != NULL &&
-            rxWin[modelID].size > 0 &&
-            rxWin[modelID].size <= MAXWINBUFFERSIZE );
+  xassert((unsigned)modelID < (unsigned)nProcsModel &&
+          rxWin != NULL && rxWin[modelID].buffer != NULL &&
+          rxWin[modelID].size > 0 &&
+          rxWin[modelID].size <= MAXWINBUFFERSIZE );
   memset(rxWin[modelID].buffer, 0, rxWin[modelID].size);
 }
 
@@ -939,9 +943,9 @@ void getTimeStepData()
              modelID, nProcsModel, modelID, rxWin[modelID].size,
              getWinBaseAddr, (unsigned)sizeof(int));
       /* FIXME: this needs to use MPI_PACK for portability */
-      xmpi(MPI_Get(rxWin[modelID].buffer, rxWin[modelID].size,
+      xmpi(MPI_Get(rxWin[modelID].buffer, (int)rxWin[modelID].size,
                    MPI_UNSIGNED_CHAR, modelID, 0,
-                   rxWin[modelID].size, MPI_UNSIGNED_CHAR, getWin));
+                   (int)rxWin[modelID].size, MPI_UNSIGNED_CHAR, getWin));
     }
   xmpi ( MPI_Win_complete ( getWin ));
 
@@ -951,7 +955,7 @@ void getTimeStepData()
         sprintf(text, "rxWin[%d].size=%zu from PE%d rxWin[%d].buffer",
                 modelID, rxWin[modelID].size, modelID, modelID);
         xprintArray(text, rxWin[modelID].buffer,
-                    rxWin[modelID].size / sizeof (double),
+                    (int)(rxWin[modelID].size / sizeof (double)),
                     DATATYPE_FLT);
       }
   readGetBuffers();
@@ -1042,9 +1046,8 @@ cdiPioCdfDefTimestep(stream_t *streamptr, int tsID)
 
 void cdiPioServer(void (*postCommSetupActions)(void))
 {
-  int source, tag, size, nProcsModel=commInqNProcsModel();
+  int nProcsModel=commInqNProcsModel();
   static int nfinished = 0;
-  char * buffer;
   MPI_Comm commCalc;
   MPI_Status status;
 
@@ -1059,8 +1062,8 @@ void cdiPioServer(void (*postCommSetupActions)(void))
   numPioPrimes = PPM_prime_factorization_32((uint32_t)commInqSizeColl(),
                                             &pioPrimes);
 #elif defined (HAVE_LIBNETCDF)
-  cdiSerialOpenFileCount = (int*) xcalloc(sizeof (cdiSerialOpenFileCount[0]),
-                                   commInqSizeColl());
+  cdiSerialOpenFileCount = xcalloc(sizeof (cdiSerialOpenFileCount[0]),
+                                   (size_t)commInqSizeColl());
   namespaceSwitchSet(NSSWITCH_STREAM_OPEN_BACKEND,
                      NSSW_FUNC(cdiPioStreamCDFOpenWrap));
   namespaceSwitchSet(NSSWITCH_STREAM_CLOSE_BACKEND,
@@ -1077,8 +1080,8 @@ void cdiPioServer(void (*postCommSetupActions)(void))
     {
       xmpi ( MPI_Probe ( MPI_ANY_SOURCE, MPI_ANY_TAG, commCalc, &status ));
       
-      source = status.MPI_SOURCE;
-      tag    = status.MPI_TAG;
+      int source = status.MPI_SOURCE;
+      int tag = status.MPI_TAG;
       
       switch ( tag )
         {
@@ -1099,14 +1102,11 @@ void cdiPioServer(void (*postCommSetupActions)(void))
 
                 if ( nStreams > 0 )
                   {
-                    int streamNo;
-                    int * resHs;
-
-                    resHs       = (int*) xmalloc ( nStreams * sizeof ( resHs[0] ));
+                    int * resHs = xmalloc((size_t)nStreams * sizeof (resHs[0]));
                     streamGetIndexList ( nStreams, resHs );
-                    for ( streamNo = 0; streamNo < nStreams; streamNo++ )
-                      streamClose ( resHs[streamNo] );
-                    free ( resHs );
+                    for (int streamNo = 0; streamNo < nStreams; ++streamNo)
+                      streamClose(resHs[streamNo]);
+                    free(resHs);
                   }
               }
               cdiPioFileWritingFinalize();
@@ -1122,16 +1122,17 @@ void cdiPioServer(void (*postCommSetupActions)(void))
           break;
           
 	case RESOURCES:
-	  xdebugMsg (  tag, source, nfinished );
-	  xmpi ( MPI_Get_count ( &status, MPI_CHAR, &size ));
-	  buffer = (char*) xmalloc(size);
-	  xmpi ( MPI_Recv ( buffer, size, MPI_PACKED, source,
-                            tag, commCalc, &status ));
-          xdebug("%s", "RECEIVED MESSAGE WITH TAG \"RESOURCES\"");
-	  reshUnpackResources(buffer, size, &commCalc);
-          xdebug("%s", "");
-	  free ( buffer );
           {
+            int size;
+            xdebugMsg(tag, source, nfinished);
+            xmpi(MPI_Get_count(&status, MPI_CHAR, &size));
+            char *buffer = xmalloc((size_t)size);
+            xmpi(MPI_Recv(buffer, size, MPI_PACKED, source,
+                          tag, commCalc, &status));
+            xdebug("%s", "RECEIVED MESSAGE WITH TAG \"RESOURCES\"");
+            reshUnpackResources(buffer, size, &commCalc);
+            xdebug("%s", "");
+            free(buffer);
             int rankGlob = commInqRankGlob();
             if ( ddebug > 0 && rankGlob == nProcsModel)
               {
@@ -1149,7 +1150,6 @@ void cdiPioServer(void (*postCommSetupActions)(void))
           }
           serverWinCreate ();
 	  break;
-
 	case WRITETS:
           {
             xdebugMsg(tag, source, nfinished);

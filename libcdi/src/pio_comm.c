@@ -387,24 +387,21 @@ void commDefCommNode ( void )
     int len;
     xmpi ( MPI_Get_processor_name ( myHost, &len ));
     xassert ( myHost[0] != '\0' );
-    strncpy(info->hostname, myHost, len);
+    strncpy(info->hostname, myHost, (size_t)len);
     info->hostname[len] = '\0';
   }
 
-  allHosts = xmalloc(size * MPI_MAX_PROCESSOR_NAME);
-  sortedHosts = xmalloc(size * sizeof(sortedHosts[0]));
+  allHosts = xmalloc((size_t)size * MPI_MAX_PROCESSOR_NAME);
+  sortedHosts = xmalloc((size_t)size * sizeof (sortedHosts[0]));
 
-  {
-    int i;
-    for (i = 0; i < size; ++i)
-      sortedHosts[i] = allHosts[i];
-  }
+  for (int i = 0; i < size; ++i)
+    sortedHosts[i] = allHosts[i];
 
   xmpi(MPI_Allgather(myHost, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
                      allHosts[0], MPI_MAX_PROCESSOR_NAME,
                      MPI_CHAR, info->commPio ));
 
-  qsort(sortedHosts, size, sizeof (sortedHosts[0]),
+  qsort(sortedHosts, (size_t)size, sizeof (sortedHosts[0]),
         (int (*)(const void *, const void *))cmpstringp);
 
   {
@@ -510,8 +507,8 @@ void     commRecvNodeMap    ( void )
 
   xdebug ( "info->nProcsColl=%d", info->nProcsColl );
 
-  info->nodeMap = (int*) xmalloc ( info->nProcsColl * 
-                                sizeof ( info->nodeMap[0] )); 
+  info->nodeMap = (int *)xmalloc((size_t)info->nProcsColl
+                                 * sizeof (info->nodeMap[0]));
 
   xmpi ( MPI_Recv ( info->nodeMap, info->nProcsColl, MPI_INTEGER, 
                     source, NODEMAP, info->commGlob, &status ));
@@ -550,7 +547,7 @@ void     commEvalPhysNodes  ( void )
 
   size = info->nProcsIO * sizeNodeInfo;
 
-  nodeInfo = (nodeInfo_t*) xmalloc ( size * sizeof ( int ));
+  nodeInfo = (nodeInfo_t *)xmalloc((size_t)size * sizeof (int));
 
   if ( info->rankGlob == info->root )
     {
@@ -590,13 +587,13 @@ void     commEvalPhysNodes  ( void )
 
   xassert ( info->nProcsColl <= info->nProcsModel );
 
-  info->procsCollMap = (int*) xmalloc ( info->nProcsColl * 
-                                 sizeof ( info->procsCollMap[0] )); 
+  info->procsCollMap = (int *)xmalloc((size_t)info->nProcsColl
+                                      * sizeof (info->procsCollMap[0]));
 
   // define nodeSizes
   info->nodeInfo.nNodes = nNodes; 
-  info->nodeSizes = (int*) xmalloc ( info->nodeInfo.nNodes * 
-                                  sizeof ( info->nodeSizes[0] ));
+  info->nodeSizes = (int *)xmalloc((size_t)info->nodeInfo.nNodes
+                                   * sizeof (info->nodeSizes[0]));
   collID = 0;
   for ( IOID = 0; IOID < info->nProcsIO; IOID++ )
     if ( nodeInfo[IOID].isProcColl )
@@ -606,11 +603,11 @@ void     commEvalPhysNodes  ( void )
       }
 
   // define nodeMap
-  info->nodeMap   = (int*) xmalloc ( info->nProcsColl * 
-                                  sizeof ( info->nodeMap[0] ));
+  info->nodeMap = (int *)xmalloc((size_t)info->nProcsColl
+                                 * sizeof (info->nodeMap[0]));
   // helpers
-  p1 = (int**) xmalloc ( info->nodeInfo.nNodes * sizeof ( p1[0] ));
-  p2 = (int**) xmalloc ( info->nodeInfo.nNodes * sizeof ( p2[0] ));
+  p1 = (int **)xmalloc((size_t)info->nodeInfo.nNodes * sizeof (p1[0]));
+  p2 = (int **)xmalloc((size_t)info->nodeInfo.nNodes * sizeof (p2[0]));
   idx = 0;
   for ( i = 0; i < info->nodeInfo.nNodes; i++ )
     {
@@ -692,18 +689,18 @@ void     commDefCommsIO     ( void )
            info->nProcsModel != CDI_UNDEFID &&
            info->commGlob != MPI_COMM_NULL );
 
-  info->commsIO = (MPI_Comm*) xmalloc ( info->nProcsColl * 
-                                sizeof ( info->commsIO[0] ));
+  info->commsIO = (MPI_Comm *)xmalloc((size_t)info->nProcsColl
+                                      * sizeof (info->commsIO[0]));
   for ( collID = 0; collID < info->nProcsColl; collID++ )
     info->commsIO[collID] = MPI_COMM_NULL;
 
-  strncpy ( name, "COMMSIO_", 8 ); 
+  strncpy ( name, "COMMSIO_", 8 );
   name[MAXCOMMIONAME - 1] = '\0';
-  
-  ranks = (int*) xmalloc (( info->nProcsModel + 1 ) * sizeof ( ranks[0] ));
+
+  ranks = (int *)xmalloc(((size_t)info->nProcsModel + 1) * sizeof (ranks[0]));
   for ( i = 0; i < info->nProcsModel; i++ )
     ranks[i] = i;
-  
+
   xmpi ( MPI_Comm_group ( info->commGlob, &groupGlob )); 
 
   for ( collID = 0; collID < info->nProcsColl; collID++ )

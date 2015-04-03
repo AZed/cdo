@@ -62,7 +62,7 @@ int cgribexGetIsRotated(int *isec2)
     {
       isRotated = 1;
     }
- 
+
   return (isRotated);
 }
 
@@ -142,7 +142,7 @@ int cgribexGetTsteptype(int timerange)
     default:
       if ( lprint )
 	{
-	  Message("GRIB time range %d unsupported!", timerange);
+	  Message("Time range indicator %d unsupported, set to 0!", timerange);
 	  lprint = FALSE;
 	}
       break;
@@ -154,9 +154,8 @@ int cgribexGetTsteptype(int timerange)
 static
 void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid, int iret)
 {
-  int gridtype;
-
-  gridtype = cgribexGetGridType(isec2);
+  int compyinc = TRUE;
+  int gridtype = cgribexGetGridType(isec2);
 
   if ( streamptr->unreduced && gridtype == GRID_GAUSSIAN_REDUCED && iret != -801 )
     {
@@ -166,6 +165,7 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid, i
       gridtype = GRID_GAUSSIAN;
       ISEC2_NumLon = nlon;
       ISEC4_NumValues = nlon*ISEC2_NumLat;
+      compyinc = FALSE;
     }
 
   memset(grid, 0, sizeof(grid_t));
@@ -222,10 +222,9 @@ void cgribexGetGrid(stream_t *streamptr, int *isec2, int *isec4, grid_t *grid, i
 	grid->ydef  = 0;
 	/* if ( ISEC2_FirstLat != 0 || ISEC2_LastLat != 0 ) */
 	  {
-	    if ( grid->ysize > 1 )
+	    if ( grid->ysize > 1 && compyinc )
 	      {
                 int recompinc = TRUE;
-
 		if ( ISEC2_ResFlag && ISEC2_LatIncr > 0 )
                   {
                     if ( abs(ISEC2_LastLat - (ISEC2_FirstLat+ISEC2_LatIncr*(grid->ysize-1))) <= 2 )
@@ -361,44 +360,36 @@ static
 void cgribexAddRecord(stream_t * streamptr, int param, int *isec1, int *isec2, double *fsec2, double *fsec3,
 		      int *isec4, long recsize, off_t position, int datatype, int comptype, int lmv, int iret)
 {
-  int zaxistype;
-  int gridID = CDI_UNDEFID, varID;
+  int varID;
   int levelID = 0;
-  int tsID, recID;
-  int level1, level2;
-  int numavg;
-  int tsteptype;
-  int lbounds = 0;
-  record_t *record;
   grid_t grid;
-  int vlistID;
 
-  vlistID = streamptr->vlistID;
-  tsID    = streamptr->curTsID;
-  recID   = recordNewEntry(streamptr, tsID);
-  record  = &streamptr->tsteps[tsID].records[recID];
+  int vlistID = streamptr->vlistID;
+  int tsID    = streamptr->curTsID;
+  int recID   = recordNewEntry(streamptr, tsID);
+  record_t *record  = &streamptr->tsteps[tsID].records[recID];
 
-  tsteptype = cgribexGetTsteptype(ISEC1_TimeRange);
-  numavg    = ISEC1_AvgNum;
+  int tsteptype = cgribexGetTsteptype(ISEC1_TimeRange);
+  int numavg    = ISEC1_AvgNum;
 
-  level1  = ISEC1_Level1;
-  level2  = ISEC1_Level2;
+  int level1  = ISEC1_Level1;
+  int level2  = ISEC1_Level2;
 
   /* fprintf(stderr, "param %d %d %d %d\n", param, level1, level2, ISEC1_LevelType); */
 
-  (*record).size      = (size_t)recsize;
-  (*record).position  = position;
-  (*record).param     = param;
-  (*record).ilevel    = level1;
-  (*record).ilevel2   = level2;
-  (*record).ltype     = ISEC1_LevelType;
-  (*record).tsteptype = tsteptype;
+  record->size      = (size_t)recsize;
+  record->position  = position;
+  record->param     = param;
+  record->ilevel    = level1;
+  record->ilevel2   = level2;
+  record->ltype     = ISEC1_LevelType;
+  record->tsteptype = tsteptype;
 
   cgribexGetGrid(streamptr, isec2, isec4, &grid, iret);
 
-  gridID = varDefGrid(vlistID, grid, 0);
+  int gridID = varDefGrid(vlistID, &grid, 0);
 
-  zaxistype = grib1ltypeToZaxisType(ISEC1_LevelType);
+  int zaxistype = grib1ltypeToZaxisType(ISEC1_LevelType);
 
   if ( zaxistype == ZAXIS_HYBRID || zaxistype == ZAXIS_HYBRID_HALF )
     {
@@ -408,7 +399,7 @@ void cgribexAddRecord(stream_t * streamptr, int param, int *isec1, int *isec2, d
       varDefVCT(vctsize, vctptr);
     }
 
-  lbounds = cgribexGetZaxisHasBounds(ISEC1_LevelType);
+  int lbounds = cgribexGetZaxisHasBounds(ISEC1_LevelType);
 
   if ( datatype > 32 ) datatype = DATATYPE_PACK32;
   if ( datatype <  0 ) datatype = DATATYPE_PACK;
@@ -573,7 +564,7 @@ int cgribexScanTimestep1(stream_t * streamptr)
   int tsID;
   int varID;
   size_t readsize;
-  int nrecords, nrecs, recID;
+  unsigned nrecords, recID;
   int nrecs_scanned = 0;
   int datatype;
   long recsize = 0;
@@ -613,10 +604,10 @@ int cgribexScanTimestep1(stream_t * streamptr)
 	Error("Skipping of %d records failed!", cdiSkipRecords);
 
       recpos  = fileGetPos(fileID);
-      fileSetPos(fileID, recsize, SEEK_CUR);
+      fileSetPos(fileID, (off_t)recsize, SEEK_CUR);
     }
 
-  nrecs = 0;
+  unsigned nrecs = 0;
   while ( TRUE )
     {
       recsize = gribGetSize(fileID);
@@ -689,7 +680,7 @@ int cgribexScanTimestep1(stream_t * streamptr)
 
 	  for ( recID = 0; recID < nrecs; recID++ )
 	    {
-	      if ( cgribexVarCompare(compVar, streamptr->tsteps[0].records[recID], 1) == 0 ) break;
+	      if ( cgribexVarCompare(compVar, streamptr->tsteps[0].records[recID], 0) == 0 ) break;
 	    }
 
 	  if ( cdiInventoryMode == 1 )
@@ -763,18 +754,18 @@ int cgribexScanTimestep1(stream_t * streamptr)
   vlistID = streamptr->vlistID;
   vlistDefTaxis(vlistID, taxisID);
 
-  nrecords = streamptr->tsteps[0].nallrecs;
-  if ( nrecords < streamptr->tsteps[0].recordSize )
+  nrecords = (unsigned)streamptr->tsteps[0].nallrecs;
+  if ( nrecords < (unsigned)streamptr->tsteps[0].recordSize )
     {
-      streamptr->tsteps[0].recordSize = nrecords;
+      streamptr->tsteps[0].recordSize = (int)nrecords;
       streamptr->tsteps[0].records =
       (record_t *) realloc(streamptr->tsteps[0].records, nrecords*sizeof(record_t));
     }
 
   streamptr->tsteps[0].recIDs = (int *) malloc(nrecords*sizeof(int));
-  streamptr->tsteps[0].nrecs = nrecords;
+  streamptr->tsteps[0].nrecs = (int)nrecords;
   for ( recID = 0; recID < nrecords; recID++ )
-    streamptr->tsteps[0].recIDs[recID] = recID;
+    streamptr->tsteps[0].recIDs[recID] = (int)recID;
 
   streamptr->record->buffer     = gribbuffer;
   streamptr->record->buffersize = (size_t)buffersize;
@@ -863,7 +854,7 @@ int cgribexScanTimestep2(stream_t * streamptr)
   cdi_create_records(streamptr, tsID);
 
   nrecords = streamptr->tsteps[tsID].nallrecs;
-  if ( nrecords ) streamptr->tsteps[1].recIDs = (int *) malloc(nrecords*sizeof(int));
+  if ( nrecords ) streamptr->tsteps[1].recIDs = (int *)xmalloc((size_t)nrecords * sizeof(int));
   streamptr->tsteps[1].nrecs = 0;
   for ( recID = 0; recID < nrecords; recID++ )
     streamptr->tsteps[1].recIDs[recID] = -1;
@@ -1074,7 +1065,6 @@ int cgribexScanTimestep(stream_t * streamptr)
 {
   int rstatus = 0;
 #if  defined  (HAVE_LIBCGRIBEX)
-  int *isec0, *isec1, *isec2, *isec3, *isec4;
   double fsec2[512], fsec3[2], *fsec4 = NULL;
   int lmv = 0, iret = 0;
   long recsize = 0;
@@ -1085,20 +1075,16 @@ int cgribexScanTimestep(stream_t * streamptr)
   int param = 0;
   int level1 = 0, level2 = 0, vdate = 0, vtime = 0;
   DateTime datetime, datetime0;
-  int tsID;
   int vrecID, recID;
   int warn_numavg = TRUE;
   size_t readsize;
   int taxisID = -1;
-  taxis_t *taxis;
-  int vlistID;
   int rindex, nrecs = 0;
   int nrecs_scanned;
   long unzipsize;
   compvar_t compVar;
   char paramstr[32];
 
-  vlistID = streamptr->vlistID;
   /*
   if ( CDI_Debug )
     {
@@ -1108,14 +1094,14 @@ int cgribexScanTimestep(stream_t * streamptr)
       Message("nts = %d", streamptr->ntsteps);
     }
   */
-  isec0 = streamptr->record->sec0;
-  isec1 = streamptr->record->sec1;
-  isec2 = streamptr->record->sec2;
-  isec3 = streamptr->record->sec3;
-  isec4 = streamptr->record->sec4;
+  int *isec0 = streamptr->record->sec0;
+  int *isec1 = streamptr->record->sec1;
+  int *isec2 = streamptr->record->sec2;
+  int *isec3 = streamptr->record->sec3;
+  int *isec4 = streamptr->record->sec4;
 
-  tsID  = streamptr->rtsteps;
-  taxis = &streamptr->tsteps[tsID].taxis;
+  int tsID  = streamptr->rtsteps;
+  taxis_t *taxis = &streamptr->tsteps[tsID].taxis;
 
   if ( streamptr->tsteps[tsID].recordSize == 0 )
     {
@@ -1127,8 +1113,7 @@ int cgribexScanTimestep(stream_t * streamptr)
       nrecs = streamptr->tsteps[1].nrecs;
 
       streamptr->tsteps[tsID].nrecs = nrecs;
-      streamptr->tsteps[tsID].recIDs
-        = (int *)xmalloc((size_t)nrecs * sizeof (int));
+      streamptr->tsteps[tsID].recIDs = (int *)xmalloc((size_t)nrecs * sizeof (int));
       for ( recID = 0; recID < nrecs; recID++ )
 	streamptr->tsteps[tsID].recIDs[recID] = streamptr->tsteps[1].recIDs[recID];
 
@@ -1195,6 +1180,7 @@ int cgribexScanTimestep(stream_t * streamptr)
 
 	  if ( rindex == 0 )
 	    {
+              int vlistID = streamptr->vlistID;
 	      taxisID = vlistInqTaxis(vlistID);
 	      if ( taxisInqType(taxisID) == TAXIS_RELATIVE )
 		{
@@ -2139,12 +2125,6 @@ void cgribexDefLevel(int *isec1, int *isec2, double *fsec2, int zaxisID, int lev
 }
 
 static
-void cgribexDefMask(int *isec3)
-{
-  UNUSED(isec3);
-}
-
-static
 void cgribexDefaultSec0(int *isec0)
 {
   ISEC0_GRIB_Len     = 0;
@@ -2230,7 +2210,6 @@ size_t cgribexEncode(int memtype, int varID, int levelID, int vlistID, int gridI
   cgribexDefTime(isec1, vdate, vtime, tsteptype, numavg, vlistInqTaxis(vlistID));
   cgribexDefGrid(isec1, isec2, isec4, gridID);
   cgribexDefLevel(isec1, isec2, fsec2, zaxisID, levelID);
-  cgribexDefMask(isec3);
 
   cgribexDefEnsembleVar(isec1, vlistID, varID);
 

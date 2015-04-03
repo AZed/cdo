@@ -705,6 +705,14 @@ void remap_define_grid(int map_type, int gridID, remapgrid_t *grid)
 #endif
   for ( i = 0; i < gridsize; ++i ) grid->mask[i] = TRUE;
 
+  if ( gridInqMask(gridID, NULL) )
+    {
+      int *mask = (int*) malloc(gridsize*sizeof(int));
+      gridInqMask(gridID, mask);
+      for ( i = 0; i < gridsize; ++i )
+	if ( mask[i] == 0 ) grid->mask[i] = FALSE;
+      free(mask);
+    }
 
   if ( remap_write_remap == FALSE && grid->remap_grid_type == REMAP_GRID_TYPE_REG2D ) return;
 

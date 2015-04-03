@@ -931,24 +931,22 @@ void print_system_info()
 
 #if defined(_ARCH_PWR6)
   fprintf(stderr, "Predefined: _ARCH_PWR6\n");
-#endif 
-#if defined(_ARCH_PWR7)
+#elif defined(_ARCH_PWR7)
   fprintf(stderr, "Predefined: _ARCH_PWR7\n");
-#endif 
-#if defined(__SSE2__)
-  fprintf(stderr, "Predefined: __SSE2__\n");
-#endif 
-#if defined(__SSE3__)
-  fprintf(stderr, "Predefined: __SSE3__\n");
-#endif 
-#if defined(__SSE4_1__)
-  fprintf(stderr, "Predefined: __SSE4_1__\n");
-#endif 
-#if defined(__SSE4_2__)
-  fprintf(stderr, "Predefined: __SSE4_2__\n");
-#endif 
-#if defined(__AVX__)
+#endif
+
+#if defined(__AVX2__)
+  fprintf(stderr, "Predefined: __AVX2__\n");
+#elif defined(__AVX__)
   fprintf(stderr, "Predefined: __AVX__\n");
+#elif defined(__SSE4_2__)
+  fprintf(stderr, "Predefined: __SSE4_2__\n");
+#elif defined(__SSE4_1__)
+  fprintf(stderr, "Predefined: __SSE4_1__\n");
+#elif defined(__SSE3__)
+  fprintf(stderr, "Predefined: __SSE3__\n");
+#elif defined(__SSE2__)
+  fprintf(stderr, "Predefined: __SSE2__\n");
 #endif 
   fprintf(stderr, "\n");
 

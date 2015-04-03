@@ -58,6 +58,8 @@ void *Histogram(void *argument)
   HISTMEAN  = cdoOperatorAdd("histmean",  0, 0, NULL);
   HISTFREQ  = cdoOperatorAdd("histfreq",  0, 0, NULL);
 
+  UNUSED(HISTSUM);
+
   operatorID = cdoOperatorID();
 
   operatorInputArg("bins");
@@ -89,7 +91,7 @@ void *Histogram(void *argument)
   free(bins);
   zaxisDefLbounds(zaxisID2, fltarr);
   zaxisDefUbounds(zaxisID2, fltarr+1);
-  zaxisDefName(zaxisID2, "bins");
+  zaxisDefName(zaxisID2, "bin");
   zaxisDefLongname(zaxisID2, "histogram bins");
   zaxisDefUnits(zaxisID2, "level");
 
@@ -147,16 +149,16 @@ void *Histogram(void *argument)
 	    {
 	      if ( !DBL_IS_EQUAL(array[i], missval) )
 		{
-		  *(vartcount[varID]+i) += 1;
+		  vartcount[varID][i] += 1;
 		  index = 0;
 		  while( index < nbins )
 		    {
 		      offset = gridsize*index;
-		      if ( !DBL_IS_EQUAL(*(vardata[varID]+offset+i), missval) &&
+		      if ( !DBL_IS_EQUAL(vardata[varID][offset+i], missval) &&
 			   array[i] >= fltarr[index] && array[i] < fltarr[index+1] )
 			{
-			  *(vardata[varID]+offset+i) += array[i];
-			  *(varcount[varID]+offset+i) += 1;
+			  vardata[varID][offset+i]  += array[i];
+			  varcount[varID][offset+i] += 1;
 			  break;
 			}
 		      index++;
@@ -177,36 +179,39 @@ void *Histogram(void *argument)
     {
       missval = vlistInqVarMissval(vlistID2, varID);
       gridsize = gridInqSize(vlistInqVarGrid(vlistID2, varID));
-      nmiss = 0;
 
       /* fix mising values */
       
       for ( index = 0; index < nbins; index++ )
 	{
-	  streamDefRecord(streamID2,  varID,  index);
-	  offset   = gridsize*index;
-	  
+	  nmiss = 0;
+	  offset = gridsize*index;
+
 	  for ( i = 0; i < gridsize; i++ )
 	    {
-	      if ( *(vartcount[varID]+i) > 0 )
+	      if ( vartcount[varID][i] > 0 )
 		{
 		  if ( operatorID == HISTMEAN || operatorID == HISTFREQ )
 		    {
-		      if ( *(varcount[varID]+offset+i) > 0 ) 
+		      if ( varcount[varID][offset+i] > 0 ) 
 			{
 			  if ( operatorID == HISTMEAN )
-			    *(vardata[varID]+offset+i) /= *(varcount[varID]+offset+i);	    
+			    vardata[varID][offset+i] /= varcount[varID][offset+i];	    
 			  else 
-			    *(vardata[varID]+offset+i) = *(varcount[varID]+offset+i) / *(vartcount[varID]+i);
+			    vardata[varID][offset+i] = varcount[varID][offset+i] / vartcount[varID][i];
 			} 
 		    }
 		}
 	      else
 		{
 		  nmiss++;
-		  *(vardata[varID]+offset+i) = missval;
+		  varcount[varID][offset+i] = missval;
+		  vardata[varID][offset+i] = missval;
 		}
 	    }
+
+	  streamDefRecord(streamID2,  varID,  index);
+
 	  if ( operatorID == HISTCOUNT )
 	    streamWriteRecord(streamID2, varcount[varID]+offset, nmiss);
 	  else

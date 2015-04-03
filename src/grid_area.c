@@ -20,6 +20,7 @@
 #include "error.h"
 #include "grid.h"
 
+
 static
 void lonlat_to_xyz(double lon, double lat, double *xyz)
 {
@@ -29,6 +30,35 @@ void lonlat_to_xyz(double lon, double lat, double *xyz)
   xyz[2] = sin(lat);
 }
 
+/*
+#include "clipping/grid.h"
+#include "clipping/grid_cell.h"
+#include "clipping/area.h"
+
+static
+double yac_huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corner_lat)
+{
+  if ( num_corners < 3 ) return 0;
+
+  double coordinates_xyz[num_corners*3];
+  enum edge_type edge_types[num_corners];
+  struct grid_cell cell =
+    {.coordinates_x   = cell_corner_lon,
+     .coordinates_y   = cell_corner_lat,
+     .coordinates_xyz = coordinates_xyz,
+     .edge_type       = edge_types,
+     .num_corners     = num_corners};
+
+  for ( int i = 0; i < num_corners; ++i ) edge_types[i] = GREAT_CIRCLE;
+  for ( int i = 0; i < num_corners; ++i ) 
+    lonlat_to_xyz(cell_corner_lon[i], cell_corner_lat[i], coordinates_xyz+i*3);
+
+  double area = huiliers_area(cell);
+  area /= (EarthRadius*EarthRadius);
+
+  return (area);
+}
+*/
 static
 void cross_product(const double *restrict a, const double *restrict b, double *restrict c)
 {
@@ -50,7 +80,7 @@ double norm(const double *restrict a)
 }
 
 static
-double cell_area(int num_corners, double *cell_corner_lon, double *cell_corner_lat)
+double mod_cell_area(int num_corners, double *cell_corner_lon, double *cell_corner_lat)
 {
   if ( num_corners < 3 ) return 0;
 
@@ -154,7 +184,7 @@ double cell_area(int num_corners, double *cell_corner_lon, double *cell_corner_l
   * Licensed under the University of Illinois-NCSA License.
   */
 static
-double tri_area(const double *restrict u, const double *restrict v, const double *restrict w)
+double mod_tri_area(const double *restrict u, const double *restrict v, const double *restrict w)
 {
   double tmp_vec[3];
 
@@ -193,7 +223,7 @@ double tri_area(const double *restrict u, const double *restrict v, const double
   * Licensed under the University of Illinois-NCSA License.
   */
 static
-double huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corner_lat)
+double mod_huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corner_lat)
 {
   if ( num_corners < 3 ) return 0;
 
@@ -210,7 +240,7 @@ double huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corn
       lonlat_to_xyz(cell_corner_lon[i], cell_corner_lat[i], pnt3);
  
       // compute angle for pnt2
-      sum += tri_area(pnt1, pnt2, pnt3);
+      sum += mod_tri_area(pnt1, pnt2, pnt3);
 
       if ( i < (num_corners-1) ) { pnt2[0] = pnt3[0]; pnt2[1] = pnt3[1]; pnt2[2] = pnt3[2]; }
     }
@@ -219,7 +249,7 @@ double huiliers_area(int num_corners, double *cell_corner_lon, double *cell_corn
 }
 
 static
-double huiliers_area2(int num_corners, double *cell_corner_lon, double *cell_corner_lat, double cell_center_lon, double cell_center_lat)
+double mod_huiliers_area2(int num_corners, double *cell_corner_lon, double *cell_corner_lat, double cell_center_lon, double cell_center_lat)
 {
   if ( num_corners < 3 ) return 0;
 
@@ -238,7 +268,7 @@ double huiliers_area2(int num_corners, double *cell_corner_lon, double *cell_cor
       lonlat_to_xyz(cell_corner_lon[i], cell_corner_lat[i], pnt3);
  
       // compute angle for pnt2
-      sum += tri_area(pnt1, pnt2, pnt3);
+      sum += mod_tri_area(pnt1, pnt2, pnt3);
 
       pnt2[0] = pnt3[0]; pnt2[1] = pnt3[1]; pnt2[2] = pnt3[2];
     }
@@ -246,7 +276,7 @@ double huiliers_area2(int num_corners, double *cell_corner_lon, double *cell_cor
   if ( !(IS_EQUAL(cell_corner_lon[0], cell_corner_lon[num_corners-1]) && IS_EQUAL(cell_corner_lat[0], cell_corner_lat[num_corners-1])) )
     {
       lonlat_to_xyz(cell_corner_lon[0], cell_corner_lat[0], pnt3);
-      sum += tri_area(pnt1, pnt2, pnt3);
+      sum += mod_tri_area(pnt1, pnt2, pnt3);
     }
 
   return (sum);
@@ -418,16 +448,16 @@ int gridGenArea(int gridID, double* area)
       if ( cdo_omp_get_thread_num() != 0 ) lprogress = 0;
 
 #if defined(_OPENMP)
-#pragma omp atomic
+#include "pragma_omp_atomic_update.h"
 #endif
       findex++;
       if ( lprogress ) progressStatus(0, 1, findex/gridsize);
 
-      //area[i] = cell_area(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv);
+      //area[i] = mod_cell_area(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv);
       if ( nv <= 4 )
-	area[i] = huiliers_area(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv);
+	area[i] = mod_huiliers_area(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv);
       else
-	area[i] = huiliers_area2(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv, grid_center_lon[i], grid_center_lat[i]);
+	area[i] = mod_huiliers_area2(nv, grid_corner_lon+i*nv, grid_corner_lat+i*nv, grid_center_lon[i], grid_center_lat[i]);
     }
 
   if ( cdoVerbose )

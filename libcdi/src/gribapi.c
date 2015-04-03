@@ -59,7 +59,7 @@ void gribContainersNew(stream_t * streamptr)
   int editionNumber = 2;
 
   if ( streamptr->filetype == FILETYPE_GRB ) editionNumber = 1;
-
+  (void)editionNumber;
 #if  defined  (HAVE_LIBCGRIBEX)
   if ( streamptr->filetype == FILETYPE_GRB )
     {

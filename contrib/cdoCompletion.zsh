@@ -572,6 +572,7 @@ sp2fc -sp2fc \
 sp2gp -sp2gp \
 sp2gpl -sp2gpl \
 sp2sp -sp2sp \
+spartab -spartab \
 spcut -spcut \
 specinfo -specinfo \
 spectrum -spectrum \

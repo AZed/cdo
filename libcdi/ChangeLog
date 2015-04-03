@@ -1,3 +1,48 @@
+2014-11-27  Uwe Schulzweida
+
+	* Version 1.6.6 released
+
+2014-11-20  Uwe Schulzweida
+
+	* table::decodeForm1: missing longname results in Abort trap (bug fix)
+
+2014-11-14  Uwe Schulzweida
+
+	* cdfCopyRecord: removed limit for datasize
+
+2014-11-12  Uwe Schulzweida
+
+	* Version 1.6.5.2 released
+
+2014-11-12  Uwe Schulzweida
+
+	* transpose2dArrayXX: wrong result (bug fix)
+
+2014-11-08  Uwe Schulzweida
+
+	* cgribexScanTimestep1: set flag to 0 in call to cgribexVarCompare() (bug fix)
+
+2014-11-05  Uwe Schulzweida
+
+	* IEG: added support for coordinate scale factor [patch from Kevin Sieck]
+
+2014-10-31  Uwe Schulzweida
+
+	* Version 1.6.5.1 released
+
+2014-10-31  Uwe Schulzweida
+
+	* netCDF: call set_validrangeDP() in cdfReadVar() (bug fix)
+	* netCDF: call cdfDoInputDataTransformation() if have missvals (bug fix)
+
+2014-10-24  Uwe Schulzweida
+
+        * gridCompare: change limit of difference from 0.001 to 0.0015
+
+2014-10-23  Nathanael Huebbe
+
+	* resource_handle: optimize error messages
+
 2014-10-23  Uwe Schulzweida
 
 	* Version 1.6.5 released
@@ -6,7 +51,7 @@
 2014-10-21  Uwe Schulzweida
 
 	* vlistDefVarXXXKey: check validity of vlist object [Feature #4720]
-	*  lock CDI internal vlist objects
+	* lock CDI internal vlist objects
 
 2014-10-13  Uwe Schulzweida
 
@@ -22,7 +67,7 @@
 
 2014-08-21  Uwe Schulzweida
 
-	* reshGetElem: call show_stackframe() to print a backtrace 
+	* reshGetElem: call show_stackframe() to print a backtrace
 
 2014-08-20  Uwe Schulzweida
 

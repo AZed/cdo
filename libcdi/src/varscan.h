@@ -5,6 +5,7 @@
 #  include "grid.h"
 #endif
 
+#include "cdi.h"
 
 void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
 		  int level1, int level2, int level_sf, int level_unit, int prec,
@@ -12,9 +13,9 @@ void varAddRecord(int recID, int param, int gridID, int zaxistype, int lbounds,
 		  const char *name, const char *stdname, const char *longname, const char *units);
 
 void varDefVCT(size_t vctsize, double *vctptr);
-void varDefZAxisReference(int nlev, int nvgrid, char *uuid);
+void varDefZAxisReference(int nlev, int nvgrid, unsigned char uuid[CDI_UUID_SIZE]);
 
-int  varDefGrid(int vlistID, grid_t grid, int mode);
+int  varDefGrid(int vlistID, const grid_t *grid, int mode);
 int  varDefZaxis(int vlistID, int zaxistype, int nlevels, double *levels, int lbounds,
 		 double *levels1, double *levels2, int vctsize, double *vct, char *name,
 		 char *longname, char *units, int prec, int mode, int ltype);
@@ -37,7 +38,7 @@ void varDefOptGribInt(int varID, long lval, const char *keyword);
 void varDefOptGribDbl(int varID, double dval, const char *keyword);
 int varOptGribNentries(int varID);
 
-int  zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, double *levels, char *longname, char *units, int ltype);
+int  zaxisCompare(int zaxisID, int zaxistype, int nlevels, int lbounds, const double *levels, char *longname, char *units, int ltype);
 
 #endif
 /*

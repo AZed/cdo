@@ -42,6 +42,7 @@ int
 serializeGetSizeInCore(int count, int datatype, void *context)
 {
   int elemSize;
+  (void)context;
   switch (datatype)
   {
   case DATATYPE_INT8:
@@ -75,7 +76,7 @@ void serializePackInCore(void *data, int count, int datatype,
 {
   int size = serializeGetSize(count, datatype, context);
   int pos = *position;
-  xassert(INT_MAX - pos >= size);
+  xassert(INT_MAX - pos >= size && buf_size - pos >= size);
   memcpy((unsigned char *)buf + pos, data, (size_t)size);
   pos += size;
   *position = pos;
@@ -86,7 +87,7 @@ void serializeUnpackInCore(void *buf, int buf_size, int *position,
 {
   int size = serializeGetSize(count, datatype, context);
   int pos = *position;
-  xassert(INT_MAX - pos >= size);
+  xassert(INT_MAX - pos >= size && buf_size - pos >= size);
   memcpy(data, (unsigned char *)buf + pos, (size_t)size);
   pos += size;
   *position = pos;

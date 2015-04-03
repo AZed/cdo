@@ -14,7 +14,7 @@
 #include "cdi.h"
 
 #include "cksum.h"
-
+#include "simple_model_helper.h"
 
 static int
 parse_intarg(const char msg[])
@@ -34,14 +34,6 @@ parse_intarg(const char msg[])
   return (int)temp;
 }
 
-static inline double
-sign_flat(double v)
-{
-  if (v == 0.0)
-    return 0.0;
-  return v;
-}
-
 static void
 allocError(const char *msg)
 {
@@ -54,8 +46,8 @@ fname_create(const char *prefix, const char *suffix)
 {
   size_t prefix_len, suffix_len;
   char *fname;
-  if (!(fname =malloc((prefix_len = strlen(prefix)) + 1
-                      + (suffix_len = strlen(suffix)) + 1)))
+  if (!(fname = malloc((prefix_len = strlen(prefix)) + 1
+                       + (suffix_len = strlen(suffix)) + 1)))
     allocError("cannot create string");
   strcpy(fname, prefix);
   fname[prefix_len] = '.';
@@ -148,7 +140,7 @@ main(int argc, char *argv[])
       case 'f':
         {
           int found = 0;
-          for (i = 0;
+          for (size_t i = 0;
                i < sizeof (suffix2type) / sizeof (suffix2type[0]);
                ++i)
             if (!strcmp(optarg, suffix2type[i].suffix))
@@ -224,6 +216,28 @@ main(int argc, char *argv[])
   zaxisID[1] = zaxisCreate(ZAXIS_PRESSURE, nlev);
   zaxisDefLevels(zaxisID[1], levs);
 
+  /* add uuids to zaxis and grid */
+  {
+    unsigned char uuid[16];
+    int str2uuid(const char *uuidstr, unsigned char *uuid);
+
+    static char gridUUIDTxt[] = "107d7a5b-348c-4d1a-90a9-d745914f2fb6";
+
+    str2uuid(gridUUIDTxt, uuid);
+    gridDefUUID(gridID, uuid);
+
+    static char zaxisUUIDTxt[2][37] = {
+      { "d157f399-5496-4097-a3d8-437a6dda6311" },
+      { "6f784a65-bce8-48c9-afa4-4c40130709c7" }
+    };
+
+    for (int i = 0; i < 2; ++i)
+      {
+        str2uuid(zaxisUUIDTxt[i], uuid);
+        zaxisDefUUID(zaxisID[i], uuid);
+      }
+  }
+
   // Create a Time axis
   taxisID = taxisCreate(TAXIS_ABSOLUTE);
 
@@ -244,41 +258,12 @@ main(int argc, char *argv[])
       var[i] = malloc(varSize[i] * sizeof (var[i][0]));
     }
 
-  {
-    int mant_bits;
-    switch (datatype)
-      {
-      case DATATYPE_PACK8:
-        mant_bits = 7;
-        break;
-      case DATATYPE_PACK16:
-        mant_bits = 15;
-        break;
-      case DATATYPE_PACK24:
-        mant_bits = 23;
-        break;
-      case DATATYPE_FLT32:
-        mant_bits = 24;
-        break;
-      case DATATYPE_FLT64:
-        mant_bits = 53;
-        break;
-      case DATATYPE_INT8:
-      case DATATYPE_INT16:
-      case DATATYPE_INT32:
-      default:
-        fprintf(stderr, "Unexpected or unusable content format: %d\n",
-                datatype);
-        exit(EXIT_FAILURE);
-      }
-    mscale = (double)(INT64_C(1) << mant_bits);
-    mrscale = 1.0/mscale;
-  }
+  var_scale(datatype, &mscale, &mrscale);
 
   // Assign the Time axis to the variable list
   vlistDefTaxis(vlistID, taxisID);
 
-  // Create a dataset in netCDF fromat
+  // Create a dataset
   {
     char *fname = fname_create(prefix, suffix);
     if ((streamID = streamOpenWrite(fname, filetype)) < 0)
@@ -298,10 +283,11 @@ main(int argc, char *argv[])
     // Loop over the number of time steps
     for ( tsID = 0; tsID < nts; tsID++ )
       {
+        int vdatetime[2] = { 120000, 19850101+tsID };
         // Set the verification date to 1985-01-01 + tsID
-        taxisDefVdate(taxisID, 19850101+tsID);
+        taxisDefVdate(taxisID, vdatetime[1]);
         // Set the verification time to 12:00:00
-        taxisDefVtime(taxisID, 120000);
+        taxisDefVtime(taxisID, vdatetime[0]);
         // Define the time step
         streamDefTimestep(streamID, tsID);
 
@@ -326,7 +312,17 @@ main(int argc, char *argv[])
                             / (lons[nlat-1] - lats[0]))
                       ) * mscale)) * mrscale;
 
+        if (filetype == FILETYPE_EXT)
+          {
+            /* EXTRA doesn't store time, only date
+             * set the value to 0 before checksumming, because a
+             * time field of 0 is what reading an EXTRA file will
+             * return */
+            vdatetime[0] = 0;
+          }
+        memcrc_r(&checksum_state[0], (const unsigned char *)vdatetime, sizeof (vdatetime));
         memcrc_r(&checksum_state[0], (const unsigned char *)var[0], varSize[0] * sizeof (var[0][0]));
+        memcrc_r(&checksum_state[1], (const unsigned char *)vdatetime, sizeof (vdatetime));
         memcrc_r(&checksum_state[1], (const unsigned char *)var[1], varSize[1] * sizeof (var[1][0]));
 
         // Write var1 and var2
@@ -380,9 +376,10 @@ main(int argc, char *argv[])
         {
           uint32_t cksum;
           int code;
-          cksum = memcrc_finish(&checksum_state[i],
-                                (off_t)(varSize[i] * sizeof (var[i][0])
-                                        * (size_t)nts));
+          cksum
+            = memcrc_finish(&checksum_state[i],
+                            (off_t)((varSize[i] * sizeof (var[i][0])
+                                     + sizeof (int) * 2) * (size_t)nts));
           code = vlistInqVarCode(vlistID, varID[i]);
           if (fprintf(tablefp, "%08lx %d\n", (unsigned long)cksum, code) < 0)
             {

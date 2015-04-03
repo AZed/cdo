@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "cdi.h"
+#include "create_uuid.h"
 #include "dmemory.h"
 #include "error.h"
 #include "resource_handle.h"
@@ -86,6 +87,11 @@ int defineGrid ()
     mask_vec[i] = i;
   gridDefRowlon ( gridID, nlon*nlat, mp );
   gridDefComplexPacking ( gridID, 1 );
+  {
+    unsigned char uuid[CDI_UUID_SIZE];
+    create_uuid(uuid);
+    gridDefUUID(gridID, uuid);
+  }
 
   return gridID;
 }
@@ -107,6 +113,11 @@ int defineZaxis ()
   zaxisDefLbounds ( zaxisID, &levs[0] );
   zaxisDefUbounds ( zaxisID, &levs[0] );
   zaxisDefWeights ( zaxisID, &levs[0] );
+  {
+    unsigned char uuid[CDI_UUID_SIZE];
+    create_uuid(uuid);
+    zaxisDefUUID(zaxisID, uuid);
+  }
 
   return zaxisID;
 }
@@ -139,7 +150,11 @@ void defineStream ( int streamID, int vlistID )
   streamDefVlist(streamID, vlistID);
 }
 
-int defineVlist ( int gridID, int zaxisID, int taxisID )
+struct idPair {
+  int id1, id2;
+};
+
+struct idPair defineVlist ( int gridID, int zaxisID, int taxisID )
 {
   int vlistID = CDI_UNDEFID;
   int zaxisID2 = zaxisCreate(ZAXIS_SURFACE, 1);
@@ -160,9 +175,7 @@ int defineVlist ( int gridID, int zaxisID, int taxisID )
   int vlistID2 = vlistCreate();
   vlistDefVar(vlistID2, gridID, zaxisID, TIME_VARIABLE);
   vlistCopy(vlistID2, vlistID);
-  vlistDestroy(vlistID);
-  vlistID = vlistID2;
-  return vlistID;
+  return (struct idPair){ vlistID, vlistID2 };
 }
 
 int defineInstitute ()
@@ -201,10 +214,14 @@ int modelRun(MPI_Comm comm)
   taxisID = defineTaxis     ();
   instID  = defineInstitute ();
   defineModel(instID);
-  vlistID = defineVlist     ( gridID, zaxisID, taxisID);
-  streamID = streamOpenWrite("example.grb", FILETYPE_GRB);
-  if ( streamID < 0 ) xabort ( "Could not open file" );
-  defineStream ( streamID, vlistID );
+  {
+    struct idPair temp = defineVlist(gridID, zaxisID, taxisID);
+    vlistID = temp.id1;
+    streamID = streamOpenWrite("example.grb", FILETYPE_GRB);
+    if ( streamID < 0 ) xabort ( "Could not open file" );
+    defineStream ( streamID, vlistID );
+    vlistDestroy(temp.id2);
+  }
 
   reshPackBufferCreate ( &sendBuffer, &bufferSize, &comm );
   recvBuffer = xmalloc((size_t)bufferSize);
@@ -235,6 +252,7 @@ int main (int argc, char *argv[])
   MPI_Init(&argc, &argv);
   commModel = MPI_COMM_WORLD;
 #else
+  (void)argc; (void)argv;
   commModel = 0;
 #endif
   destNamespace = namespaceNew();

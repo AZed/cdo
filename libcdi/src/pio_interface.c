@@ -35,7 +35,7 @@ static struct rdmaWin
   MPI_Win win;
   int postSet, refuseFuncCall;
   MPI_Group ioGroup;
-  int dictSize, dictDataUsed, dictRPCUsed, dict;
+  int dictSize, dictDataUsed, dictRPCUsed;
 } *txWin = NULL;
 
 
@@ -64,6 +64,7 @@ void memcpyPackFunc(void *dataDesc, void *buf, int size, int *pos,
                     void *context)
 {
   struct memCpyDataDesc *p = dataDesc;
+  (void)context;
   xassert(size >= *pos && (size_t)(size - *pos) >= p->obj_size);
   memcpy((unsigned char *)buf + *pos, p->obj, p->obj_size);
   *pos += (int)p->obj_size;
@@ -91,10 +92,10 @@ mapProblems(int problemSizes[], int * problemMapping, int nProblems,
       sum += problemSizes[i];
     }
 
-  qsort ( ip, nProblems, sizeof ( int * ), cmp );
+  qsort(ip, (size_t)nProblems, sizeof ( int * ), cmp );
 
   for ( i = 0; i < nProblems; i++ )
-    dummy[i] = ip[i] - problemSizes;
+    dummy[i] = (int)(ip[i] - problemSizes);
 
   for ( j = 0; j < nWriter; j++ )
     meanBucket[j] = ( double ) sum * ( * ( w + j ));
@@ -107,7 +108,7 @@ mapProblems(int problemSizes[], int * problemMapping, int nProblems,
 
       for ( j = 0; j < nWriter; j++ )
 	{
-	  nextCapacity = meanBucket[j] - ( buckets[j] + ( *ip[i] ));
+	  nextCapacity = (int)meanBucket[j] - ( buckets[j] + ( *ip[i] ));
 
 	  if ( nextCapacity > currCapacity )
 	    {
@@ -161,7 +162,6 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
   int streamMapping[nStreams];
   int nPEs = 0, nVars = 0;
   int i, j, k, offset = 0, offsetN = 0;
-  double * w;
 
   int * weightsVarsNode;
   int * varMappingNode;
@@ -178,7 +178,7 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 	weightsStreams[i] += * ( vSizes + offset++ );
     }
 
-  w = ( double * ) xmalloc( nNodes * sizeof ( double ));
+  double *w = (double *)xmalloc((size_t)nNodes * sizeof ( double ));
   for ( j = 0; j < nNodes; j++ )
     nPEs += * ( nodeSizes + j );
 
@@ -195,9 +195,9 @@ varMapGen(int *vSizes, int *sSizes, int *varMapping,
 	if ( * ( streamMapping + j ) == i )
 	  nVarsNode += * ( sSizes + j );
 
-      weightsVarsNode = ( int * ) xmalloc( nVarsNode * sizeof ( int ));
-      varMappingNode = ( int * ) xmalloc( nVarsNode * sizeof ( int ));
-      w = ( double * ) xmalloc( * ( nodeSizes + i ) * sizeof ( double ));
+      weightsVarsNode = xmalloc((size_t)nVarsNode * sizeof (int));
+      varMappingNode = xmalloc((size_t)nVarsNode * sizeof ( int ));
+      w = xmalloc((size_t)nodeSizes[i] * sizeof (double));
       offset = 0;
       offsetN = 0;
 
@@ -251,28 +251,31 @@ varsMapNDeco(int nNodes, int *nodeSizes)
 {
   int nStreams, nVars, * resHs, * streamSizes, * varSizes, * varMapping,
     * collectsData;
-  int i, j, k = 0;
+  int k = 0;
   int nProcsColl = commInqNProcsColl ();
 
   xdebug ( "START, nProcsColl=%d", nProcsColl );
 
   nStreams = streamSize ();
 
-  resHs       = (int*) xmalloc( nStreams * sizeof ( resHs[0] ));
-  streamSizes = (int*) xmalloc( nStreams * sizeof ( streamSizes[0] ));
-  collectsData = (int*) xmalloc( nProcsColl * sizeof ( collectsData[0] ));
+  resHs       = xmalloc((size_t)nStreams * sizeof (resHs[0]));
+  streamSizes = xmalloc((size_t)nStreams * sizeof (streamSizes[0]));
+  collectsData = xmalloc((size_t)nProcsColl * sizeof (collectsData[0]));
   streamGetIndexList ( nStreams, resHs );
 
-  for ( i = 0; i < nStreams; i++ )
+  for (int i = 0; i < nStreams; i++ )
     streamSizes[i] = streamInqNvars ( * ( resHs + i ));
 
-  nVars = sum_int(nStreams, streamSizes);
-  varSizes   = (int*) xmalloc( nVars * sizeof ( varSizes[0] ));
-  varMapping = (int*) xmalloc( nVars * sizeof ( varMapping[0] ));
+  nVars = sum_int((size_t)nStreams, streamSizes);
+  varSizes   = xmalloc((size_t)nVars * sizeof (varSizes[0]));
+  varMapping = xmalloc((size_t)nVars * sizeof (varMapping[0]));
 
-  for ( i = 0; i < nStreams; i++ )
-    for ( j = 0; j < * ( streamSizes + i ); j++ )
-      varSizes[k++] += vlistInqVarSize ( streamInqVlist ( * ( resHs + i )), j );
+  for (int i = 0; i < nStreams; i++ )
+    {
+      int vlistID = streamInqVlist(resHs[i]);
+      for (int j = 0; j < streamSizes[i]; j++ )
+        varSizes[k++] += vlistInqVarSize(vlistID, j);
+    }
 
   xassert ( k == nVars );
 
@@ -280,8 +283,8 @@ varsMapNDeco(int nNodes, int *nodeSizes)
 	      nStreams, nodeSizes, nNodes );
 
   k = 0;
-  for ( i = 0; i < nStreams; i++ )
-    for ( j = 0; j < * ( streamSizes + i ); j++ )
+  for (int i = 0; i < nStreams; i++ )
+    for (int j = 0; j < * ( streamSizes + i ); j++ )
       {
         vlistDefVarIOrank ( streamInqVlist ( * ( resHs + i )), j,
                             * ( varMapping + k ));
@@ -290,7 +293,7 @@ varsMapNDeco(int nNodes, int *nodeSizes)
         collectsData[commRankGlob2CollID ( varMapping[k++] )] = 1;
       }
 
-  for ( j = 0; j < nProcsColl; j++ )
+  for (int j = 0; j < nProcsColl; j++ )
     if ( collectsData[j] == 0 )
       xabort("AT LEAST ONE COLLECTOR PROCESS IDLES, "
              "CURRENTLY NOT COVERED: "
@@ -341,7 +344,7 @@ static void
 modelWinDefBufferSizes(void)
 {
   int collID, nstreams, * streamIndexList, streamNo, nvars, varID;
-  int sumWinBufferSize = 0;
+  size_t sumWinBufferSize = 0;
   int nProcsColl  = commInqNProcsColl ();
   int rankGlob    = commInqRankGlob ();
   int root = commInqRootGlob ();
@@ -351,8 +354,8 @@ modelWinDefBufferSizes(void)
   xassert(txWin != NULL);
 
   nstreams = reshCountType ( &streamOps );
-  streamIndexList = (int*) xmalloc( nstreams * sizeof ( streamIndexList[0] ));
-  collIndex = (struct collDesc*) xcalloc(nProcsColl, sizeof (collIndex[0]));
+  streamIndexList = xmalloc((size_t)nstreams * sizeof (streamIndexList[0]));
+  collIndex = xcalloc((size_t)nProcsColl, sizeof (collIndex[0]));
   reshGetResHListOfType ( nstreams, streamIndexList, &streamOps );
   for ( streamNo = 0; streamNo < nstreams; streamNo++ )
     {
@@ -363,12 +366,13 @@ modelWinDefBufferSizes(void)
       for ( varID = 0; varID < nvars; varID++ )
         {
           int collID = commRankGlob2CollID(vlistInqVarIOrank(vlistID, varID));
-          int collIDchunk;
+          size_t collIDchunk;
           {
             int varSize = vlistInqVarSize(vlistID, varID);
             int nProcsModel = commInqNProcsModel();
-            collIDchunk = (int)ceilf(cdiPIOpartInflate_
-                                     * (varSize + nProcsModel - 1)/nProcsModel);
+            collIDchunk = (size_t)ceilf(cdiPIOpartInflate_
+                                        * (float)(varSize + nProcsModel - 1)
+                                        / (float)nProcsModel);
           }
           xassert ( collID != CDI_UNDEFID && collIDchunk > 0 );
           collIndex[collID].numDataRecords += 2;
@@ -407,14 +411,14 @@ modelWinDefBufferSizes(void)
       txWin[collID].size += sizeof (struct winHeaderEntry);
       txWin[collID].size = roundUpToMultiple(txWin[collID].size,
                                              PIO_WIN_ALIGN);
-      sumWinBufferSize += txWin[collID].size;
+      sumWinBufferSize += (size_t)txWin[collID].size;
     }
   free(collIndex);
   free ( streamIndexList );
 
-  xdebug("sumWinBufferSize=%zu, MAXWINBUFFERSIZE=%zu", (size_t)sumWinBufferSize,
+  xdebug("sumWinBufferSize=%zu, MAXWINBUFFERSIZE=%zu", sumWinBufferSize,
          (size_t)MAXWINBUFFERSIZE);
-  xassert ( sumWinBufferSize <= MAXWINBUFFERSIZE );
+  xassert ( sumWinBufferSize <= (size_t)MAXWINBUFFERSIZE );
   xdebug("%s", "RETURN");
 }
 
@@ -431,11 +435,10 @@ static
             collID                < nProcsColl &&
             txWin != NULL      &&
             txWin[collID].buffer     != NULL      &&
-            txWin[collID].size >= 0         &&
             txWin[collID].size <= MAXWINBUFFERSIZE);
   memset(txWin[collID].buffer, 0, txWin[collID].size);
   txWin[collID].head = txWin[collID].buffer
-    + txWin[collID].dictSize * sizeof (struct winHeaderEntry);
+    + (size_t)txWin[collID].dictSize * sizeof (struct winHeaderEntry);
   txWin[collID].refuseFuncCall = 0;
   txWin[collID].dictDataUsed = 1;
   txWin[collID].dictRPCUsed = 0;
@@ -452,7 +455,7 @@ void modelWinCreate ( void )
   int nProcsColl = commInqNProcsColl ();
 
   xdebug("%s", "START");
-  txWin = (struct rdmaWin*) xmalloc(nProcsColl * sizeof (txWin[0]));
+  txWin = xmalloc((size_t)nProcsColl * sizeof (txWin[0]));
 
   modelWinDefBufferSizes ();
   ranks[0] = commInqNProcsModel ();
@@ -468,7 +471,7 @@ void modelWinCreate ( void )
                          &txWin[collID].buffer));
       xassert ( txWin[collID].buffer != NULL );
       txWin[collID].head = txWin[collID].buffer
-        + txWin[collID].dictSize * sizeof (struct winHeaderEntry);
+        + (size_t)txWin[collID].dictSize * sizeof (struct winHeaderEntry);
       xmpi(MPI_Win_create(txWin[collID].buffer, (MPI_Aint)txWin[collID].size, 1,
                           no_locks_info, commInqCommsIO(collID),
                           &txWin[collID].win));
@@ -500,7 +503,8 @@ modelWinEnqueue(int collID,
   if (header.id > 0)
     {
       int offset = header.offset
-        = (int)roundUpToMultiple(txWin[collID].head - txWin[collID].buffer,
+        = (int)roundUpToMultiple((size_t)(txWin[collID].head
+                                          - txWin[collID].buffer),
                                  sizeof (double));
       MPI_Comm comm = commInqCommsIO(collID);
       packFunc((void *)data, txWin[collID].buffer, (int)txWin[collID].size,
@@ -553,8 +557,8 @@ cdiPio_xt_idxlist_pack_wrap(void *data, void *buf, int size, int *pos,
                             void *context)
 {
   MPI_Comm comm = *(MPI_Comm *)context;
-  int pack_size = xt_idxlist_get_pack_size((Xt_idxlist)data, comm);
-  xassert(size >= *pos && pack_size <= size - *pos);
+  size_t pack_size = xt_idxlist_get_pack_size((Xt_idxlist)data, comm);
+  xassert(size >= *pos && pack_size <= (size_t)(size - *pos));
   xt_idxlist_pack((Xt_idxlist)data, (unsigned char *)buf,
                   size, pos, comm);
 }
@@ -631,7 +635,7 @@ pioBufferPartData(int streamID, int varID, const double *data,
   int chunk = xt_idxlist_get_num_indices(partDesc);
   xassert(chunk <= INT_MAX);
   pioBufferPartData_(streamID, varID,
-                     &(struct memCpyDataDesc){data, chunk * sizeof (data[0])},
+                     &(struct memCpyDataDesc){data, (size_t)chunk * sizeof (data[0])},
                      memcpyPackFunc,
                      nmiss, partDesc);
 }
@@ -649,28 +653,30 @@ static void
 scatterGatherPackFunc(void *dataDesc, void *buf, int size, int *pos,
                       void *context)
 {
+  (void)context;
   const struct scatterGatherDesc *p = dataDesc;
   unsigned numBlocks = p->numBlocks;
   const int *bls = p->blocklengths, *disps = p->displacements;
   int pos_ = *pos;
   unsigned char *dstBuf = buf + pos_, *bufEnd = (unsigned char *)buf + size;
   size_t elemSize = p->elemSize;
+  xassert(elemSize <= SSIZE_MAX);
   const unsigned char *data = p->data;
   unsigned copyCount = 0, numElems = p->numElems;
   for (unsigned j = 0; j < numBlocks && copyCount < numElems; ++j)
     {
       int bl = bls[j];
-      if (bl + copyCount > numElems)
-        {
-          bl = numElems - copyCount;
-          Warning("%s: %s", "streamWriteScatteredVarPart",
-                  "blocks longer than number of elements in index list!");
-        }
       if (bl > 0)
         {
+          if ((unsigned)bl + copyCount > numElems)
+            {
+              bl = (int)(numElems - copyCount);
+              Warning("%s: %s", "streamWriteScatteredVarPart",
+                      "blocks longer than number of elements in index list!");
+            }
           size_t bsize = (size_t)bl * elemSize;
           xassert(dstBuf + bsize <= bufEnd);
-          memcpy(dstBuf, data + elemSize * disps[j], bsize);
+          memcpy(dstBuf, data + (ssize_t)elemSize * (ssize_t)disps[j], bsize);
           dstBuf += bsize;
         }
     }
@@ -689,7 +695,8 @@ cdiPioBufferPartDataGather(int streamID, int varID, const double *data,
                      &(struct scatterGatherDesc)
                      { .data = (void *)data, .blocklengths = blocklengths,
                        .displacements = displacements,
-                       .elemSize = sizeof (data[0]), .numBlocks = numBlocks,
+                       .elemSize = sizeof (data[0]),
+                       .numBlocks = (unsigned)numBlocks,
                        .numElems
                          = (unsigned)xt_idxlist_get_num_indices(partDesc) },
                      scatterGatherPackFunc,

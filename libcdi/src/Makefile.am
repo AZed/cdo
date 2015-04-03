@@ -2,11 +2,13 @@
 #
 EXTRA_DIST = cdilib.c mo_cdi.f90
 
+noinst_LTLIBRARIES = libcdiresunpack.la
+
 if ENABLE_CDI_LIB
   lib_LTLIBRARIES = libcdi.la
   include_HEADERS = cdi.h cdi.inc
 else
-  noinst_LTLIBRARIES = libcdi.la
+  noinst_LTLIBRARIES += libcdi.la
 endif
 
 AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
@@ -108,6 +110,9 @@ libcdi_la_SOURCES = 	 \
 	zaxis.h		 \
         stream.c         \
         swap.c
+
+libcdiresunpack_la_SOURCES = \
+	resource_unpack.c
 
 if USE_MPI
 if ENABLE_CDI_LIB

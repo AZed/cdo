@@ -72,7 +72,8 @@ void *Deltime(void *argument)
       if ( isalpha(*sarg) )
 	{
 	  char smon[32];
-	  strncpy(smon, sarg, 32);
+	  strncpy(smon, sarg, sizeof(smon)-1);
+	  smon[sizeof(smon)-1] = 0;
 	  strtolower(smon);
 	  for ( im = 0; im < 12; ++im )
 	    if ( memcmp(smon, cmons[im+1], 3) == 0 ) break;

@@ -54,6 +54,7 @@ void nbr_store_distance(int nadd, double distance, int num_neighbors, int *restr
 {
   if ( num_neighbors == 1 )
     {
+      // if ( (distance+1.e-10) < nbr_dist[0] || ((fabs(distance-nbr_dist[0]) < 1.e-10) && nadd < nbr_add[0]) )
       if ( distance < nbr_dist[0] || (distance <= nbr_dist[0] && nadd < nbr_add[0]) )
 	{
 	  nbr_add[0]  = nadd;
@@ -503,7 +504,7 @@ void scrip_remap_weights_distwgt(int num_neighbors, remapgrid_t *src_grid, remap
       if ( cdo_omp_get_thread_num() != 0 ) lprogress = 0;
 
 #if defined(_OPENMP)
-#pragma omp atomic
+#include "pragma_omp_atomic_update.h"
 #endif
       findex++;
       if ( lprogress ) progressStatus(0, 1, findex/tgt_grid_size);

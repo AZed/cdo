@@ -82,20 +82,20 @@ static void modelRun(MPI_Comm commModel)
       varID[i] = vlistDefVar ( vlistID, gridID, zaxisID[i], TIME_VARIABLE );
 #ifdef USE_MPI
       {
-         int start = uniform_partition_start((int [2]){ 0, varSize[i] - 1 },
+        int start = uniform_partition_start((int [2]){ 0, (int)varSize[i] - 1 },
                                              comm_size, rank),
-           chunkSize = uniform_partition_start((int [2]){ 0, varSize[i] - 1 },
-                                               comm_size, rank + 1) - start;
-         fprintf(stderr, "%d: start=%d, chunkSize = %d\n", rank,
-                 start, chunkSize);
-         Xt_idxlist idxlist
-           = xt_idxstripes_new(&(struct Xt_stripe){ .start = start,
-                 .nstrides = chunkSize, .stride = 1 }, 1);
-         varDeco[i] = (struct var1DDeco){
-           .start = start,
-           .chunkSize = chunkSize,
-           .partDesc = idxlist
-         };
+          chunkSize = uniform_partition_start((int [2]){ 0, (int)varSize[i] - 1 },
+                                              comm_size, rank + 1) - start;
+        fprintf(stderr, "%d: start=%d, chunkSize = %d\n", rank,
+                start, chunkSize);
+        Xt_idxlist idxlist
+          = xt_idxstripes_new(&(struct Xt_stripe){ .start = start,
+                .nstrides = chunkSize, .stride = 1 }, 1);
+        varDeco[i] = (struct var1DDeco){
+          .start = start,
+          .chunkSize = chunkSize,
+          .partDesc = idxlist
+        };
       }
 #endif
     }
@@ -172,6 +172,21 @@ static struct {
   { "PIO_WRITER", PIO_WRITER },
   { "PIO_FPGUARD", PIO_FPGUARD},
 };
+
+static inline int
+search_iomode_str(const char *modestr)
+{
+  int retval = -1;
+  for (size_t i = 0;
+       i < sizeof (mode_map) / sizeof (mode_map[0]);
+       ++i)
+    if (!strcmp(modestr, mode_map[i].text))
+      {
+        retval = (int)i;
+        break;
+      }
+  return retval;
+}
 #endif
 
 
@@ -197,25 +212,24 @@ int main (int argc, char *argv[])
       switch (opt) {
       case 'p':
         {
-          int i, found=0;
-          for (i = 0;
-               i < sizeof (mode_map) / sizeof (mode_map[0]);
-               ++i)
-            if (!strcmp(optarg, mode_map[i].text))
-              {
-                found = 1;
-                IOMode = mode_map[i].mode;
-              }
-          if (!found)
+          int entry = search_iomode_str(optarg);
+          if (entry < 0)
             {
               fprintf(stderr, "Unsupported PIO mode requested: %s\n", optarg);
               exit(EXIT_FAILURE);
             }
+          IOMode = mode_map[entry].mode;
         }
         break;
       case 'w':
         {
-          nProcsIO = strtol(optarg, NULL, 0);
+          long temp = strtol(optarg, NULL, 0);
+          if (temp < 0 || temp > INT_MAX/2)
+            {
+              fprintf(stderr, "Unsupported number of I/O servers: %ld\n", temp);
+              exit(EXIT_FAILURE);
+            }
+          nProcsIO = (int)temp;
           break;
         }
       }
@@ -244,8 +258,8 @@ static int
 uniform_partition_start(int set_interval[2], int nparts, int part_idx)
 {
   int part_offset
-    = (((long long)set_interval[1] - (long long)set_interval[0] + 1LL)
-       * (long long)part_idx) / (long long)nparts;
+    = (int)((((long long)set_interval[1] - (long long)set_interval[0] + 1LL)
+             * (long long)part_idx) / (long long)nparts);
   int start = set_interval[0] + part_offset;
   return start;
 }

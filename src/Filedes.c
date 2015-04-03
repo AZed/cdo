@@ -91,9 +91,11 @@ void partab(FILE *fp, int vlistID, int option)
   int natts;
   int nvars;
   int chunktype;
+  int linebreak = 1;
   double missval;
       
   nvars  = vlistNvars(vlistID);
+  if ( option == 4 ) linebreak = 0;
 
   if ( option == 2 )
     {
@@ -121,17 +123,23 @@ void partab(FILE *fp, int vlistID, int option)
 
       if ( datatype != -1 )
 	{
-	  fprintf(fp, "&parameter\n");
-	  fprintf(fp, "  name=_default_\n");
+	  fprintf(fp, "&parameter");
+	  if ( linebreak ) fprintf(fp, "\n");
+	  fprintf(fp, "  name=_default_");
+	  if ( linebreak ) fprintf(fp, "\n");
 	  if ( datatype2str(datatype, pstr) == 0 )
-	    fprintf(fp, "  datatype=%s\n", pstr);
+	    {
+	      fprintf(fp, "  datatype=%s", pstr);
+	      if ( linebreak ) fprintf(fp, "\n");
+	    }
 	  fprintf(fp, "/\n");
 	}
     }
 
   for ( varID = 0; varID < nvars; varID++ )
     {
-      fprintf(fp, "&parameter\n");
+      fprintf(fp, "&parameter");
+      if ( linebreak ) fprintf(fp, "\n");
       
       varname[0]     = 0;
       varlongname[0] = 0;
@@ -146,38 +154,61 @@ void partab(FILE *fp, int vlistID, int option)
       /* printf("3>%s<\n", varname); */
       vlistInqVarUnits(vlistID, varID, varunits);
             
-      fprintf(fp, "  name=%s\n", varname);
+      fprintf(fp, "  name=%s", varname);
+      if ( linebreak ) fprintf(fp, "\n");
       // if ( code   > 0 ) fprintf(fp, "  code=%d\n", code);
       // if ( tabnum > 0 ) fprintf(fp, "  table=%d\n", tabnum);
       if ( param >= 0 )
 	{
 	  cdiParamToString(param, paramstr, sizeof(paramstr));
-	  fprintf(fp, "  param=%s\n", paramstr);
+	  fprintf(fp, "  param=%s", paramstr);
+	  if ( linebreak ) fprintf(fp, "\n");
 	}
       if ( strlen(varstdname) )
-	fprintf(fp, "  standard_name=%s\n", varstdname);
+	{
+	  fprintf(fp, "  standard_name=%s", varstdname);
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
       if ( strlen(varlongname) )
-	fprintf(fp, "  long_name=\"%s\"\n", varlongname);
+	{
+	  fprintf(fp, "  long_name=\"%s\"", varlongname);
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
       if ( strlen(varunits) )
-	fprintf(fp, "  units=\"%s\"\n", varunits);
-      
+	{
+	  fprintf(fp, "  units=\"%s\"", varunits);
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
+
       if ( datatype == -1 )
 	if ( datatype2str(vlistInqVarDatatype(vlistID, varID), pstr) == 0 )
-	  fprintf(fp, "  datatype=%s\n", pstr);
+	  {
+	    fprintf(fp, "  datatype=%s", pstr);
+	    if ( linebreak ) fprintf(fp, "\n");
+	  }
 
       chunktype = vlistInqVarChunkType(vlistID, varID);
       if ( chunktype == CHUNK_AUTO )
-	fprintf(fp, "  chunktype=auto\n");
+	{
+	  fprintf(fp, "  chunktype=auto");
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
       else if ( chunktype == CHUNK_GRID )
-	fprintf(fp, "  chunktype=grid\n");
+	{
+	  fprintf(fp, "  chunktype=grid");
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
       if ( chunktype == CHUNK_LINES )
-	fprintf(fp, "  chunktype=lines\n");
-	
+	{
+	  fprintf(fp, "  chunktype=lines");
+	  if ( linebreak ) fprintf(fp, "\n");
+	}
       
       if ( option == 2 ) printAtts(fp, vlistID, varID);
       if ( option == 2 ) 
 	fprintf(fp, "  missing_value=%g\n", missval);
       
+      if ( !linebreak ) fprintf(fp, "  ");
       fprintf(fp, "/\n");
     }   
 }
@@ -193,6 +224,9 @@ void filedes(int streamID)
     {
     case FILETYPE_GRB:
       printf("  GRIB data\n");
+      break;
+    case FILETYPE_GRB2:
+      printf("  GRIB2 data\n");
       break;
     case FILETYPE_NC:
       printf("  netCDF data\n");
@@ -253,7 +287,7 @@ void filedes(int streamID)
 
 void *Filedes(void *argument)
 {
-  int GRIDDES, GRIDDES2, ZAXISDES, VCT, VCT2, PARDES, FILEDES, VLIST, PARTAB, PARTAB2;
+  int GRIDDES, GRIDDES2, ZAXISDES, VCT, VCT2, PARDES, FILEDES, VLIST, SPARTAB, PARTAB, PARTAB2;
   int operatorID;
   int streamID = 0;
   int zaxisID;
@@ -271,6 +305,7 @@ void *Filedes(void *argument)
   PARDES   = cdoOperatorAdd("pardes",    0, 0, NULL);
   FILEDES  = cdoOperatorAdd("filedes",   0, 0, NULL);
   VLIST    = cdoOperatorAdd("vlist",     0, 0, NULL);
+  SPARTAB  = cdoOperatorAdd("spartab",   0, 0, NULL);
   PARTAB   = cdoOperatorAdd("partab",    0, 0, NULL);
   PARTAB2  = cdoOperatorAdd("partab2",   0, 0, NULL);
 
@@ -372,10 +407,11 @@ void *Filedes(void *argument)
 	  fprintf(stdout, "\n");
 	}   
     }
-  else if ( operatorID == PARTAB || operatorID == PARTAB2 )
+  else if ( operatorID == PARTAB || operatorID == SPARTAB || operatorID == PARTAB2 )
     {
       int option = 1;
 
+      if ( operatorID == SPARTAB ) option = 4;
       if ( operatorID == PARTAB2 ) option = 2;
       
       partab(stdout, vlistID, option);

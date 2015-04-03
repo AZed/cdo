@@ -259,6 +259,7 @@ cdo_SOURCES += Adisit.c        \
                percentiles.h   \
                pipe.c          \
                pipe.h          \
+               pragma_omp_atomic_update.h \
                printinfo.h     \
                process.c       \
                process.h       \

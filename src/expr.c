@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <cdi.h>
 #include "cdo.h"
@@ -862,8 +863,17 @@ nodeType *expr_run(nodeType *p, parse_parm_t *parse_arg)
 		cdoAbort("Operand not variable!");
 
 	      varID = vlistDefVar(parse_arg->vlistID2, parse_arg->gridID2, parse_arg->zaxisID2, parse_arg->tsteptype2);
-	      vlistDefVarName(parse_arg->vlistID2, varID, p->u.opr.op[0]->u.var.nm);
+	      const char *varname = p->u.opr.op[0]->u.var.nm;
+	      vlistDefVarName(parse_arg->vlistID2, varID, varname);
 	      vlistDefVarMissval(parse_arg->vlistID2, varID, parse_arg->missval2);
+	      if ( memcmp(varname, "var", 3) == 0 )
+		{
+		  if ( strlen(varname) > 3 && isdigit(varname[3]) )
+		    {
+		      int code = atoi(varname+3);
+		      vlistDefVarCode(parse_arg->vlistID2, varID, code);
+		    }
+		}
 	    }
 	  else
 	    {

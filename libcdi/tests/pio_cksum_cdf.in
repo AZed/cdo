@@ -8,3 +8,8 @@ if [ "@USE_MPI@" = yes -a "@ENABLE_NETCDF@" = yes ]; then
 else
   exit 77
 fi
+#
+# Local Variables:
+# mode: sh
+# End:
+#

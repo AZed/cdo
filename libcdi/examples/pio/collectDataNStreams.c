@@ -108,9 +108,9 @@ static void modelRun(MPI_Comm commModel)
         varSize[i][j] = nlon * nlat * (size_t)nlev[i][j];
 #ifdef USE_MPI
         {
-          int start = uniform_partition_start((int [2]){ 0, varSize[i][j] - 1 },
+          int start = uniform_partition_start((int [2]){ 0, (int)varSize[i][j] - 1 },
                                               comm_size, rank),
-            chunkSize = uniform_partition_start((int [2]){ 0, varSize[i][j] - 1 },
+            chunkSize = uniform_partition_start((int [2]){ 0, (int)varSize[i][j] - 1 },
                                                 comm_size, rank + 1) - start;
           if (maxChunkSize < chunkSize)
             maxChunkSize = chunkSize;
@@ -289,8 +289,8 @@ static int
 uniform_partition_start(int set_interval[2], int nparts, int part_idx)
 {
   int part_offset
-    = (((long long)set_interval[1] - (long long)set_interval[0] + 1LL)
-       * (long long)part_idx) / (long long)nparts;
+    = (int)((((long long)set_interval[1] - (long long)set_interval[0] + 1LL)
+             * (long long)part_idx) / (long long)nparts);
   int start = set_interval[0] + part_offset;
   return start;
 }

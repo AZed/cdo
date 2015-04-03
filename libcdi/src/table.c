@@ -205,16 +205,21 @@ decodeForm1(char *pline, char *name, char *longname, char *units)
   while ( isspace((int) *pline) ) pline++;
 
   len = strlen(pline);
-  if ( len > 0)
+  if ( len > 0 )
     {
       pstart = pline;
       pend = strrchr(pline, '[');
-      if ( pend )
-	pend--;
+      if ( pend == pstart )
+        len = 0;
       else
-	pend = pstart + len;
-      while ( isspace((int) *pend) ) pend--;
-      len = (size_t)(pend - pstart + 1);
+        {
+          if ( pend )
+            pend--;
+          else
+            pend = pstart + len;
+          while ( isspace((int) *pend) ) pend--;
+          len = (size_t)(pend - pstart + 1);
+        }
       if ( len > 0 )
 	{
 	  memcpy(longname, pstart, len);
@@ -234,10 +239,10 @@ decodeForm1(char *pline, char *name, char *longname, char *units)
 	    {
 	      memcpy(units, pstart, len);
 	      units[len] = 0;
-	    }	  
+	    }
 	}
     }
- 
+
   return (0);
 }
 
@@ -378,9 +383,10 @@ static int tableFromEnv(int modelID, int tablenum)
   char tablename[256] = {'\0'};
   int tablenamefound = 0;
 
-  if ( modelInqNamePtr(modelID) )
+  const char *modelName;
+  if ( (modelName = modelInqNamePtr(modelID)) )
     {
-      strcpy(tablename, modelInqNamePtr(modelID));
+      strcpy(tablename, modelName);
       if ( tablenum )
 	{
 	  size_t len = strlen(tablename);
@@ -393,9 +399,10 @@ static int tableFromEnv(int modelID, int tablenum)
       int instID = modelInqInstitut(modelID);
       if ( instID != UNDEFID )
 	{
-	  if ( institutInqNamePtr(instID) )
+          const char *instName;
+	  if ( (instName = institutInqNamePtr(instID)) )
 	    {
-	      strcpy(tablename, institutInqNamePtr(instID));
+	      strcpy(tablename, instName);
 	      if ( tablenum )
 		{
 		  size_t len = strlen(tablename);
@@ -486,9 +493,10 @@ int tableInq(int modelID, int tablenum, const char *tablename)
 	{
 	  if ( modelID != UNDEFID )
 	    {
-	      if ( modelInqNamePtr(modelID) )
+              const char *modelName;
+	      if ( (modelName = modelInqNamePtr(modelID)) )
 		{
-		  strcpy(tablefile, modelInqNamePtr(modelID));
+		  strcpy(tablefile, modelName);
 		  size_t len = strlen(tablefile);
 		  for ( size_t i = 0; i < len; i++)
 		    if ( tablefile[i] == '.' ) tablefile[i] = '\0';
@@ -605,7 +613,7 @@ void tableWrite(const char *ptfile, int tableID)
   FILE *ptfp;
   int tablenum, modelID, instID = CDI_UNDEFID;
   int center = 0, subcenter = 0;
-  char *instnameptr = NULL, *modelnameptr = NULL;
+  const char *instnameptr = NULL, *modelnameptr = NULL;
 
   if ( CDI_Debug )
     Message("write parameter table %d to %s", tableID, ptfile);

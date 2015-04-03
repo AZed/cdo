@@ -33,7 +33,7 @@ static struct
   { DATATYPE_UCHAR, MPI_UNSIGNED_CHAR }
 };
 
-static inline int
+static inline size_t
 lookupDt(int datatype)
 {
   for (size_t i = 0; i < sizeof (dtDict) / sizeof (dtDict[0]); ++i)
@@ -46,7 +46,7 @@ lookupDt(int datatype)
 static int dtDictMatchComplete = 0;
 
 static inline void
-  dtDictFixMPIType(int i, int typeclass, int size)
+dtDictFixMPIType(size_t i, int typeclass, int size)
 {
   MPI_Aint lb, extent;
   xmpi(MPI_Type_get_extent(dtDict[i].mpidt, &lb, &extent));

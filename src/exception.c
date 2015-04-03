@@ -8,25 +8,66 @@
 
 static int _ExitOnError   = 1;	/* If set to 1, exit on error       */
 
-void cdiError(int cdiErrno, const char *fmt, ...)
-{
-  va_list args;
-	
-  va_start(args, fmt);
-
+void cdiOpenError(int cdiErrno, const char *fmt, const char *path)
+{	
   printf("\n");
   set_text_color(stderr, RESET, RED);
    fprintf(stderr, "%s: ", processInqPrompt());
   reset_text_color(stderr);
   set_text_color(stderr, RESET, BLACK);
-  vfprintf(stderr, fmt, args);
+  fprintf(stderr, fmt, path);
   reset_text_color(stderr);
    fprintf(stderr, "\n");
 
-  va_end(args);
-
   fprintf(stderr, "%s\n", cdiStringError(cdiErrno));
 
+  if ( cdiErrno == CDI_ELIBNAVAIL )
+    {
+      int byteorder;
+      int filetype = cdiGetFiletype(path, &byteorder);
+
+      switch (filetype)
+	{
+	case FILETYPE_GRB:
+	  {
+	    break;
+	  }
+	case FILETYPE_GRB2:
+	  {
+	    fprintf(stderr, "To create a CDO application with GRIB2 support use: ./configure --with-netcdf=<GRIB_API root directory> ...\n");
+	    break;
+	  }
+	case FILETYPE_SRV:
+	  {
+	    break;
+	  }
+	case FILETYPE_EXT:
+	  {
+	    break;
+	  }
+	case FILETYPE_IEG:
+	  {
+	    break;
+	  }
+	case FILETYPE_NC:
+	case FILETYPE_NC2:
+	  {
+	    fprintf(stderr, "To create a CDO application with netCDF support use: ./configure --with-netcdf=<netCDF root directory> ...\n");
+	    break;
+	  }
+	case FILETYPE_NC4:
+	case FILETYPE_NC4C:
+	  {
+	    fprintf(stderr, "To create a CDO application with netCDF4 support use: ./configure --with-netcdf=<netCDF4 root directory> ...\n");
+	    break;
+	  }
+	default:
+	  {
+	    break;
+	  }
+	}
+    }
+  
   if ( _ExitOnError ) exit(EXIT_FAILURE);
 }
 

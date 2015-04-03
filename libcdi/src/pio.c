@@ -43,7 +43,7 @@ char *token = "%";
 size_t
 cdiPioFileWrite(int fileID, const void *restrict buffer, size_t len, int tsID)
 {
-  size_t iret = CDI_UNDEFID;
+  size_t iret = 0;
 
   switch ( commInqIOMode ())
     {

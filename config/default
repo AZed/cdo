@@ -31,7 +31,7 @@ case "${HOSTNAME}" in
     bailung*|d133*|d134*)
         CDOLIBS="--with-fftw3 \
                  --with-jasper=$HOME/local \
-                 --with-grib_api=$HOME/local/gribapi-1.12.3 \
+                 --with-grib_api=$HOME/local/gribapi-1.13.0 \
                  --with-netcdf=$HOME/local \
                  --with-hdf5=$HOME/local \
                  --with-szlib=$HOME/local \
@@ -62,7 +62,7 @@ case "${HOSTNAME}" in
     hama*)
         CDOLIBS="--with-fftw3 \
                  --with-jasper=/opt/local \
-                 --with-grib_api=$HOME/local/gribapi-1.9.16 \
+                 --with-grib_api=$HOME/local/gribapi-1.13.0 \
                  --with-netcdf=/opt/local \
                  --with-hdf5=/opt/local \
                  --with-szlib=$HOME/local \
@@ -112,21 +112,24 @@ case "${HOSTNAME}" in
                     --enable-all-static \
                     --with-fftw3 \
                     $CDOLIBS \
-                    CC=gcc CFLAGS='-g -Wall -O3 -mavx'
+                    CC=gcc CFLAGS='-g -Wall -O3'
 	fi
 	;;
-# x86_64-lenny-linux-gnu
-    squall*)
-        ${CONFPATH}configure --prefix=$HOME/local --exec_prefix=$HOME/local/squeeze-x64 \
-                    --enable-all-static \
-                    --with-jasper=/sw/squeeze-x64/jasper-1.900.1-static \
-                    --with-grib_api=/sw/squeeze-x64/grib_api-1.9.9-static \
-                    --with-netcdf=/sw/squeeze-x64/netcdf-4.2-static \
-                    --with-hdf5=/sw/squeeze-x64/hdf5-1.8.8-static \
-                    --with-szlib=/sw/squeeze-x64/szip-2.1 \
-                    --with-udunits2=/sw/squeeze-x64/udunits-2.1.19 \
-                    --with-proj=/sw/squeeze-x64/proj-4.7.0 \
-                    CC=gcc CFLAGS='-g -Wall -O3'
+# x86_64-unknown-linux-gnu
+    btlogin*)
+        CDOLIBS=""
+
+        if  test "$COMP" = icc ; then
+          ${CONFPATH}configure --prefix=$HOME/local \
+                    --with-fftw3 \
+                    $CDOLIBS \
+	            CC=icc CFLAGS="-g -Wall -O3 -vec-report2 -march=native -fp-model source -fast-transcendentals"
+	else
+          ${CONFPATH}configure --prefix=$HOME/local \
+                    --with-fftw3 \
+                    $CDOLIBS \
+                    CC=gcc CFLAGS='-g -Wall -O3 -march=native'
+	fi
 	;;
 # ia64-xxx-linux
     ds*)

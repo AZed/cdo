@@ -59,8 +59,9 @@ void reshDestroy(cdiResH);
 
 int    reshCountType ( const resOps * );
 
-void * reshGetValue(const char *, cdiResH, const resOps * );
-#define reshGetVal(resH, ops)  reshGetValue(__func__, resH, ops)
+void * reshGetValue(const char* caller, const char* expressionString, cdiResH id, const resOps* ops);
+#define reshGetVal(resH, ops)  reshGetValue(__func__, #resH, resH, ops)
+
 
 void   reshGetResHListOfType ( int, int *, const resOps * );
 
@@ -80,9 +81,11 @@ cdiResHFilterApply(const resOps *p,
 
 void   reshPackBufferCreate ( char **, int *, void *context );
 void   reshPackBufferDestroy ( char ** );
-int    reshResourceGetPackSize(int resh, const resOps *ops, void *context);
-void   reshPackResource(int resh, const resOps *ops,
-                        void *buf, int buf_size, int *position, void *context);
+int    reshResourceGetPackSize_intern(int resh, const resOps *ops, void *context, const char* caller, const char* expressionString);
+#define reshResourceGetPackSize(resh, ops, context) reshResourceGetPackSize_intern(resh, ops, context, __func__, #resh)
+void   reshPackResource_intern(int resh, const resOps *ops, void *buf, int buf_size, int *position, void *context, const char* caller, const char* expressionString);
+#define reshPackResource(resh, ops, buf, buf_size, position, context) reshPackResource_intern(resh, ops, buf, buf_size, position, context, __func__, #resh)
+
 void   reshSetStatus ( cdiResH, const resOps *, int );
 int    reshGetStatus ( cdiResH, const resOps * );
 

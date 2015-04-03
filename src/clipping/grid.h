@@ -109,7 +109,7 @@ struct grid_vtable {
    void (*pack_grid)(struct grid *, double **, unsigned, unsigned *, unsigned *,
                      unsigned **, unsigned, unsigned *, unsigned *);
    struct grid_search * (*get_grid_search)(struct grid * grid);
-   void (*delete)(struct grid *);
+   void (*xdelete)(struct grid *);
 };
 
 struct grid {

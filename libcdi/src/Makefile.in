@@ -79,17 +79,18 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_1 = libcdipio.la
-@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_2 = cdipio.h cdipio.inc
-@ENABLE_CDI_LIB_FALSE@@USE_MPI_TRUE@am__append_3 = libcdipio.la
-@ENABLE_CDI_LIB_TRUE@am__append_4 = pkgconfig/cdi.pc
-@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_5 = pkgconfig/cdipio.pc
-@CREATE_ISOC_TRUE@am__append_6 = mo_cdi.$(OBJEXT)
+@ENABLE_CDI_LIB_FALSE@am__append_1 = libcdi.la
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_2 = libcdipio.la
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_3 = cdipio.h cdipio.inc
+@ENABLE_CDI_LIB_FALSE@@USE_MPI_TRUE@am__append_4 = libcdipio.la
+@ENABLE_CDI_LIB_TRUE@am__append_5 = pkgconfig/cdi.pc
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_6 = pkgconfig/cdipio.pc
+@CREATE_ISOC_TRUE@am__append_7 = mo_cdi.$(OBJEXT)
 #CLEANFILES += cdilib.c
-@CREATE_ISOC_TRUE@am__append_7 = mo_cdi.$(FCMODEXT) mo_cdi.$(OBJEXT) mo_cdi.f90
-@ENABLE_CDI_LIB_TRUE@am__append_8 = pkgconfig/cdi.pc
-@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_9 = pkgconfig/cdipio.pc
+@CREATE_ISOC_TRUE@am__append_8 = mo_cdi.$(FCMODEXT) mo_cdi.$(OBJEXT) mo_cdi.f90
+@ENABLE_CDI_LIB_TRUE@am__append_9 = pkgconfig/cdi.pc
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_10 = pkgconfig/cdipio.pc
+@ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am__append_11 = pkgconfig/cdipio.pc
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(srcdir)/config.h.in $(top_srcdir)/config/mkinstalldirs \
@@ -176,6 +177,9 @@ libcdipio_la_OBJECTS = $(am_libcdipio_la_OBJECTS)
 @ENABLE_CDI_LIB_FALSE@@USE_MPI_TRUE@am_libcdipio_la_rpath =
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@am_libcdipio_la_rpath = -rpath \
 @ENABLE_CDI_LIB_TRUE@@USE_MPI_TRUE@	$(libdir)
+libcdiresunpack_la_LIBADD =
+am_libcdiresunpack_la_OBJECTS = resource_unpack.lo
+libcdiresunpack_la_OBJECTS = $(am_libcdiresunpack_la_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -210,8 +214,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES)
-DIST_SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES)
+SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES) \
+	$(libcdiresunpack_la_SOURCES)
+DIST_SOURCES = $(libcdi_la_SOURCES) $(libcdipio_la_SOURCES) \
+	$(libcdiresunpack_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -364,6 +370,7 @@ THREADS_INCLUDE = @THREADS_INCLUDE@
 THREADS_LIBS = @THREADS_LIBS@
 USER_NAME = @USER_NAME@
 USE_MPI = @USE_MPI@
+UUID_C_LIB = @UUID_C_LIB@
 VERSION = @VERSION@
 YAXT_CFLAGS = @YAXT_CFLAGS@
 YAXT_LIBS = @YAXT_LIBS@
@@ -429,9 +436,10 @@ top_srcdir = @top_srcdir@
 
 #
 EXTRA_DIST = cdilib.c mo_cdi.f90
-@ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la $(am__append_1)
-@ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc $(am__append_2)
-@ENABLE_CDI_LIB_FALSE@noinst_LTLIBRARIES = libcdi.la $(am__append_3)
+noinst_LTLIBRARIES = libcdiresunpack.la $(am__append_1) \
+	$(am__append_4)
+@ENABLE_CDI_LIB_TRUE@lib_LTLIBRARIES = libcdi.la $(am__append_2)
+@ENABLE_CDI_LIB_TRUE@include_HEADERS = cdi.h cdi.inc $(am__append_3)
 AM_CFLAGS = $(PPM_CORE_CFLAGS) $(YAXT_CFLAGS)
 libcdi_la_SOURCES = \
 	basetime.c     	 \
@@ -531,6 +539,9 @@ libcdi_la_SOURCES = \
         stream.c         \
         swap.c
 
+libcdiresunpack_la_SOURCES = \
+	resource_unpack.c
+
 libcdipio_la_SOURCES = \
 	cdipio.h							\
 	cdipioFortran.c							\
@@ -573,11 +584,11 @@ libcdi_la_LIBADD =
 #
 #cdilib.o: cdilib.c
 #	$(COMPILE) -c $<
-LOCALTARGETS = $(am__append_4) $(am__append_5) $(am__append_6)
+LOCALTARGETS = $(am__append_5) $(am__append_6) $(am__append_7)
 #
-CLEANFILES = `ls *~` $(am__append_7) $(am__append_8) $(am__append_9)
+CLEANFILES = `ls *~` $(am__append_8) $(am__append_9) $(am__append_10)
 @ENABLE_CDI_LIB_TRUE@PKGCONFIG_FILES = pkgconfig/cdi.pc \
-@ENABLE_CDI_LIB_TRUE@	$(am__append_10)
+@ENABLE_CDI_LIB_TRUE@	$(am__append_11)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -680,6 +691,9 @@ libcdi.la: $(libcdi_la_OBJECTS) $(libcdi_la_DEPENDENCIES) $(EXTRA_libcdi_la_DEPE
 
 libcdipio.la: $(libcdipio_la_OBJECTS) $(libcdipio_la_DEPENDENCIES) $(EXTRA_libcdipio_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(LINK) $(am_libcdipio_la_rpath) $(libcdipio_la_OBJECTS) $(libcdipio_la_LIBADD) $(LIBS)
+
+libcdiresunpack.la: $(libcdiresunpack_la_OBJECTS) $(libcdiresunpack_la_DEPENDENCIES) $(EXTRA_libcdiresunpack_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(LINK)  $(libcdiresunpack_la_OBJECTS) $(libcdiresunpack_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

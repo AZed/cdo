@@ -218,6 +218,8 @@ extern "C" {
 #define  CALENDAR_366DAYS         4
 #define  CALENDAR_NONE            5
 
+/* number of unsigned char needed to store UUID */
+#define  CDI_UUID_SIZE           16
 
 /* CDI control routines */
 
@@ -261,6 +263,8 @@ int     cdiEncodeTime(int hour, int minute, int second);
 
 
 /* STREAM control routines */
+
+int     cdiGetFiletype(const char *path, int *byteorder);
 
 /*      streamOpenRead: Open a dataset for reading */
 int     streamOpenRead(const char *path);
@@ -316,7 +320,6 @@ int     streamInqCurTimestepID(int streamID);
 
 char   *streamFilename(int streamID);
 char   *streamFilesuffix(int filetype);
-int     streamNtsteps(int streamID);
 off_t   streamNvals(int streamID);
 
 int     streamInqNvars ( int streamID );
@@ -742,10 +745,10 @@ void    gridDefReference(int gridID, const char *reference);
 int     gridInqReference(int gridID, char *reference);
 
 /*      gridDefUUID: Define the UUID of an unstructured grid */
-void    gridDefUUID(int gridID, const char *uuid_cbuf);
+void    gridDefUUID(int gridID, const unsigned char uuid[CDI_UUID_SIZE]);
 
 /*      gridInqUUID: Get the UUID of an unstructured grid */
-void    gridInqUUID(int gridID, char *uuid_cbuf);
+void    gridInqUUID(int gridID, unsigned char uuid[CDI_UUID_SIZE]);
 
 
 /* Lambert Conformal Conic grid (GRIB version) */
@@ -783,7 +786,7 @@ void    gridDefYbounds(int gridID, const double *ybounds_vec);
 /*      gridInqYbounds: Get the bounds of a Y-axis */
 int     gridInqYbounds(int gridID, double *ybounds_vec);
 
-void    gridDefRowlon(int gridID, int nrowlon, const int *rowlon_vec);
+void    gridDefRowlon(int gridID, int nrowlon, const int rowlon_vec[]);
 void    gridInqRowlon(int gridID, int *rowlon_vec);
 void    gridChangeType(int gridID, int gridtype);
 
@@ -838,10 +841,10 @@ void    zaxisDefNumber(int gridID, int number);
 int     zaxisInqNumber(int gridID);
 
 /*      zaxisDefUUID: Define the UUID of a generalized Z-axis */
-void    zaxisDefUUID(int zaxisID, const char *uuid_cbuf);
+void    zaxisDefUUID(int zaxisID, const unsigned char uuid[CDI_UUID_SIZE]);
 
 /*      zaxisInqUUID: Get the UUID of a generalized Z-axis */
-void    zaxisInqUUID(int zaxisID, char *uuid_cbuf);
+void    zaxisInqUUID(int zaxisID, unsigned char uuid[CDI_UUID_SIZE]);
 
 /*      zaxisDefName: Define the name of a Z-axis */
 void    zaxisDefName(int zaxisID, const char *name);
@@ -981,7 +984,7 @@ int     institutInq(int center, int subcenter, const char *name, const char *lon
 int     institutInqNumber(void);
 int     institutInqCenter(int instID);
 int     institutInqSubcenter(int instID);
-char   *institutInqNamePtr(int instID);
+const char *institutInqNamePtr(int instID);
 char   *institutInqLongnamePtr(int instID);
 
 /* Model routines */
@@ -990,7 +993,7 @@ int     modelDef(int instID, int modelgribID, const char *name);
 int     modelInq(int instID, int modelgribID, char *name);
 int     modelInqInstitut(int modelID);
 int     modelInqGribID(int modelID);
-char   *modelInqNamePtr(int modelID);
+const char *modelInqNamePtr(int modelID);
 
 /* Table routines */
 

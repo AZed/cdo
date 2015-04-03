@@ -296,7 +296,7 @@ int fowMPINONB ( const char *filename )
   xdebug("buffersize=%ld", buffersize);
 
   listSetForeach(bibAFiledataM, elemCheck, (void *)filename);
-  of = initAFiledataMPINONB(filename, buffersize);
+  of = initAFiledataMPINONB(filename, (size_t)buffersize);
 
   if ((id = listSetAdd(bibAFiledataM, of)) < 0 )
     xabort("filename %s not unique", of->name);
