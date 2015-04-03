@@ -527,8 +527,8 @@ void Free(const char *caller, const char *file, int line, void *ptr)
 void *cdiXmalloc(size_t size, const char *filename, const char *functionname,
                  int line)
 {
-  void * value = calloc (1, size );
-  if ( value == NULL )
+  void *value = malloc(size);
+  if (size == 0 || value != NULL) ; else
     cdiAbort(filename, functionname, line, "malloc failed: %s",
              strerror(errno));
   return value;
@@ -537,8 +537,8 @@ void *cdiXmalloc(size_t size, const char *filename, const char *functionname,
 void *cdiXcalloc(size_t nmemb, size_t size, const char *filename,
                  const char *functionname, int line)
 {
-  void * value = calloc ( nmemb, size );
-  if ( value == NULL )
+  void *value = calloc(nmemb, size);
+  if (size == 0 || value != NULL) ; else
     cdiAbort(filename, functionname, line, "calloc failed: %s",
              strerror(errno) );
   return value;
@@ -548,7 +548,7 @@ void *cdiXrealloc(void *p, size_t size, const char *functionname,
                   const char *filename, int line)
 {
   void *value = realloc(p, size);
-  if ( value == NULL )
+  if (size == 0 || value != NULL) ; else
     cdiAbort(filename, functionname, line, "realloc failed: %s",
              strerror(errno));
   return value;

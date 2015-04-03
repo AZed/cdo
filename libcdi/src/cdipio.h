@@ -28,8 +28,8 @@
 void     pioEndDef             ( void );
 void     pioEndTimestepping    ( void );
 void     pioFinalize           ( void );
-/* Dummy function to use as argument to pioInit if no actions are
- * ncecessary after I/O servers initialize communication */
+/* cdiPioNoPostCommSetup: Dummy function to use as argument to pioInit
+ * if no actions are necessary after I/O servers initialize communication */
 void cdiPioNoPostCommSetup(void);
 /*      pioInit: initialize I/O server processes and communication */
 MPI_Comm pioInit(MPI_Comm commSuper, int nProcsIO, int IOMode,

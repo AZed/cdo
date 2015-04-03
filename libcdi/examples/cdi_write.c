@@ -1,67 +1,64 @@
 #include <stdio.h>
 #include "cdi.h"
 
-#define  nlon   12 // Number of longitudes
-#define  nlat    6 // Number of latitudes 
-#define  nlev    5 // Number of levels    
-#define  nts     3 // Number of time steps
-
 int main(void)
 {
-  int gridID, zaxisID1, zaxisID2, taxisID;
-  int vlistID, varID1, varID2, streamID, tsID;
-  int i, nmiss = 0;
-  double lons[nlon] = {0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
-  double lats[nlat] = {-75, -45, -15, 15, 45, 75};
-  double levs[nlev] = {101300, 92500, 85000, 50000, 20000};
+  const int nlon = 12; // Number of longitudes
+  const int nlat =  6; // Number of latitudes
+  const int nlev =  5; // Number of levels
+  const int nts  =  3; // Number of time steps
+  int nmiss = 0;
+  double lons[] = {0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
+  double lats[] = {-75, -45, -15, 15, 45, 75};
+  double levs[] = {101300, 92500, 85000, 50000, 20000};
   double var1[nlon*nlat];
   double var2[nlon*nlat*nlev];
 
 
   // Create a regular lon/lat grid
-  gridID = gridCreate(GRID_LONLAT, nlon*nlat);
+  int gridID = gridCreate(GRID_LONLAT, nlon*nlat);
   gridDefXsize(gridID, nlon);
   gridDefYsize(gridID, nlat);
   gridDefXvals(gridID, lons);
   gridDefYvals(gridID, lats);
 
   // Create a surface level Z-axis
-  zaxisID1 = zaxisCreate(ZAXIS_SURFACE, 1);
+  int zaxisID1 = zaxisCreate(ZAXIS_SURFACE, 1);
 
   // Create a pressure level Z-axis
-  zaxisID2 = zaxisCreate(ZAXIS_PRESSURE, nlev);
+  int zaxisID2 = zaxisCreate(ZAXIS_PRESSURE, nlev);
   zaxisDefLevels(zaxisID2, levs);
  
   // Create a variable list
-  vlistID = vlistCreate();
+  int vlistID = vlistCreate();
 
   // Define the variables
-  varID1 = vlistDefVar(vlistID, gridID, zaxisID1, TSTEP_INSTANT);
-  varID2 = vlistDefVar(vlistID, gridID, zaxisID2, TSTEP_INSTANT);
+  int varID1 = vlistDefVar(vlistID, gridID, zaxisID1, TSTEP_INSTANT);
+  int varID2 = vlistDefVar(vlistID, gridID, zaxisID2, TSTEP_INSTANT);
 
   // Define the variable names
   vlistDefVarName(vlistID, varID1, "varname1");
   vlistDefVarName(vlistID, varID2, "varname2");
 
   // Create a Time axis
-  taxisID = taxisCreate(TAXIS_ABSOLUTE);
+  int taxisID = taxisCreate(TAXIS_ABSOLUTE);
 
   // Assign the Time axis to the variable list
   vlistDefTaxis(vlistID, taxisID);
 
   // Create a dataset in netCDF format
-  streamID = streamOpenWrite("example.nc", FILETYPE_NC);
+  int streamID = streamOpenWrite("example.nc", FILETYPE_NC);
   if ( streamID < 0 )
     {
       fprintf(stderr, "%s\n", cdiStringError(streamID));
-      return(1);
+      return 1;
     }
 
   // Assign the variable list to the dataset
   streamDefVlist(streamID, vlistID);
 
   // Loop over the number of time steps
-  for ( tsID = 0; tsID < nts; tsID++ )
+  for ( int tsID = 0; tsID < nts; tsID++ )
     {
       // Set the verification date to 1985-01-01 + tsID
       taxisDefVdate(taxisID, 19850101+tsID);
@@ -71,8 +68,8 @@ int main(void)
       streamDefTimestep(streamID, tsID);
 
       // Init var1 and var2
-      for ( i = 0; i < nlon*nlat;      i++ ) var1[i] = 1.1;
-      for ( i = 0; i < nlon*nlat*nlev; i++ ) var2[i] = 2.2;
+      for ( int i = 0; i < nlon*nlat;      i++ ) var1[i] = 1.1;
+      for ( int i = 0; i < nlon*nlat*nlev; i++ ) var2[i] = 2.2;
 
       // Write var1 and var2
       streamWriteVar(streamID, varID1, var1, nmiss);

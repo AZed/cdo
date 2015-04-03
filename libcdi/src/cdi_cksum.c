@@ -11,7 +11,7 @@
 #include "error.h"
 #include "serialize.h"
 
-uint32_t cdiCheckSum(int type, int count, void *buffer)
+uint32_t cdiCheckSum(int type, int count, const void *buffer)
 {
   uint32_t s = 0U;
   xassert(count >= 0);

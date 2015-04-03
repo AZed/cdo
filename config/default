@@ -31,7 +31,7 @@ case "${HOSTNAME}" in
     bailung*|d133*|d134*)
         CDOLIBS="--with-fftw3 \
                  --with-jasper=$HOME/local \
-                 --with-grib_api=$HOME/local/gribapi-1.13.0 \
+                 --with-grib_api=$HOME/local/gribapi-1.12.3 \
                  --with-netcdf=$HOME/local \
                  --with-hdf5=$HOME/local \
                  --with-szlib=$HOME/local \

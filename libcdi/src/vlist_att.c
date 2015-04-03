@@ -41,13 +41,13 @@ cdi_att_t *find_att(cdi_atts_t *attsp, const char *name)
   if ( attsp->nelems == 0 ) return NULL;
 
   size_t slen = strlen(name);
+  if ( slen > CDI_MAX_NAME ) slen = CDI_MAX_NAME;
 
   cdi_att_t *atts = attsp->value;
-  for (size_t attid = 0; attid < attsp->nelems; attid++)
+  for ( size_t attid = 0; attid < attsp->nelems; attid++ )
     {
       cdi_att_t *attp = atts + attid;
-      if (attp->namesz == slen
-          && memcmp(attp->name, name, slen) == 0)
+      if ( attp->namesz == slen && memcmp(attp->name, name, slen) == 0 )
         return (attp); /* Normal return */
     }
 
@@ -69,6 +69,7 @@ cdi_att_t *new_att(cdi_atts_t *attsp, const char *name)
   attsp->nelems++;
 
   slen = strlen(name);
+  if ( slen > CDI_MAX_NAME ) slen = CDI_MAX_NAME;
 
   attp->name = (char *) malloc(slen+1);
   memcpy(attp->name, name, slen+1);

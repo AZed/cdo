@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -146,6 +146,21 @@ int intersect(double pix, double piy, double pjx, double pjy,
 }
 
 static
+int check_ncorner(int ncorner, const double *lon_bounds, const double *lat_bounds)
+{
+  int ncorner_new = ncorner;
+  int k;
+
+  for ( k=ncorner-1; k>0; --k )
+    if ( IS_NOT_EQUAL(lon_bounds[k], lon_bounds[k-1]) ||
+	 IS_NOT_EQUAL(lat_bounds[k], lat_bounds[k-1]) ) break;
+
+  if ( k < ncorner-1 ) ncorner_new = k+1;
+
+  return ncorner_new;
+}
+
+static
 void verify_grid(int gridtype, int gridsize, int ncorner,
 		double *grid_center_lon, double *grid_center_lat,
 		double *grid_corner_lon, double *grid_corner_lat)
@@ -212,19 +227,24 @@ void verify_grid(int gridtype, int gridsize, int ncorner,
           if ( nout == 1 )
             {
               fprintf(stdout,"\n CENTER IS OUT OF BOUNDS");
-              fprintf(stdout,"\n                                                  :");
+              fprintf(stdout,"\n                                               :");
               for ( k = 0; k < ncorner; k++ )
-                fprintf(stdout, "            Corner %2i : ", k);
-              fprintf(stdout,"\n Number  Index  center_lon  center_lat  area*10^6 :");
+                fprintf(stdout, "          Corner %2i : ", k+1);
+              fprintf(stdout,"\n Number  Index center_lon center_lat area*10^6 :");
               for ( k = 0; k < ncorner; k++ )
-                fprintf(stdout, "    lon_%2.2i     lat_%2.2i : ", k, k);
+                fprintf(stdout, "   lon_%2.2i    lat_%2.2i : ", k+1, k+1);
               fprintf(stdout, "\n");
             }
           area = PolygonArea(ncorner+1, lon_bounds, lat_bounds,lat);
-          fprintf(stdout, " %6i %6i   %9.4f   %9.4f %10.5f :", 
+          fprintf(stdout, " %6i %6i  %9.4f  %9.4f %9.5f :", 
 		  nout, i+1, lon, lat, area*pow(10,6));
-          for ( k = 0; k < ncorner; k++ )
-            fprintf(stdout, " %9.4f  %9.4f : ", lon_bounds[k], lat_bounds[k]);
+
+	  int ncorner_new = check_ncorner(ncorner, lon_bounds, lat_bounds);
+
+          for ( k = 0; k < ncorner_new; k++ )
+	    fprintf(stdout, "%9.4f %9.4f : ", lon_bounds[k], lat_bounds[k]);
+           for ( k = ncorner_new; k < ncorner; k++ )
+	     fprintf(stdout, "     ----      ---- : ");
           fprintf(stdout, "\n");
         }
     }
@@ -261,17 +281,23 @@ void verify_grid(int gridtype, int gridsize, int ncorner,
         {
           if ( nout == 1 )
             {
-              fprintf(stdout,"\n                                       :");
+              fprintf(stdout,"\n                                     :");
               for ( k = 0; k < ncorner; k++ )
-                fprintf(stdout, "            Corner %2i : ", k);
-              fprintf(stdout,"\n Number  Index  center_lon  center_lat :");
+                fprintf(stdout, "          Corner %2i : ", k+1);
+              fprintf(stdout,"\n Number  Index center_lon center_lat :");
               for ( k = 0; k < ncorner; k++ )
-                fprintf(stdout, "    lon_%2.2i     lat_%2.2i : ", k, k);
+                fprintf(stdout, "   lon_%2.2i    lat_%2.2i : ", k+1, k+1);
               fprintf(stdout, "\n");
             }
-          fprintf(stdout, "%6i %6i   %9.4f   %9.4f :", nout, i+1, lon, lat);
-          for ( k = 0; k < ncorner; k++ )
-            fprintf(stdout, " %9.4f  %9.4f : ", lon_bounds[k], lat_bounds[k]);
+          fprintf(stdout, " %6i %6i  %9.4f  %9.4f :", nout, i+1, lon, lat);
+
+	  int ncorner_new = check_ncorner(ncorner, lon_bounds, lat_bounds);
+
+          for ( k = 0; k < ncorner_new; k++ )
+	    fprintf(stdout, "%9.4f %9.4f : ", lon_bounds[k], lat_bounds[k]);
+           for ( k = ncorner_new; k < ncorner; k++ )
+	     fprintf(stdout, "     ----      ---- : ");
+
           fprintf(stdout, "\n");
         }
     }
@@ -571,7 +597,7 @@ void *Outputgmt(void *argument)
   int nmiss;
   int nlon, nlat, nalloc;
   int nlev, lzon = FALSE, lmer = FALSE, lhov = FALSE;
-  int gridcorners = 0, ic;
+  int ncorner = 0, ic;
   int status;
   int lgrid_gen_bounds = FALSE, luse_grid_corner = FALSE;
   int zaxisID, taxisID;
@@ -702,9 +728,9 @@ void *Outputgmt(void *argument)
     }
 
   if ( gridInqType(gridID) == GRID_UNSTRUCTURED )
-    gridcorners = gridInqNvertex(gridID);
+    ncorner = gridInqNvertex(gridID);
   else
-    gridcorners = 4;
+    ncorner = 4;
 
   grid_is_circular = gridIsCircular(gridID);
 
@@ -755,8 +781,8 @@ void *Outputgmt(void *argument)
 
   if ( luse_grid_corner )
     {
-      if ( gridcorners == 0 ) cdoAbort("grid corner missing!");
-      nalloc = gridcorners*gridsize;
+      if ( ncorner == 0 ) cdoAbort("grid corner missing!");
+      nalloc = ncorner*gridsize;
       grid_corner_lat = (double*) realloc(grid_corner_lat, nalloc*sizeof(double));
       grid_corner_lon = (double*) realloc(grid_corner_lon, nalloc*sizeof(double));
 
@@ -782,8 +808,8 @@ void *Outputgmt(void *argument)
 
 
       /* Note: using units from latitude instead from bounds */
-      grid_to_degree(units, gridcorners*gridsize, grid_corner_lon, "grid corner lon");
-      grid_to_degree(units, gridcorners*gridsize, grid_corner_lat, "grid corner lat");
+      grid_to_degree(units, ncorner*gridsize, grid_corner_lon, "grid corner lon");
+      grid_to_degree(units, ncorner*gridsize, grid_corner_lat, "grid corner lat");
 
       if ( zaxisInqLbounds(zaxisID, NULL) && zaxisInqUbounds(zaxisID, NULL) )
 	{
@@ -825,7 +851,7 @@ void *Outputgmt(void *argument)
     }
 
   if ( operatorID == GRIDVERIFY )
-    verify_grid(gridInqType(gridID), gridsize, gridcorners,
+    verify_grid(gridInqType(gridID), gridsize, ncorner,
 		grid_center_lon, grid_center_lat,
 		grid_corner_lon, grid_corner_lat);
 
@@ -1195,11 +1221,13 @@ void *Outputgmt(void *argument)
 		    }
 		  else
 		    {
-		      for ( ic = 0; ic < gridcorners; ic++ )
-			fprintf(stdout, "   %g  %g\n",
-				grid_corner_lon[i*gridcorners+ic], grid_corner_lat[i*gridcorners+ic]);
-		      fprintf(stdout, "   %g  %g\n",
-			      grid_corner_lon[i*gridcorners], grid_corner_lat[i*gridcorners]);
+		      const double *lon_bounds = grid_corner_lon+i*ncorner;
+		      const double *lat_bounds = grid_corner_lat+i*ncorner;
+		      int ncorner_new = check_ncorner(ncorner, lon_bounds, lat_bounds);
+
+		      for ( ic = 0; ic < ncorner_new; ic++ )
+			fprintf(stdout, "   %g  %g\n", lon_bounds[ic], lat_bounds[ic]);
+		      fprintf(stdout, "   %g  %g\n", lon_bounds[0], lat_bounds[0]);
 		    }
 		}
 	      fprintf(stdout, "\n");

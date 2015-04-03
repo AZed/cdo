@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,8 @@
 #include "cdo_int.h"
 #include "pstream.h"
 #include "grid.h"
+//#include <string.h> // necessary for compatability? GNU basename
+#include "libgen.h" // posix basename POSIX.1-2001
 
 
 /*
@@ -934,68 +936,6 @@ void write_map_grib1(const char *ctlfile, int map_version, int nrecords, int *in
 }
 
 
-/*
- * Remove file extension:
- * -------------------------------------------------
- * Remove file extension if it is the expected one
- * Do nothing otherwise
- */
-static
-void rm_ext(char *file, const char *ext)
-{
-  // length of filename
-  int namelen = (int) strlen(file);
-  // length of the original file extension
-  int extlen =  (int) strlen(ext);
-
-  // delete original extension if it is the expected one
-  if ( strcmp(&file[namelen-extlen], ext) == 0 )
-      file[namelen-extlen] = 0;
-}
-
-
-/* 
- * Return the filetype extension
- * for a given filetype (int)
- * TODO this general function should be somewhere else
- */
-static
-const char *filetypeext(int filetype)
-{
-  switch ( filetype )
-    {
-    case FILETYPE_GRB:
-    case FILETYPE_GRB2: return (".grb");   break;
-    case FILETYPE_NC:
-    case FILETYPE_NC2:
-    case FILETYPE_NC4:
-    case FILETYPE_NC4C: return (".nc");    break;
-    case FILETYPE_SRV:  return (".srv");   break;
-    case FILETYPE_EXT:  return (".ext");   break;
-    case FILETYPE_IEG:  return (".ieg");   break;
-    default:            return ("");
-    }
-}
-
-
-/*
- * Replace or just add file extension:
- * -------------------------------------------------
- * Replace file extension with new one
- * or just add the new file extension 
- * if the original extension is not the expected one
- */
-static
-void repl_filetypeext(char *file, const char *oldext, const char *newext)
-{
-  // delete original extension if it is the expected one
-  rm_ext(file, oldext);
-
-  // add new file extension
-  strcat(file, newext);
-}
-
-
 static
 void write_map_grib2(const char *ctlfile, int map_version, int nrecords, int *intnum, float *fltnum, off_t *bignum)
 {
@@ -1019,9 +959,8 @@ void *Gradsdes(void *argument)
   int taxisID, nrecs;
   int vdate, vtime;
   const char *datfile;
-  char ctlfile[1024], *pctlfile;
-  char idxfile[1024], *pidxfile;
-  int len;
+  char ctlfile[1024];
+  char idxfile[1024];
   char varname[CDI_MAX_NAME];
   FILE *gdp;
   int yrev = FALSE;
@@ -1037,7 +976,7 @@ void *Gradsdes(void *argument)
   char Time[30], Incr[10] = {"1mn"}, *IncrKey[] = {"mn","hr","dy","mo","yr"};
   int isd, imn, ihh, iyy, imm, idd;
   int isds = 0, imns = 0, ihhs = 0, iyys = 0, imms = 0, idds = 0;
-  int isd0 = 0, imn0 = 0, ihh0 = 0, iyy0 = 0, imm0 = 0, idd0 = 0;
+  int imn0 = 0, ihh0 = 0, iyy0 = 0, imm0 = 0, idd0 = 0;
   int idmn, idhh, idmm, idyy, iddd;
   int dt=1, iik=0, mdt = 0;
   int gridsize = 0;
@@ -1062,6 +1001,12 @@ void *Gradsdes(void *argument)
   DUMPMAP   = cdoOperatorAdd("dumpmap",   0, 0, NULL);
 
   operatorID = cdoOperatorID();
+
+  strcpy(ctlfile, cdoStreamName(0)->args);
+  char relpath_sign = '^';
+  if ( ctlfile[0] == '/' )
+    relpath_sign = '\0';
+  datfile = cdoStreamName(0)->args;
 
   if ( cdoStreamName(0)->args[0] == '-' )
     cdoAbort("This operator does not work with pipes!");
@@ -1198,7 +1143,6 @@ void *Gradsdes(void *argument)
     }
 
   /* ctl file name */
-  strcpy(ctlfile, cdoStreamName(0)->args);
   repl_filetypeext(ctlfile, filetypeext(filetype), ".ctl");
 
   /* open ctl file*/
@@ -1212,59 +1156,39 @@ void *Gradsdes(void *argument)
 #endif
 
   /* DSET */
-  datfile = cdoStreamName(0)->args;
-  if ( datfile[0] == '/' )
-    fprintf(gdp, "DSET  %s\n", datfile);
-  else
-    {
-      datfile = strrchr(datfile, '/');
-      if ( datfile == 0 ) datfile = cdoStreamName(0)->args;
-      else                datfile++;
-      fprintf(gdp, "DSET  ^%s\n", datfile);
-    }
+  if ( relpath_sign ) 
+      datfile = basename((char *) datfile);
+  fprintf(gdp, "DSET  %c%s\n", relpath_sign, datfile);
 
   /*
    * DTYPE Print file type
-   * INDEX Print filename of the control file .ctl
+   * INDEX Print filename of the control/index file .ctl/.idx
    */
-  if ( filetype == FILETYPE_GRB )
+  if ( filetype == FILETYPE_GRB ||  filetype == FILETYPE_GRB2 )
     {
-      fprintf(gdp, "DTYPE  GRIB\n");
-
-      pctlfile = ctlfile;
-      repl_filetypeext(pctlfile, ".ctl", ".gmp");
-
-      if ( datfile[0] == '/' )
-        fprintf(gdp, "INDEX  %s\n", pctlfile);
-      else
-        {
-          pctlfile = strrchr(pctlfile, '/');
-          if ( pctlfile == 0 ) pctlfile = ctlfile;
-          else                 pctlfile++;
-          fprintf(gdp, "INDEX  ^%s\n", pctlfile);
-        }
-
-      gridsize = vlistGridsizeMax(vlistID);
-      array = (double*) malloc(gridsize*sizeof(double));
-    }
-  else if ( filetype ==  FILETYPE_GRB2 )
-    {
-      fprintf(gdp, "DTYPE  GRIB2\n");
 
       strcpy(idxfile, ctlfile);
-      pidxfile = idxfile;
-      repl_filetypeext(pidxfile, ".ctl", ".idx");
+      char *pidxfile = idxfile;
 
-      if ( datfile[0] == '/' )
-        fprintf(gdp, "INDEX  %s\n", pidxfile);
-      else
+      // print GRIB[12] file type
+      // generate the index file
+      if ( filetype == FILETYPE_GRB )
         {
-          pidxfile = strrchr(pidxfile, '/');
-          if ( pidxfile == 0 ) pidxfile = idxfile;
-          else                 pidxfile++;
-          fprintf(gdp, "INDEX  ^%s\n", pidxfile);
+          fprintf(gdp, "DTYPE  GRIB\n");
+          repl_filetypeext(idxfile, ".ctl", ".gmp");
+          write_map_grib1(idxfile, map_version, nrecords, intnum, fltnum, bignum);
+        }
+      else if ( filetype == FILETYPE_GRB2 )
+        {
+          fprintf(gdp, "DTYPE  GRIB2\n");
+          repl_filetypeext(pidxfile, ".ctl", ".idx");
+          // TODO: write_map_grib2();
         }
 
+      // print file name of index file
+      if ( relpath_sign ) 
+          pidxfile = basename((char *) pidxfile);
+      fprintf(gdp, "INDEX  %c%s\n", relpath_sign, pidxfile);
 
       gridsize = vlistGridsizeMax(vlistID);
       array = (double*) malloc(gridsize*sizeof(double));
@@ -1470,7 +1394,6 @@ void *Gradsdes(void *argument)
   /* INDEX file */
   if ( filetype == FILETYPE_GRB )
     {
-      write_map_grib1(ctlfile, map_version, nrecords, intnum, fltnum, bignum);
     }
   if ( filetype == FILETYPE_GRB2 )
     {

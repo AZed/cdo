@@ -230,7 +230,7 @@ int grbUnzipRecord(unsigned char *gribbuffer, size_t *gribsize)
   igribsize = *gribsize;
   ogribsize = *gribsize;
 
-  if ( (izip = gribGetZip(igribsize, gribbuffer, &unzipsize)) > 0 )
+  if ( (izip = gribGetZip((long)igribsize, gribbuffer, &unzipsize)) > 0 )
     {
       zip = izip;
       if ( izip == 128 ) /* szip */
@@ -254,7 +254,7 @@ int grbUnzipRecord(unsigned char *gribbuffer, size_t *gribsize)
 
 	  unzipsize += 100; /* need 0 to 1 bytes for rounding of bds */
 
-	  ogribsize = gribUnzip(gribbuffer, unzipsize, itmpbuffer, igribsize);
+	  ogribsize = (size_t)gribUnzip(gribbuffer, unzipsize, itmpbuffer, (long)igribsize);
 
 	  free(itmpbuffer);
 
@@ -547,6 +547,7 @@ size_t grbEncode(int filetype, int memtype, int varID, int levelID, int vlistID,
 #else
     Error("GRIB_API support not compiled in!");
     (void)gribContainer;
+    (void)comptype;
 #endif
 
 

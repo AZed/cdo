@@ -21,8 +21,6 @@
 typedef int MPI_Comm;
 #endif
 
-extern void   arrayDestroy          ( void );
-
 enum {
   DOUBLE_PRECISION = 8,
   nlon             = 12,

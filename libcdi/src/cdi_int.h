@@ -67,7 +67,6 @@ char *strdup(const char *s);
 
 #include "cdi.h"
 
-
 #define check_parg(arg)  if ( arg == 0 ) Warning("Argument '" #arg "' not allocated!")
 
 #if defined (__xlC__) /* performance problems on IBM */
@@ -108,30 +107,23 @@ char *strdup(const char *s);
 
 typedef struct
 {
-  void     *buffer;
-  size_t    buffersize;
-  off_t     position;
-  int       recsize;
-  int       size;
-  int       dataread;
-  int       param;
-  int       level;
-  int       date;
-  int       time;
-  int       gridID;
-  int       zaxisID;
-  int       used;
-  int       nrec;
-  int       varID;
-  int       levelID;
-  int       recid;
-  int       prec;
-  int       sec0[2];
-  int       sec1[1024];
-  int       sec2[4096];
-  int       sec3[2];
-  int       sec4[512];
-  void     *exsep;
+  void     *buffer;             /* gribapi, cgribex */
+  size_t    buffersize;         /* gribapi, cgribex */
+  off_t     position;           /* ieg */
+  int       param;              /* srv */
+  int       level;              /* ext, srv */
+  int       date;               /* ext, srv */
+  int       time;               /* srv */
+  int       gridID;             /* ieg, ext */
+  int       varID;              /* ieg */
+  int       levelID;            /* ieg  */
+  int       prec;               /* ext, srv */
+  int       sec0[2];            /* cgribex */
+  int       sec1[1024];         /* cgribex */
+  int       sec2[4096];         /* cgribex */
+  int       sec3[2];            /* cgribex */
+  int       sec4[512];          /* cgribex */
+  void     *exsep;              /* ieg, ext, srv */
 }
 Record;
 
@@ -201,21 +193,17 @@ typedef struct {
   int         filetype;
   int         byteorder;
   int         fileID;
-  int         dimgroupID;
   int         filemode;
   off_t       numvals;
   char       *filename;
   Record     *record;
   int         nrecs;        /* number of records                  */
   int         nvars;        /* number of variables                */
-  int         varlocked;    /* variables locked                   */
   svarinfo_t *vars;
   int         varsAllocated;
-  int         varinit;
   int         curTsID;      /* current timestep ID */
   int         rtsteps;      /* number of tsteps accessed       */
   long        ntsteps;      /* number of tsteps : only set if all records accessed */
-  int         numTimestep;  /* number of tsteps : only set if all records accessed */
   tsteps_t   *tsteps;
   int         tstepsTableSize;
   int         tstepsNextID;
@@ -237,9 +225,6 @@ typedef struct {
   int         have_missval;
   int         comptype;      // compression type
   int         complevel;     // compression level
-  int         curfile;
-  int         nfiles;
-  char      **fnames;
 #if defined (GRIBCONTAINER2D)
   void      **gribContainers;
 #else
@@ -331,9 +316,6 @@ void    cdiPrintDatatypes(void);
 void    cdiDefAccesstype(int streamID, int type);
 int     cdiInqAccesstype(int streamID);
 
-void    streamDefDimgroupID(int streamID, int dimgroupID);
-int     streamInqDimgroupID(int streamID);
-
 int     getByteswap(int byteorder);
 
 int     streamSize ();
@@ -347,7 +329,7 @@ int str2uuid(const char *uuidstr, unsigned char *uuid);
 static inline int
 cdiUUIDIsNull(const unsigned char uuid[CDI_UUID_SIZE])
 {
-  static unsigned char uuid_nil[CDI_UUID_SIZE];
+  static const unsigned char uuid_nil[CDI_UUID_SIZE];
   return !memcmp(uuid, uuid_nil, CDI_UUID_SIZE);
 }
 

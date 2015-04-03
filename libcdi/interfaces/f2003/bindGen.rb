@@ -209,7 +209,7 @@ def printParams(fParams, indent)
       value  = 'value'
     end
 
-    typeinfo = [value,intent,dimension].select {|s| ! s.nil?}.join(',')
+    typeinfo = [value,intent,dimension].select {|s| ! s.nil?}.join(', ')
     out << "  #{indent}#{ftype}"
     out << (paramType == 'c_ptr' ? '' : "(kind=#{paramType})")
     out << ", #{typeinfo} :: #{param}\n"
@@ -219,15 +219,15 @@ end
 
 # creates the actual binding within the module for the given c function
 # unsupported types of function a ignored, see RESTRICTIONS (top) for details
-def genInterface(cFuncname, returnType, returnPointer, paramList)
+def genInterface(cFuncname, returnType, returnPointer, paramList, debug)
 
-  # do not create interfaces for unsuppoerted function
+  # do not create interfaces for unsupported functions
   if isBadFunction( returnType, returnPointer, paramList)
     warn "parameterlist of '#{cFuncname}' is not supported -> function ignored."
     return ['','']
   end
   return ['', ''] if (cFuncname[0,1] == '_')
-  # the void argument type can be left out: if 'void' occures in the
+  # the void argument type can be left out: if 'void' occurs in the
   # parameterlist (which is only the case, if it is the only parameter
   # information), it is simply removed and a empty paramter list is left.
   paramList = [[],[]] if paramList.flatten == [ 'void' ] or paramList.flatten.empty?
@@ -246,6 +246,15 @@ def genInterface(cFuncname, returnType, returnPointer, paramList)
     # collect information for setting the correct fortran type for each parameter
     paramsWithTypes = paramList.collect {|paramInfo|
       ctype, param = paramInfo[-2,2]
+      integral_type = /^(:?char|int|long|short)$/.match(ctype);
+      if (integral_type)
+        while (/^(:?un)?signed/.match(paramInfo[-3]))
+          ctype = paramInfo[-3] << ' ' << ctype
+          paramInfo.delete_at(-3)
+          paramInfo[-2] = ctype
+          pp [paramInfo] if debug
+        end
+      end
       ptr_match = /^\*(\w+)$/.match(param)
       if (/^(:?const)? *void$/.match(ctype) and ptr_match)
         param = ptr_match[1]
@@ -465,7 +474,7 @@ end.parse!
 
   funcdecls.each {| funcName, returnType, returnPointer, paramList|
     pp [funcName, returnType, returnPointer, paramList] if debug
-    interface, makepublic, isWrapper = genInterface(funcName,returnType, returnPointer, paramList)
+    interface, makepublic, isWrapper = genInterface(funcName,returnType, returnPointer, paramList, debug)
     if isWrapper
       subroutines << interface
     else

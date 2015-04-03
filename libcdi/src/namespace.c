@@ -35,28 +35,6 @@ static int activeNamespace = 0;
 #define CDI_NETCDF_SWITCHES
 #endif
 
-#if defined (SX)
-static const union namespaceSwitchValue defaultSwitches[NUM_NAMESPACE_SWITCH] = {
-    { .func = (void (*)()) cdiAbortC_serial },
-    { .func = (void (*)()) cdiWarning },
-    { .func = (void (*)()) serializeGetSizeInCore },
-    { .func = (void (*)()) serializePackInCore },
-    { .func = (void (*)()) serializeUnpackInCore },
-    { .func = (void (*)()) fileOpen_serial },
-    { .func = (void (*)()) fileWrite },
-    { .func = (void (*)()) fileClose_serial },
-    { .func = (void (*)()) cdiStreamOpenDefaultDelegate },
-    { .func = (void (*)()) cdiStreamDefVlist_ },
-    { .func = (void (*)()) cdiStreamWriteVar_ },
-    { .func = (void (*)()) cdiStreamwriteVarChunk_ },
-    { .func = (void (*)()) 0 },
-    { .func = (void (*)()) 0 },
-    { .func = (void (*)()) cdiStreamCloseDefaultDelegate },
-    { .func = (void (*)()) cdiStreamDefTimestep_ },
-    { .func = (void (*)()) cdiStreamSync_ },
-    CDI_NETCDF_SWITCHES
-};
-#else
 #define defaultSwitches {                                   \
     { .func = (void (*)()) cdiAbortC_serial },              \
     { .func = (void (*)()) cdiWarning },                    \
@@ -77,6 +55,10 @@ static const union namespaceSwitchValue defaultSwitches[NUM_NAMESPACE_SWITCH] = 
     { .func = (void (*)()) cdiStreamSync_ },                \
     CDI_NETCDF_SWITCHES                        \
     }
+
+#if defined (SX)
+static const union namespaceSwitchValue
+  defaultSwitches_[NUM_NAMESPACE_SWITCH] = defaultSwitches;
 #endif
 
 struct Namespace
@@ -85,30 +67,7 @@ struct Namespace
   union namespaceSwitchValue switches[NUM_NAMESPACE_SWITCH];
 } initialNamespace = {
   .resStage = STAGE_DEFINITION,
-#if defined (SX)
-  .switches = {
-    { .func = (void (*)()) cdiAbortC_serial },
-    { .func = (void (*)()) cdiWarning },
-    { .func = (void (*)()) serializeGetSizeInCore },
-    { .func = (void (*)()) serializePackInCore },
-    { .func = (void (*)()) serializeUnpackInCore },
-    { .func = (void (*)()) fileOpen_serial },
-    { .func = (void (*)()) fileWrite },
-    { .func = (void (*)()) fileClose_serial },
-    { .func = (void (*)()) cdiStreamOpenDefaultDelegate },
-    { .func = (void (*)()) cdiStreamDefVlist_ },
-    { .func = (void (*)()) cdiStreamWriteVar_ },
-    { .func = (void (*)()) cdiStreamwriteVarChunk_ },
-    { .func = (void (*)()) 0 },
-    { .func = (void (*)()) 0 },
-    { .func = (void (*)()) cdiStreamCloseDefaultDelegate },
-    { .func = (void (*)()) cdiStreamDefTimestep_ },
-    { .func = (void (*)()) cdiStreamSync_ },
-    CDI_NETCDF_SWITCHES
-}
-#else
   .switches = defaultSwitches
-#endif
 };
 
 struct Namespace *namespaces = &initialNamespace;
@@ -226,7 +185,8 @@ namespaceNew()
   ++nNamespaces;
   namespaces[newNamespaceID].resStage = STAGE_DEFINITION;
 #if defined (SX)
-  memcpy(namespaces[newNamespaceID].switches, defaultSwitches,
+  memcpy(namespaces[newNamespaceID].switches,
+         defaultSwitches_,
          sizeof (namespaces[newNamespaceID].switches));
 #else
   memcpy(namespaces[newNamespaceID].switches,

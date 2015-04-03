@@ -15,7 +15,6 @@ enum
   VLIST     = 7,
   RESH_DELETE,
   START     = 55555555,
-  SEPARATOR = 66666666,
   END       = 99999999
 };
 

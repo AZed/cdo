@@ -97,6 +97,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/acx_assert_lang_is_fortran_variant.m4 \
 	$(top_srcdir)/m4/acx_check_strptr_convert.m4 \
+	$(top_srcdir)/m4/acx_execinfo.m4 \
 	$(top_srcdir)/m4/acx_lang_other_suffix_conftest.m4 \
 	$(top_srcdir)/m4/acx_options.m4 \
 	$(top_srcdir)/m4/acx_sl_fc_mod_path_flag.m4 \

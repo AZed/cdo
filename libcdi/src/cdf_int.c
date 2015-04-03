@@ -12,8 +12,6 @@
 #include "cdf_int.h"
 #include "namespace.h"
 
-extern int CDF_Fatal;
-extern int CDF_Verbose;
 extern int CDF_Debug;
 
 #if  defined  (HAVE_LIBNETCDF)

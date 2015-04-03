@@ -6,6 +6,7 @@
 #endif
 
 #include <inttypes.h>
+#include <math.h>
 #include <time.h>
 
 void
@@ -17,6 +18,15 @@ sign_flat(double v)
   if (v == 0.0)
     return 0.0;
   return v;
+}
+
+/* data generator function */
+static inline double
+dg_wobble(double frac_x, double frac_y, double mscale, double mrscale)
+{
+  double r = sign_flat(round((cos(2.0 * M_PI * frac_x)
+                              * sin(2.0 * M_PI * frac_y)) * mscale)) * mrscale;
+  return r;
 }
 
 time_t

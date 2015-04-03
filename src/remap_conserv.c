@@ -304,10 +304,7 @@ void boundbox_from_corners1r(long ic, long nc, const double *restrict corner_lon
 static
 double gridcell_area(struct grid_cell cell)
 {
-  double area = huiliers_area(cell);
-  area /= (EarthRadius*EarthRadius);
-
-  return (area);
+  return huiliers_area(cell);
 }
 
 static
@@ -920,6 +917,8 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
       // printf("  int ii = 0;\n");
       for ( n = 0; n < num_srch_cells; ++n )
 	{
+	  long srch_corners_new = srch_corners;
+
 	  src_grid_add = srch_add[n];
 
 	  if ( src_remap_grid_type == REMAP_GRID_TYPE_REG2D )
@@ -947,28 +946,49 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 	  else
 	    {
 	      ioffset = src_grid_add*srch_corners;
+	      /*
+	      for ( k = srch_corners-1; k > 0; --k )
+		{
+		  if ( IS_NOT_EQUAL(src_grid->cell_corner_lon[ioffset+k], src_grid->cell_corner_lon[ioffset+k-1]) ||
+		       IS_NOT_EQUAL(src_grid->cell_corner_lat[ioffset+k], src_grid->cell_corner_lat[ioffset+k-1]) )
+		    break;
+		}
+	      if ( k != srch_corners-1 ) printf("%ld %ld %ld %ld\n", tgt_grid_add, n, srch_corners, k+1);
 
-	      for ( k = 0; k < srch_corners; ++k )
+	      if ( k != srch_corners-1 )
+		{
+		  srch_corners_new = k+1;
+		  src_grid_cells[n].num_corners = srch_corners_new;
+		}
+	      */
+	      for ( k = 0; k < srch_corners_new; ++k )
 		{
 		  src_grid_cells[n].coordinates_x[k] = src_grid->cell_corner_lon[ioffset+k];
 		  src_grid_cells[n].coordinates_y[k] = src_grid->cell_corner_lat[ioffset+k];
 		}
 	      /*
+	      for ( k = 0; k < srch_corners_new; ++k )
+		{
+		  printf("  SourceCell[ii].coordinates_x[%ld] = %g*rad;\n", k, src_grid_cells[n].coordinates_x[k]/DEG2RAD);
+		  printf("  SourceCell[ii].coordinates_y[%ld] = %g*rad;\n", k, src_grid_cells[n].coordinates_y[k]/DEG2RAD);
+		}
+	      */
+	      /*
 	      printf("source2: %ld %ld", num_srch_cells, n);
-	      for ( k = 0; k < srch_corners; ++k )
+	      for ( k = 0; k < srch_corners_new; ++k )
 		printf(" %g %g", src_grid_cells[n].coordinates_x[k]/DEG2RAD, src_grid_cells[n].coordinates_y[k]/DEG2RAD);
 	      printf("\n");
 	      */
 	    }
 
-	  for ( int ic = 0; ic < srch_corners; ++ic )
+	  for ( int ic = 0; ic < srch_corners_new; ++ic )
 	    LLtoXYZ(src_grid_cells[n].coordinates_x[ic], src_grid_cells[n].coordinates_y[ic], src_grid_cells[n].coordinates_xyz+ic*3);
 
 	  if ( lyac )
 	    if ( tgt_grid_add == 174752 )
 	    {
 	      // printf("n %d\n", (int)n);
-	      for ( k = 0; k < srch_corners; ++k )
+	      for ( k = 0; k < srch_corners_new; ++k )
 		{
 		  printf("  SourceCell[ii].coordinates_x[%ld] = %g*rad;\n", k, src_grid_cells[n].coordinates_x[k]/DEG2RAD);
 		  printf("  SourceCell[ii].coordinates_y[%ld] = %g*rad;\n", k, src_grid_cells[n].coordinates_y[k]/DEG2RAD);
@@ -976,7 +996,7 @@ void remap_weights_conserv(remapgrid_t *src_grid, remapgrid_t *tgt_grid, remapva
 	      printf("  ii++;\n");
 	      /*
 	      printf("> -Z1\n");
-	      for ( k = 0; k < srch_corners; ++k )
+	      for ( k = 0; k < srch_corners_new; ++k )
 		printf("  %g %g\n", src_grid_cells[n].coordinates_x[k]/DEG2RAD, src_grid_cells[n].coordinates_y[k]/DEG2RAD);
 	      printf("  %g %g\n", src_grid_cells[n].coordinates_x[0]/DEG2RAD, src_grid_cells[n].coordinates_y[0]/DEG2RAD);
 	      */

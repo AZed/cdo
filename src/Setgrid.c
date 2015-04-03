@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -321,14 +321,13 @@ void *Setgrid(void *argument)
 	  gridsize = gridInqSize(gridID1);
 	  if ( gridsize == masksize )
 	    {
-	      int *mask;
-	      mask = (int*) malloc(masksize*sizeof(int));
+	      int *mask = (int*) malloc(masksize*sizeof(int));
 	      for ( i = 0; i < masksize; i++ )
 		{
 		  if ( gridmask[i] < 0 || gridmask[i] > 255 )
 		    mask[i] = 0;
 		  else
-		    mask[i] = lround(gridmask[i]);
+		    mask[i] = (int)lround(gridmask[i]);
 		}
 	      gridID2 = gridDuplicate(gridID1);
 	      gridDefMask(gridID2, mask);

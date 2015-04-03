@@ -79,7 +79,7 @@ void cdfComment(int ncid)
 	strcat(comment, "??");
       else
 	strncat(comment, libvers, size);
-      strcat(comment, " (http://code.zmaw.de/projects/cdi)");
+      strcat(comment, " (https://code.zmaw.de/projects/cdi)");
     }
 
   cdf_put_att_text(ncid, NC_GLOBAL, "CDI", strlen(comment), comment);

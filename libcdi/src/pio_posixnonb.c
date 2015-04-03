@@ -15,8 +15,6 @@
 
 #include "dmemory.h"
 
-extern char * command2charP[6];
-
 extern char *token;
 
 typedef struct
@@ -141,7 +139,7 @@ pioWriterStdIO(void)
   xdebug ( "ncollectors=%d on this node", nProcsCollNode );
 
   bibBFiledataP = listSetNew(destroyBFiledataP, compareNamesBP);
-  sentFinalize = xmalloc((size_t)nProcsCollNode * sizeof (sentFinalize[0]));
+  sentFinalize = xcalloc((size_t)nProcsCollNode, sizeof (sentFinalize[0]));
   
   for ( ;; )
     {  
@@ -154,12 +152,12 @@ pioWriterStdIO(void)
       tag    = status.MPI_TAG;
       
       rtag = decodeFileOpTag(tag);
-      
-      xmpi ( MPI_Get_count ( &status, MPI_CHAR, &messagesize ));
+
+      xmpi(MPI_Get_count(&status, MPI_UNSIGNED_CHAR, &messagesize));
 
       xdebug ( "RECEIVE MESSAGE FROM SOURCE=%d, ID=%d, COMMAND=%d ( %s ),"
                "MESSAGESIZE=%d", source, rtag.id, rtag.command,
-               command2charP[rtag.command], messagesize);
+               cdiPioCmdStrTab[rtag.command], messagesize);
 
       switch (rtag.command)
 	{
@@ -169,8 +167,8 @@ pioWriterStdIO(void)
             = xmalloc((size_t)messagesize * sizeof (messageBuffer[0]));
     	  pMB = messageBuffer;
 
-	  xmpi ( MPI_Recv ( messageBuffer, messagesize, MPI_CHAR, source, 
-                            tag, commNode, &status ));
+	  xmpi(MPI_Recv(messageBuffer, messagesize, MPI_UNSIGNED_CHAR,
+                        source, tag, commNode, &status));
 
 	  xdebug("%s", "after recv, in loop");
 	  
@@ -182,7 +180,7 @@ pioWriterStdIO(void)
 	  amount = (size_t)(messageBuffer + messagesize - pMB);
 	  
 	  xdebug("command %s, filename=%s, buffersize=%zu, amount=%zu",
-                 command2charP[rtag.command], filename, buffersize, amount);
+                 cdiPioCmdStrTab[rtag.command], filename, buffersize, amount);
 	  
 	  
           if (!(bfd = listSetGet(bibBFiledataP, fileIDTest,
@@ -216,11 +214,11 @@ pioWriterStdIO(void)
 
 	  amount = (size_t)messagesize;
 
-	  xdebug("COMMAND %s, ID=%d, NAME=%s", command2charP[rtag.command],
+	  xdebug("COMMAND %s, ID=%d, NAME=%s", cdiPioCmdStrTab[rtag.command],
                  rtag.id, bfd->name);
 
-	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_CHAR, source, tag,
-                        commNode, &status));
+	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_UNSIGNED_CHAR,
+                        source, tag, commNode, &status));
 
 	  writeP(bfd, amount);
 	  break;
@@ -228,7 +226,7 @@ pioWriterStdIO(void)
 	case IO_Close_file:
 
 	  xdebug("COMMAND %s,  FILE%d, SOURCE%d",
-                 command2charP[rtag.command], rtag.id, source);
+                 cdiPioCmdStrTab[rtag.command], rtag.id, source);
 
           if (!(bfd = listSetGet(bibBFiledataP, fileIDTest,
                                (void *)(intptr_t)rtag.id)))
@@ -237,10 +235,10 @@ pioWriterStdIO(void)
           amount = (size_t)messagesize;
 
 	  xdebug("COMMAND %s, ID=%d, NAME=%s, AMOUNT=%zu",
-                 command2charP[rtag.command], rtag.id, bfd->name, amount);
+                 cdiPioCmdStrTab[rtag.command], rtag.id, bfd->name, amount);
 
-	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_CHAR, source, tag,
-                        commNode, &status));
+	  xmpi(MPI_Recv(bfd->fb->buffer, messagesize, MPI_UNSIGNED_CHAR,
+                        source, tag, commNode, &status));
 
 	  writeP ( bfd, amount );
 
@@ -277,6 +275,7 @@ pioWriterStdIO(void)
                            " return");
                     listSetDelete(bibBFiledataP);
                   }
+                free(sentFinalize);
                 return;
               }
           }

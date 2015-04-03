@@ -85,6 +85,7 @@ module mo_cdi
       integer, parameter :: DATATYPE_TXT = 253
       integer, parameter :: DATATYPE_CPX = 254
       integer, parameter :: DATATYPE_UCHAR = 255
+      integer, parameter :: DATATYPE_LONG = 256
       integer, parameter :: CHUNK_AUTO = 1
       integer, parameter :: CHUNK_GRID = 2
       integer, parameter :: CHUNK_LINES = 3
@@ -452,7 +453,7 @@ module mo_cdi
           import :: c_int,c_double
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
-          real(kind=c_double), intent(in),dimension(*) :: data_vec
+          real(kind=c_double), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteVar
       end interface
@@ -461,7 +462,7 @@ module mo_cdi
           import :: c_int,c_float
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
-          real(kind=c_float), intent(in),dimension(*) :: data_vec
+          real(kind=c_float), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteVarF
       end interface
@@ -470,7 +471,7 @@ module mo_cdi
           import :: c_int,c_double
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
-          real(kind=c_double), intent(out),dimension(*) :: data_vec
+          real(kind=c_double), intent(out), dimension(*) :: data_vec
           integer(kind=c_int), intent(out) :: nmiss
         end subroutine streamReadVar
       end interface
@@ -479,7 +480,7 @@ module mo_cdi
           import :: c_int,c_float
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
-          real(kind=c_float), intent(out),dimension(*) :: data_vec
+          real(kind=c_float), intent(out), dimension(*) :: data_vec
           integer(kind=c_int), intent(out) :: nmiss
         end subroutine streamReadVarF
       end interface
@@ -489,7 +490,7 @@ module mo_cdi
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
           integer(kind=c_int), value :: levelID
-          real(kind=c_double), intent(in),dimension(*) :: data_vec
+          real(kind=c_double), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteVarSlice
       end interface
@@ -499,7 +500,7 @@ module mo_cdi
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
           integer(kind=c_int), value :: levelID
-          real(kind=c_float), intent(in),dimension(*) :: data_vec
+          real(kind=c_float), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteVarSliceF
       end interface
@@ -509,7 +510,7 @@ module mo_cdi
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
           integer(kind=c_int), value :: levelID
-          real(kind=c_double), intent(out),dimension(*) :: data_vec
+          real(kind=c_double), intent(out), dimension(*) :: data_vec
           integer(kind=c_int), intent(out) :: nmiss
         end subroutine streamReadVarSlice
       end interface
@@ -519,7 +520,7 @@ module mo_cdi
           integer(kind=c_int), value :: streamID
           integer(kind=c_int), value :: varID
           integer(kind=c_int), value :: levelID
-          real(kind=c_float), intent(out),dimension(*) :: data_vec
+          real(kind=c_float), intent(out), dimension(*) :: data_vec
           integer(kind=c_int), intent(out) :: nmiss
         end subroutine streamReadVarSliceF
       end interface
@@ -543,7 +544,7 @@ module mo_cdi
         subroutine streamWriteRecord(streamID,data_vec,nmiss) bind(c,name='streamWriteRecord')
           import :: c_int,c_double
           integer(kind=c_int), value :: streamID
-          real(kind=c_double), intent(in),dimension(*) :: data_vec
+          real(kind=c_double), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteRecord
       end interface
@@ -551,7 +552,7 @@ module mo_cdi
         subroutine streamWriteRecordF(streamID,data_vec,nmiss) bind(c,name='streamWriteRecordF')
           import :: c_int,c_float
           integer(kind=c_int), value :: streamID
-          real(kind=c_float), intent(in),dimension(*) :: data_vec
+          real(kind=c_float), intent(in), dimension(*) :: data_vec
           integer(kind=c_int), value :: nmiss
         end subroutine streamWriteRecordF
       end interface
@@ -559,7 +560,7 @@ module mo_cdi
         subroutine streamReadRecord(streamID,data_vec,nmiss) bind(c,name='streamReadRecord')
           import :: c_int,c_double
           integer(kind=c_int), value :: streamID
-          real(kind=c_double), intent(out),dimension(*) :: data_vec
+          real(kind=c_double), intent(out), dimension(*) :: data_vec
           integer(kind=c_int), intent(out) :: nmiss
         end subroutine streamReadRecord
       end interface
@@ -1435,7 +1436,7 @@ module mo_cdi
           character(kind=c_char), dimension(*) :: name
           integer(kind=c_int), value :: type
           integer(kind=c_int), value :: len
-          integer(kind=c_int), intent(in),dimension(*) :: ip_vec
+          integer(kind=c_int), intent(in), dimension(*) :: ip_vec
           integer(kind=c_int) :: vlistDefAttInt
         end function vlistDefAttInt
       end interface
@@ -1447,7 +1448,7 @@ module mo_cdi
           character(kind=c_char), dimension(*) :: name
           integer(kind=c_int), value :: type
           integer(kind=c_int), value :: len
-          real(kind=c_double), intent(in),dimension(*) :: dp_vec
+          real(kind=c_double), intent(in), dimension(*) :: dp_vec
           integer(kind=c_int) :: vlistDefAttFlt
         end function vlistDefAttFlt
       end interface
@@ -1469,7 +1470,7 @@ module mo_cdi
           integer(kind=c_int), value :: varID
           character(kind=c_char), dimension(*) :: name
           integer(kind=c_int), value :: mlen
-          integer(kind=c_int), intent(out),dimension(*) :: ip_vec
+          integer(kind=c_int), intent(out), dimension(*) :: ip_vec
           integer(kind=c_int) :: vlistInqAttInt
         end function vlistInqAttInt
       end interface
@@ -1480,7 +1481,7 @@ module mo_cdi
           integer(kind=c_int), value :: varID
           character(kind=c_char), dimension(*) :: name
           integer(kind=c_int), value :: mlen
-          real(kind=c_double), intent(out),dimension(*) :: dp_vec
+          real(kind=c_double), intent(out), dimension(*) :: dp_vec
           integer(kind=c_int) :: vlistInqAttFlt
         end function vlistInqAttFlt
       end interface
@@ -1512,14 +1513,14 @@ module mo_cdi
         subroutine gridDefMaskGME(gridID,mask_vec) bind(c,name='gridDefMaskGME')
           import :: c_int
           integer(kind=c_int), value :: gridID
-          integer(kind=c_int), intent(in),dimension(*) :: mask_vec
+          integer(kind=c_int), intent(in), dimension(*) :: mask_vec
         end subroutine gridDefMaskGME
       end interface
       interface
         function gridInqMaskGME(gridID,mask_vec) bind(c,name='gridInqMaskGME')
           import :: c_int
           integer(kind=c_int), value :: gridID
-          integer(kind=c_int), intent(out),dimension(*) :: mask_vec
+          integer(kind=c_int), intent(out), dimension(*) :: mask_vec
           integer(kind=c_int) :: gridInqMaskGME
         end function gridInqMaskGME
       end interface
@@ -1527,14 +1528,14 @@ module mo_cdi
         subroutine gridDefMask(gridID,mask_vec) bind(c,name='gridDefMask')
           import :: c_int
           integer(kind=c_int), value :: gridID
-          integer(kind=c_int), intent(in),dimension(*) :: mask_vec
+          integer(kind=c_int), intent(in), dimension(*) :: mask_vec
         end subroutine gridDefMask
       end interface
       interface
         function gridInqMask(gridID,mask_vec) bind(c,name='gridInqMask')
           import :: c_int
           integer(kind=c_int), value :: gridID
-          integer(kind=c_int), intent(out),dimension(*) :: mask_vec
+          integer(kind=c_int), intent(out), dimension(*) :: mask_vec
           integer(kind=c_int) :: gridInqMask
         end function gridInqMask
       end interface
@@ -1626,14 +1627,14 @@ module mo_cdi
         subroutine gridDefXvals(gridID,xvals_vec) bind(c,name='gridDefXvals')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(in),dimension(*) :: xvals_vec
+          real(kind=c_double), intent(in), dimension(*) :: xvals_vec
         end subroutine gridDefXvals
       end interface
       interface
         function gridInqXvals(gridID,xvals_vec) bind(c,name='gridInqXvals')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(out),dimension(*) :: xvals_vec
+          real(kind=c_double), intent(out), dimension(*) :: xvals_vec
           integer(kind=c_int) :: gridInqXvals
         end function gridInqXvals
       end interface
@@ -1641,14 +1642,14 @@ module mo_cdi
         subroutine gridDefYvals(gridID,yvals_vec) bind(c,name='gridDefYvals')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(in),dimension(*) :: yvals_vec
+          real(kind=c_double), intent(in), dimension(*) :: yvals_vec
         end subroutine gridDefYvals
       end interface
       interface
         function gridInqYvals(gridID,yvals_vec) bind(c,name='gridInqYvals')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(out),dimension(*) :: yvals_vec
+          real(kind=c_double), intent(out), dimension(*) :: yvals_vec
           integer(kind=c_int) :: gridInqYvals
         end function gridInqYvals
       end interface
@@ -1965,16 +1966,16 @@ module mo_cdi
       end interface
       interface
         subroutine gridDefUUID(gridID,uuid) bind(c,name='gridDefUUID')
-          import :: c_int,c_char
+          import :: c_int,c_signed_char
           integer(kind=c_int), value :: gridID
-          character(kind=c_char), dimension(16) :: uuid
+          integer(kind=c_signed_char), intent(in), dimension(16) :: uuid
         end subroutine gridDefUUID
       end interface
       interface
         subroutine gridInqUUID(gridID,uuid) bind(c,name='gridInqUUID')
-          import :: c_int,c_char
+          import :: c_int,c_signed_char
           integer(kind=c_int), value :: gridID
-          character(kind=c_char), dimension(16) :: uuid
+          integer(kind=c_signed_char), intent(out), dimension(16) :: uuid
         end subroutine gridInqUUID
       end interface
       interface
@@ -2051,14 +2052,14 @@ module mo_cdi
         subroutine gridDefArea(gridID,area_vec) bind(c,name='gridDefArea')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(in),dimension(*) :: area_vec
+          real(kind=c_double), intent(in), dimension(*) :: area_vec
         end subroutine gridDefArea
       end interface
       interface
         subroutine gridInqArea(gridID,area_vec) bind(c,name='gridInqArea')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(out),dimension(*) :: area_vec
+          real(kind=c_double), intent(out), dimension(*) :: area_vec
         end subroutine gridInqArea
       end interface
       interface
@@ -2086,14 +2087,14 @@ module mo_cdi
         subroutine gridDefXbounds(gridID,xbounds_vec) bind(c,name='gridDefXbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(in),dimension(*) :: xbounds_vec
+          real(kind=c_double), intent(in), dimension(*) :: xbounds_vec
         end subroutine gridDefXbounds
       end interface
       interface
         function gridInqXbounds(gridID,xbounds_vec) bind(c,name='gridInqXbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(out),dimension(*) :: xbounds_vec
+          real(kind=c_double), intent(out), dimension(*) :: xbounds_vec
           integer(kind=c_int) :: gridInqXbounds
         end function gridInqXbounds
       end interface
@@ -2101,14 +2102,14 @@ module mo_cdi
         subroutine gridDefYbounds(gridID,ybounds_vec) bind(c,name='gridDefYbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(in),dimension(*) :: ybounds_vec
+          real(kind=c_double), intent(in), dimension(*) :: ybounds_vec
         end subroutine gridDefYbounds
       end interface
       interface
         function gridInqYbounds(gridID,ybounds_vec) bind(c,name='gridInqYbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: gridID
-          real(kind=c_double), intent(out),dimension(*) :: ybounds_vec
+          real(kind=c_double), intent(out), dimension(*) :: ybounds_vec
           integer(kind=c_int) :: gridInqYbounds
         end function gridInqYbounds
       end interface
@@ -2117,14 +2118,14 @@ module mo_cdi
           import :: c_int
           integer(kind=c_int), value :: gridID
           integer(kind=c_int), value :: nrowlon
-          integer(kind=c_int), intent(in),dimension(*) :: rowlon_vec
+          integer(kind=c_int), intent(in), dimension(*) :: rowlon_vec
         end subroutine gridDefRowlon
       end interface
       interface
         subroutine gridInqRowlon(gridID,rowlon_vec) bind(c,name='gridInqRowlon')
           import :: c_int
           integer(kind=c_int), value :: gridID
-          integer(kind=c_int), intent(out),dimension(*) :: rowlon_vec
+          integer(kind=c_int), intent(out), dimension(*) :: rowlon_vec
         end subroutine gridInqRowlon
       end interface
       interface
@@ -2207,14 +2208,14 @@ module mo_cdi
         subroutine zaxisDefLevels(zaxisID,levels_vec) bind(c,name='zaxisDefLevels')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(in),dimension(*) :: levels_vec
+          real(kind=c_double), intent(in), dimension(*) :: levels_vec
         end subroutine zaxisDefLevels
       end interface
       interface
         subroutine zaxisInqLevels(zaxisID,levels_vec) bind(c,name='zaxisInqLevels')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(out),dimension(*) :: levels_vec
+          real(kind=c_double), intent(out), dimension(*) :: levels_vec
         end subroutine zaxisInqLevels
       end interface
       interface
@@ -2263,16 +2264,16 @@ module mo_cdi
       end interface
       interface
         subroutine zaxisDefUUID(zaxisID,uuid) bind(c,name='zaxisDefUUID')
-          import :: c_int,c_char
+          import :: c_int,c_signed_char
           integer(kind=c_int), value :: zaxisID
-          character(kind=c_char), dimension(16) :: uuid
+          integer(kind=c_signed_char), intent(in), dimension(16) :: uuid
         end subroutine zaxisDefUUID
       end interface
       interface
         subroutine zaxisInqUUID(zaxisID,uuid) bind(c,name='zaxisInqUUID')
-          import :: c_int,c_char
+          import :: c_int,c_signed_char
           integer(kind=c_int), value :: zaxisID
-          character(kind=c_char), dimension(16) :: uuid
+          integer(kind=c_signed_char), intent(out), dimension(16) :: uuid
         end subroutine zaxisInqUUID
       end interface
       interface
@@ -2378,14 +2379,14 @@ module mo_cdi
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
           integer(kind=c_int), value :: size
-          real(kind=c_double), intent(in),dimension(*) :: vct_vec
+          real(kind=c_double), intent(in), dimension(*) :: vct_vec
         end subroutine zaxisDefVct
       end interface
       interface
         subroutine zaxisInqVct(zaxisID,vct_vec) bind(c,name='zaxisInqVct')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(out),dimension(*) :: vct_vec
+          real(kind=c_double), intent(out), dimension(*) :: vct_vec
         end subroutine zaxisInqVct
       end interface
       interface
@@ -2406,14 +2407,14 @@ module mo_cdi
         subroutine zaxisDefLbounds(zaxisID,lbounds_vec) bind(c,name='zaxisDefLbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(in),dimension(*) :: lbounds_vec
+          real(kind=c_double), intent(in), dimension(*) :: lbounds_vec
         end subroutine zaxisDefLbounds
       end interface
       interface
         function zaxisInqLbounds(zaxisID,lbounds_vec) bind(c,name='zaxisInqLbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(out),dimension(*) :: lbounds_vec
+          real(kind=c_double), intent(out), dimension(*) :: lbounds_vec
           integer(kind=c_int) :: zaxisInqLbounds
         end function zaxisInqLbounds
       end interface
@@ -2429,14 +2430,14 @@ module mo_cdi
         subroutine zaxisDefUbounds(zaxisID,ubounds_vec) bind(c,name='zaxisDefUbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(in),dimension(*) :: ubounds_vec
+          real(kind=c_double), intent(in), dimension(*) :: ubounds_vec
         end subroutine zaxisDefUbounds
       end interface
       interface
         function zaxisInqUbounds(zaxisID,ubounds_vec) bind(c,name='zaxisInqUbounds')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(out),dimension(*) :: ubounds_vec
+          real(kind=c_double), intent(out), dimension(*) :: ubounds_vec
           integer(kind=c_int) :: zaxisInqUbounds
         end function zaxisInqUbounds
       end interface
@@ -2452,14 +2453,14 @@ module mo_cdi
         subroutine zaxisDefWeights(zaxisID,weights_vec) bind(c,name='zaxisDefWeights')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(in),dimension(*) :: weights_vec
+          real(kind=c_double), intent(in), dimension(*) :: weights_vec
         end subroutine zaxisDefWeights
       end interface
       interface
         function zaxisInqWeights(zaxisID,weights_vec) bind(c,name='zaxisInqWeights')
           import :: c_int,c_double
           integer(kind=c_int), value :: zaxisID
-          real(kind=c_double), intent(out),dimension(*) :: weights_vec
+          real(kind=c_double), intent(out), dimension(*) :: weights_vec
           integer(kind=c_int) :: zaxisInqWeights
         end function zaxisInqWeights
       end interface
@@ -3385,6 +3386,7 @@ module mo_cdi
       public :: DATATYPE_TXT
       public :: DATATYPE_CPX
       public :: DATATYPE_UCHAR
+      public :: DATATYPE_LONG
       public :: CHUNK_AUTO
       public :: CHUNK_GRID
       public :: CHUNK_LINES

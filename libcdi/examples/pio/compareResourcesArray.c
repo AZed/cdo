@@ -15,7 +15,6 @@
 #include "resource_unpack.h"
 
 extern int    reshListCompare      ( int, int );
-extern void   arrayDestroy          ( void );
 
 enum {
   IOMode           = PIO_NONE,

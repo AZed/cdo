@@ -3934,7 +3934,7 @@ static char *OutputtabHelp[] = {
     "    ",
     "    The contents of the table depends on the chosen paramters. The format of each table",
     "    parameter is keyname[:len]. len is the optional length of a table entry.  ",
-    "    Here is a list a all valid keynames:",
+    "    Here is a list of all valid keynames:",
     "    ",
     "     Keyname    & Type    & Description      ",
     "     value      & FLOAT   & Value of the variable [len:8]",

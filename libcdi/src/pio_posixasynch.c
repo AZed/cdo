@@ -27,13 +27,7 @@
 #include "pio_util.h"
 #include "dmemory.h"
 
-extern char * command2charP[6];
-
 extern char *token;
-
-extern double accumSuspend;
-extern double accumWrite;
-
 
 typedef struct
 {
@@ -105,7 +99,6 @@ destroyBFiledataPA ( void *v )
   ssize_t ssiret;
   int nextFinishOp = (bfd->nextOpIndex - bfd->prefIndex + nPrefStreams)
     % nPrefStreams;
-  double startTime;
 
   xdebug ( "filename=%s, cleanup and close file", bfd->name );
 
@@ -115,19 +108,12 @@ destroyBFiledataPA ( void *v )
     {
       xdebug("file: %s, prefIndex=%d", bfd->name, (int)bfd->prefIndex);
       ccBP[0] = ( bfd->ctrlBlks + nextFinishOp );
-
-      if ( ddebug )
-	startTime = MPI_Wtime ();
-
       do
 	{
 	  iret = aio_suspend ( ccBP, 1, NULL );
 	  if ( iret < 0 && errno != EINTR ) xabort ( "aio_suspend () failed" );
 	}
       while ( iret != 0 );
-
-      if ( ddebug )
-	accumSuspend += ( MPI_Wtime () - startTime);
 
       iret = aio_error(bfd->ctrlBlks + nextFinishOp);
       if (( ssiret = aio_return ( bfd->ctrlBlks + nextFinishOp )) == -1 )
@@ -170,7 +156,6 @@ writePA(bFiledataPA *bfd, size_t amount)
 {
   const struct aiocb *ccBP[1];
   ssize_t iret;
-  double startTime;
 
   xdebug ( "file %s, in", bfd->name );
   
@@ -181,11 +166,7 @@ writePA(bFiledataPA *bfd, size_t amount)
            bfd->name, bfd->ctrlBlks[bfd->currOpIndex].aio_nbytes,
            bfd->ctrlBlks[bfd->currOpIndex].aio_offset );
 
-  if ( ddebug ) startTime = MPI_Wtime ();
-
   iret = aio_write ( bfd->ctrlBlks + bfd->currOpIndex );
-
-  if ( ddebug ) accumWrite += ( MPI_Wtime () - startTime);
 
   xdebug ( "after aio_write(), file %s, aio_nbytes=%zu, aio_offset=%zu,"
            "iret=aio_write()=%d",
@@ -205,10 +186,6 @@ writePA(bFiledataPA *bfd, size_t amount)
   if ( bfd->prefIndex >= nPrefStreams ) 
     {
       ccBP[0] = ( bfd->ctrlBlks + bfd->nextOpIndex );
-
-      if ( ddebug )
-	startTime = MPI_Wtime ();
-
       do
 	{
 	  iret = aio_suspend ( ccBP, 1, NULL );
@@ -216,10 +193,7 @@ writePA(bFiledataPA *bfd, size_t amount)
 	    xabort ( "aio_suspend () failed" );
 	} while ( iret != 0 );
 
-      if ( ddebug )
-	accumSuspend += ( MPI_Wtime () - startTime);
-	      
-      if (( iret = aio_return ( bfd->ctrlBlks + bfd->nextOpIndex )) == -1 ) 
+      if (( iret = aio_return ( bfd->ctrlBlks + bfd->nextOpIndex )) == -1 )
 	xabort ( "aio_return () failed" );
 
       bfd->prefIndex --;
@@ -253,7 +227,7 @@ void pioWriterAIO(void)
   xdebug ( "nProcsCollNode=%d on this node", nProcsCollNode );
  
   bibBFiledataPA = listSetNew(destroyBFiledataPA, compareNamesBPA);
-  sentFinalize = xmalloc((size_t)nProcsCollNode * sizeof (sentFinalize[0]));
+  sentFinalize = xcalloc((size_t)nProcsCollNode, sizeof (sentFinalize[0]));
   
   for ( ;; )
     {
@@ -266,11 +240,11 @@ void pioWriterAIO(void)
       struct fileOpTag rtag = decodeFileOpTag(tag);
 
       int messagesize;
-      xmpi (MPI_Get_count(&status, MPI_CHAR, &messagesize));
+      xmpi(MPI_Get_count(&status, MPI_UNSIGNED_CHAR, &messagesize));
 
       xdebug ( "receive message from source=%d, id=%d, command=%d ( %s ), "
                "messagesize=%d", source, rtag.id, rtag.command,
-               command2charP[rtag.command], messagesize);
+               cdiPioCmdStrTab[rtag.command], messagesize);
 
       switch (rtag.command)
 	{
@@ -280,7 +254,7 @@ void pioWriterAIO(void)
                                           * sizeof (messageBuffer[0]));
             char *pMB = messageBuffer;
 
-            xmpi(MPI_Recv(messageBuffer, messagesize, MPI_CHAR, source,
+            xmpi(MPI_Recv(messageBuffer, messagesize, MPI_UNSIGNED_CHAR, source,
                           tag, commNode, &status ));
 
             char *filename = strtok(pMB, token);
@@ -291,7 +265,7 @@ void pioWriterAIO(void)
             size_t amount = (size_t)(messageBuffer + messagesize - pMB);
 
             xdebug("command  %s, filename=%s, buffersize=%ld, amount=%zd",
-                   command2charP[rtag.command], filename, buffersize, amount);
+                   cdiPioCmdStrTab[rtag.command], filename, buffersize, amount);
 
             if (!(bfd = listSetGet(bibBFiledataPA, fileIDTest,
                                    (void *)(intptr_t)rtag.id)))
@@ -326,13 +300,14 @@ void pioWriterAIO(void)
             xabort("fileID=%d is not in set", rtag.id);
 
 	  xdebug("command: %s, id=%d, name=%s",
-                 command2charP[rtag.command], rtag.id, bfd->name );
+                 cdiPioCmdStrTab[rtag.command], rtag.id, bfd->name );
 
 	  bfd->currOpIndex = bfd->nextOpIndex;
 	  bfd->nextOpIndex = ( bfd->nextOpIndex + 1 ) % nPrefStreams;
 
 	  xmpi(MPI_Recv((void *)bfd->ctrlBlks[bfd->currOpIndex].aio_buf,
-                        messagesize, MPI_CHAR, source, tag, commNode, &status ));
+                        messagesize, MPI_UNSIGNED_CHAR, source, tag, commNode,
+                        &status));
 	  writePA(bfd, (size_t)messagesize);
 	  break;
 
@@ -343,14 +318,15 @@ void pioWriterAIO(void)
             xabort("fileID=%d is not in set", rtag.id);
 
 	  xdebug(" command %s, id=%d, name=%s",
-                 command2charP[rtag.command], rtag.id, bfd->name);
+                 cdiPioCmdStrTab[rtag.command], rtag.id, bfd->name);
 
 	  bfd->currOpIndex = bfd->nextOpIndex;
 
 	  bfd->nextOpIndex = ( bfd->nextOpIndex + 1 ) % nPrefStreams;
 
-	  MPI_Recv((void *)bfd->ctrlBlks[bfd->currOpIndex].aio_buf,
-                   messagesize, MPI_CHAR, source, tag, commNode, &status);
+	  xmpi(MPI_Recv((void *)bfd->ctrlBlks[bfd->currOpIndex].aio_buf,
+                        messagesize, MPI_UNSIGNED_CHAR,
+                        source, tag, commNode, &status));
 
 	  writePA(bfd, (size_t)messagesize);
 
@@ -380,6 +356,7 @@ void pioWriterAIO(void)
                            " return");
                     listSetDelete(bibBFiledataPA);
                   }
+                free(sentFinalize);
                 return;
               }
           }

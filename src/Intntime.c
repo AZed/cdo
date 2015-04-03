@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -142,9 +142,8 @@ void *Intntime(void *argument)
 
       for ( it = 1; it < numts; it++ )
 	{
-	  double seconds;
-	  seconds = it * juldate_to_seconds(juldate_sub(juldate2, juldate1)) / numts;
-	  juldate = juldate_add_seconds(lround(seconds), juldate1);
+	  double seconds = it * juldate_to_seconds(juldate_sub(juldate2, juldate1)) / numts;
+	  juldate = juldate_add_seconds((int)lround(seconds), juldate1);
 
 	  juldate_decode(calendar, juldate, &vdate, &vtime);
 

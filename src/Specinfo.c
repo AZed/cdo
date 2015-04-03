@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -135,12 +135,9 @@ static int nlat2nlon(int nlat)
 
 int ngp2ntr(int ngp)
 {
-  int ntr, nlatl, nlonl;
-
-  ntr = lround(sqrt(0.25+ngp)-1.5);
-  nlatl = ntr2nlat_linear(ntr);
-  nlonl = compnlon(nlatl);
-  nlatl = nlonl/2;
+  int ntr   = (int)lround(sqrt(0.25+ngp)-1.5);
+  int nlonl = compnlon(ntr2nlat_linear(ntr));
+  int nlatl = nlonl/2;
 
   ntr = (2*nlatl-1)/2;
 

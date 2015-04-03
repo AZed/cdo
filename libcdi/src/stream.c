@@ -796,8 +796,7 @@ open stream. Otherwise, a negative number with the error status is returned.
 @EndList
 
 @Example
-Here is an example using @func{streamOpenWrite} to create a new netCDF file
-named @func{foo.nc} for writing:
+Here is an example using @func{streamOpenWrite} to create a new netCDF file named @func{foo.nc} for writing:
 
 @Source
 #include "cdi.h"
@@ -828,7 +827,6 @@ void streamDefaultValue ( stream_t * streamptr )
   streamptr->filetype          = FILETYPE_UNDEF;
   streamptr->byteorder         = CDI_UNDEFID;
   streamptr->fileID            = 0;
-  streamptr->dimgroupID        = CDI_UNDEFID;
   streamptr->filemode          = 0;
   streamptr->numvals           = 0;
   streamptr->filename          = NULL;
@@ -837,12 +835,10 @@ void streamDefaultValue ( stream_t * streamptr )
   streamptr->nrecs             = 0;
   streamptr->nvars             = 0;
   streamptr->vars              = NULL;
-  streamptr->varinit           = 0;
   streamptr->ncmode            = 0;
   streamptr->curTsID           = CDI_UNDEFID;
   streamptr->rtsteps           = 0;
   streamptr->ntsteps           = CDI_UNDEFID;
-  streamptr->numTimestep       = 0;
   streamptr->tsteps            = NULL;
   streamptr->tstepsTableSize   = 0;
   streamptr->tstepsNextID      = 0;
@@ -868,10 +864,6 @@ void streamDefaultValue ( stream_t * streamptr )
   for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncxvarID[i] = CDI_UNDEFID;
   for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncyvarID[i] = CDI_UNDEFID;
   for ( i = 0; i < MAX_GRIDS_PS; i++ ) streamptr->ncavarID[i] = CDI_UNDEFID;
-
-  streamptr->curfile           = 0;
-  streamptr->nfiles            = 0;
-  streamptr->fnames            = NULL;
 
   streamptr->gribContainers    = NULL;
   streamptr->vlistIDorig       = CDI_UNDEFID;
@@ -1028,14 +1020,6 @@ void streamClose(int streamID)
   if ( streamptr->tsteps ) free(streamptr->tsteps);
 
   if ( streamptr->basetime.timevar_cache ) free(streamptr->basetime.timevar_cache);
-
-  if ( streamptr->nfiles > 0 )
-    {
-      for ( index = 0; index < streamptr->nfiles; ++index )
-	free(streamptr->fnames[index]);
-
-      free(streamptr->fnames);
-    }
 
   if ( vlistID != -1 )
     {
@@ -1671,7 +1655,7 @@ void streamReadVarSlice(int streamID, int varID, int levelID, double *data, int 
   if ( cdiStreamReadVarSlice(streamID, varID, levelID, MEMTYPE_DOUBLE, data, nmiss) )
     {
       Warning("Unexpected error returned from cdiStreamReadVarSlice()!");
-      size_t elementCount = gridInqSize(vlistInqVarGrid(streamInqVlist(streamID), varID));
+      size_t elementCount = (size_t)gridInqSize(vlistInqVarGrid(streamInqVlist(streamID), varID));
       memset(data, 0, elementCount * sizeof(*data));
     }
 }
@@ -1700,10 +1684,10 @@ void streamReadVarSliceF(int streamID, int varID, int levelID, float *data, int 
     {
       // In case the file format does not support single precision reading,
       // we fall back to double precision reading, converting the data on the fly.
-      size_t elementCount = gridInqSize(vlistInqVarGrid(streamInqVlist(streamID), varID));
+      size_t elementCount = (size_t)gridInqSize(vlistInqVarGrid(streamInqVlist(streamID), varID));
       double* conversionBuffer = malloc(elementCount * sizeof(*conversionBuffer));
       streamReadVarSlice(streamID, varID, levelID, conversionBuffer, nmiss);
-      for (size_t i = elementCount; i--; ) data[i] = conversionBuffer[i];
+      for (size_t i = elementCount; i--; ) data[i] = (float)conversionBuffer[i];
       free(conversionBuffer);
     }
 }
@@ -2117,46 +2101,17 @@ int streamInqFileID(int streamID)
   return (streamptr->fileID);
 }
 
-void streamDefDimgroupID(int streamID, int dimgroupID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  streamptr->dimgroupID = dimgroupID;
-}
-
-
-int streamInqDimgroupID(int streamID)
-{
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
-
-  return (streamptr->dimgroupID);
-}
-
-
 void cdiDefAccesstype(int streamID, int type)
 {
-  stream_t *streamptr;
-
-  streamptr = ( stream_t *) reshGetVal ( streamID, &streamOps );
+  stream_t *streamptr = reshGetVal(streamID, &streamOps);
 
   if ( streamptr->accesstype == CDI_UNDEFID )
     {
       streamptr->accesstype = type;
     }
-  else
-    {
-      if ( streamptr->accesstype != type )
-	{
-	  if ( streamptr->accesstype == TYPE_REC )
-	    Error("Changing access type from REC to VAR not allowed!");
-	  else
-	    Error("Changing access type from VAR to REC not allowed!");
-	}
-    }
+  else if ( streamptr->accesstype != type )
+    Error("Changing access type from %s not allowed!",
+          streamptr->accesstype == TYPE_REC ? "REC to VAR" : "VAR to REC");
 }
 
 
@@ -2193,25 +2148,26 @@ void cdiStreamSetupVlist(stream_t *streamptr, int vlistID, int vlistIDorig)
     }
 
   if (streamptr->filemode == 'w' )
-    {
-      if ( streamptr->filetype == FILETYPE_NC  ||
-           streamptr->filetype == FILETYPE_NC2 ||
-           streamptr->filetype == FILETYPE_NC4 ||
-           streamptr->filetype == FILETYPE_NC4C )
-        {
+    switch (streamptr->filetype)
+      {
 #ifdef HAVE_LIBNETCDF
+      case FILETYPE_NC:
+      case FILETYPE_NC2:
+      case FILETYPE_NC4:
+      case FILETYPE_NC4C:
+        {
           void (*myCdfDefVars)(stream_t *streamptr)
             = (void (*)(stream_t *))
             namespaceSwitchGet(NSSWITCH_CDF_STREAM_SETUP).func;
           myCdfDefVars(streamptr);
+        }
+        break;
 #endif
-        }
-      else if ( streamptr->filetype == FILETYPE_GRB  ||
-                streamptr->filetype == FILETYPE_GRB2 )
-        {
-          gribContainersNew(streamptr);
-        }
-    }
+      case FILETYPE_GRB:
+      case FILETYPE_GRB2:
+        gribContainersNew(streamptr);
+        break;
+      }
 }
 
 
@@ -2222,9 +2178,8 @@ void streamGetIndexList ( int nstreams, int * streamIndexList )
 
 int streamInqNvars ( int streamID )
 {
-  stream_t * streamptr;
-  streamptr = ( stream_t * ) reshGetVal ( streamID, &streamOps );
-  return ( streamptr->nvars );
+  stream_t *streamptr = reshGetVal(streamID, &streamOps);
+  return streamptr->nvars;
 }
 
 
@@ -2285,21 +2240,17 @@ void streamPrintP   ( void * streamptr, FILE * fp )
   fprintf ( fp, "filetype      = %d\n", sp->filetype );
   fprintf ( fp, "byteorder     = %d\n", sp->byteorder );
   fprintf ( fp, "fileID        = %d\n", sp->fileID );
-  fprintf ( fp, "dimgroupID    = %d\n", sp->dimgroupID );
   fprintf ( fp, "filemode      = %d\n", sp->filemode );
   fprintf ( fp, "//off_t numvals;\n" );
   fprintf ( fp, "filename      = %s\n", sp->filename );
   fprintf ( fp, "//Record   *record;\n" );
   fprintf ( fp, "nrecs         = %d\n", sp->nrecs );
   fprintf ( fp, "nvars         = %d\n", sp->nvars );
-  fprintf ( fp, "varlocked     = %d\n", sp->varlocked );
   fprintf ( fp, "//svarinfo_t *vars;\n" );
   fprintf ( fp, "varsAllocated = %d\n", sp->varsAllocated );
-  fprintf ( fp, "varinit       = %d\n", sp->varinit );
   fprintf ( fp, "curTsID       = %d\n", sp->curTsID );
   fprintf ( fp, "rtsteps       = %d\n", sp->rtsteps );
   fprintf ( fp, "//long ntsteps;\n" );
-  fprintf ( fp, "numTimestep   = %d\n", sp->numTimestep );
   fprintf ( fp, "//  tsteps_t   *tsteps;\n" );
   fprintf ( fp, "tstepsTableSize= %d\n", sp->tstepsTableSize );
   fprintf ( fp, "tstepsNextID  = %d\n", sp->tstepsNextID );
@@ -2321,9 +2272,6 @@ void streamPrintP   ( void * streamptr, FILE * fp )
   fprintf ( fp, "have_missval  = %d\n", sp->have_missval );
   fprintf ( fp, "ztype         = %d\n", sp->comptype );
   fprintf ( fp, "zlevel        = %d\n", sp->complevel );
-  fprintf ( fp, "curfile       = %d\n", sp->curfile );
-  fprintf ( fp, "nfiles        = %d\n", sp->nfiles );
-  fprintf ( fp, "//  char    **fnames;\n" );
   fprintf ( fp, "//  void    **gribContainers;\n" );
   fprintf ( fp, "vlistIDorig   = %d\n", sp->vlistIDorig );
 }

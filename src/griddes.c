@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -1388,9 +1388,7 @@ int gridFromPingo(FILE *gfp, const char *dname)
 
 int nfc2nlat(int nfc, int ntr)
 {
-  int nlat;
-
-  nlat = nfc / (ntr+1);
+  int nlat = nfc / (ntr+1);
   nlat /= 2;
 
   return (nlat);
@@ -1399,9 +1397,7 @@ int nfc2nlat(int nfc, int ntr)
 
 int nlat2ntr(int nlat)
 {
-  int ntr;
-
-  ntr = (nlat*2 - 1) / 3;
+  int ntr = (nlat*2 - 1) / 3;
 
   return (ntr);
 }
@@ -1409,9 +1405,7 @@ int nlat2ntr(int nlat)
 
 int nlat2ntr_linear(int nlat)
 {
-  int ntr;
-
-  ntr = (nlat*2 - 1) / 2;
+  int ntr = (nlat*2 - 1) / 2;
 
   return (ntr);
 }
@@ -1419,14 +1413,12 @@ int nlat2ntr_linear(int nlat)
 
 int ntr2nlat(int ntr)
 {
-  int nlat, nlat2;
-
-  nlat = lround((ntr*3.+1.)/2.);
+  int nlat = (int)lround((ntr*3.+1.)/2.);
   if ( (nlat % 2) > 0 )
     {
       nlat  = nlat + 1;
-      nlat2 = lround(((ntr+1)*3.+1.)/2.);
       /*
+      int nlat2 = (int)lround(((ntr+1)*3.+1.)/2.);
       if ( nlat == nlat2 )
 	Error("Computation of latitudes failed for truncation %d", ntr);
       */
@@ -1438,14 +1430,12 @@ int ntr2nlat(int ntr)
 
 int ntr2nlat_linear(int ntr)
 {
-  int nlat, nlat2;
-
-  nlat = lround((ntr*2.+1.)/2.);
+  int nlat = (int)lround((ntr*2.+1.)/2.);
   if ( (nlat % 2) > 0 )
     {
       nlat  = nlat + 1;
-      nlat2 = lround(((ntr+1)*2.+1.)/2.);
       /*
+      int nlat2 = (int)lround(((ntr+1)*2.+1.)/2.);
       if ( nlat == nlat2 )
 	Error("Computation of latitudes failed for truncation %d", ntr);
       */
@@ -1457,9 +1447,8 @@ int ntr2nlat_linear(int ntr)
 
 int compNlon(int nlat)
 {
-  int nlon, n;
-
-  nlon = 2 * nlat;
+  int n;
+  int nlon = 2 * nlat;
 
   /* check that FFT works with nlon */
   while ( 1 )

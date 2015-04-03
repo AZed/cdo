@@ -1,6 +1,11 @@
 CDO NEWS
 --------
 
+Version 1.6.7 (11 December 2014):
+
+   Fixed bugs:
+     * GRIB_API: segfaults when writing grib2 files [Bug #5351]
+
 Version 1.6.6 (27 November 2014):
 
    New operators:

@@ -267,7 +267,7 @@ varsMapNDeco(int nNodes, int *nodeSizes)
     streamSizes[i] = streamInqNvars ( * ( resHs + i ));
 
   nVars = sum_int((size_t)nStreams, streamSizes);
-  varSizes   = xmalloc((size_t)nVars * sizeof (varSizes[0]));
+  varSizes   = xcalloc((size_t)nVars, sizeof (varSizes[0]));
   varMapping = xmalloc((size_t)nVars * sizeof (varMapping[0]));
 
   for (int i = 0; i < nStreams; i++ )
@@ -455,7 +455,7 @@ void modelWinCreate ( void )
   int nProcsColl = commInqNProcsColl ();
 
   xdebug("%s", "START");
-  txWin = xmalloc((size_t)nProcsColl * sizeof (txWin[0]));
+  txWin = xcalloc((size_t)nProcsColl, sizeof (txWin[0]));
 
   modelWinDefBufferSizes ();
   ranks[0] = commInqNProcsModel ();
@@ -886,17 +886,16 @@ void  pioEndTimestepping ( void )
 
 void pioFinalize ( void )
 {
-  int collID, ibuffer = 1111;
   xdebug("%s", "START");
 
   /* pioNamespace_ is unchanged on I/O servers */
   if (pioNamespace_ == -1)
     return;
   namespaceDelete(pioNamespace_);
-  for ( collID = 0; collID < commInqNProcsColl (); collID++ )
+  for (int collID = 0; collID < commInqNProcsColl (); collID++ )
     {
-      xmpi ( MPI_Send ( &ibuffer, 1, MPI_INT, commInqNProcsModel (),
-                        FINALIZE, commInqCommsIO ( collID )));
+      xmpi(MPI_Send(NULL, 0, MPI_INT, commInqNProcsModel(),
+                    FINALIZE, commInqCommsIO ( collID )));
       xdebug("%s", "SENT MESSAGE WITH TAG \"FINALIZE\"");
     }
   modelWinCleanup ();

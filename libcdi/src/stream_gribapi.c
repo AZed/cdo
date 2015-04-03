@@ -1511,7 +1511,7 @@ int gribapiScanTimestep2(stream_t * streamptr)
 
   tsID = streamptr->rtsteps;
   if ( tsID != 1 )
-    Error("Internal problem! unexpeceted timestep %d", tsID+1);
+    Error("Internal problem! unexpected timestep %d", tsID+1);
 
   taxis = &streamptr->tsteps[tsID].taxis;
 
@@ -3092,11 +3092,10 @@ void gribapiDefLevel(int editionNumber, grib_handle *gh, int param, int zaxisID,
 
 #ifdef HAVE_LIBGRIB_API
 size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisID,
-		     int vdate, int vtime, int tsteptype, int numavg, 
+		     int vdate, int vtime, int tsteptype, int numavg,
 		     long datasize, const double *data, int nmiss, unsigned char **gribbuffer, size_t *gribbuffersize,
 		     int comptype, void *gribContainer)
 {
-  size_t nbytes = 0;
   size_t recsize = 0;
   void *dummy = NULL;
   int datatype;
@@ -3108,7 +3107,6 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
   long bitsPerValue;
   long editionNumber = 2;
   char name[256];
-  grib_handle *gh = NULL;
   gribContainer_t *gc = (gribContainer_t *) gribContainer;
   // extern unsigned char _grib_template_GRIB2[];
 
@@ -3120,11 +3118,10 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
   vlistInqVarName(vlistID, varID, name);
 
 #if defined(GRIBAPIENCODETEST)
-  gh = (grib_handle *) gribHandleNew(editionNumber);
+  grib_handle *gh = (grib_handle *) gribHandleNew(editionNumber);
 #else
-  gh = gc->gribHandle;
+  grib_handle *gh = gc->gribHandle;
 #endif
-
   GRIB_CHECK(grib_get_long(gh, "editionNumber", &editionNumber), 0);
 
   if ( editionNumber == 2 )
@@ -3166,15 +3163,15 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
   /* Local change: 2013-01-28, FP (DWD) */
   /* ---------------------------------- */
 
-  vlist_t *vlistptr;
-  vlistptr = vlist_to_pointer(vlistID);
+  vlist_t *vlistptr = vlist_to_pointer(vlistID);
   //if (!gc->init)
   {
-    for (int i=0; i<vlistptr->vars[varID].opt_grib_dbl_nentries; i++)
+    for ( int i=0; i<vlistptr->vars[varID].opt_grib_dbl_nentries; i++ )
       {
         if ( vlistptr->vars[varID].opt_grib_dbl_update[i] )
           {
-            vlistptr->vars[varID].opt_grib_dbl_update[i] = FALSE;
+            //DR: Fix for multi-level fields (otherwise only the 1st level is correct)
+            if ( zaxisInqSize(zaxisID)==(levelID+1) ) vlistptr->vars[varID].opt_grib_dbl_update[i] = FALSE;
             int ret = my_grib_set_double(gh, vlistptr->vars[varID].opt_grib_dbl_keyword[i],
                                          vlistptr->vars[varID].opt_grib_dbl_val[i]);
             if (ret != 0) {
@@ -3185,11 +3182,12 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
             GRIB_CHECK(ret, 0);
           }
       }
-    for (int i=0; i<vlistptr->vars[varID].opt_grib_int_nentries; i++)
+    for ( int i=0; i<vlistptr->vars[varID].opt_grib_int_nentries; i++ )
       {
         if ( vlistptr->vars[varID].opt_grib_int_update[i] )
           {
-            vlistptr->vars[varID].opt_grib_int_update[i] = FALSE;
+            //DR: Fix for multi-level fields (otherwise only the 1st level is correct)
+            if ( zaxisInqSize(zaxisID)==(levelID+1) ) vlistptr->vars[varID].opt_grib_int_update[i] = FALSE;
             int ret = my_grib_set_long(gh, vlistptr->vars[varID].opt_grib_int_keyword[i],
                                        vlistptr->vars[varID].opt_grib_int_val[i]);
             if (ret != 0) {
@@ -3226,9 +3224,7 @@ size_t gribapiEncode(int varID, int levelID, int vlistID, int gridID, int zaxisI
 
   gc->init = TRUE;
 
-  nbytes = recsize;
-
-  return (nbytes);
+  return (recsize);
 }
 #endif
 

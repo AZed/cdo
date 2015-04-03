@@ -16,22 +16,22 @@ serializeGetSize(int count, int datatype, void *context)
   return serialize_get_size_p(count, datatype, context);
 }
 
-void serializePack(void *data, int count, int datatype,
-                    void *buf, int buf_size, int *position, void *context)
+void serializePack(const void *data, int count, int datatype,
+                   void *buf, int buf_size, int *position, void *context)
 {
-  void (*serialize_pack_p)(void *data, int count, int datatype,
+  void (*serialize_pack_p)(const void *data, int count, int datatype,
                            void *buf, int buf_size, int *position, void *context)
-    = (void (*)(void *, int, int, void *, int, int *, void *))
+    = (void (*)(const void *, int, int, void *, int, int *, void *))
     namespaceSwitchGet(NSSWITCH_SERIALIZE_PACK).func;
   serialize_pack_p(data, count, datatype, buf, buf_size, position, context);
 }
 
-void serializeUnpack(void *buf, int buf_size, int *position,
-                      void *data, int count, int datatype, void *context)
+void serializeUnpack(const void *buf, int buf_size, int *position,
+                     void *data, int count, int datatype, void *context)
 {
-  void (*serialize_unpack_p)(void *buf, int buf_size, int *position,
+  void (*serialize_unpack_p)(const void *buf, int buf_size, int *position,
                              void *data, int count, int datatype, void *context)
-    = (void (*)(void *, int, int *, void *, int, int, void *))
+    = (void (*)(const void *, int, int *, void *, int, int, void *))
     namespaceSwitchGet(NSSWITCH_SERIALIZE_UNPACK).func;
   serialize_unpack_p(buf, buf_size, position, data, count, datatype, context);
 }
@@ -65,14 +65,17 @@ serializeGetSizeInCore(int count, int datatype, void *context)
   case DATATYPE_UCHAR:
     elemSize = 1;
     break;
+  case DATATYPE_LONG:
+    elemSize = sizeof (long);
+    break;
   default:
     xabort("Unexpected datatype");
   }
   return count * elemSize;
 }
 
-void serializePackInCore(void *data, int count, int datatype,
-                          void *buf, int buf_size, int *position, void *context)
+void serializePackInCore(const void *data, int count, int datatype,
+                         void *buf, int buf_size, int *position, void *context)
 {
   int size = serializeGetSize(count, datatype, context);
   int pos = *position;
@@ -82,8 +85,8 @@ void serializePackInCore(void *data, int count, int datatype,
   *position = pos;
 }
 
-void serializeUnpackInCore(void *buf, int buf_size, int *position,
-                            void *data, int count, int datatype, void *context)
+void serializeUnpackInCore(const void *buf, int buf_size, int *position,
+                           void *data, int count, int datatype, void *context)
 {
   int size = serializeGetSize(count, datatype, context);
   int pos = *position;

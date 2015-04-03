@@ -21,10 +21,6 @@
 #include "pio_util.h"
 #include "dmemory.h"
 
-extern char * command2charP[6];
-
-extern long initial_buffersize;
-
 typedef struct
 {
   struct dBuffer *db1;
@@ -161,7 +157,8 @@ compareNamesAPF(void *v1, void *v2)
 
 /***************************************************************/
 
-void fpgPOSIXFPGUARDSENDRECV ( void )
+static void
+fpgPOSIXFPGUARDSENDRECV(void)
 {
   int i, source, iret;
   struct fileOpTag rtag;
@@ -176,7 +173,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
   xdebug ( "ncollectors=%d on this node", nProcsCollNode );
   
   bibBFiledataPF = listSetNew( destroyBFiledataPF, fileIDCmpB);
-  sentFinalize = xmalloc((size_t)nProcsCollNode * sizeof (sentFinalize[0]));
+  sentFinalize = xcalloc((size_t)nProcsCollNode, sizeof (sentFinalize[0]));
 
   for ( ;; )
     {
@@ -185,8 +182,8 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
       rtag = decodeFileOpTag(status.MPI_TAG);
       
       xdebug("receive message from source=%d, id=%d, command=%d ( %s )",
-             source, rtag.id, rtag.command, command2charP[rtag.command]);
-      
+             source, rtag.id, rtag.command, cdiPioCmdStrTab[rtag.command]);
+
       switch (rtag.command)
       	{
       	case IO_Open_file:
@@ -202,8 +199,8 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
 	    }
 
           xdebug("id=%d, command=%d ( %s ), send offset=%ld", rtag.id,
-                 rtag.command, command2charP[rtag.command], bfd->offset);
-	  
+                 rtag.command, cdiPioCmdStrTab[rtag.command], bfd->offset);
+
 	  xmpi ( MPI_Sendrecv ( &( bfd->offset ), 1, MPI_LONG, source,  status.MPI_TAG,
                                 &amount, 1, MPI_LONG, source,  status.MPI_TAG,
                                 commNode, &status ));
@@ -211,7 +208,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
 	  bfd->offset += amount; 
  
           xdebug("id=%d, command=%d ( %s ), recv amount=%ld, set offset=%ld",
-                 rtag.id, rtag.command, command2charP[rtag.command], amount,
+                 rtag.id, rtag.command, cdiPioCmdStrTab[rtag.command], amount,
                  bfd->offset);
 
 	  break;
@@ -223,7 +220,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
             xabort("fileId=%d not in set", rtag.id);
 
           xdebug("id=%d, command=%d ( %s ), send offset=%ld", rtag.id,
-                 rtag.command, command2charP[rtag.command], bfd->offset);
+                 rtag.command, cdiPioCmdStrTab[rtag.command], bfd->offset);
 
 	  xmpi ( MPI_Sendrecv ( &( bfd->offset ), 1, MPI_LONG, source,  status.MPI_TAG,
                                 &amount, 1, MPI_LONG, source,  status.MPI_TAG,
@@ -232,7 +229,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
 	  bfd->offset += amount;
 
           xdebug("id=%d, command=%d ( %s ), recv amount=%ld, set offset=%ld",
-                 rtag.id, rtag.command, command2charP[rtag.command], amount,
+                 rtag.id, rtag.command, cdiPioCmdStrTab[rtag.command], amount,
                  bfd->offset);
 
 	  break;
@@ -244,7 +241,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
             xabort("fileId=%d not in set", rtag.id);
 
           xdebug("id=%d, command=%d ( %s )), send offset=%ld", rtag.id,
-                 rtag.command, command2charP[rtag.command], bfd->offset);
+                 rtag.command, cdiPioCmdStrTab[rtag.command], bfd->offset);
 
 	  xmpi ( MPI_Sendrecv ( &( bfd->offset ), 1, MPI_LONG, source,  status.MPI_TAG,
                                 &amount, 1, MPI_LONG, source,  status.MPI_TAG,
@@ -253,7 +250,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
 	  bfd->offset += amount;
 
           xdebug("id=%d, command=%d ( %s ), recv amount=%ld, set offset=%ld",
-                 rtag.id, rtag.command, command2charP[rtag.command], amount,
+                 rtag.id, rtag.command, cdiPioCmdStrTab[rtag.command], amount,
                  bfd->offset);
 
 
@@ -290,6 +287,7 @@ void fpgPOSIXFPGUARDSENDRECV ( void )
                     xdebug("%s", "destroy set");
                     listSetDelete(bibBFiledataPF);
                   }
+                free(sentFinalize);
                 return;
               }
           }
@@ -454,23 +452,20 @@ elemCheck(void *q, void *nm)
 
 int fowPOSIXFPGUARDSENDRECV ( const char *filename )
 {
-  int root = 0, id;
+  int id;
+  enum {
+    bcastRoot = 0
+  };
   aFiledataPF *afd;
-  static long buffersize = 0;
+  static unsigned long buffersize = 0;
 
   /* broadcast buffersize to collectors */
   if (!buffersize)
     {
-      if (commInqRankColl() == root)
-	{
-          xdebug("name=%s, broadcast buffersize to collectors ...",
-                 filename);
-	  if ( getenv( "BUFSIZE" ) != NULL )
-	    buffersize = atol ( getenv ( "BUFSIZE" ));
-	  if ( buffersize < initial_buffersize )
-	    buffersize = initial_buffersize;
-	}
-      xmpi(MPI_Bcast(&buffersize, 1, MPI_LONG, root, commInqCommColl()));
+      if (commInqRankColl() == bcastRoot)
+        buffersize = findWriteAccumBufsize();
+      xmpi(MPI_Bcast(&buffersize, 1, MPI_UNSIGNED_LONG, bcastRoot,
+                     commInqCommColl()));
     }
 
   /* init and add file element */

@@ -4,14 +4,14 @@
 
 Name:           cdo
 #BuildRequires:  
-Version:        1.6.6
+Version:        1.6.7
 Release:        1
 Summary:        Climate Data Operators
 License:        GNU GENERAL PUBLIC LICENSE Version 2, June 1991
 Group:          Productivity/Graphics/Visualization/Other
 Requires:       netcdf
 Autoreqprov:    on
-URL:            http://code.zmaw.de/projects/cdo
+URL:            https://code.zmaw.de/projects/cdo
 Source0:        cdo-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -24,12 +24,12 @@ operators available. The following table provides a brief overview of the main c
 Authors:
 --------
     This program was developed at the Max-Planck-Institute for Meteorology.
-    Uwe Schulzweida, Uwe.Schulzweida@zmaw.de, is the main author.
-    Ralf Mueller, Ralf.Mueller@zmaw.de
-    Luis Kornblueh, Luis.Kornblueh@zmaw.de
-    Cedrick Ansorge, Cedrick.Ansorge@zmaw.de
-    Ralf Quast, Ralf.Quast@brockmann-consult.de
-    Send questions, comments and bug reports to <http://code.zmaw.de/projects/cdo>
+    Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>, is the main author.
+    Ralf Mueller, <ralf.mueller AT mpimet.mpg.de>
+    Luis Kornblueh, <luis.kornblueh AT mpimet.mpg.de>
+    Cedrick Ansorge, <cedrick.ansorge AT mpimet.mpg.de>
+    Ralf Quast, <ralf.quast AT brockmann-consult.de>
+    Send questions, comments and bug reports to <https://code.zmaw.de/projects/cdo>
 
 
 %prep

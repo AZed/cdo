@@ -17,15 +17,14 @@
 static
 void show_stackframe()
 {
-#if defined (HAVE_EXECINFO_H)
+#if defined HAVE_EXECINFO_H && defined backtrace_size_t && defined HAVE_BACKTRACE
   void *trace[16];
-  size_t i;
-  size_t trace_size = backtrace(trace, 16);
+  backtrace_size_t trace_size = backtrace(trace, 16);
   char **messages = backtrace_symbols(trace, trace_size);
 
   fprintf(stderr, "[bt] Execution path:\n");
   if ( messages ) {
-    for ( i = 0; i < trace_size; ++i )
+    for ( backtrace_size_t i = 0; i < trace_size; ++i )
       fprintf(stderr, "[bt] %s\n", messages[i]);
     free(messages);
   }
@@ -539,6 +538,10 @@ reshPackResource_intern(int resH, const resOps *ops, void *buf, int buf_size, in
   curr->res.v.ops->valPack(curr->res.v.val, buf, buf_size, position, context);
 }
 
+enum {
+  resHPackHeaderNInt = 2,
+  resHDeleteNInt = 2,
+};
 
 static int getPackBufferSize(void *context)
 {
@@ -547,7 +550,7 @@ static int getPackBufferSize(void *context)
   int nsp = namespaceGetActive ();
 
   /* pack start marker, namespace and sererator marker */
-  packBufferSize += 3 * (intpacksize = serializeGetSize(1, DATATYPE_INT, context));
+  packBufferSize += resHPackHeaderNInt * (intpacksize = serializeGetSize(1, DATATYPE_INT, context));
 
   /* pack resources, type marker and seperator marker */
   listElem_t *r = resHList[nsp].resources;
@@ -556,15 +559,15 @@ static int getPackBufferSize(void *context)
       {
         if (r[i].status == RESH_DESYNC_DELETED)
           {
-            packBufferSize += 3 * intpacksize;
+            packBufferSize += resHDeleteNInt * intpacksize;
           }
         else if (r[i].status == RESH_DESYNC_IN_USE)
           {
             xassert ( r[i].res.v.ops );
-            /* message plus frame of 2 ints */
+            /* packed resource plus 1 int for type */
             packBufferSize +=
               r[i].res.v.ops->valGetPackSize(r[i].res.v.val, context)
-              + 2 * intpacksize;
+              + intpacksize;
           }
       }
   /* end marker */
@@ -585,7 +588,7 @@ void reshPackBufferDestroy ( char ** buffer )
 void reshPackBufferCreate(char **packBuffer, int *packBufferSize, void *context)
 {
   int i, packBufferPos = 0;
-  int start = START, end = END, sep = SEPARATOR, type;
+  int end = END;
 
   xassert ( packBuffer );
 
@@ -597,8 +600,8 @@ void reshPackBufferCreate(char **packBuffer, int *packBufferSize, void *context)
   char *pB = *packBuffer = (char *)xcalloc(1, (size_t)pBSize);
 
   {
-    int header[3] = { start, nsp, sep };
-    serializePack(header, 3,  DATATYPE_INT, pB, pBSize, &packBufferPos, context);
+    int header[resHPackHeaderNInt] = { START, nsp };
+    serializePack(header, resHPackHeaderNInt,  DATATYPE_INT, pB, pBSize, &packBufferPos, context);
   }
 
   listElem_t *r = resHList[nsp].resources;
@@ -607,23 +610,21 @@ void reshPackBufferCreate(char **packBuffer, int *packBufferSize, void *context)
       {
         if (r[i].status == RESH_DESYNC_DELETED)
           {
-            enum { del_ints = 3 };
-            int temp[del_ints] = { RESH_DELETE, namespaceIdxEncode2(nsp, i), SEPARATOR };
-            serializePack(temp, del_ints, DATATYPE_INT,
+            int temp[resHDeleteNInt]
+              = { RESH_DELETE, namespaceIdxEncode2(nsp, i) };
+            serializePack(temp, resHDeleteNInt, DATATYPE_INT,
                           pB, pBSize, &packBufferPos, context);
           }
         else
           {
             listElem_t * curr = r + i;
             xassert ( curr->res.v.ops );
-            type = curr->res.v.ops->valTxCode ();
+            int type = curr->res.v.ops->valTxCode();
             if ( ! type ) continue;
             serializePack(&type, 1, DATATYPE_INT, pB,
                           pBSize, &packBufferPos, context);
             curr->res.v.ops->valPack(curr->res.v.val,
                                      pB, pBSize, &packBufferPos, context);
-            serializePack(&sep, 1, DATATYPE_INT,
-                          pB, pBSize, &packBufferPos, context);
           }
         r[i].status &= ~RESH_SYNC_BIT;
       }

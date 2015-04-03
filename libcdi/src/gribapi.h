@@ -1,7 +1,7 @@
 #ifndef _GRIBAPI_H
 #define _GRIBAPI_H
 
-#ifdef HAVE_LIBGRIBAPI
+#ifdef HAVE_LIBGRIB_API
 #  include "error.h"
 #  include <grib_api.h>
 #endif
@@ -50,7 +50,7 @@
 const char *gribapiLibraryVersionString(void);
 void gribContainersNew(stream_t * streamptr);
 void gribContainersDelete(stream_t * streamptr);
-#ifdef HAVE_LIBGRIBAPI
+#ifdef HAVE_LIBGRIB_API
 static inline void *gribHandleNew(int editionNumber)
 {
   void *gh =

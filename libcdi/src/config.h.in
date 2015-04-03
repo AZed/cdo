@@ -9,6 +9,9 @@
 /* Compiler version */
 #undef COMP_VERSION
 
+/* Defined if backtrace() could be fully identified. */
+#undef HAVE_BACKTRACE
+
 /* Define if C / Fortran interface cfortran.h works */
 #undef HAVE_CF_INTERFACE
 
@@ -254,3 +257,6 @@
 
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* Defined to return type of backtrace(). */
+#undef backtrace_size_t

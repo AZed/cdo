@@ -2,7 +2,7 @@
   This file is part of CDO. CDO is a collection of Operators to
   manipulate and analyse Climate model Data.
 
-  Copyright (C) 2003-2014 Uwe Schulzweida, Uwe.Schulzweida@zmaw.de
+  Copyright (C) 2003-2014 Uwe Schulzweida, <uwe.schulzweida AT mpimet.mpg.de>
   See COPYING file for copying and redistribution conditions.
 
   This program is free software; you can redistribute it and/or modify
@@ -203,7 +203,7 @@ void *Intlevel3d(void *argument)
   double *lonIn, *latIn, *lonOut, *latOut;
 
   int zaxisID1 = -1, zaxisID3;
-  int gridID, zaxisID;
+  int gridID3 = -1, gridID, zaxisID;
   int nlevi, nlevo, nlevel = 0, maxlev;
   int lup, ldown;
   int **varnmiss = NULL;
@@ -292,6 +292,7 @@ void *Intlevel3d(void *argument)
     nvars = vlistNvars(vlistID2);
     if (nvars != 1) cdoAbort("Only one single variable is allowed!");
     gridID      = vlistInqVarGrid(vlistID2, varID);
+    gridID3     = gridID;
     zaxisID     = vlistInqVarZaxis(vlistID2, varID);
     gridsize    = gridInqSize(gridID);
     nlevel      = zaxisInqSize(zaxisID);
@@ -321,14 +322,14 @@ void *Intlevel3d(void *argument)
 
   /* Missing values are not allowed for coordinate variables */
   if ( 0 != zlevels_in_miss  )
-    cdoAbort("Input vertical coordinate variables are not allowd to contian missing values.");
+    cdoAbort("Input vertical coordinate variables are not allowd to contain missing values.");
   else
     {
       if ( cdoVerbose ) cdoPrint("Input vertical coordinate has no missing values.");
     }
 
   if ( 0 != zlevels_out_miss )
-    cdoAbort("Output vertical coordinate variables are not allowd to contian missing values.");
+    cdoAbort("Output vertical coordinate variables are not allowd to contain missing values.");
   else
     {
       if ( cdoVerbose ) cdoPrint("Output vertical coordinate has no missing values.");
@@ -448,7 +449,7 @@ void *Intlevel3d(void *argument)
     if ( zaxisID1 == vlistZaxis(vlistID1, i) )
       vlistChangeZaxisIndex(vlistID3, i, zaxisID3);
   /* add the vertical output field to the output stream */
-  int oz3dvarID = vlistDefVar(vlistID3,0,zaxisID3,TSTEP_INSTANT);
+  int oz3dvarID = vlistDefVar(vlistID3, gridID3, zaxisID3, TSTEP_INSTANT);
   {
     char str[256];
     str[0] = 0;
@@ -456,7 +457,7 @@ void *Intlevel3d(void *argument)
     vlistDefVarName(vlistID3,oz3dvarID,str);
     str[0] = 0;
     vlistInqVarLongname(vlistID2,0,str);
-    if ( str[0] ) vlistDefVarLongname(vlistID3,zaxisID1, str);
+    if ( str[0] ) vlistDefVarLongname(vlistID3,oz3dvarID, str);
     str[0] = 0;
     vlistInqVarUnits(vlistID2,0, str);
     if ( str[0] ) vlistDefVarUnits(vlistID3,oz3dvarID, str);
@@ -473,7 +474,7 @@ void *Intlevel3d(void *argument)
   varinterp = (int*) malloc(nvars*sizeof(int));     /* marker for variables to be interpolated       */
 
   /* by default no variable should be interpolated */
-  for (i = 0; i < nvars;i++)
+  for ( i = 0; i < nvars; i++ )
     varinterp[varID] = FALSE;
 
   for ( varID = 0; varID < nvars; varID++ )
@@ -492,7 +493,7 @@ void *Intlevel3d(void *argument)
        *  * have the same number of horizontal grid points (i.e. same gridSize) like the two vertical coordinates
        *  * are NOT the output vertical coordinates itself
        */
-      if ( zaxisID == zaxisID1 && varID != oz3dvarID && gridsize == gridSize)
+      if ( zaxisID == zaxisID1 && varID != oz3dvarID && gridsize == gridSize )
         {
           nlonIn  = gridInqXsize(gridID);
           nlatIn  = gridInqYsize(gridID);
@@ -600,6 +601,7 @@ void *Intlevel3d(void *argument)
 		}
 	    }
 	}
+
       /* copy output z coordinate to output stream */
       nlevel = zaxisInqSize(vlistInqVarZaxis(vlistID3, oz3dvarID));
       for ( levelID = 0; levelID < nlevel; levelID++ )
